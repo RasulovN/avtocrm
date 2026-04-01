@@ -1,0 +1,226 @@
+import type { Product, ProductFormData, ProductFilters, PaginatedResponse, ApiResponse } from '../types';
+
+// Mock data for demo (when backend is not available)
+const mockProducts: Product[] = [
+  {
+    id: '1',
+    name: 'Oil Filter X500',
+    description: 'Premium oil filter for cars',
+    purchase_price: 15000,
+    selling_price: 25000,
+    category: 'Filters',
+    supplier_id: '1',
+    supplier_name: 'AutoParts Co',
+    store_id: '1',
+    store_name: 'Main Store',
+    sku: 'SKU-001',
+    barcode: '1234567890123',
+    quantity: 100,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: '2',
+    name: 'Brake Pads Premium',
+    description: 'Ceramic brake pads',
+    purchase_price: 45000,
+    selling_price: 75000,
+    category: 'Brakes',
+    supplier_id: '1',
+    supplier_name: 'AutoParts Co',
+    store_id: '1',
+    store_name: 'Main Store',
+    sku: 'SKU-002',
+    barcode: '1234567890124',
+    quantity: 50,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: '3',
+    name: 'Air Filter AF200',
+    description: 'High quality air filter',
+    purchase_price: 20000,
+    selling_price: 35000,
+    category: 'Filters',
+    supplier_id: '2',
+    supplier_name: 'Parts Plus',
+    store_id: '1',
+    store_name: 'Main Store',
+    sku: 'SKU-003',
+    barcode: '1234567890125',
+    quantity: 75,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: '4',
+    name: 'Spark Plug SP11',
+    description: 'Iridium spark plugs',
+    purchase_price: 8000,
+    selling_price: 15000,
+    category: 'Electrical',
+    supplier_id: '2',
+    supplier_name: 'Parts Plus',
+    store_id: '2',
+    store_name: 'Warehouse',
+    sku: 'SKU-004',
+    barcode: '1234567890126',
+    quantity: 200,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: '5',
+    name: 'Wiper Blades WB15',
+    description: 'Universal wiper blades',
+    purchase_price: 12000,
+    selling_price: 22000,
+    category: 'Body Parts',
+    supplier_id: '1',
+    supplier_name: 'AutoParts Co',
+    store_id: '1',
+    store_name: 'Main Store',
+    sku: 'SKU-005',
+    barcode: '1234567890127',
+    quantity: 80,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
+
+export const productService = {
+  getAll: async (filters?: ProductFilters & { page?: number; limit?: number }): Promise<PaginatedResponse<Product>> => {
+    try {
+      const params = new URLSearchParams();
+      if (filters?.search) params.append('search', filters.search);
+      if (filters?.category) params.append('category', filters.category);
+      if (filters?.store_id) params.append('store_id', filters.store_id);
+      if (filters?.page) params.append('page', filters.page.toString());
+      if (filters?.limit) params.append('limit', filters.limit.toString());
+      
+      // Try to fetch from API first
+      const response = await fetch(`http://localhost:3000/api/products?${params.toString()}`);
+      if (!response.ok) throw new Error('API not available');
+      const data = await response.json();
+      return data;
+    } catch {
+      // Use mock data if API is not available
+      let filtered = [...mockProducts];
+      
+      if (filters?.search) {
+        filtered = filtered.filter(p => 
+          p.name.toLowerCase().includes(filters.search!.toLowerCase()) ||
+          p.sku.toLowerCase().includes(filters.search!.toLowerCase())
+        );
+      }
+      
+      if (filters?.category) {
+        filtered = filtered.filter(p => p.category === filters.category);
+      }
+      
+      if (filters?.store_id) {
+        filtered = filtered.filter(p => p.store_id === filters.store_id);
+      }
+      
+      const page = filters?.page || 1;
+      const limit = filters?.limit || 10;
+      const start = (page - 1) * limit;
+      const end = start + limit;
+      
+      return {
+        data: filtered.slice(start, end),
+        total: filtered.length,
+        page,
+        limit,
+      };
+    }
+  },
+
+  getById: async (id: string): Promise<Product> => {
+    try {
+      const response = await fetch(`http://localhost:3000/api/products/${id}`);
+      if (!response.ok) throw new Error('API not available');
+      const data: ApiResponse<Product> = await response.json();
+      return data.data;
+    } catch {
+      const product = mockProducts.find(p => p.id === id);
+      if (!product) throw new Error('Product not found');
+      return product;
+    }
+  },
+
+  create: async (data: ProductFormData): Promise<Product> => {
+    try {
+      const response = await fetch('http://localhost:3000/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('API not available');
+      const result: ApiResponse<Product> = await response.json();
+      return result.data;
+    } catch {
+      const newProduct: Product = {
+        id: Date.now().toString(),
+        ...data,
+        sku: data.sku || `SKU-${Date.now()}`,
+        barcode: data.barcode || `1234567890${Date.now()}`,
+        quantity: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      mockProducts.push(newProduct);
+      return newProduct;
+    }
+  },
+
+  update: async (id: string, data: Partial<ProductFormData>): Promise<Product> => {
+    try {
+      const response = await fetch(`http://localhost:3000/api/products/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('API not available');
+      const result: ApiResponse<Product> = await response.json();
+      return result.data;
+    } catch {
+      const index = mockProducts.findIndex(p => p.id === id);
+      if (index === -1) throw new Error('Product not found');
+      
+      const updated = {
+        ...mockProducts[index],
+        ...data,
+        updated_at: new Date().toISOString(),
+      };
+      mockProducts[index] = updated;
+      return updated;
+    }
+  },
+
+  delete: async (id: string): Promise<void> => {
+    try {
+      const response = await fetch(`http://localhost:3000/api/products/${id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('API not available');
+    } catch {
+      const index = mockProducts.findIndex(p => p.id === id);
+      if (index !== -1) {
+        mockProducts.splice(index, 1);
+      }
+    }
+  },
+
+  getByBarcode: async (barcode: string): Promise<Product | null> => {
+    try {
+      const response = await fetch(`http://localhost:3000/api/products/barcode/${barcode}`);
+      if (!response.ok) throw new Error('API not available');
+      const data: ApiResponse<Product> = await response.json();
+      return data.data;
+    } catch {
+      return mockProducts.find(p => p.barcode === barcode) || null;
+    }
+  },
+};
