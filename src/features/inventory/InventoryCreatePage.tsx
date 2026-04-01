@@ -1,4 +1,5 @@
 import { useState, useEffect, type ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, Save } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
@@ -24,6 +25,7 @@ interface InventoryFormItem {
 }
 
 export function InventoryCreatePage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [stores, setStores] = useState<Store[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -137,11 +139,11 @@ export function InventoryCreatePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Create Incoming Stock"
-        description="Add new inventory from supplier"
+        title={t('inventory.createIncomingStock')}
+        description={t('inventory.addFromSupplier')}
         breadcrumbs={[
-          { label: 'Inventory', href: '/inventory' },
-          { label: 'Create' },
+          { label: t('inventory.title'), href: '/inventory' },
+          { label: t('common.create') },
         ]}
       />
 
@@ -149,15 +151,15 @@ export function InventoryCreatePage() {
         <div className="grid gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>Basic Information</CardTitle>
+              <CardTitle>{t('inventory.basicInfo')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="space-y-2">
-                  <Label>Supplier</Label>
+                  <Label>{t('suppliers.title')}</Label>
                   <Select value={supplierId} onValueChange={setSupplierId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select supplier" />
+                      <SelectValue placeholder={t('inventory.selectSupplier')} />
                     </SelectTrigger>
                     <SelectContent>
                       {suppliers.map(s => (
@@ -167,10 +169,10 @@ export function InventoryCreatePage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Store / Warehouse</Label>
+                  <Label>{t('stores.title')}</Label>
                   <Select value={storeId} onValueChange={setStoreId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select location" />
+                      <SelectValue placeholder={t('inventory.selectLocation')} />
                     </SelectTrigger>
                     <SelectContent>
                       {stores.map(s => (
@@ -180,7 +182,7 @@ export function InventoryCreatePage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Paid Amount</Label>
+                  <Label>{t('inventory.paidAmount')}</Label>
                   <Input
                     type="number"
                     value={paid}
@@ -193,20 +195,20 @@ export function InventoryCreatePage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Products</CardTitle>
+              <CardTitle>{t('products.title')}</CardTitle>
               <Button type="button" variant="outline" size="sm" onClick={addItem}>
                 <Plus className="h-4 w-4 mr-2" />
-                Add Product
+                {t('inventory.addProduct')}
               </Button>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Product</TableHead>
-                    <TableHead>Quantity</TableHead>
-                    <TableHead>Purchase Price</TableHead>
-                    <TableHead>Total</TableHead>
+                    <TableHead>{t('products.title')}</TableHead>
+                    <TableHead>{t('inventory.quantity')}</TableHead>
+                    <TableHead>{t('inventory.purchasePrice')}</TableHead>
+                    <TableHead>{t('common.total')}</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -219,7 +221,7 @@ export function InventoryCreatePage() {
                           onValueChange={(v: string) => handleItemChange(index, 'product_id', v)}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Select product" />
+                            <SelectValue placeholder={t('inventory.selectProduct')} />
                           </SelectTrigger>
                           <SelectContent>
                             {products.map(p => (
@@ -260,12 +262,12 @@ export function InventoryCreatePage() {
             </CardContent>
             <CardFooter className="flex justify-between">
               <div className="space-y-1">
-                <p className="text-lg font-medium">Total: {formatCurrency(total)}</p>
-                <p className="text-sm text-muted-foreground">Debt: {formatCurrency(debt)}</p>
+                <p className="text-lg font-medium">{t('common.total')}: {formatCurrency(total)}</p>
+                <p className="text-sm text-muted-foreground">{t('suppliers.debt')}: {formatCurrency(debt)}</p>
               </div>
               <Button type="submit" disabled={saving}>
                 <Save className="h-4 w-4 mr-2" />
-                {saving ? 'Saving...' : 'Create Incoming Stock'}
+                {saving ? t('common.loading') : t('inventory.createIncomingStock')}
               </Button>
             </CardFooter>
           </Card>

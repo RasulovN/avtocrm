@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScanBarcode, Trash2, DollarSign } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { Button } from '../../components/ui/Button';
@@ -23,6 +24,7 @@ interface SaleItem {
 }
 
 export function SalesPage() {
+  const { t } = useTranslation();
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const [stores, setStores] = useState<Store[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -138,23 +140,23 @@ export function SalesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Sales"
-        description="Point of Sale - Scan barcode to add products"
+        title={t('sales.title')}
+        description={t('sales.scanBarcode')}
       />
 
       <form onSubmit={handleSubmit}>
         <div className="grid gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>Sale Information</CardTitle>
+              <CardTitle>{t('sales.saleInfo')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Store</Label>
+                  <Label>{t('stores.title')}</Label>
                   <Select value={storeId} onValueChange={setStoreId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select store" />
+                      <SelectValue placeholder={t('sales.selectStore')} />
                     </SelectTrigger>
                     <SelectContent>
                       {stores.map(s => (
@@ -164,12 +166,12 @@ export function SalesPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Scan Barcode</Label>
+                  <Label>{t('sales.scanBarcode')}</Label>
                   <div className="relative">
                     <ScanBarcode className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       ref={barcodeInputRef}
-                      placeholder="Scan or enter barcode..."
+                      placeholder={t('sales.scanPlaceholder')}
                       value={barcode}
                       onChange={(e: ChangeEvent<HTMLInputElement>) => setBarcode(e.target.value)}
                       onKeyDown={handleBarcodeScan}
@@ -183,22 +185,22 @@ export function SalesPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Products</CardTitle>
+              <CardTitle>{t('products.title')}</CardTitle>
             </CardHeader>
             <CardContent>
               {items.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <ScanBarcode className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Scan a barcode to add products</p>
+                  <p>{t('sales.scanToAdd')}</p>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Quantity</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Total</TableHead>
+                      <TableHead>{t('products.title')}</TableHead>
+                      <TableHead>{t('inventory.quantity')}</TableHead>
+                      <TableHead>{t('products.sellingPrice')}</TableHead>
+                      <TableHead>{t('common.total')}</TableHead>
                       <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -239,21 +241,21 @@ export function SalesPage() {
               <CardFooter className="flex flex-col gap-4">
                 <div className="grid grid-cols-3 gap-4 w-full">
                   <div className="p-4 bg-muted rounded-lg">
-                    <p className="text-sm text-muted-foreground">Total Cost</p>
+                    <p className="text-sm text-muted-foreground">{t('sales.totalCost')}</p>
                     <p className="text-xl font-bold">{formatCurrency(totalCost)}</p>
                   </div>
                   <div className="p-4 bg-primary/10 rounded-lg">
-                    <p className="text-sm text-muted-foreground">Total Price</p>
+                    <p className="text-sm text-muted-foreground">{t('common.total')}</p>
                     <p className="text-xl font-bold">{formatCurrency(totalPrice)}</p>
                   </div>
                   <div className="p-4 bg-green-100 rounded-lg">
-                    <p className="text-sm text-muted-foreground">Profit</p>
+                    <p className="text-sm text-muted-foreground">{t('sales.profit')}</p>
                     <p className="text-xl font-bold text-green-700">{formatCurrency(profit)}</p>
                   </div>
                 </div>
                 <Button type="submit" disabled={saving} className="w-full">
                   <DollarSign className="h-4 w-4 mr-2" />
-                  {saving ? 'Processing...' : `Complete Sale - ${formatCurrency(totalPrice)}`}
+                  {saving ? t('common.loading') : `${t('sales.completeSale')} - ${formatCurrency(totalPrice)}`}
                 </Button>
               </CardFooter>
             )}

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Printer, ArrowLeft } from 'lucide-react';
 import JsBarcode from 'jsbarcode';
 import { PageHeader } from '../../components/shared/PageHeader';
@@ -12,6 +13,7 @@ import type { Product } from '../../types';
 import { formatCurrency } from '../../utils';
 
 export function ProductBarcodePage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
   const barcodeRef = useRef<SVGSVGElement>(null);
@@ -108,16 +110,16 @@ export function ProductBarcodePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Product Barcode"
-        description="Generate and print barcode for product"
+        title={t('products.barcode')}
+        description={t('products.barcode')}
         breadcrumbs={[
-          { label: 'Products', href: '/products' },
-          { label: 'Barcode' },
+          { label: t('nav.products'), href: '/products' },
+          { label: t('products.barcode') },
         ]}
         actions={
           <Button variant="outline" onClick={() => navigate('/products')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+            {t('common.back')}
           </Button>
         }
       />
@@ -151,11 +153,11 @@ export function ProductBarcodePage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Barcode</CardTitle>
+            <CardTitle>{t('products.barcode')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Barcode Value</Label>
+              <Label>{t('products.barcode')}</Label>
               <Input
                 value={barcodeValue}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setBarcodeValue(e.target.value)}
@@ -168,7 +170,7 @@ export function ProductBarcodePage() {
             </div>
             <Button onClick={handlePrint} className="w-full">
               <Printer className="h-4 w-4 mr-2" />
-              Print Barcode
+              {t('products.printBarcode')}
             </Button>
           </CardContent>
         </Card>

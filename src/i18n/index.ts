@@ -10,6 +10,11 @@ const resources = {
   ru: { translation: ru },
 };
 
+// Get saved language from localStorage or default to 'uz'
+const savedLanguage = typeof window !== 'undefined' 
+  ? localStorage.getItem('i18nextLng') || 'uz' 
+  : 'uz';
+
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
@@ -17,6 +22,7 @@ i18n
     resources,
     fallbackLng: 'uz',
     supportedLngs: ['uz', 'ru'],
+    lng: savedLanguage,
     interpolation: {
       escapeValue: false,
     },
@@ -27,3 +33,8 @@ i18n
   });
 
 export default i18n;
+
+export const changeLanguage = (lang: string) => {
+  i18n.changeLanguage(lang);
+  localStorage.setItem('i18nextLng', lang);
+};

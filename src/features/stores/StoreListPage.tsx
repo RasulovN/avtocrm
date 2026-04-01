@@ -1,4 +1,5 @@
 import { useEffect, useState, type ChangeEvent, type MouseEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
@@ -12,6 +13,7 @@ import type { Store, StoreFormData } from '../../types';
 import { formatDate } from '../../utils';
 
 export function StoreListPage() {
+  const { t } = useTranslation();
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -99,22 +101,22 @@ export function StoreListPage() {
   };
 
   const columns: Column<Store>[] = [
-    { key: 'name', header: 'Name' },
-    { key: 'address', header: 'Address' },
-    { key: 'phone', header: 'Phone' },
+    { key: 'name', header: t('stores.storeName') },
+    { key: 'address', header: t('stores.address') },
+    { key: 'phone', header: t('stores.phone') },
     {
       key: 'is_warehouse',
-      header: 'Type',
-      render: (item: Store) => item.is_warehouse ? 'Warehouse' : 'Store',
+      header: t('stores.type'),
+      render: (item: Store) => item.is_warehouse ? t('stores.warehouse') : t('stores.store'),
     },
     {
       key: 'created_at',
-      header: 'Created',
+      header: t('common.createdAt'),
       render: (item: Store) => formatDate(item.created_at),
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: t('common.actions'),
       className: 'text-right',
       render: (item: Store) => (
         <div className="flex items-center justify-end gap-2">
@@ -132,12 +134,12 @@ export function StoreListPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Stores"
-        description="Manage your stores and warehouses"
+        title={t('stores.title')}
+        description={t('stores.title')}
         actions={
           <Button onClick={() => handleOpenDialog()}>
             <Plus className="h-4 w-4 mr-2" />
-            Add Store
+            {t('stores.addStore')}
           </Button>
         }
       />
@@ -153,41 +155,41 @@ export function StoreListPage() {
         open={!!deleteId}
         onOpenChange={(open: boolean) => !open && setDeleteId(null)}
         onConfirm={handleDelete}
-        title="Delete Store"
-        description="Are you sure you want to delete this store?"
-        confirmText="Delete"
+        title={t('common.delete')}
+        description={t('stores.storeDeleted')}
+        confirmText={t('common.delete')}
         variant="destructive"
         loading={deleting}
       />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingStore ? 'Edit Store' : 'Add Store'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
+            <DialogHeader>
+              <DialogTitle>{editingStore ? t('stores.editStore') : t('stores.addStore')}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Name</Label>
+              <Label>{t('stores.storeName')}</Label>
               <Input value={formData.name} onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, name: e.target.value })} required />
             </div>
             <div className="space-y-2">
-              <Label>Address</Label>
+              <Label>{t('stores.address')}</Label>
               <Input value={formData.address} onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, address: e.target.value })} />
             </div>
             <div className="space-y-2">
-              <Label>Phone</Label>
+              <Label>{t('stores.phone')}</Label>
               <Input value={formData.phone} onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, phone: e.target.value })} />
             </div>
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 <input type="checkbox" checked={formData.is_warehouse} onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, is_warehouse: e.target.checked })} />
-                Is Warehouse
+                {t('stores.isWarehouse')}
               </Label>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('common.cancel')}</Button>
+            <Button onClick={handleSave} disabled={saving}>{saving ? t('common.loading') : t('common.save')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import {
   LayoutDashboard,
   Package,
@@ -12,25 +12,32 @@ import {
   LogOut,
   Menu,
   X,
+  FileText,
+  Settings,
+  Folder,
 } from 'lucide-react';
 import { cn } from '../../utils';
 import { useAuthStore } from '../../app/store';
+import { useTranslation } from 'react-i18next';
 
 interface NavItem {
-  title: string;
+  titleKey: string;
   href: string;
   icon: React.ElementType;
   roles?: ('admin' | 'store_user')[];
 }
 
 const navItems: NavItem[] = [
-  { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { title: 'Products', href: '/products', icon: Package },
-  { title: 'Inventory', href: '/inventory', icon: ArrowDownToLine, roles: ['admin'] },
-  { title: 'Transfers', href: '/transfers', icon: ArrowRightLeft },
-  { title: 'Sales', href: '/sales', icon: DollarSign },
-  { title: 'Suppliers', href: '/suppliers', icon: Truck, roles: ['admin'] },
-  { title: 'Stores', href: '/stores', icon: Store, roles: ['admin'] },
+  { titleKey: 'nav.dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { titleKey: 'nav.products', href: '/products', icon: Package },
+  { titleKey: 'nav.categories', href: '/categories', icon: Folder },
+  { titleKey: 'nav.inventory', href: '/inventory', icon: ArrowDownToLine, roles: ['admin'] },
+  { titleKey: 'nav.transfers', href: '/transfers', icon: ArrowRightLeft },
+  { titleKey: 'nav.sales', href: '/sales', icon: DollarSign },
+  { titleKey: 'nav.suppliers', href: '/suppliers', icon: Truck, roles: ['admin'] },
+  { titleKey: 'nav.stores', href: '/stores', icon: Store, roles: ['admin'] },
+  { titleKey: 'nav.reports', href: '/reports', icon: FileText },
+  { titleKey: 'nav.settings', href: '/settings', icon: Settings },
 ];
 
 interface SidebarProps {
@@ -39,6 +46,9 @@ interface SidebarProps {
 
 export function Sidebar({ className }: SidebarProps) {
   const location = useLocation();
+  const params = useParams();
+  const lang = params.lang || 'uz';
+  const { t } = useTranslation();
   const { user, logout } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -69,13 +79,15 @@ export function Sidebar({ className }: SidebarProps) {
             <p className="text-sm text-muted-foreground">Auto Spare Parts</p>
           </div>
 
-          <nav className="flex-1 p-4 space-y-1">
+          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
             {filteredNavItems.map((item) => {
-              const isActive = location.pathname.startsWith(item.href);
+              const href = `/${lang}${item.href}`;
+              const isActive = location.pathname.startsWith(`/${lang}${item.href}`) || 
+                             (location.pathname === `/${item.href}` && item.href === '/dashboard');
               return (
                 <Link
                   key={item.href}
-                  to={item.href}
+                  to={href}
                   onClick={() => setIsOpen(false)}
                   className={cn(
                     'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
@@ -85,7 +97,7 @@ export function Sidebar({ className }: SidebarProps) {
                   )}
                 >
                   <item.icon className="h-5 w-5" />
-                  {item.title}
+                  {t(item.titleKey)}
                 </Link>
               );
             })}
@@ -96,18 +108,18 @@ export function Sidebar({ className }: SidebarProps) {
               <div className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
                   <span className="text-sm text-primary-foreground">
-                    {user?.username?.charAt(0).toUpperCase()}
+                    {user?.username?.charAt(0).toUpperCase() || 'U'}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{user?.username}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
+                  <p className="text-sm font-medium truncate">{user?.username || 'User'}</p>
+                  <p className="text-xs text-muted-foreground capitalize">{user?.role || 'admin'}</p>
                 </div>
               </div>
               <button
                 onClick={logout}
                 className="p-2 rounded-md hover:bg-accent text-muted-foreground"
-                title="Logout"
+                title={t('nav.logout')}
               >
                 <LogOut className="h-4 w-4" />
               </button>

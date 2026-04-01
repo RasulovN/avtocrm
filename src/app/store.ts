@@ -2,6 +2,27 @@ import { create } from 'zustand';
 import { authService } from '../services/authService';
 import type { User, UserRole } from '../types';
 
+interface ThemeStore {
+  theme: 'light' | 'dark';
+  toggleTheme: () => void;
+  setTheme: (theme: 'light' | 'dark') => void;
+}
+
+export const useThemeStore = create<ThemeStore>((set) => ({
+  theme: (localStorage.getItem('theme') as 'light' | 'dark') || 'light',
+  toggleTheme: () => set((state) => {
+    const newTheme = state.theme === 'light' ? 'dark' : 'light';
+    localStorage.setItem('theme', newTheme);
+    document.documentElement.classList.toggle('dark', newTheme === 'dark');
+    return { theme: newTheme };
+  }),
+  setTheme: (theme) => {
+    localStorage.setItem('theme', theme);
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    set({ theme });
+  },
+}));
+
 interface AuthStore {
   user: User | null;
   token: string | null;

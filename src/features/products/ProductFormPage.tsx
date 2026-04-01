@@ -1,5 +1,6 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Save, ArrowLeft } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { Button } from '../../components/ui/Button';
@@ -14,6 +15,7 @@ import type { Product, ProductFormData, Store, Supplier } from '../../types';
 import { generateSKU, generateBarcode } from '../../utils';
 
 export function ProductFormPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = Boolean(id);
@@ -103,16 +105,16 @@ export function ProductFormPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={isEditing ? 'Edit Product' : 'Add Product'}
-        description={isEditing ? 'Update product information' : 'Create a new product'}
+        title={isEditing ? t('products.editProduct') : t('products.addProduct')}
+        description={isEditing ? t('products.productUpdated') : t('products.productAdded')}
         breadcrumbs={[
-          { label: 'Products', href: '/products' },
-          { label: isEditing ? 'Edit' : 'Add' },
+          { label: t('nav.products'), href: '/products' },
+          { label: isEditing ? t('common.edit') : t('common.add') },
         ]}
         actions={
           <Button variant="outline" onClick={() => navigate('/products')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+            {t('common.back')}
           </Button>
         }
       />
@@ -121,11 +123,11 @@ export function ProductFormPage() {
         <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>Basic Information</CardTitle>
+              <CardTitle>{t('products.productName')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Product Name</Label>
+                <Label htmlFor="name">{t('products.productName')}</Label>
                 <Input
                   id="name"
                   value={formData.name}
@@ -134,7 +136,7 @@ export function ProductFormPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor="description">{t('common.description')}</Label>
                 <Input
                   id="description"
                   value={formData.description}
@@ -142,7 +144,7 @@ export function ProductFormPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
+                <Label htmlFor="category">{t('products.category')}</Label>
                 <Input
                   id="category"
                   value={formData.category}
@@ -156,11 +158,11 @@ export function ProductFormPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Pricing</CardTitle>
+              <CardTitle>{t('products.sellingPrice')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="purchase_price">Purchase Price</Label>
+                <Label htmlFor="purchase_price">{t('products.purchasePrice')}</Label>
                 <Input
                   id="purchase_price"
                   type="number"
@@ -170,7 +172,7 @@ export function ProductFormPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="selling_price">Selling Price</Label>
+                <Label htmlFor="selling_price">{t('products.sellingPrice')}</Label>
                 <Input
                   id="selling_price"
                   type="number"
@@ -184,17 +186,17 @@ export function ProductFormPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Location</CardTitle>
+              <CardTitle>{t('products.store')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="store_id">Store / Warehouse</Label>
+                <Label htmlFor="store_id">{t('products.store')}</Label>
                 <Select
                   value={formData.store_id}
                   onValueChange={(value: string) => handleChange('store_id', value)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select store" />
+                    <SelectValue placeholder={t('products.store')} />
                   </SelectTrigger>
                   <SelectContent>
                     {stores.map((store) => (
@@ -206,13 +208,13 @@ export function ProductFormPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="supplier_id">Supplier</Label>
+                <Label htmlFor="supplier_id">{t('products.supplier')}</Label>
                 <Select
                   value={formData.supplier_id}
                   onValueChange={(value: string) => handleChange('supplier_id', value)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select supplier" />
+                    <SelectValue placeholder={t('products.supplier')} />
                   </SelectTrigger>
                   <SelectContent>
                     {suppliers.map((supplier) => (
@@ -229,11 +231,11 @@ export function ProductFormPage() {
 
         <div className="mt-6 flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => navigate('/products')}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" disabled={saving}>
             <Save className="h-4 w-4 mr-2" />
-            {saving ? 'Saving...' : 'Save Product'}
+            {saving ? t('common.loading') : t('products.productSaved')}
           </Button>
         </div>
       </form>

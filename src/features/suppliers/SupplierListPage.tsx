@@ -1,4 +1,5 @@
 import { useEffect, useState, type ChangeEvent, type MouseEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
@@ -12,6 +13,7 @@ import type { Supplier, SupplierFormData } from '../../types';
 import { formatCurrency, formatDate } from '../../utils';
 
 export function SupplierListPage() {
+  const { t } = useTranslation();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -99,22 +101,22 @@ export function SupplierListPage() {
   };
 
   const columns: Column<Supplier>[] = [
-    { key: 'name', header: 'Name' },
-    { key: 'phone', header: 'Phone' },
+    { key: 'name', header: t('suppliers.supplierName') },
+    { key: 'phone', header: t('suppliers.phone') },
     {
       key: 'debt',
-      header: 'Debt',
+      header: t('suppliers.debt'),
       className: 'text-right',
       render: (item: Supplier) => formatCurrency(item.debt),
     },
     {
       key: 'created_at',
-      header: 'Created',
+      header: t('common.createdAt'),
       render: (item: Supplier) => formatDate(item.created_at),
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: t('common.actions'),
       className: 'text-right',
       render: (item: Supplier) => (
         <div className="flex items-center justify-end gap-2">
@@ -132,12 +134,12 @@ export function SupplierListPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Suppliers"
-        description="Manage your suppliers"
+        title={t('suppliers.title')}
+        description={t('suppliers.title')}
         actions={
           <Button onClick={() => handleOpenDialog()}>
             <Plus className="h-4 w-4 mr-2" />
-            Add Supplier
+            {t('suppliers.addSupplier')}
           </Button>
         }
       />
@@ -153,9 +155,9 @@ export function SupplierListPage() {
         open={!!deleteId}
         onOpenChange={(open: boolean) => !open && setDeleteId(null)}
         onConfirm={handleDelete}
-        title="Delete Supplier"
-        description="Are you sure you want to delete this supplier?"
-        confirmText="Delete"
+        title={t('common.delete')}
+        description={t('suppliers.supplierDeleted')}
+        confirmText={t('common.delete')}
         variant="destructive"
         loading={deleting}
       />
@@ -165,27 +167,27 @@ export function SupplierListPage() {
           <DialogHeader>
             <DialogTitle>{editingSupplier ? 'Edit Supplier' : 'Add Supplier'}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+            <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Name</Label>
+              <Label>{t('suppliers.supplierName')}</Label>
               <Input value={formData.name} onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, name: e.target.value })} required />
             </div>
             <div className="space-y-2">
-              <Label>Phone</Label>
+              <Label>{t('suppliers.phone')}</Label>
               <Input value={formData.phone} onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, phone: e.target.value })} />
             </div>
             <div className="space-y-2">
-              <Label>Email</Label>
+              <Label>{t('suppliers.email')}</Label>
               <Input type="email" value={formData.email} onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, email: e.target.value })} />
             </div>
             <div className="space-y-2">
-              <Label>Address</Label>
+              <Label>{t('suppliers.address')}</Label>
               <Input value={formData.address} onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, address: e.target.value })} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('common.cancel')}</Button>
+            <Button onClick={handleSave} disabled={saving}>{saving ? t('common.loading') : t('common.save')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

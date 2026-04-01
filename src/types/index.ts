@@ -170,7 +170,9 @@ export interface Sale {
   items: SaleItem[];
   total_cost: number;
   total_price: number;
+  total?: number;
   profit: number;
+  payment_method?: 'cash' | 'card';
   created_at: string;
 }
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, Save, ArrowRight } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { Button } from '../../components/ui/Button';
@@ -20,6 +21,7 @@ interface TransferFormItem {
 }
 
 export function TransferCreatePage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [stores, setStores] = useState<Store[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -107,11 +109,11 @@ export function TransferCreatePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Create Transfer"
-        description="Transfer products between stores"
+        title={t('transfers.createTransfer')}
+        description={t('transfers.title')}
         breadcrumbs={[
-          { label: 'Transfers', href: '/transfers' },
-          { label: 'Create' },
+          { label: t('nav.transfers'), href: '/transfers' },
+          { label: t('common.add') },
         ]}
       />
 
@@ -119,15 +121,15 @@ export function TransferCreatePage() {
         <div className="grid gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>Transfer Details</CardTitle>
+              <CardTitle>{t('transfers.title')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>From Store</Label>
+                  <Label>{t('transfers.fromStore')}</Label>
                   <Select value={fromStoreId} onValueChange={setFromStoreId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select source store" />
+                      <SelectValue placeholder={t('transfers.selectProduct')} />
                     </SelectTrigger>
                     <SelectContent>
                       {stores.map(s => (
@@ -137,10 +139,10 @@ export function TransferCreatePage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>To Store</Label>
+                  <Label>{t('transfers.toStore')}</Label>
                   <Select value={toStoreId} onValueChange={setToStoreId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select destination store" />
+                      <SelectValue placeholder={t('transfers.selectProduct')} />
                     </SelectTrigger>
                     <SelectContent>
                       {stores.filter(s => s.id !== fromStoreId).map(s => (
@@ -155,18 +157,18 @@ export function TransferCreatePage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Products</CardTitle>
+              <CardTitle>{t('products.title')}</CardTitle>
               <Button type="button" variant="outline" size="sm" onClick={addItem}>
                 <Plus className="h-4 w-4 mr-2" />
-                Add Product
+                {t('inventory.addProduct')}
               </Button>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Product</TableHead>
-                    <TableHead>Quantity</TableHead>
+                    <TableHead>{t('products.title')}</TableHead>
+                    <TableHead>{t('products.quantity')}</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -179,7 +181,7 @@ export function TransferCreatePage() {
                           onValueChange={(v: string) => handleItemChange(index, 'product_id', v)}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Select product" />
+                            <SelectValue placeholder={t('transfers.selectProduct')} />
                           </SelectTrigger>
                           <SelectContent>
                             {products.map(p => (
@@ -210,7 +212,7 @@ export function TransferCreatePage() {
             <CardFooter className="flex justify-end">
               <Button type="submit" disabled={saving}>
                 <ArrowRight className="h-4 w-4 mr-2" />
-                {saving ? 'Creating...' : 'Create Transfer'}
+                {saving ? t('common.loading') : t('transfers.createTransfer')}
               </Button>
             </CardFooter>
           </Card>

@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
-import { useThemeStore } from './app/themeStore';
+import { useThemeStore } from './app/store';
 import { useEffect } from 'react';
 
 // Layout
@@ -13,17 +13,22 @@ import { ProductListPage } from './features/products/ProductListPage';
 import { ProductFormPage } from './features/products/ProductFormPage';
 import { ProductBarcodePage } from './features/products/ProductBarcodePage';
 import { CategoryListPage } from './features/categories/CategoryListPage';
+import { InventoryListPage } from './features/inventory/InventoryListPage';
 import { InventoryCreatePage } from './features/inventory/InventoryCreatePage';
+import { TransferListPage } from './features/transfers/TransferListPage';
 import { TransferCreatePage } from './features/transfers/TransferCreatePage';
+import { SalesListPage } from './features/sales/SalesListPage';
 import { SalesPage } from './features/sales/SalesPage';
 import { SupplierListPage } from './features/suppliers/SupplierListPage';
 import { StoreListPage } from './features/stores/StoreListPage';
+import { SettingsPage } from './features/settings/SettingsPage';
 
 // Styles
 import './i18n';
 
 function App() {
   const { theme } = useThemeStore();
+  const { i18n } = useTranslation();
   
   useEffect(() => {
     const root = window.document.documentElement;
@@ -34,101 +39,128 @@ function App() {
     }
   }, [theme]);
 
+  // Get current language from i18n
+  const currentLang = i18n.language || 'uz';
+
   return (
     <BrowserRouter>
       <Toaster position="top-right" />
       <Routes>
-        {/* Dashboard - Direct access without login */}
-        <Route path="/dashboard" element={
+        {/* Language-prefixed routes */}
+        <Route path={`/${currentLang}`} element={<Navigate to={`/${currentLang}/dashboard`} replace />} />
+        
+        {/* Dashboard */}
+        <Route path={`/:lang/dashboard`} element={
           <MainLayout>
             <DashboardPage />
           </MainLayout>
         } />
         
-        {/* Products - Direct access without login */}
-        <Route path="/products" element={
+        {/* Products */}
+        <Route path={`/:lang/products`} element={
           <MainLayout>
             <ProductListPage />
           </MainLayout>
         } />
         
-        <Route path="/products/new" element={
+        <Route path={`/:lang/products/new`} element={
           <MainLayout>
             <ProductFormPage />
           </MainLayout>
         } />
         
-        <Route path="/products/:id/edit" element={
+        <Route path={`/:lang/products/:id/edit`} element={
           <MainLayout>
             <ProductFormPage />
           </MainLayout>
         } />
         
-        <Route path="/products/:id/barcode" element={
+        <Route path={`/:lang/products/:id/barcode`} element={
           <MainLayout>
             <ProductBarcodePage />
           </MainLayout>
         } />
         
-        {/* Categories - Direct access without login */}
-        <Route path="/categories" element={
+        {/* Categories */}
+        <Route path={`/:lang/categories`} element={
           <MainLayout>
             <CategoryListPage />
           </MainLayout>
         } />
         
-        {/* Inventory - Direct access without login */}
-        <Route path="/inventory" element={
+        {/* Inventory (Kirim) - List */}
+        <Route path={`/:lang/inventory`} element={
+          <MainLayout>
+            <InventoryListPage />
+          </MainLayout>
+        } />
+        
+        {/* Inventory - Create */}
+        <Route path={`/:lang/inventory/new`} element={
           <MainLayout>
             <InventoryCreatePage />
           </MainLayout>
         } />
         
-        {/* Transfers - Direct access without login */}
-        <Route path="/transfers" element={
+        {/* Transfers - List */}
+        <Route path={`/:lang/transfers`} element={
+          <MainLayout>
+            <TransferListPage />
+          </MainLayout>
+        } />
+        
+        {/* Transfers - Create */}
+        <Route path={`/:lang/transfers/new`} element={
           <MainLayout>
             <TransferCreatePage />
           </MainLayout>
         } />
         
-        {/* Sales - Direct access without login */}
-        <Route path="/sales" element={
+        {/* Sales - List */}
+        <Route path={`/:lang/sales`} element={
+          <MainLayout>
+            <SalesListPage />
+          </MainLayout>
+        } />
+        
+        {/* Sales - Create (POS) */}
+        <Route path={`/:lang/sales/new`} element={
           <MainLayout>
             <SalesPage />
           </MainLayout>
         } />
         
-        {/* Suppliers - Direct access without login */}
-        <Route path="/suppliers" element={
+        {/* Suppliers */}
+        <Route path={`/:lang/suppliers`} element={
           <MainLayout>
             <SupplierListPage />
           </MainLayout>
         } />
         
-        {/* Stores - Direct access without login */}
-        <Route path="/stores" element={
+        {/* Stores */}
+        <Route path={`/:lang/stores`} element={
           <MainLayout>
             <StoreListPage />
           </MainLayout>
         } />
         
-        {/* Reports - Direct access without login */}
-        <Route path="/reports" element={
+        {/* Reports */}
+        <Route path={`/:lang/reports`} element={
           <MainLayout>
             <DashboardPage />
           </MainLayout>
         } />
         
-        {/* Settings - Direct access without login */}
-        <Route path="/settings" element={
+        {/* Settings */}
+        <Route path={`/:lang/settings`} element={
           <MainLayout>
-            <DashboardPage />
+            <SettingsPage />
           </MainLayout>
         } />
         
-        {/* Default route  11*/}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        {/* Default route - redirect to /uz/dashboard */}
+        <Route path="/" element={<Navigate to={`/${currentLang}/dashboard`} replace />} />
+        <Route path="*" element={<Navigate to={`/${currentLang}/dashboard`} replace />} />
       </Routes>
     </BrowserRouter>
   );
