@@ -424,7 +424,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       )}>
         {/* Top Navbar */}
         <header className="sticky top-0 z-20 h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="flex h-full items-center justify-between px-4 lg:px-6">
+          <div className="flex h-full items-center justify-end px-4 lg:px-6">
             {/* Mobile menu button */}
             <button
               onClick={() => setIsSidebarOpen(true)}

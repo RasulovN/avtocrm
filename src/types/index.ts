@@ -78,6 +78,7 @@ export interface Category {
 export interface Supplier {
   id: string;
   name: string;
+  inn?: string;
   phone?: string;
   email?: string;
   address?: string;
@@ -87,8 +88,8 @@ export interface Supplier {
 
 export interface SupplierFormData {
   name: string;
+  inn?: string;
   phone?: string;
-  email?: string;
   address?: string;
 }
 
