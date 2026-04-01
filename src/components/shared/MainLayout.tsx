@@ -84,19 +84,38 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showSubNav, setShowSubNav] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const { theme, toggleTheme } = useThemeStore();
   const { user, logout } = useAuthStore();
 
-  // Check if current path has sub-navigation
-  const currentPathWithoutLang = '/' + location.pathname.split('/').slice(2).join('/');
-  const activeSubNav = subNavs[currentPathWithoutLang] || null;
-  const activeSubNavKey = activeSubNav ? currentPathWithoutLang : null;
-
-  // Get the parent menu item that's currently active
-  const activeParentItem = navItems.find(item => 
-    location.pathname.startsWith(`/${lang}${item.href}`) && item.href !== '/dashboard'
+  // Get current path without language prefix
+  const currentPath = location.pathname;
+  const pathWithoutLang = '/' + currentPath.split('/').slice(2).join('/');
+  
+  // Check if current path is part of a sub-nav module
+  const activeSubNavKey = Object.keys(subNavs).find(key => 
+    currentPath.includes(key) && currentPath.startsWith(`/${lang}${key}`)
   );
+  const activeSubNav = activeSubNavKey ? subNavs[activeSubNavKey] : null;
+  
+  // Check if we're on a sub-nav page (but not the main page of that module)
+  const isOnSubNavPage = activeSubNavKey && !currentPath.endsWith(`/${lang}${activeSubNavKey}`) && !currentPath.endsWith(`/${lang}${activeSubNavKey}/`);
+  
+  // Determine if we should show sub-nav sidebar
+  const shouldShowSubNav = isOnSubNavPage || showSubNav;
+
+  // Find the parent nav item for back button
+  const parentNavItem = activeSubNavKey 
+    ? navItems.find(item => item.href === activeSubNavKey) 
+    : null;
+
+  // Update showSubNav based on current location
+  useEffect(() => {
+    if (activeSubNavKey) {
+      setShowSubNav(true);
+    }
+  }, [activeSubNavKey]);
 
   // Update lang in URL when language changes
   useEffect(() => {
@@ -131,10 +150,21 @@ export function MainLayout({ children }: MainLayoutProps) {
   };
 
   const goBackToMainNav = () => {
+    setShowSubNav(false);
     // Navigate to the parent page
-    if (activeParentItem) {
-      navigate(`/${lang}${activeParentItem.href}`);
+    if (activeSubNavKey) {
+      navigate(`/${lang}${activeSubNavKey}`);
     }
+  };
+
+  const handleMainNavClick = (item: NavItem) => {
+    // If this item has sub-nav, show sub-nav mode
+    if (subNavs[item.href]) {
+      setShowSubNav(true);
+    } else {
+      setShowSubNav(false);
+    }
+    setIsSidebarOpen(false);
   };
 
   const currentUser = user || {
@@ -143,9 +173,6 @@ export function MainLayout({ children }: MainLayoutProps) {
     email: 'admin@avtocrm.uz',
     phone: '+998 90 123-45-67',
   };
-
-  // If we have an active sub-navigation, show simplified sidebar with back button
-  const showSubNavSidebar = !!activeSubNav;
 
   return (
     <div className="flex min-h-screen">
@@ -191,9 +218,9 @@ export function MainLayout({ children }: MainLayoutProps) {
             </button>
           </div>
 
-          {/* Navigation - Show either sub-nav or main nav */}
+          {/* Navigation */}
           <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
-            {showSubNavSidebar ? (
+            {shouldShowSubNav && activeSubNav ? (
               // Show sub-navigation items
               <>
                 {/* Back button */}
@@ -210,6 +237,13 @@ export function MainLayout({ children }: MainLayoutProps) {
                 </button>
                 
                 <div className="my-2 border-t" />
+                
+                {/* Parent item */}
+                {parentNavItem && !isCollapsed && (
+                  <div className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase">
+                    {t(parentNavItem.titleKey)}
+                  </div>
+                )}
                 
                 {/* Sub-nav items */}
                 {activeSubNav.map((subItem) => {
@@ -249,10 +283,10 @@ export function MainLayout({ children }: MainLayoutProps) {
                   <Link
                     key={item.href}
                     to={href}
-                    onClick={() => setIsSidebarOpen(false)}
+                    onClick={() => handleMainNavClick(item)}
                     className={cn(
                       'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
-                      isActive
+                      isActive && !showSubNav
                         ? 'bg-primary text-primary-foreground'
                         : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
                       isCollapsed && 'justify-center px-2'
