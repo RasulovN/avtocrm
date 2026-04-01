@@ -23,8 +23,8 @@ export interface ProductStoreInventory {
   store_id: string;
   store_name: string;
   quantity: number;
-  purchase_price: number;
-  selling_price: number;
+  purchase_price?: number;
+  selling_price?: number;
 }
 
 export interface Product {

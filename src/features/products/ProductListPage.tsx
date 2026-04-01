@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Plus, Edit, Trash2, Barcode, Search } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
-import { DataTable, type Column } from '../../components/shared/DataTable';
+import { DataTable, type Column, type StoreInventory } from '../../components/shared/DataTable';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -15,13 +15,15 @@ import {
   SelectValue,
 } from '../../components/ui/Select';
 import { productService } from '../../services/productService';
-import type { Product, ProductFilters } from '../../types';
+import { storeService } from '../../services/storeService';
+import type { Product, ProductFilters, Store } from '../../types';
 import { formatCurrency } from '../../utils';
 
 export function ProductListPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ProductFilters>({});
   const [page, setPage] = useState(1);
@@ -33,7 +35,22 @@ export function ProductListPage() {
 
   useEffect(() => {
     loadProducts();
+    loadStores();
   }, [filters, page]);
+
+  const loadStores = async () => {
+    try {
+      const response = await storeService.getAll();
+      setStores(response.data);
+    } catch (error) {
+      console.error('Failed to load stores:', error);
+      // Mock stores for demo
+      setStores([
+        { id: '1', name: 'Main Store', is_warehouse: false, created_at: '' },
+        { id: '2', name: 'Warehouse', is_warehouse: true, created_at: '' },
+      ]);
+    }
+  };
 
   const loadProducts = async () => {
     try {
@@ -58,6 +75,10 @@ export function ProductListPage() {
           store_name: 'Main Store',
           sku: 'SKU-001',
           quantity: 100,
+          inventory_by_store: [
+            { store_id: '1', store_name: 'Main Store', quantity: 60, purchase_price: 15000, selling_price: 25000 },
+            { store_id: '2', store_name: 'Warehouse', quantity: 40, purchase_price: 15000, selling_price: 25000 },
+          ],
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
@@ -74,11 +95,35 @@ export function ProductListPage() {
           store_name: 'Main Store',
           sku: 'SKU-002',
           quantity: 50,
+          inventory_by_store: [
+            { store_id: '1', store_name: 'Main Store', quantity: 30, purchase_price: 45000, selling_price: 75000 },
+            { store_id: '2', store_name: 'Warehouse', quantity: 20, purchase_price: 45000, selling_price: 75000 },
+          ],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        {
+          id: '3',
+          name: 'Spark Plug',
+          description: 'IRidium spark plug',
+          purchase_price: 8000,
+          selling_price: 15000,
+          category: 'Electrical',
+          supplier_id: '1',
+          supplier_name: 'AutoParts Co',
+          store_id: '2',
+          store_name: 'Warehouse',
+          sku: 'SKU-003',
+          quantity: 200,
+          inventory_by_store: [
+            { store_id: '1', store_name: 'Main Store', quantity: 100, purchase_price: 8000, selling_price: 15000 },
+            { store_id: '2', store_name: 'Warehouse', quantity: 100, purchase_price: 8000, selling_price: 15000 },
+          ],
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
       ]);
-      setTotal(2);
+      setTotal(3);
     } finally {
       setLoading(false);
     }
@@ -109,6 +154,11 @@ export function ProductListPage() {
     }
   };
 
+  // Get inventory by store for each product
+  const getInventoryByStore = (item: Product): StoreInventory[] => {
+    return item.inventory_by_store || [];
+  };
+
   const columns: Column<Product>[] = [
     {
       key: 'sku',
@@ -124,26 +174,21 @@ export function ProductListPage() {
       header: t('products.category'),
     },
     {
-      key: 'store_name',
-      header: t('products.store'),
-    },
-    {
       key: 'quantity',
       header: t('products.quantity'),
-      className: 'text-right',
-      render: (item: Product) => item.quantity.toLocaleString(),
+      className: 'min-w-[180px]',
     },
     {
       key: 'purchase_price',
       header: t('products.purchasePrice'),
       className: 'text-right',
-      render: (item: Product) => formatCurrency(item.purchase_price),
+      render: (item: Product) => formatCurrency(item.purchase_price ?? 0),
     },
     {
       key: 'selling_price',
       header: t('products.sellingPrice'),
       className: 'text-right',
-      render: (item: Product) => formatCurrency(item.selling_price),
+      render: (item: Product) => formatCurrency(item.selling_price ?? 0),
     },
     {
       key: 'actions',
@@ -223,7 +268,7 @@ export function ProductListPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t('common.all')}</SelectItem>
-            <SelectItem value="Filters">{t('products.category')}</SelectItem>
+            <SelectItem value="Filters">Filters</SelectItem>
             <SelectItem value="Brakes">Brakes</SelectItem>
             <SelectItem value="Engine">Engine</SelectItem>
           </SelectContent>
@@ -257,6 +302,13 @@ export function ProductListPage() {
           total,
           onPageChange: setPage,
         }}
+        // Use inventoryByStore to render nested store quantities
+        inventoryByStore={getInventoryByStore}
+        itemNameKey={'name' as keyof Product}
+        showFooter={true}
+        showStoreStats={true}
+        storeKey={'store_name' as keyof Product}
+        quantityKey={'quantity' as keyof Product}
       />
 
       <ConfirmDialog
@@ -272,3 +324,5 @@ export function ProductListPage() {
     </div>
   );
 }
+
+export default ProductListPage;
