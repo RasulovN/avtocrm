@@ -19,23 +19,39 @@ export interface AuthState {
 }
 
 // Product Types
+export interface ProductStoreInventory {
+  store_id: string;
+  store_name: string;
+  quantity: number;
+  purchase_price: number;
+  selling_price: number;
+}
+
 export interface Product {
   id: string;
   name: string;
   description: string;
-  purchase_price: number;
-  selling_price: number;
   category: string;
   supplier_id: string;
   supplier_name?: string;
-  store_id: string;
-  store_name?: string;
   sku: string;
   image?: string;
   barcode?: string;
-  quantity: number;
   created_at: string;
   updated_at: string;
+  // Aggregated data (new format for list page)
+  total_quantity?: number;
+  min_purchase_price?: number;
+  max_purchase_price?: number;
+  min_selling_price?: number;
+  max_selling_price?: number;
+  inventory_by_store?: ProductStoreInventory[];
+  // Legacy fields (for backward compatibility)
+  store_id?: string;
+  store_name?: string;
+  purchase_price?: number;
+  selling_price?: number;
+  quantity?: number;
 }
 
 export interface ProductFormData {

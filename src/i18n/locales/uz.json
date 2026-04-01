@@ -30,7 +30,10 @@
     "date": "Sana",
     "completed": "Bajarildi",
     "pending": "Kutilmoqda",
-    "accepted": "Qabul qilingan"
+    "accepted": "Qabul qilingan",
+    "showing": "Ko'rsatilyapti",
+    "to": "dan",
+    "of": "jami"
   },
   "nav": {
     "dashboard": "Bosh sahifa",
@@ -90,6 +93,7 @@
     "supplier": "Ta'minotchi",
     "store": "Do'kon",
     "quantity": "Miqdor",
+    "totalQuantity": "Jami miqdor",
     "image": "Rasm",
     "generateBarcode": "Barcode generatsiya qilish",
     "printBarcode": "Barcode chop etish",
@@ -235,5 +239,31 @@
     "notFound": "Topilmadi",
     "unauthorized": "Ruxsat yo'q",
     "validationError": "Ma'lumotlarni tekshirish xatoligi"
+  },
+  "reports": {
+    "title": "Hisobotlar",
+    "description": "Hisobotlarni ko'rish va yaratish",
+    "stats": {
+      "totalSales": "Jami sotuvlar",
+      "totalPurchases": "Jami xaridlar",
+      "netProfit": "Sof foyda",
+      "totalDebt": "Jami qarzdorlik"
+    },
+    "filters": "Filtrlar",
+    "allTypes": "Barcha turlar",
+    "types": {
+      "sales": "Sotuvlar",
+      "inventory": "Ombor",
+      "financial": "Moliya",
+      "transfer": "O'tkazmalar"
+    },
+    "periods": {
+      "week": "Hafta",
+      "month": "Oy",
+      "quarter": "Chorak",
+      "year": "Yil"
+    },
+    "ready": "Tayyor",
+    "processing": "Qayta ishlanmoqda"
   }
 }

@@ -30,7 +30,10 @@
     "date": "Дата",
     "completed": "Выполнено",
     "pending": "Ожидание",
-    "accepted": "Принято"
+    "accepted": "Принято",
+    "showing": "Показано",
+    "to": "из",
+    "of": "всего"
   },
   "nav": {
     "dashboard": "Главная",
@@ -90,6 +93,7 @@
     "supplier": "Поставщик",
     "store": "Магазин",
     "quantity": "Количество",
+    "totalQuantity": "Общее количество",
     "image": "Изображение",
     "generateBarcode": "Сгенерировать штрихкод",
     "printBarcode": "Печать штрихкода",
@@ -235,5 +239,31 @@
     "notFound": "Не найдено",
     "unauthorized": "Доступ запрещён",
     "validationError": "Ошибка валидации"
+  },
+  "reports": {
+    "title": "Отчёты",
+    "description": "Просмотр и генерация отчётов",
+    "stats": {
+      "totalSales": "Всего продаж",
+      "totalPurchases": "Всего закупок",
+      "netProfit": "Чистая прибыль",
+      "totalDebt": "Общая задолженность"
+    },
+    "filters": "Фильтры",
+    "allTypes": "Все типы",
+    "types": {
+      "sales": "Продажи",
+      "inventory": "Склад",
+      "financial": "Финансы",
+      "transfer": "Перемещения"
+    },
+    "periods": {
+      "week": "Неделя",
+      "month": "Месяц",
+      "quarter": "Квартал",
+      "year": "Год"
+    },
+    "ready": "Готов",
+    "processing": "Обработка"
   }
 }

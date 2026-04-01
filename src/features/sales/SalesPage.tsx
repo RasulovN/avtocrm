@@ -11,10 +11,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { salesService } from '../../services/salesService';
 import { storeService } from '../../services/storeService';
 import { productService } from '../../services/productService';
-import type { Store, Product } from '../../types';
+import type { Store, Product, SaleFormData } from '../../types';
 import { formatCurrency } from '../../utils';
+import toast from 'react-hot-toast';
 
-interface SaleItem {
+// Cart item interface for POS
+interface CartItem {
   product_id: string;
   product_name: string;
   quantity: number;
@@ -33,7 +35,7 @@ export function SalesPage() {
   const [barcode, setBarcode] = useState('');
 
   const [storeId, setStoreId] = useState('');
-  const [items, setItems] = useState<SaleItem[]>([]);
+  const [items, setItems] = useState<CartItem[]>([]);
 
   useEffect(() => {
     loadData();
@@ -85,9 +87,9 @@ export function SalesPage() {
         product_id: product.id,
         product_name: product.name,
         quantity: 1,
-        purchase_price: product.purchase_price,
-        selling_price: product.selling_price,
-        total: product.selling_price,
+        purchase_price: product.purchase_price ?? 0,
+        selling_price: product.selling_price ?? 0,
+        total: product.selling_price ?? 0,
       }]);
     }
   };

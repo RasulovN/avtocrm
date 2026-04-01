@@ -22,6 +22,7 @@ import { SalesPage } from './features/sales/SalesPage';
 import { SupplierListPage } from './features/suppliers/SupplierListPage';
 import { StoreListPage } from './features/stores/StoreListPage';
 import { SettingsPage } from './features/settings/SettingsPage';
+import { ReportsPage } from './features/reports/ReportsPage';
 
 // Styles
 import './i18n';
@@ -147,7 +148,7 @@ function App() {
         {/* Reports */}
         <Route path={`/:lang/reports`} element={
           <MainLayout>
-            <DashboardPage />
+            <ReportsPage />
           </MainLayout>
         } />
         
