@@ -17,6 +17,7 @@ import { InventoryListPage } from './features/inventory/InventoryListPage';
 import { InventoryCreatePage } from './features/inventory/InventoryCreatePage';
 import { TransferListPage } from './features/transfers/TransferListPage';
 import { TransferCreatePage } from './features/transfers/TransferCreatePage';
+import { TransferRequestsPage } from './features/transfers/TransferRequestsPage';
 import { SalesListPage } from './features/sales/SalesListPage';
 import { SalesPage } from './features/sales/SalesPage';
 import { SupplierListPage } from './features/suppliers/SupplierListPage';
@@ -114,6 +115,19 @@ function App() {
         <Route path={`/:lang/transfers/new`} element={
           <MainLayout>
             <TransferCreatePage />
+          </MainLayout>
+        } />
+        {/* Transfers - Request */}
+        <Route path={`/:lang/transfers/requests`} element={
+          <MainLayout>
+            <TransferRequestsPage />
+          </MainLayout>
+        } />
+        
+        {/* Transfer Requests */}
+        <Route path={`/:lang/transfer-requests`} element={
+          <MainLayout>
+            <TransferRequestsPage />
           </MainLayout>
         } />
         

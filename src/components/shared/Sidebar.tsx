@@ -15,6 +15,7 @@ import {
   FileText,
   Settings,
   Folder,
+  Send,
 } from 'lucide-react';
 import { cn } from '../../utils';
 import { useAuthStore } from '../../app/store';
@@ -33,6 +34,7 @@ const navItems: NavItem[] = [
   { titleKey: 'nav.categories', href: '/categories', icon: Folder },
   { titleKey: 'nav.inventory', href: '/inventory', icon: ArrowDownToLine, roles: ['admin'] },
   { titleKey: 'nav.transfers', href: '/transfers', icon: ArrowRightLeft },
+  { titleKey: 'nav.transferRequests', href: '/transfer-requests', icon: Send },
   { titleKey: 'nav.sales', href: '/sales', icon: DollarSign },
   { titleKey: 'nav.suppliers', href: '/suppliers', icon: Truck, roles: ['admin'] },
   { titleKey: 'nav.stores', href: '/stores', icon: Store, roles: ['admin'] },

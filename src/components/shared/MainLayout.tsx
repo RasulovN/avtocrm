@@ -25,6 +25,8 @@ import {
   Plus,
   List,
   ArrowLeft,
+  Upload,
+  Download,
 } from 'lucide-react';
 import { cn } from '../../utils';
 import { useThemeStore, useAuthStore } from '../../app/store';
@@ -64,7 +66,8 @@ const subNavs: Record<string, SubNavItem[]> = {
   '/transfers': [
     { titleKey: 'transfers.list', href: '/transfers', icon: List },
     { titleKey: 'transfers.createTransfer', href: '/transfers/new', icon: Plus },
-  ],
+    { titleKey: 'transfers.requestTransfer', href: '/transfers/requests', icon: Download },
+  ], 
   '/sales': [
     { titleKey: 'sales.list', href: '/sales', icon: List },
     { titleKey: 'sales.newSale', href: '/sales/new', icon: Plus },

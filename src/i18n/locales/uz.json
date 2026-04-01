@@ -41,6 +41,7 @@
     "categories": "Kategoriyalar",
     "inventory": "Kirim",
     "transfers": "O'tkazmalar",
+    "transferRequests": "So'rovlar",
     "sales": "Sotuvlar",
     "suppliers": "Ta'minotchilar",
     "stores": "Do'konlar",
@@ -164,7 +165,8 @@
     "listDescription": "O'tkazmalar ro'yxati",
     "history": "O'tkazmalar tarixi",
     "noData": "O'tkazmalar yo'q",
-    "list": "Ro'yxat"
+    "list": "Ro'yxat",
+    "requestTransfer": "O'tkazma so'rovi"
   },
   "sales": {
     "title": "Sotuvlar",
