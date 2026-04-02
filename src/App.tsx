@@ -22,6 +22,7 @@ import { SalesListPage } from './features/sales/SalesListPage';
 import { SalesPage } from './features/sales/SalesPage';
 import { SupplierListPage } from './features/suppliers/SupplierListPage';
 import { StoreListPage } from './features/stores/StoreListPage';
+import { UserListPage } from './features/users/UserListPage';
 import { SettingsPage } from './features/settings/SettingsPage';
 import { ReportsPage } from './features/reports/ReportsPage';
 
@@ -156,6 +157,13 @@ function App() {
         <Route path={`/:lang/stores`} element={
           <MainLayout>
             <StoreListPage />
+          </MainLayout>
+        } />
+        
+        {/* Users */}
+        <Route path={`/:lang/users`} element={
+          <MainLayout>
+            <UserListPage />
           </MainLayout>
         } />
         

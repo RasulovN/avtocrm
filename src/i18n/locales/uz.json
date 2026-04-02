@@ -39,14 +39,15 @@
     "dashboard": "Bosh sahifa",
     "products": "Mahsulotlar",
     "categories": "Kategoriyalar",
-    "inventory": "Kirim",
     "transfers": "O'tkazmalar",
     "transferRequests": "So'rovlar",
     "sales": "Sotuvlar",
     "suppliers": "Ta'minotchilar",
     "stores": "Do'konlar",
+    "users": "Foydalanuvchilar",
     "reports": "Hisobotlar",
-    "settings": "Sozlamalar"
+    "settings": "Sozlamalar",
+    "inventory": "Kirim"
   },
   "auth": {
     "login": "Kirish",
@@ -224,6 +225,28 @@
     "storeAdded": "Do'kon muvaffaqiyatli qo'shildi",
     "storeUpdated": "Do'kon muvaffaqiyatli yangilandi",
     "storeDeleted": "Do'kon muvaffaqiyatli o'chirildi"
+  },
+  "users": {
+    "title": "Foydalanuvchilar",
+    "addUser": "Foydalanuvchi qo'shish",
+    "editUser": "Foydalanuvchini tahrirlash",
+    "userId": "Foydalanuvchi ID",
+    "fullName": "F.I.O",
+    "email": "Email",
+    "phone": "Telefon",
+    "password": "Parol",
+    "role": "Rol",
+    "store": "Do'kon",
+    "logs": "Loglar",
+    "noLogs": "Loglar yo'q",
+    "admin": "Admin",
+    "storeAdmin": "Do'kon Admin",
+    "storeUser": "Do'kon Foydalanuvchi",
+    "noUsers": "Foydalanuvchilar yo'q",
+    "userAdded": "Foydalanuvchi muvaffaqiyatli qo'shildi",
+    "userUpdated": "Foydalanuvchi muvaffaqiyatli yangilandi",
+    "userDeleted": "Foydalanuvchi muvaffaqiyatli o'chirildi",
+    "optional": "(ixtiyoriy)"
   },
   "theme": {
     "lightMode": "Yorug' rejim",
