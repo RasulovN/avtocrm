@@ -28,12 +28,46 @@ export function SalesPage() {
   const [barcode, setBarcode] = useState('');
 
   const [storeId, setStoreId] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
   const [items, setItems] = useState<CartItem[]>([]);
+
+  // Payment states
+  const [cashAmount, setCashAmount] = useState(0);
+  const [cardAmount, setCardAmount] = useState(0);
+  const [discount, setDiscount] = useState(0);
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [activePayment, setActivePayment] = useState<'cash' | 'card' | null>(null);
+
+  // Computed values
+  const totalPrice = items.reduce((sum, item) => sum + item.total, 0);
+  const totalWithDiscount = totalPrice - Math.min(discount, totalPrice);
+  const totalPaid = cashAmount + cardAmount;
+  const change = totalPaid > totalWithDiscount ? totalPaid - totalWithDiscount : 0;
+  const debt = totalWithDiscount > totalPaid ? totalWithDiscount - totalPaid : 0;
+
+  // Get unique categories from products
+  const categories = [...new Set(products.map(p => p.category).filter(c => c && c.trim()))];
+
+  // Filter products by store and category
+  const filteredProducts = products.filter(p => {
+    const matchStore = !storeId || p.store_id === storeId;
+    const matchCategory = !categoryFilter || p.category === categoryFilter;
+    return matchStore && matchCategory;
+  });
 
   useEffect(() => {
     loadData();
     barcodeInputRef.current?.focus();
   }, []);
+
+  const handleDiscountChange = (value: number) => {
+    setDiscount(value);
+    if (activePayment === 'cash') {
+      setCashAmount(totalPrice - Math.min(value, totalPrice));
+    } else if (activePayment === 'card') {
+      setCardAmount(totalPrice - Math.min(value, totalPrice));
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -100,7 +134,40 @@ export function SalesPage() {
     setItems(items.filter((_, i) => i !== index));
   };
 
-  const totalPrice = items.reduce((sum, item) => sum + item.total, 0);
+  const handleQuickCash = () => {
+    setCashAmount(totalWithDiscount);
+    setCardAmount(0);
+    setActivePayment('cash');
+  };
+  const handleQuickCard = () => {
+    setCardAmount(totalWithDiscount);
+    setCashAmount(0);
+    setActivePayment('card');
+  };
+
+  const handleFinishSale = () => {
+    if (items.length === 0) return;
+    setShowReceipt(true);
+    _setSaving(true);
+    setTimeout(() => _setSaving(false), 1000);
+  };
+
+  const resetSale = () => {
+    setShowReceipt(false);
+    setItems([]);
+    setCashAmount(0);
+    setCardAmount(0);
+    setDiscount(0);
+    setActivePayment(null);
+    barcodeInputRef.current?.focus();
+  };
+
+  const printReceipt = () => {
+    window.print();
+  };
+
+  const receiptTotal = totalWithDiscount;
+  const receiptProfit = items.reduce((sum, item) => sum + ((item.selling_price - item.purchase_price) * item.quantity), 0);
 
   return (
     <div>
@@ -132,7 +199,7 @@ export function SalesPage() {
                 </div>
                 <div className="flex gap-2 mt-2">
                   <Select value={storeId} onValueChange={setStoreId}>
-                    <SelectTrigger className="w-[150px] h-8 dark:bg-gray-900 dark:border-gray-600 dark:text-white">
+                    <SelectTrigger className="w-[120px] h-8 dark:bg-gray-900 dark:border-gray-600 dark:text-white">
                       <SelectValue placeholder="Do'kon" />
                     </SelectTrigger>
                     <SelectContent>
@@ -141,10 +208,20 @@ export function SalesPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                    <SelectTrigger className="w-[120px] h-8 dark:bg-gray-900 dark:border-gray-600 dark:text-white">
+                      <SelectValue placeholder="Kategoriya" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map(cat => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto space-y-1.5">
-                {products.map((product) => (
+                {filteredProducts.map((product) => (
                   <button
                     key={product.id}
                     className="w-full text-left rounded-lg p-2.5 border border-gray-900 hover:bg-accent dark:hover:bg-gray-900 transition-colors"
@@ -240,9 +317,15 @@ export function SalesPage() {
                   <span className="text-muted-foreground dark:text-gray-400">Summa:</span>
                   <span className="font-medium dark:text-gray-200">{formatCurrency(totalPrice)}</span>
                 </div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground dark:text-gray-400">Chegirma:</span>
+                    <span className="font-medium dark:text-gray-200">-{formatCurrency(discount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between pt-1.5 border-t dark:border-gray-600">
                   <span className="font-semibold dark:text-white">JAMI:</span>
-                  <span className="text-xl font-bold text-green-600 dark:text-green-400">{formatCurrency(totalPrice)}</span>
+                  <span className="text-xl font-bold text-green-600 dark:text-green-400">{formatCurrency(totalWithDiscount)}</span>
                 </div>
               </div>
             </div>
@@ -257,42 +340,184 @@ export function SalesPage() {
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground dark:text-gray-400">Tezkor to'lov</Label>
                   <div className="grid grid-cols-2 gap-1.5">
-                    <Button type="button" variant="outline" className="h-10 text-xs dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900">Naqd</Button>
-                    <Button type="button" variant="outline" className="h-10 text-xs dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900">Karta</Button>
+                    <Button 
+                      type="button" 
+                      variant={activePayment === 'cash' ? 'default' : 'outline'} 
+                      className={`h-10 text-xs ${activePayment === 'cash' ? '' : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'}`} 
+                      onClick={handleQuickCash}
+                    >
+                      Naqd
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant={activePayment === 'card' ? 'default' : 'outline'} 
+                      className={`h-10 text-xs ${activePayment === 'card' ? '' : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'}`} 
+                      onClick={handleQuickCard}
+                    >
+                      Karta
+                    </Button>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <div>
                     <Label className="text-xs dark:text-gray-300">Naqd</Label>
-                    <Input type="number" min="0" placeholder="0" className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
+                    <Input 
+                      type="number" 
+                      min="0" 
+                      placeholder="0" 
+                      value={cashAmount || ''}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setCashAmount(Number(e.target.value))}
+                      className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white" 
+                    />
                   </div>
                   <div>
                     <Label className="text-xs dark:text-gray-300">Karta</Label>
-                    <Input type="number" min="0" placeholder="0" className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
+                    <Input 
+                      type="number" 
+                      min="0" 
+                      placeholder="0" 
+                      value={cardAmount || ''}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setCardAmount(Number(e.target.value))}
+                      className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white" 
+                    />
                   </div>
                   <div>
-                    <Label className="text-xs dark:text-gray-300">Chgirma</Label>
-                    <Input type="number" min="0" placeholder="0" className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
+                    <Label className="text-xs dark:text-gray-300">Chegirma</Label>
+                    <Input 
+                      type="number" 
+                      min="0" 
+                      placeholder="0" 
+                      value={discount || ''}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => handleDiscountChange(Number(e.target.value))}
+                      className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white" 
+                    />
                   </div>
                 </div>
                 <div className="rounded-lg p-2.5 bg-muted/50 dark:bg-gray-900 space-y-1.5">
                   <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground dark:text-gray-400">To'lanadi:</span>
+                    <span className="text-muted-foreground dark:text-gray-400">Jami:</span>
                     <span className="font-bold dark:text-white">{formatCurrency(totalPrice)}</span>
                   </div>
-                   <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground dark:text-gray-400">Qarz:</span>
-                    <span className="font-bold dark:text-white">{formatCurrency(totalPrice)}</span>
+                  {discount > 0 && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground dark:text-gray-400">Chegirma:</span>
+                      <span className="font-bold dark:text-white">-{formatCurrency(discount)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground dark:text-gray-400">To'landi:</span>
+                    <span className="font-bold dark:text-white">{formatCurrency(totalPaid)}</span>
                   </div>
+                  {change > 0 && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground dark:text-gray-400">Qaytim:</span>
+                      <span className="font-bold text-blue-600 dark:text-blue-400">{formatCurrency(change)}</span>
+                    </div>
+                  )}
+                  {debt > 0 && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground dark:text-gray-400">Qarz:</span>
+                      <span className="font-bold text-red-600 dark:text-red-400">{formatCurrency(debt)}</span>
+                    </div>
+                  )}
                 </div>
-                <Button type="submit" className="w-full h-11 text-sm font-semibold dark:bg-green-600 dark:hover:bg-green-700" disabled={_saving}>
-                  {_saving ? 'Yuklanmoqda...' : `Sotuvni yakunlash — ${formatCurrency(totalPrice)}`}
+                <Button type="button" className="w-full h-11 text-sm font-semibold dark:bg-green-600 dark:hover:bg-green-700" onClick={handleFinishSale} disabled={_saving || items.length === 0}>
+                  {_saving ? 'Yuklanmoqda...' : `Sotuvni yakunlash — ${formatCurrency(totalWithDiscount)}`}
                 </Button>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {showReceipt && (
+        <div className="receipt-modal fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="receipt-content bg-white dark:bg-gray-800 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b dark:border-gray-600 flex justify-between items-center">
+              <h3 className="text-lg font-bold dark:text-white">Chek</h3>
+              <Button variant="ghost" size="icon" onClick={() => setShowReceipt(false)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="p-4 space-y-3">
+              <div className="text-center border-b dark:border-gray-600 pb-3">
+                <h4 className="text-xl font-bold dark:text-white">AvtoCRM</h4>
+                <p className="text-sm text-muted-foreground dark:text-gray-400">Sotuv cheki</p>
+                <p className="text-xs text-muted-foreground dark:text-gray-400">{new Date().toLocaleString()}</p>
+              </div>
+              
+              <div className="space-y-2 text-sm">
+                <div className="font-semibold dark:text-white">Tovarlar:</div>
+                {items.map((item, idx) => (
+                  <div key={idx} className="flex justify-between dark:text-gray-300">
+                    <div className="flex-1">
+                      <span>{item.product_name}</span>
+                      <span className="text-muted-foreground dark:text-gray-400"> x{item.quantity}</span>
+                    </div>
+                    <span>{formatCurrency(item.total)}</span>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="border-t dark:border-gray-600 pt-2 space-y-1 text-sm">
+                <div className="flex justify-between dark:text-gray-300">
+                  <span>Jami:</span>
+                  <span>{formatCurrency(totalPrice)}</span>
+                </div>
+                {discount > 0 && (
+                  <div className="flex justify-between dark:text-gray-300">
+                    <span>Chegirma:</span>
+                    <span>-{formatCurrency(discount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold text-lg dark:text-white">
+                  <span>JAMI:</span>
+                  <span>{formatCurrency(receiptTotal)}</span>
+                </div>
+              </div>
+              
+              <div className="border-t dark:border-gray-600 pt-2 space-y-1 text-sm">
+                <div className="flex justify-between dark:text-gray-300">
+                  <span>Naqd:</span>
+                  <span>{formatCurrency(cashAmount)}</span>
+                </div>
+                <div className="flex justify-between dark:text-gray-300">
+                  <span>Karta:</span>
+                  <span>{formatCurrency(cardAmount)}</span>
+                </div>
+                <div className="flex justify-between dark:text-gray-300">
+                  <span>Jami to'landi:</span>
+                  <span>{formatCurrency(totalPaid)}</span>
+                </div>
+                {change > 0 && (
+                  <div className="flex justify-between text-blue-600 dark:text-blue-400">
+                    <span>Qaytim:</span>
+                    <span>{formatCurrency(change)}</span>
+                  </div>
+                )}
+                {debt > 0 && (
+                  <div className="flex justify-between text-red-600 dark:text-red-400">
+                    <span>Qarz:</span>
+                    <span>{formatCurrency(debt)}</span>
+                  </div>
+                )}
+              </div>
+              
+              <div className="text-center text-xs text-muted-foreground dark:text-gray-400 pt-3">
+                Xaridingiz uchun rahmat!
+              </div>
+            </div>
+            <div className="p-4 border-t dark:border-gray-600 flex gap-2">
+              <Button className="flex-1" onClick={printReceipt}>
+                Chop etish
+              </Button>
+              <Button variant="outline" className="flex-1" onClick={resetSale}>
+                Yangi sotuv
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
