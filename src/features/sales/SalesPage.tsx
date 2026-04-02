@@ -1,19 +1,13 @@
 import { useState, useEffect, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
-import { useTranslation } from 'react-i18next';
 import { ScanBarcode, Trash2, DollarSign } from 'lucide-react';
-import { PageHeader } from '../../components/shared/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../../components/ui/Card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/Table';
-import { salesService } from '../../services/salesService';
 import { storeService } from '../../services/storeService';
 import { productService } from '../../services/productService';
-import type { Store, Product, SaleFormData } from '../../types';
+import type { Store, Product } from '../../types';
 import { formatCurrency } from '../../utils';
-import toast from 'react-hot-toast';
 
 // Cart item interface for POS
 interface CartItem {
@@ -26,12 +20,11 @@ interface CartItem {
 }
 
 export function SalesPage() {
-  const { t } = useTranslation();
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const [stores, setStores] = useState<Store[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [_loading, _setLoading] = useState(false);
+  const [_saving, _setSaving] = useState(false);
   const [barcode, setBarcode] = useState('');
 
   const [storeId, setStoreId] = useState('');
@@ -44,7 +37,7 @@ export function SalesPage() {
 
   const loadData = async () => {
     try {
-      setLoading(true);
+      _setLoading(true);
       const [storesRes, productsRes] = await Promise.all([
         storeService.getAll(),
         productService.getAll({ limit: 100 }),
@@ -61,7 +54,7 @@ export function SalesPage() {
         { id: '2', name: 'Brake Pads', purchase_price: 45000, selling_price: 75000, category: 'Brakes', supplier_id: '1', store_id: '1', sku: 'SKU-002', barcode: '987654321', description: '', quantity: 50, created_at: '', updated_at: '' },
       ]);
     } finally {
-      setLoading(false);
+      _setLoading(false);
     }
   };
 
@@ -102,63 +95,45 @@ export function SalesPage() {
     setItems(newItems);
   };
 
-  const updatePrice = (index: number, selling_price: number) => {
-    const newItems = [...items];
-    newItems[index].selling_price = selling_price;
-    newItems[index].total = selling_price * newItems[index].quantity;
-    setItems(newItems);
-  };
 
   const removeItem = (index: number) => {
     setItems(items.filter((_, i) => i !== index));
   };
 
-  const totalCost = items.reduce((sum, item) => sum + (item.purchase_price * item.quantity), 0);
   const totalPrice = items.reduce((sum, item) => sum + item.total, 0);
-  const profit = totalPrice - totalCost;
-
-  const handleSubmit = async (e: ChangeEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!storeId || items.length === 0) return;
-    try {
-      setSaving(true);
-      await salesService.create({
-        store_id: storeId,
-        items: items.map(item => ({
-          product_id: item.product_id,
-          quantity: item.quantity,
-          purchase_price: item.purchase_price,
-          selling_price: item.selling_price,
-        })),
-      });
-      setItems([]);
-    } catch (error) {
-      console.error('Failed to create sale:', error);
-    } finally {
-      setSaving(false);
-    }
-  };
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title={t('sales.title')}
-        description={t('sales.scanBarcode')}
-      />
-
-      <form onSubmit={handleSubmit}>
-        <div className="grid gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('sales.saleInfo')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>{t('stores.title')}</Label>
+    <div>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight dark:text-white">Sotuvlar (POS)</h2>
+            <p className="text-sm text-muted-foreground dark:text-gray-400">Panel prodaj</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-12 gap-2 lg:gap-3 h-[calc(100vh-11rem)]">
+          {/* Katalog (chap panel) */}
+          <div className="col-span-5 flex flex-col space-y-2">
+            <div className="bg-card border border-gray-900 rounded-lg flex-1 flex flex-col p-3">
+              <div className="mb-3">
+                <h4 className="text-base font-semibold flex items-center gap-2 dark:text-white mb-2">
+                  Katalog tovarov
+                </h4>
+                <div className="relative py-1">
+                  <ScanBarcode className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground dark:text-gray-400" />
+                  <Input
+                    ref={barcodeInputRef}
+                    placeholder="Poisk: nomi, artikul, shtrixkod"
+                    value={barcode}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setBarcode(e.target.value)}
+                    onKeyDown={handleBarcodeScan}
+                    className="pl-9 h-9 dark:bg-gray-900 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+                <div className="flex gap-2 mt-2">
                   <Select value={storeId} onValueChange={setStoreId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={t('sales.selectStore')} />
+                    <SelectTrigger className="w-[150px] h-8 dark:bg-gray-900 dark:border-gray-600 dark:text-white">
+                      <SelectValue placeholder="Do'kon" />
                     </SelectTrigger>
                     <SelectContent>
                       {stores.map(s => (
@@ -167,103 +142,157 @@ export function SalesPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>{t('sales.scanBarcode')}</Label>
-                  <div className="relative">
-                    <ScanBarcode className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      ref={barcodeInputRef}
-                      placeholder={t('sales.scanPlaceholder')}
-                      value={barcode}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => setBarcode(e.target.value)}
-                      onKeyDown={handleBarcodeScan}
-                      className="pl-9"
-                    />
-                  </div>
+              </div>
+              <div className="flex-1 overflow-y-auto space-y-1.5">
+                {products.map((product) => (
+                  <button
+                    key={product.id}
+                    className="w-full text-left rounded-lg p-2.5 border border-gray-900 hover:bg-accent dark:hover:bg-gray-900 transition-colors"
+                    onClick={() => addProduct(product)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="font-medium dark:text-white">{product.name}</div>
+                        <div className="text-xs text-muted-foreground dark:text-gray-400">{product.sku}</div>
+                      </div>
+                      <div className="text-right ml-3">
+                        <div className="font-bold dark:text-white">{formatCurrency(product.selling_price ?? 0)}</div>
+                        <div className="flex items-center justify-end">
+                          <span className="inline-flex items-center rounded bg-primary/10 dark:bg-gray-600 px-1.5 py-0.5 text-xs font-medium dark:text-gray-200">
+                            {product.quantity}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          {/* Chek (o'rta panel) */}
+          <div className="col-span-4 flex flex-col space-y-2">
+            <div className="bg-card border border-gray-900 rounded-lg flex-1 flex flex-col">
+              <div className="p-3 pb-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-base font-semibold flex items-center gap-2 dark:text-white">
+                    <DollarSign className="h-4 w-4" /> Chek
+                    <span className="inline-flex items-center rounded bg-secondary dark:bg-gray-800 px-1.5 py-0.5 text-xs font-medium dark:text-gray-200 ml-1">
+                      {items.length}
+                    </span>
+                  </h4>
+                  <Button type="button" variant="ghost" className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 h-7 px-2 text-sm" onClick={() => setItems([])}>
+                    <Trash2 className="h-3.5 w-3.5 mr-1" /> Tozalash
+                  </Button>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('products.title')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {items.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <ScanBarcode className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>{t('sales.scanToAdd')}</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('products.title')}</TableHead>
-                      <TableHead>{t('inventory.quantity')}</TableHead>
-                      <TableHead>{t('products.sellingPrice')}</TableHead>
-                      <TableHead>{t('common.total')}</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {items.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">{item.product_name}</TableCell>
-                        <TableCell>
+              <div className="px-3 flex-1 overflow-y-auto space-y-2">
+                {items.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground dark:text-gray-400">
+                    <ScanBarcode className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">Shtrixkod skanerlang</p>
+                  </div>
+                ) : (
+                  items.map((item, index) => (
+                    <div key={item.product_id} className="rounded-lg p-2.5 bg-muted/50 dark:bg-gray-900 hover:shadow-sm transition-shadow">
+                      <div className="flex items-start justify-between mb-1.5">
+                        <div className="flex-1">
+                          <div className="font-medium dark:text-white text-sm">{item.product_name}</div>
+                          <div className="text-xs text-muted-foreground dark:text-gray-400">{products.find(p => p.id === item.product_id)?.sku}</div>
+                        </div>
+                        <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => removeItem(index)}>
+                          <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-3 gap-1.5 text-xs">
+                        <div>
+                          <div className="text-muted-foreground dark:text-gray-400 mb-1">Soni</div>
                           <Input
                             type="number"
                             min="1"
                             value={item.quantity}
                             onChange={(e: ChangeEvent<HTMLInputElement>) => updateQuantity(index, Number(e.target.value))}
-                            className="w-20"
+                            className="h-7 text-center text-xs dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                           />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            value={item.selling_price}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => updatePrice(index, Number(e.target.value))}
-                            className="w-32"
-                          />
-                        </TableCell>
-                        <TableCell className="font-medium">{formatCurrency(item.total)}</TableCell>
-                        <TableCell>
-                          <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(index)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-            {items.length > 0 && (
-              <CardFooter className="flex flex-col gap-4">
-                <div className="grid grid-cols-3 gap-4 w-full">
-                  <div className="p-4 bg-muted rounded-lg">
-                    <p className="text-sm text-muted-foreground">{t('sales.totalCost')}</p>
-                    <p className="text-xl font-bold">{formatCurrency(totalCost)}</p>
-                  </div>
-                  <div className="p-4 bg-primary/10 rounded-lg">
-                    <p className="text-sm text-muted-foreground">{t('common.total')}</p>
-                    <p className="text-xl font-bold">{formatCurrency(totalPrice)}</p>
-                  </div>
-                  <div className="p-4 bg-green-100 rounded-lg">
-                    <p className="text-sm text-muted-foreground">{t('sales.profit')}</p>
-                    <p className="text-xl font-bold text-green-700">{formatCurrency(profit)}</p>
+                        </div>
+                        <div>
+                          <div className="text-muted-foreground dark:text-gray-400 mb-1">Narx</div>
+                          <div className="h-7 flex items-center justify-center bg-muted dark:bg-gray-600 rounded text-xs dark:text-gray-200">
+                            {formatCurrency(item.selling_price)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-muted-foreground dark:text-gray-400 mb-1">Jami</div>
+                          <div className="h-7 flex items-center justify-center bg-green-100 dark:bg-green-900/30 rounded text-xs font-semibold text-green-700 dark:text-green-400">
+                            {formatCurrency(item.total)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="p-3 pt-2 space-y-1.5 bg-muted/30 dark:bg-gray-900/50">
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground dark:text-gray-400">Tovarlar:</span>
+                  <span className="font-medium dark:text-gray-200">{items.length}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground dark:text-gray-400">Summa:</span>
+                  <span className="font-medium dark:text-gray-200">{formatCurrency(totalPrice)}</span>
+                </div>
+                <div className="flex justify-between pt-1.5 border-t dark:border-gray-600">
+                  <span className="font-semibold dark:text-white">JAMI:</span>
+                  <span className="text-xl font-bold text-green-600 dark:text-green-400">{formatCurrency(totalPrice)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Oplata (o'ng panel) */}
+          <div className="col-span-3 flex flex-col space-y-2">
+            <div className="bg-card border border-gray-900 rounded-lg flex-1 flex flex-col">
+              <div className="p-3 pb-2">
+                <h4 className="text-base font-semibold dark:text-white">To'lov</h4>
+              </div>
+              <div className="px-3 flex-1 space-y-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground dark:text-gray-400">Tezkor to'lov</Label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <Button type="button" variant="outline" className="h-10 text-xs dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900">Naqd</Button>
+                    <Button type="button" variant="outline" className="h-10 text-xs dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900">Karta</Button>
                   </div>
                 </div>
-                <Button type="submit" disabled={saving} className="w-full">
-                  <DollarSign className="h-4 w-4 mr-2" />
-                  {saving ? t('common.loading') : `${t('sales.completeSale')} - ${formatCurrency(totalPrice)}`}
+                <div className="space-y-2">
+                  <div>
+                    <Label className="text-xs dark:text-gray-300">Naqd</Label>
+                    <Input type="number" min="0" placeholder="0" className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
+                  </div>
+                  <div>
+                    <Label className="text-xs dark:text-gray-300">Karta</Label>
+                    <Input type="number" min="0" placeholder="0" className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
+                  </div>
+                  <div>
+                    <Label className="text-xs dark:text-gray-300">Chgirma</Label>
+                    <Input type="number" min="0" placeholder="0" className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
+                  </div>
+                </div>
+                <div className="rounded-lg p-2.5 bg-muted/50 dark:bg-gray-900 space-y-1.5">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground dark:text-gray-400">To'lanadi:</span>
+                    <span className="font-bold dark:text-white">{formatCurrency(totalPrice)}</span>
+                  </div>
+                   <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground dark:text-gray-400">Qarz:</span>
+                    <span className="font-bold dark:text-white">{formatCurrency(totalPrice)}</span>
+                  </div>
+                </div>
+                <Button type="submit" className="w-full h-11 text-sm font-semibold dark:bg-green-600 dark:hover:bg-green-700" disabled={_saving}>
+                  {_saving ? 'Yuklanmoqda...' : `Sotuvni yakunlash — ${formatCurrency(totalPrice)}`}
                 </Button>
-              </CardFooter>
-            )}
-          </Card>
+              </div>
+            </div>
+          </div>
         </div>
-      </form>
+      </div>
     </div>
   );
 }
