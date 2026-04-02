@@ -27,6 +27,7 @@ import {
   ArrowLeft,
   Upload,
   Download,
+  Users,
 } from 'lucide-react';
 import { cn } from '../../utils';
 import { useThemeStore, useAuthStore } from '../../app/store';
@@ -52,7 +53,7 @@ const navItems: NavItem[] = [
   { titleKey: 'nav.transfers', href: '/transfers', icon: ArrowRightLeft },
   { titleKey: 'nav.sales', href: '/sales', icon: DollarSign },
   { titleKey: 'nav.suppliers', href: '/suppliers', icon: Truck },
-  { titleKey: 'nav.stores', href: '/stores', icon: Store },
+  { titleKey: 'nav.stores', href: '/stores', icon: Store }, 
   { titleKey: 'nav.reports', href: '/reports', icon: BarChart3 },
   { titleKey: 'nav.settings', href: '/settings', icon: Settings },
 ];
@@ -71,6 +72,10 @@ const subNavs: Record<string, SubNavItem[]> = {
   '/sales': [
     { titleKey: 'sales.list', href: '/sales', icon: List },
     { titleKey: 'sales.newSale', href: '/sales/new', icon: Plus },
+  ],
+  '/stores': [
+    { titleKey: 'stores.list', href: '/stores', icon: List }, 
+    { titleKey: 'stores.manageUsers', href: '/stores/users', icon: Users },
   ],
 };
 
@@ -173,7 +178,6 @@ export function MainLayout({ children }: MainLayoutProps) {
   const currentUser = user || {
     username: 'Admin',
     role: 'admin',
-    email: 'admin@avtocrm.uz',
     phone: '+998 90 123-45-67',
   };
 
@@ -343,10 +347,6 @@ export function MainLayout({ children }: MainLayoutProps) {
                       <p className="text-xs text-muted-foreground capitalize">{currentUser.role}</p>
                     </div>
                     <div className="space-y-1 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">{t('auth.email')}:</span>
-                        <span className="truncate">{(currentUser as any).email || 'admin@avtocrm.uz'}</span>
-                      </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">{t('stores.phone')}:</span>
                         <span>{(currentUser as any).phone || '+998 90 123-45-67'}</span>

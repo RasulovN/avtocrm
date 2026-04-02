@@ -224,7 +224,21 @@
     "noStores": "Do'konlar yo'q",
     "storeAdded": "Do'kon muvaffaqiyatli qo'shildi",
     "storeUpdated": "Do'kon muvaffaqiyatli yangilandi",
-    "storeDeleted": "Do'kon muvaffaqiyatli o'chirildi"
+    "storeDeleted": "Do'kon muvaffaqiyatli o'chirildi",
+    "manageUsers": "Foydalanuvchilarni boshqarish",
+    "users": "Foydalanuvchilar",
+    "noUsers": "Foydalanuvchilar yo'q",
+    "addUser": "Foydalanuvchi qo'shish",
+    "editUser": "Foydalanuvchini tahrirlash",
+    "userId": "Foydalanuvchi ID",
+    "fullName": "F.I.O",
+    "email": "Email",
+    "password": "Parol",
+    "role": "Rol",
+    "logs": "Loglar",
+    "noLogs": "Loglar yo'q",
+    "admin": "Admin",
+    "list": "Do'konlar ro'yxati"
   },
   "users": {
     "title": "Foydalanuvchilar",

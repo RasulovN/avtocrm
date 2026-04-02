@@ -161,7 +161,7 @@ function App() {
         } />
         
         {/* Users */}
-        <Route path={`/:lang/users`} element={
+        <Route path={`/:lang/stores/users`} element={
           <MainLayout>
             <UserListPage />
           </MainLayout>

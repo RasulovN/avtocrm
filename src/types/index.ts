@@ -11,7 +11,6 @@ export interface UserLog {
 export interface User {
   id: string;
   user_id: string;
-  email: string;
   full_name: string;
   username?: string;
   password?: string;
@@ -24,7 +23,6 @@ export interface User {
 }
 
 export interface UserFormData {
-  email: string;
   full_name: string;
   password?: string;
   role: UserRole;

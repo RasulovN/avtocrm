@@ -28,7 +28,6 @@ export function UserListPage() {
   const [viewingUser, setViewingUser] = useState<User | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [formData, setFormData] = useState<UserFormData>({
-    email: '',
     full_name: '',
     password: '',
     role: 'store_user',
@@ -54,7 +53,6 @@ export function UserListPage() {
         {
           id: '1',
           user_id: 'USR001',
-          email: 'admin@avtocrm.uz',
           full_name: 'Admin User',
           role: 'admin',
           phone: '+998901234567',
@@ -66,7 +64,6 @@ export function UserListPage() {
         {
           id: '2',
           user_id: 'USR002',
-          email: 'store@avtocrm.uz',
           full_name: 'Store Manager',
           role: 'store_admin',
           phone: '+998901234568',
@@ -113,7 +110,6 @@ export function UserListPage() {
     if (user) {
       setEditingUser(user);
       setFormData({
-        email: user.email,
         full_name: user.full_name,
         password: '',
         role: user.role,
@@ -123,7 +119,6 @@ export function UserListPage() {
     } else {
       setEditingUser(null);
       setFormData({
-        email: '',
         full_name: '',
         password: '',
         role: 'store_user',
@@ -163,7 +158,6 @@ export function UserListPage() {
   const columns: Column<User>[] = [
     { key: 'user_id', header: t('users.userId') },
     { key: 'full_name', header: t('users.fullName') },
-    { key: 'email', header: t('users.email') },
     { key: 'phone', header: t('users.phone') },
     {
       key: 'role',
@@ -246,20 +240,11 @@ export function UserListPage() {
             <DialogTitle>{editingUser ? t('users.editUser') : t('users.addUser')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
+<div className="space-y-2">
               <Label>{t('users.fullName')}</Label>
               <Input
                 value={formData.full_name}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, full_name: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('users.email')}</Label>
-              <Input
-                type="email"
-                value={formData.email}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, email: e.target.value })}
                 required
               />
             </div>

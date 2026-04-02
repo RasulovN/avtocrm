@@ -1,6 +1,6 @@
 import { useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Save, User, Mail, Phone, Lock, History, Clock } from 'lucide-react';
+import { Save, User, Phone, Lock, History, Clock } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -19,7 +19,6 @@ interface LoginHistory {
 
 interface ProfileFormData {
   username: string;
-  email: string;
   phone: string;
 }
 
@@ -44,7 +43,6 @@ export function SettingsPage() {
   
   const [profileData, setProfileData] = useState<ProfileFormData>({
     username: user?.username || 'Admin',
-    email: user?.email || 'admin@avtocrm.uz',
     phone: user?.phone || '+998 90 123-45-67',
   });
 
@@ -114,19 +112,6 @@ export function SettingsPage() {
                     id="username"
                     value={profileData.username}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => handleProfileChange('username', e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">{t('common.email')}</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    value={profileData.email}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => handleProfileChange('email', e.target.value)}
                     className="pl-10"
                   />
                 </div>
