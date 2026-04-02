@@ -25,8 +25,8 @@ export function SupplierListPage() {
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [formData, setFormData] = useState<SupplierFormData>({
     name: '',
+    inn: '',
     phone: '',
-    email: '',
     address: '',
   });
   const [saving, setSaving] = useState(false);
@@ -44,8 +44,8 @@ export function SupplierListPage() {
     } catch (error) {
       console.error('Failed to load suppliers:', error);
       setSuppliers([
-        { id: '1', name: 'AutoParts Co', phone: '+998901234567', debt: 5000000, created_at: new Date().toISOString() },
-        { id: '2', name: 'Global Parts', phone: '+998901234568', debt: 3500000, created_at: new Date().toISOString() },
+        { id: '1', name: 'AutoParts Co', inn: '305123456', phone: '+998901234567', address: 'Toshkent', debt: 5000000, created_at: new Date().toISOString() },
+        { id: '2', name: 'Global Parts', inn: '305123457', phone: '+998901234568', address: 'Samarqand', debt: 3500000, created_at: new Date().toISOString() },
       ]);
       setTotal(2);
     } finally {
@@ -72,13 +72,13 @@ export function SupplierListPage() {
       setEditingSupplier(supplier);
       setFormData({
         name: supplier.name,
+        inn: supplier.inn || '',
         phone: supplier.phone || '',
-        email: supplier.email || '',
         address: supplier.address || '',
       });
     } else {
       setEditingSupplier(null);
-      setFormData({ name: '', phone: '', email: '', address: '' });
+      setFormData({ name: '', inn: '', phone: '', address: '' });
     }
     setDialogOpen(true);
   };
@@ -102,6 +102,7 @@ export function SupplierListPage() {
 
   const columns: Column<Supplier>[] = [
     { key: 'name', header: t('suppliers.supplierName') },
+    { key: 'inn', header: t('suppliers.inn') },
     { key: 'phone', header: t('suppliers.phone') },
     {
       key: 'debt',
@@ -109,6 +110,7 @@ export function SupplierListPage() {
       className: 'text-right',
       render: (item: Supplier) => formatCurrency(item.debt),
     },
+    { key: 'address', header: t('suppliers.address') },
     {
       key: 'created_at',
       header: t('common.createdAt'),
@@ -177,8 +179,8 @@ export function SupplierListPage() {
               <Input value={formData.phone} onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, phone: e.target.value })} />
             </div>
             <div className="space-y-2">
-              <Label>{t('suppliers.email')}</Label>
-              <Input type="email" value={formData.email} onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, email: e.target.value })} />
+              <Label>{t('suppliers.inn')}</Label>
+              <Input value={formData.inn} onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, inn: e.target.value })} />
             </div>
             <div className="space-y-2">
               <Label>{t('suppliers.address')}</Label>
