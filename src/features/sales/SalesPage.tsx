@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
-import { ScanBarcode, Trash2, DollarSign } from 'lucide-react';
+import { BrowserMultiFormatReader } from '@zxing/browser';
+import { ScanBarcode, Trash2, DollarSign, Search } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
@@ -37,6 +38,9 @@ export function SalesPage() {
   const [discount, setDiscount] = useState(0);
   const [showReceipt, setShowReceipt] = useState(false);
   const [activePayment, setActivePayment] = useState<'cash' | 'card' | null>(null);
+  const [showScanner, setShowScanner] = useState(false);
+  const scannerVideoRef = useRef<HTMLVideoElement>(null);
+  const scannerReaderRef = useRef<BrowserMultiFormatReader | null>(null);
 
   // Computed values
   const totalPrice = items.reduce((sum, item) => sum + item.total, 0);
@@ -102,23 +106,54 @@ export function SalesPage() {
     }
   };
 
+  const handleOpenScanner = () => {
+    setShowScanner(true);
+  };
+
+  useEffect(() => {
+    if (!showScanner) return;
+    const reader = new BrowserMultiFormatReader();
+    scannerReaderRef.current = reader;
+    const videoEl = scannerVideoRef.current;
+    if (!videoEl) return () => {
+      reader.reset();
+      scannerReaderRef.current = null;
+    };
+    reader.decodeFromVideoDevice(undefined, videoEl, (result) => {
+      if (result) {
+        const text = result.getText();
+        const product = products.find(p => p.barcode === text || p.sku === text);
+        if (product) {
+          addProduct(product);
+        }
+        setBarcode('');
+        setShowScanner(false);
+      }
+    });
+    return () => {
+      reader.reset();
+      scannerReaderRef.current = null;
+    };
+  }, [showScanner, products]);
+
   const addProduct = (product: Product) => {
-    const existingIndex = items.findIndex(item => item.product_id === product.id);
-    if (existingIndex >= 0) {
-      const newItems = [...items];
-      newItems[existingIndex].quantity += 1;
-      newItems[existingIndex].total = newItems[existingIndex].selling_price * newItems[existingIndex].quantity;
-      setItems(newItems);
-    } else {
-      setItems([...items, {
+    setItems(prevItems => {
+      const existingIndex = prevItems.findIndex(item => item.product_id === product.id);
+      if (existingIndex >= 0) {
+        const newItems = [...prevItems];
+        newItems[existingIndex].quantity += 1;
+        newItems[existingIndex].total = newItems[existingIndex].selling_price * newItems[existingIndex].quantity;
+        return newItems;
+      }
+      return [...prevItems, {
         product_id: product.id,
         product_name: product.name,
         quantity: 1,
         purchase_price: product.purchase_price ?? 0,
         selling_price: product.selling_price ?? 0,
         total: product.selling_price ?? 0,
-      }]);
-    }
+      }];
+    });
   };
 
   const updateQuantity = (index: number, quantity: number) => {
@@ -126,6 +161,14 @@ export function SalesPage() {
     const newItems = [...items];
     newItems[index].quantity = quantity;
     newItems[index].total = newItems[index].selling_price * quantity;
+    setItems(newItems);
+  };
+
+  const updatePrice = (index: number, price: number) => {
+    if (price < 0) return;
+    const newItems = [...items];
+    newItems[index].selling_price = price;
+    newItems[index].total = price * newItems[index].quantity;
     setItems(newItems);
   };
 
@@ -167,7 +210,6 @@ export function SalesPage() {
   };
 
   const receiptTotal = totalWithDiscount;
-  const receiptProfit = items.reduce((sum, item) => sum + ((item.selling_price - item.purchase_price) * item.quantity), 0);
 
   return (
     <div>
@@ -186,20 +228,25 @@ export function SalesPage() {
                 <h4 className="text-base font-semibold flex items-center gap-2 dark:text-white mb-2">
                   Katalog tovarov
                 </h4>
-                <div className="relative py-1">
-                  <ScanBarcode className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground dark:text-gray-400" />
-                  <Input
-                    ref={barcodeInputRef}
-                    placeholder="Poisk: nomi, artikul, shtrixkod"
-                    value={barcode}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setBarcode(e.target.value)}
-                    onKeyDown={handleBarcodeScan}
-                    className="pl-9 h-9 dark:bg-gray-900 dark:border-gray-600 dark:text-white"
-                  />
+                <div className='flex justify-between gap-2'>
+                  <div className="relative w-full">
+                    <Search className="absolute left-2.5 top-3 h-4 w-4 text-muted-foreground dark:text-gray-400" />
+                    <Input
+                      ref={barcodeInputRef}
+                      placeholder="Poisk: nomi, artikul, shtrixkod"
+                      value={barcode}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setBarcode(e.target.value)}
+                      onKeyDown={handleBarcodeScan}
+                      className="pl-9 dark:bg-gray-900 dark:border-gray-600 dark:text-white"
+                    />
+                  </div>
+                  <Button className='dark:bg-gray-900 dark:border-gray-600 dark:text-white hover:bg-gray-700 px-3' onClick={handleOpenScanner}>
+                    <ScanBarcode className="w-5 text-muted-foreground dark:text-gray-400" />
+                  </Button>
                 </div>
                 <div className="flex gap-2 mt-2">
                   <Select value={storeId} onValueChange={setStoreId}>
-                    <SelectTrigger className="w-[120px] h-8 dark:bg-gray-900 dark:border-gray-600 dark:text-white">
+                    <SelectTrigger className="w-30 h-8 dark:bg-gray-900 dark:border-gray-600 dark:text-white">
                       <SelectValue placeholder="Do'kon" />
                     </SelectTrigger>
                     <SelectContent>
@@ -293,9 +340,13 @@ export function SalesPage() {
                         </div>
                         <div>
                           <div className="text-muted-foreground dark:text-gray-400 mb-1">Narx</div>
-                          <div className="h-7 flex items-center justify-center bg-muted dark:bg-gray-600 rounded text-xs dark:text-gray-200">
-                            {formatCurrency(item.selling_price)}
-                          </div>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={item.selling_price || ''}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => updatePrice(index, Number(e.target.value))}
+                            className="h-7 text-center text-xs dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          />
                         </div>
                         <div>
                           <div className="text-muted-foreground dark:text-gray-400 mb-1">Jami</div>
@@ -340,18 +391,18 @@ export function SalesPage() {
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground dark:text-gray-400">Tezkor to'lov</Label>
                   <div className="grid grid-cols-2 gap-1.5">
-                    <Button 
-                      type="button" 
-                      variant={activePayment === 'cash' ? 'default' : 'outline'} 
-                      className={`h-10 text-xs ${activePayment === 'cash' ? '' : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'}`} 
+                    <Button
+                      type="button"
+                      variant={activePayment === 'cash' ? 'default' : 'outline'}
+                      className={`h-10 text-xs ${activePayment === 'cash' ? '' : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'}`}
                       onClick={handleQuickCash}
                     >
                       Naqd
                     </Button>
-                    <Button 
-                      type="button" 
-                      variant={activePayment === 'card' ? 'default' : 'outline'} 
-                      className={`h-10 text-xs ${activePayment === 'card' ? '' : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'}`} 
+                    <Button
+                      type="button"
+                      variant={activePayment === 'card' ? 'default' : 'outline'}
+                      className={`h-10 text-xs ${activePayment === 'card' ? '' : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'}`}
                       onClick={handleQuickCard}
                     >
                       Karta
@@ -361,35 +412,35 @@ export function SalesPage() {
                 <div className="space-y-2">
                   <div>
                     <Label className="text-xs dark:text-gray-300">Naqd</Label>
-                    <Input 
-                      type="number" 
-                      min="0" 
-                      placeholder="0" 
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="0"
                       value={cashAmount || ''}
                       onChange={(e: ChangeEvent<HTMLInputElement>) => setCashAmount(Number(e.target.value))}
-                      className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white" 
+                      className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white"
                     />
                   </div>
                   <div>
                     <Label className="text-xs dark:text-gray-300">Karta</Label>
-                    <Input 
-                      type="number" 
-                      min="0" 
-                      placeholder="0" 
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="0"
                       value={cardAmount || ''}
                       onChange={(e: ChangeEvent<HTMLInputElement>) => setCardAmount(Number(e.target.value))}
-                      className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white" 
+                      className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white"
                     />
                   </div>
                   <div>
                     <Label className="text-xs dark:text-gray-300">Chegirma</Label>
-                    <Input 
-                      type="number" 
-                      min="0" 
-                      placeholder="0" 
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="0"
                       value={discount || ''}
                       onChange={(e: ChangeEvent<HTMLInputElement>) => handleDiscountChange(Number(e.target.value))}
-                      className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white" 
+                      className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white"
                     />
                   </div>
                 </div>
@@ -445,7 +496,7 @@ export function SalesPage() {
                 <p className="text-sm text-muted-foreground dark:text-gray-400">Sotuv cheki</p>
                 <p className="text-xs text-muted-foreground dark:text-gray-400">{new Date().toLocaleString()}</p>
               </div>
-              
+
               <div className="space-y-2 text-sm">
                 <div className="font-semibold dark:text-white">Tovarlar:</div>
                 {items.map((item, idx) => (
@@ -458,7 +509,7 @@ export function SalesPage() {
                   </div>
                 ))}
               </div>
-              
+
               <div className="border-t dark:border-gray-600 pt-2 space-y-1 text-sm">
                 <div className="flex justify-between dark:text-gray-300">
                   <span>Jami:</span>
@@ -475,7 +526,7 @@ export function SalesPage() {
                   <span>{formatCurrency(receiptTotal)}</span>
                 </div>
               </div>
-              
+
               <div className="border-t dark:border-gray-600 pt-2 space-y-1 text-sm">
                 <div className="flex justify-between dark:text-gray-300">
                   <span>Naqd:</span>
@@ -502,7 +553,7 @@ export function SalesPage() {
                   </div>
                 )}
               </div>
-              
+
               <div className="text-center text-xs text-muted-foreground dark:text-gray-400 pt-3">
                 Xaridingiz uchun rahmat!
               </div>
