@@ -12,7 +12,8 @@ const removeAuth = () => {
 
 // Create axios instance
 const api: AxiosInstance = axios.create({
-  baseURL: 'https://autocrm.pythonanywhere.com/api',
+  baseURL: 'http://localhost:5173/api',
+
   headers: {
     'Content-Type': 'application/json',
   },

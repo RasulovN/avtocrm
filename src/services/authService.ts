@@ -6,14 +6,14 @@ export const authService = {
     console.log('Login attempt:', phone_number);
     
     // 1. Login - server sets httpOnly cookie
-    const loginResponse = await apiClient.post('/api/users/login/', {
+    const loginResponse = await apiClient.post('/users/login/', {
       phone_number,
       password,
     });
     console.log('Login response:', loginResponse.status, loginResponse.data);
     
     // 2. Fetch profile - uses server cookie
-    const profileResponse = await apiClient.get('/api/users/profile/');
+    const profileResponse = await apiClient.get('/users/profile/');
     console.log('Profile response:', profileResponse.status, profileResponse.data);
     
     const user = profileResponse.data;
@@ -30,7 +30,7 @@ export const authService = {
   logout: async (): Promise<void> => {
     console.log('Logout...');
     try {
-      await apiClient.post('/api/users/logout/');
+      await apiClient.post('/users/logout/');
     } catch (error) {
       console.warn('Logout API failed:', error);
     }
@@ -73,7 +73,7 @@ export const authService = {
 
   refreshAuth: async (): Promise<User | null> => {
     try {
-      const profileResponse = await apiClient.get('/api/users/profile/');
+      const profileResponse = await apiClient.get('/users/profile/');
       const user = profileResponse.data;
       localStorage.setItem('crm_user', JSON.stringify(user));
       localStorage.setItem('crm_auth_time', Date.now().toString());

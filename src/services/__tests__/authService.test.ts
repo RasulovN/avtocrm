@@ -40,7 +40,7 @@ describe('authService', () => {
 
       const result = await authService.login('+998901234567', 'password');
 
-      expect(apiClient.post).toHaveBeenCalledWith('/api/users/login/', {
+      expect(apiClient.post).toHaveBeenCalledWith('/users/login/', {
         phone_number: '+998901234567',
         password: 'password',
       });
@@ -85,7 +85,7 @@ describe('authService', () => {
 
       await authService.logout();
 
-      expect(apiClient.post).toHaveBeenCalledWith('/api/users/logout/');
+      expect(apiClient.post).toHaveBeenCalledWith('/users/logout/');
       expect(localStorage.removeItem).toHaveBeenCalledWith('token');
       expect(localStorage.removeItem).toHaveBeenCalledWith('user');
     });
