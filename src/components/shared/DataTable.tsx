@@ -71,8 +71,8 @@ interface DataTableProps<T extends { id: string }> {
 }
 
 export function DataTable<T extends { id: string }>({
-  data,
-  columns,
+  data = [],
+  columns = [],
   loading = false,
   searchPlaceholder = 'Search...',
   onSearch,
@@ -88,6 +88,8 @@ export function DataTable<T extends { id: string }>({
   inventoryByStore,
   itemNameKey,
 }: DataTableProps<T>) {
+  const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
+  const safeColumns = useMemo(() => (Array.isArray(columns) ? columns : []), [columns]);
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedInventory, setSelectedInventory] = useState<StoreInventory[]>([]);
@@ -95,13 +97,13 @@ export function DataTable<T extends { id: string }>({
 
   // Calculate totals
   const stats = useMemo(() => {
-    if (!showFooter || data.length === 0) return null;
+    if (!showFooter || safeData.length === 0) return null;
 
     // Total quantity
     let totalQuantity = 0;
     if (inventoryByStore) {
       // Calculate total from inventoryByStore
-      data.forEach((item) => {
+      safeData.forEach((item) => {
         const inventories = inventoryByStore(item);
         if (inventories) {
           inventories.forEach((inv) => {
@@ -110,7 +112,7 @@ export function DataTable<T extends { id: string }>({
         }
       });
     } else if (quantityKey) {
-      totalQuantity = data.reduce((sum, item) => {
+      totalQuantity = safeData.reduce((sum, item) => {
         const qty = Number(item[quantityKey] ?? 0) || 0;
         return sum + qty;
       }, 0);
@@ -122,7 +124,7 @@ export function DataTable<T extends { id: string }>({
     if (showStoreStats) {
       if (inventoryByStore) {
         // Calculate from inventoryByStore
-        data.forEach((item) => {
+        safeData.forEach((item) => {
           const inventories = inventoryByStore(item);
           if (inventories) {
             inventories.forEach((inv) => {
@@ -135,7 +137,7 @@ export function DataTable<T extends { id: string }>({
           }
         });
       } else if (showStoreStats && storeKey) {
-        data.forEach((item) => {
+        safeData.forEach((item) => {
           const storeName = String(item[storeKey] ?? 'Unknown');
           const qty = quantityKey ? Number(item[quantityKey] ?? 0) || 0 : 0;
           storeQuantities[storeName] = (storeQuantities[storeName] || 0) + qty;
@@ -151,7 +153,7 @@ export function DataTable<T extends { id: string }>({
       storeQuantities,
       storeProductCounts,
     };
-  }, [data, showFooter, showStoreStats, storeKey, quantityKey, inventoryByStore]);
+  }, [safeData, showFooter, showStoreStats, storeKey, quantityKey, inventoryByStore]);
 
   const handleSearch = (value: string) => {
     setSearch(value);
@@ -220,7 +222,7 @@ export function DataTable<T extends { id: string }>({
             {/* Sticky Header */}
             <TableHeader className="sticky top-0 bg-muted/50 backdrop-blur-sm z-10">
               <TableRow className="hover:bg-transparent">
-                {columns.map((column) => (
+                {safeColumns.map((column) => (
                   <TableHead
                     key={column.key}
                     className={cn(
@@ -240,17 +242,17 @@ export function DataTable<T extends { id: string }>({
               {/* Loading State */}
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-32 text-center">
+                  <TableCell colSpan={safeColumns.length || 1} className="h-32 text-center">
                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
                       <Loader2 className="h-6 w-6 animate-spin" />
                       <span className="text-sm">{loadingMessage}</span>
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : data.length === 0 ? (
+              ) : safeData.length === 0 ? (
                 /* Empty State */
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-32 text-center">
+                  <TableCell colSpan={safeColumns.length || 1} className="h-32 text-center">
                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
                       <Package className="h-8 w-8 opacity-50" />
                       <span className="text-sm">{emptyMessage}</span>
@@ -259,7 +261,7 @@ export function DataTable<T extends { id: string }>({
                 </TableRow>
               ) : (
                 /* Data Rows */
-                data.map((item, index) => (
+                safeData.map((item, index) => (
                   <TableRow
                     key={item.id}
                     onClick={() => onRowClick?.(item)}
@@ -268,7 +270,7 @@ export function DataTable<T extends { id: string }>({
                       'transition-colors hover:bg-muted/50'
                     )}
                   >
-                    {columns.map((column) => (
+                    {safeColumns.map((column) => (
                       <TableCell
                         key={column.key}
                         className={cn(
