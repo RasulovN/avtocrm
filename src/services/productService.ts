@@ -207,10 +207,12 @@ export const productService = {
       const newProduct: Product = {
         id: Date.now().toString(),
         ...data,
+        description: data.description ?? '',
         sku: data.sku || `SKU-${Date.now()}`,
         barcode: data.barcode || `1234567890${Date.now()}`,
         category: data.category || data.category_id || '',
         image: data.image,
+        supplier_id: data.supplier_id || '',
         total_count: data.total_count ?? 0,
         is_active: data.is_active ?? true,
         quantity: data.total_count ?? 0,
@@ -240,10 +242,12 @@ export const productService = {
       const index = mockProducts.findIndex(p => p.id === id);
       if (index === -1) throw new Error('Product not found');
       
-      const updated = {
+      const updated: Product = {
         ...mockProducts[index],
         ...data,
+        description: data.description ?? mockProducts[index].description ?? '',
         category: data.category || data.category_id || mockProducts[index].category,
+        supplier_id: data.supplier_id || mockProducts[index].supplier_id,
         updated_at: new Date().toISOString(),
       };
       mockProducts[index] = updated;

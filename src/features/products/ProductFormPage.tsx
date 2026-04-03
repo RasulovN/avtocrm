@@ -49,8 +49,8 @@ export function ProductFormPage() {
         storeService.getAll(),
         supplierService.getAll(),
       ]);
-      setStores(storesRes.data);
-      setSuppliers(suppliersRes.data);
+      setStores(Array.isArray(storesRes.data) ? storesRes.data : []);
+      setSuppliers(Array.isArray(suppliersRes.data) ? suppliersRes.data : []);
 
       if (id) {
         const product = await productService.getById(id);
@@ -243,6 +243,42 @@ export function ProductFormPage() {
                   onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('selling_price', Number(e.target.value))}
                   required
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="supplier_id">{t('nav.suppliers')}</Label>
+                <Select
+                  value={formData.supplier_id || ''}
+                  onValueChange={(value) => handleChange('supplier_id', value)}
+                >
+                  <SelectTrigger id="supplier_id">
+                    <SelectValue placeholder={t('nav.suppliers')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {suppliers.map((supplier) => (
+                      <SelectItem key={supplier.id} value={supplier.id}>
+                        {supplier.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="store_id">{t('nav.stores')}</Label>
+                <Select
+                  value={formData.store_id || ''}
+                  onValueChange={(value) => handleChange('store_id', value)}
+                >
+                  <SelectTrigger id="store_id">
+                    <SelectValue placeholder={t('nav.stores')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {stores.map((store) => (
+                      <SelectItem key={store.id} value={store.id}>
+                        {store.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>

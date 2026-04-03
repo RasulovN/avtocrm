@@ -39,10 +39,10 @@ export function TransferRequestsPage(): ReactElement {
   const [saving, setSaving] = useState(false);
   const safeStores = useMemo(() => (Array.isArray(stores) ? stores : []), [stores]);
   const safeProducts = useMemo(() => (Array.isArray(products) ? products : []), [products]);
-  const safeRequests = useMemo(() => (Array.isArray(requests) ? requests : []), [requests]);
 
   // Existing requests
   const [requests, setRequests] = useState<TransferRequest[]>([]);
+  const safeRequests = useMemo(() => (Array.isArray(requests) ? requests : []), [requests]);
 
   // Form state
   const [fromStoreId, setFromStoreId] = useState('');
