@@ -1,5 +1,4 @@
-import { useState, useEffect, type ChangeEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, Send, Check, X } from 'lucide-react';
 import { PageHeader } from '../../../components/shared/PageHeader';
@@ -35,10 +34,8 @@ interface TransferRequest {
 
 export function TransferRequestsPage(): ReactElement {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const [stores, setStores] = useState<Store[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Existing requests
@@ -51,13 +48,8 @@ export function TransferRequestsPage(): ReactElement {
     { product_id: '', product_name: '', quantity: 1 }
   ]);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
-      setLoading(true);
       const [storesRes, productsRes] = await Promise.all([
         storeService.getAll(),
         productService.getAll({ limit: 100 }),
@@ -104,10 +96,12 @@ export function TransferRequestsPage(): ReactElement {
           created_at: new Date().toISOString(),
         },
       ]);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const handleItemChange = (index: number, field: keyof TransferRequestItem, value: string | number) => {
     const newItems = [...items];

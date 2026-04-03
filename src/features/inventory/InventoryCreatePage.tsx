@@ -1,4 +1,4 @@
-import { useState, useEffect, type ChangeEvent } from 'react';
+import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, Save } from 'lucide-react';
@@ -30,7 +30,6 @@ export function InventoryCreatePage() {
   const [stores, setStores] = useState<Store[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const [supplierId, setSupplierId] = useState('');
@@ -40,13 +39,8 @@ export function InventoryCreatePage() {
     { product_id: '', product_name: '', quantity: 1, purchase_price: 0, total: 0 }
   ]);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
-      setLoading(true);
       const [storesRes, suppliersRes, productsRes] = await Promise.all([
         storeService.getAll(),
         supplierService.getAll(),
@@ -68,10 +62,12 @@ export function InventoryCreatePage() {
         { id: '1', name: 'Oil Filter', purchase_price: 15000, selling_price: 25000, category: 'Filters', supplier_id: '1', store_id: '1', sku: 'SKU-001', description: '', quantity: 0, created_at: '', updated_at: '' },
         { id: '2', name: 'Brake Pads', purchase_price: 45000, selling_price: 75000, category: 'Brakes', supplier_id: '1', store_id: '1', sku: 'SKU-002', description: '', quantity: 0, created_at: '', updated_at: '' },
       ]);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const handleItemChange = (index: number, field: keyof InventoryFormItem, value: string | number) => {
     const newItems = [...items];

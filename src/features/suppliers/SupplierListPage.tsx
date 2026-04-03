@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent, type MouseEvent } from 'react';
+import { useEffect, useState, useCallback, type ChangeEvent, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
@@ -31,11 +31,7 @@ export function SupplierListPage() {
   });
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadSuppliers();
-  }, [page]);
-
-  const loadSuppliers = async () => {
+  const loadSuppliers = useCallback(async () => {
     try {
       setLoading(true);
       const response = await supplierService.getAll({ page, limit });
@@ -51,7 +47,11 @@ export function SupplierListPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page]);
+
+  useEffect(() => {
+    void loadSuppliers();
+  }, [loadSuppliers]);
 
   const handleDelete = async () => {
     if (!deleteId) return;

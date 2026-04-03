@@ -133,7 +133,7 @@ export function SalesPage() {
         reader.decodeFromVideoDevice(
           undefined, 
           videoEl, 
-          (result, err) => {
+          (result) => {
             if (result && isActive) {
               const text = result.getText();
               const product = products.find(p => p.barcode === text || p.sku === text);

@@ -8,13 +8,14 @@ vi.mock('react-i18next', () => ({
     t: (key: string) => {
       const translations: Record<string, string> = {
         'auth.login': 'Login',
-        'auth.username': 'Username',
         'auth.password': 'Password',
         'auth.loginButton': 'Sign In',
         'common.loading': 'Loading...',
+        'stores.phone': 'Phone',
       };
       return translations[key] || key;
     },
+    i18n: { language: 'uz' },
   }),
 }));
 
@@ -23,99 +24,26 @@ describe('LoginPage', () => {
     vi.clearAllMocks();
   });
 
-  it('renders login form', () => {
+  it('renders phone and password inputs', () => {
     render(<LoginPage />);
 
     expect(screen.getByText('AvtoCRM')).toBeInTheDocument();
-    expect(screen.getByText('Login')).toBeInTheDocument();
-    expect(screen.getByLabelText('Username')).toBeInTheDocument();
-    expect(screen.getByLabelText('Password')).toBeInTheDocument();
+    expect(screen.getByLabelText('Phone')).toHaveAttribute('type', 'tel');
+    expect(screen.getByLabelText('Password')).toHaveAttribute('type', 'password');
     expect(screen.getByRole('button', { name: 'Sign In' })).toBeInTheDocument();
   });
 
-  it('renders username input with correct type', () => {
-    render(<LoginPage />);
-    const input = screen.getByLabelText('Username');
-    expect(input).toHaveAttribute('type', 'text');
-  });
-
-  it('renders password input with correct type', () => {
-    render(<LoginPage />);
-    const input = screen.getByLabelText('Password');
-    expect(input).toHaveAttribute('type', 'password');
-  });
-
-  it('updates username value on input', async () => {
+  it('updates field values on input', async () => {
     const user = userEvent.setup();
     render(<LoginPage />);
 
-    const input = screen.getByLabelText('Username');
-    await user.type(input, 'admin');
+    const phoneInput = screen.getByLabelText('Phone');
+    const passwordInput = screen.getByLabelText('Password');
 
-    expect(input).toHaveValue('admin');
-  });
+    await user.type(phoneInput, '+998901234567');
+    await user.type(passwordInput, 'secret123');
 
-  it('updates password value on input', async () => {
-    const user = userEvent.setup();
-    render(<LoginPage />);
-
-    const input = screen.getByLabelText('Password');
-    await user.type(input, 'secret123');
-
-    expect(input).toHaveValue('secret123');
-  });
-
-  it('username input is required', () => {
-    render(<LoginPage />);
-    expect(screen.getByLabelText('Username')).toBeRequired();
-  });
-
-  it('password input is required', () => {
-    render(<LoginPage />);
-    expect(screen.getByLabelText('Password')).toBeRequired();
-  });
-
-  it('username input has correct placeholder', () => {
-    render(<LoginPage />);
-    expect(screen.getByPlaceholderText('Username')).toBeInTheDocument();
-  });
-
-  it('password input has correct placeholder', () => {
-    render(<LoginPage />);
-    expect(screen.getByPlaceholderText('Password')).toBeInTheDocument();
-  });
-
-  it('renders submit button', () => {
-    render(<LoginPage />);
-    const button = screen.getByRole('button', { name: 'Sign In' });
-    expect(button).toHaveAttribute('type', 'submit');
-  });
-
-  it('renders form with correct structure', () => {
-    render(<LoginPage />);
-    const form = document.querySelector('form');
-    expect(form).toBeInTheDocument();
-  });
-
-  it('username input has correct id', () => {
-    render(<LoginPage />);
-    expect(screen.getByLabelText('Username')).toHaveAttribute('id', 'username');
-  });
-
-  it('password input has correct id', () => {
-    render(<LoginPage />);
-    expect(screen.getByLabelText('Password')).toHaveAttribute('id', 'password');
-  });
-
-  it('label is associated with username input', () => {
-    render(<LoginPage />);
-    const label = screen.getByText('Username');
-    expect(label).toHaveAttribute('for', 'username');
-  });
-
-  it('label is associated with password input', () => {
-    render(<LoginPage />);
-    const label = screen.getByText('Password');
-    expect(label).toHaveAttribute('for', 'password');
+    expect(phoneInput).toHaveValue('+998901234567');
+    expect(passwordInput).toHaveValue('secret123');
   });
 });

@@ -1,9 +1,10 @@
 import Cookies from 'js-cookie';
+import type { User } from '../types';
 
 const USER_KEY = 'user';
 
 export const cookieAuth = {
-  getUser(): any | null {
+  getUser(): User | Record<string, unknown> | null {
     const userStr = Cookies.get(USER_KEY);
     if (!userStr) return null;
     try {

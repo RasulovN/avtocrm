@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent, type MouseEvent } from 'react';
+import { useEffect, useState, useCallback, type ChangeEvent, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
@@ -31,11 +31,7 @@ export function StoreListPage() {
   });
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadStores();
-  }, [page]);
-
-  const loadStores = async () => {
+  const loadStores = useCallback(async () => {
     try {
       setLoading(true);
       const response = await storeService.getAll({ page, limit });
@@ -51,7 +47,11 @@ export function StoreListPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page]);
+
+  useEffect(() => {
+    void loadStores();
+  }, [loadStores]);
 
   const handleDelete = async () => {
     if (!deleteId) return;

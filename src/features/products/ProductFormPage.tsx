@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent } from 'react';
+import { useEffect, useState, useCallback, type ChangeEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Save, ArrowLeft } from 'lucide-react';
@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { productService } from '../../services/productService';
 import { storeService } from '../../services/storeService';
 import { supplierService } from '../../services/supplierService';
-import type { Product, ProductFormData, Store, Supplier } from '../../types';
+import type { ProductFormData, Store, Supplier } from '../../types';
 import { generateSKU, generateBarcode } from '../../utils';
 
 export function ProductFormPage() {
@@ -20,7 +20,6 @@ export function ProductFormPage() {
   const { id } = useParams();
   const isEditing = Boolean(id);
 
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [stores, setStores] = useState<Store[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -35,13 +34,8 @@ export function ProductFormPage() {
     store_id: '',
   });
 
-  useEffect(() => {
-    loadData();
-  }, [id]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
-      setLoading(true);
       const [storesRes, suppliersRes] = await Promise.all([
         storeService.getAll(),
         supplierService.getAll(),
@@ -73,10 +67,12 @@ export function ProductFormPage() {
         { id: '1', name: 'AutoParts Co', debt: 0, created_at: '' },
         { id: '2', name: 'Global Parts', debt: 0, created_at: '' },
       ]);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const handleSubmit = async (e: ChangeEvent<HTMLFormElement>) => {
     e.preventDefault();

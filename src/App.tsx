@@ -3,7 +3,6 @@ import { Toaster } from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { useThemeStore, useAuthStore } from './app/store';
 import { useEffect } from 'react';
-import { authService } from './services/authService';
 
 // Layout
 import { MainLayout } from './components/shared/MainLayout';

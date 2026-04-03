@@ -1,7 +1,7 @@
-import { useState, useEffect, type ChangeEvent } from 'react';
+import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Trash2, Save, ArrowRight } from 'lucide-react';
+import { Plus, Trash2, ArrowRight } from 'lucide-react';
 import { PageHeader } from '../../../components/shared/PageHeader';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
@@ -25,7 +25,6 @@ export function TransferCreatePage() {
   const navigate = useNavigate();
   const [stores, setStores] = useState<Store[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const [fromStoreId, setFromStoreId] = useState('');
@@ -34,13 +33,8 @@ export function TransferCreatePage() {
     { product_id: '', product_name: '', quantity: 1 }
   ]);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
-      setLoading(true);
       const [storesRes, productsRes] = await Promise.all([
         storeService.getAll(),
         productService.getAll({ limit: 100 }),
@@ -56,10 +50,12 @@ export function TransferCreatePage() {
       setProducts([
         { id: '1', name: 'Oil Filter', purchase_price: 15000, selling_price: 25000, category: 'Filters', supplier_id: '1', store_id: '1', sku: 'SKU-001', description: '', quantity: 100, created_at: '', updated_at: '' },
       ]);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const handleItemChange = (index: number, field: keyof TransferFormItem, value: string | number) => {
     const newItems = [...items];

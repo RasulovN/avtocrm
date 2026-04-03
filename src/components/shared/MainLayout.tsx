@@ -102,11 +102,6 @@ export function MainLayout({ children }: MainLayoutProps) {
     }
   }, [navigate, user]);
 
-  if (!user) {
-    return null;
-  }
-
-
   // Get current path without language prefix
   const currentPath = location.pathname;
   
@@ -145,6 +140,10 @@ export function MainLayout({ children }: MainLayoutProps) {
       i18n.changeLanguage(pathParts[0]);
     }
   }, [location.pathname, i18n]);
+
+  if (!user) {
+    return null;
+  }
 
   const switchLanguage = (newLang: string) => {
     i18n.changeLanguage(newLang);

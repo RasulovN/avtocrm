@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { Button } from '../../components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { 
   Select, 
   SelectContent, 
@@ -88,16 +88,6 @@ export function ReportsPage() {
     if (selectedType === 'all') return true;
     return report.type === selectedType;
   });
-
-  const getReportTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      sales: t('reports.types.sales'),
-      inventory: t('reports.types.inventory'),
-      financial: t('reports.types.financial'),
-      transfer: t('reports.types.transfer'),
-    };
-    return labels[type] || type;
-  };
 
   const getReportTypeIcon = (type: string) => {
     const icons: Record<string, typeof FileText> = {

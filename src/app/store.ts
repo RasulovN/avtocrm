@@ -25,6 +25,7 @@ export const useThemeStore = create<ThemeStore>((set) => ({
 
 interface AuthStore {
   user: User | null;
+  token: string | null;
   isLoading: boolean;
   error: string | null;
   login: (phone_number: string, password: string) => Promise<void>;
@@ -36,6 +37,7 @@ interface AuthStore {
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
   user: authService.getCurrentUser(),
+  token: null,
   isLoading: false,
   error: null,
 
@@ -43,7 +45,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const user = await authService.login(phone_number, password);
-      set({ user, isLoading: false });
+      set({ user, token: 'session', isLoading: false });
     } catch (error) {
       set({ 
         isLoading: false, 
@@ -54,17 +56,17 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   },
 
   logout: () => {
-    authService.logout();
-    set({ user: null });
+    void authService.logout();
+    set({ user: null, token: null });
   },
 
   checkAuth: () => {
     const user = authService.getCurrentUser();
-    set({ user });
+    set({ user, token: user ? 'session' : null });
   },
 
   isAuthenticated: () => {
-    return !!get().user;
+    return !!get().user || !!get().token;
   },
 
   hasRole: (roles: string[]) => {

@@ -1,4 +1,4 @@
-import { useEffect, useState, type MouseEvent } from 'react';
+import { useEffect, useState, useCallback, type MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Plus, Edit, Trash2, Barcode, Search } from 'lucide-react';
@@ -15,15 +15,13 @@ import {
   SelectValue,
 } from '../../components/ui/Select';
 import { productService } from '../../services/productService';
-import { storeService } from '../../services/storeService';
-import type { Product, ProductFilters, Store } from '../../types';
+import type { Product, ProductFilters } from '../../types';
 import { formatCurrency } from '../../utils';
 
 export function ProductListPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
-  const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ProductFilters>({});
   const [page, setPage] = useState(1);
@@ -33,26 +31,7 @@ export function ProductListPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    loadProducts();
-    loadStores();
-  }, [filters, page]);
-
-  const loadStores = async () => {
-    try {
-      const response = await storeService.getAll();
-      setStores(response.data);
-    } catch (error) {
-      console.error('Failed to load stores:', error);
-      // Mock stores for demo
-      setStores([
-        { id: '1', name: 'Main Store', is_warehouse: false, created_at: '' },
-        { id: '2', name: 'Warehouse', is_warehouse: true, created_at: '' },
-      ]);
-    }
-  };
-
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     try {
       setLoading(true);
       const response = await productService.getAll({ ...filters, page, limit });
@@ -127,7 +106,11 @@ export function ProductListPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters, page]);
+
+  useEffect(() => {
+    void loadProducts();
+  }, [loadProducts]);
 
   const handleSearch = (value: string) => {
     setSearchQuery(value);

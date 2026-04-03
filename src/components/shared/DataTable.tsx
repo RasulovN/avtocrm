@@ -1,4 +1,4 @@
-import { useState, useMemo, type ReactNode } from 'react';
+import { useState, useMemo } from 'react';
 import { Search, ChevronLeft, ChevronRight, Package, Loader2, Building2, Eye } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
@@ -22,9 +22,9 @@ import {
 
 // Column interface with optional properties for styling
 export interface Column<T> {
-  key: string;
+  key: keyof T;
   header: string;
-  render?: (item: T) => ReactNode;
+  render?: (item: T) => React.ReactNode;
   className?: string;
   sortable?: boolean;
   width?: string;
@@ -111,7 +111,7 @@ export function DataTable<T extends { id: string }>({
       });
     } else if (quantityKey) {
       totalQuantity = data.reduce((sum, item) => {
-        const qty = Number((item as Record<string, unknown>)[quantityKey as string]) || 0;
+        const qty = Number(item[quantityKey] ?? 0) || 0;
         return sum + qty;
       }, 0);
     }
@@ -136,8 +136,8 @@ export function DataTable<T extends { id: string }>({
         });
       } else if (showStoreStats && storeKey) {
         data.forEach((item) => {
-          const storeName = String((item as Record<string, unknown>)[storeKey as string]) || 'Unknown';
-          const qty = quantityKey ? Number((item as Record<string, unknown>)[quantityKey as string]) || 0 : 0;
+          const storeName = String(item[storeKey] ?? 'Unknown');
+          const qty = quantityKey ? Number(item[quantityKey] ?? 0) || 0 : 0;
           storeQuantities[storeName] = (storeQuantities[storeName] || 0) + qty;
           if (qty > 0) {
             storeProductCounts[storeName] = (storeProductCounts[storeName] || 0) + 1;
@@ -182,7 +182,7 @@ export function DataTable<T extends { id: string }>({
 
     const handleClick = (e: React.MouseEvent) => {
       e.stopPropagation();
-      const itemName = itemNameKey ? String((item as Record<string, unknown>)[itemNameKey as string]) : '';
+      const itemName = itemNameKey ? String(item[itemNameKey] ?? '') : '';
       setSelectedInventory(inventories || []);
       setSelectedItemName(itemName);
       setModalOpen(true);
@@ -280,7 +280,7 @@ export function DataTable<T extends { id: string }>({
                           renderStoreInventory(item)
                         ) : column.render
                           ? column.render(item)
-                          : String((item as Record<string, unknown>)[column.key] || '')}
+                          : String(item[column.key] ?? '')}
                       </TableCell>
                     ))}
                   </TableRow>

@@ -1,11 +1,10 @@
 import { useTranslation } from 'react-i18next';
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { ThemeToggle } from './ThemeToggle';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { useAuthStore } from '../../app/store';
 import { LogOut, Menu, X } from 'lucide-react';
 import { useState } from 'react';
-import { cn } from '../../utils';
 
 export function Navbar() {
   const { t } = useTranslation();

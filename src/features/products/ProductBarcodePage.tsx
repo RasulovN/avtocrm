@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useRef, useState, useCallback, type ChangeEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Printer, ArrowLeft } from 'lucide-react';
@@ -22,10 +22,6 @@ export function ProductBarcodePage() {
   const [barcodeValue, setBarcodeValue] = useState('');
 
   useEffect(() => {
-    loadProduct();
-  }, [id]);
-
-  useEffect(() => {
     if (barcodeRef.current && barcodeValue) {
       try {
         JsBarcode(barcodeRef.current, barcodeValue, {
@@ -42,7 +38,7 @@ export function ProductBarcodePage() {
     }
   }, [barcodeValue]);
 
-  const loadProduct = async () => {
+  const loadProduct = useCallback(async () => {
     if (!id) return;
     try {
       const data = await productService.getById(id);
@@ -70,7 +66,11 @@ export function ProductBarcodePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    void loadProduct();
+  }, [loadProduct]);
 
   const handlePrint = () => {
     const printContent = document.getElementById('barcode-print-area');

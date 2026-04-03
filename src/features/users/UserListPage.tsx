@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent, type MouseEvent } from 'react';
+import { useEffect, useState, useCallback, type ChangeEvent, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Edit, Trash2, Eye } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
@@ -31,17 +31,12 @@ export function UserListPage() {
     full_name: '',
     password: '',
     role: 'store_user',
-    phone: '',
+    phone_number: '',
     store_id: '',
   });
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadUsers();
-    loadStores();
-  }, [page]);
-
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
       const response = await userService.getAll({ page, limit });
@@ -77,9 +72,9 @@ export function UserListPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page]);
 
-  const loadStores = async () => {
+  const loadStores = useCallback(async () => {
     try {
       const response = await storeService.getAll({ page: 1, limit: 100 });
       setStores(response.data);
@@ -90,7 +85,12 @@ export function UserListPage() {
         { id: '2', name: 'Warehouse', address: 'Tashkent', phone: '+998901234568', is_warehouse: true, created_at: new Date().toISOString() },
       ]);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void loadUsers();
+    void loadStores();
+  }, [loadUsers, loadStores]);
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -113,7 +113,7 @@ export function UserListPage() {
         full_name: user.full_name,
         password: '',
         role: user.role,
-        phone: user.phone,
+        phone_number: user.phone_number,
         store_id: user.store_id || '',
       });
     } else {
@@ -122,7 +122,7 @@ export function UserListPage() {
         full_name: '',
         password: '',
         role: 'store_user',
-        phone: '',
+        phone_number: '',
         store_id: '',
       });
     }
@@ -158,7 +158,7 @@ export function UserListPage() {
   const columns: Column<User>[] = [
     { key: 'user_id', header: t('users.userId') },
     { key: 'full_name', header: t('users.fullName') },
-    { key: 'phone', header: t('users.phone') },
+    { key: 'phone_number', header: t('users.phone') },
     {
       key: 'role',
       header: t('users.role'),
@@ -252,8 +252,8 @@ export function UserListPage() {
               <Label>{t('users.phone')}</Label>
               <Input
                 type="tel"
-                value={formData.phone}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, phone: e.target.value })}
+                value={formData.phone_number}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, phone_number: e.target.value })}
                 required
               />
             </div>
