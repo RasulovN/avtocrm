@@ -6,20 +6,17 @@ import cookieAuth from '../utils/cookie';
 
 // Create axios instance
 const api: AxiosInstance = axios.create({
-  baseURL: 'http://localhost:3000/api',
+  baseURL: 'https://autocrm.pythonanywhere.com/api',
   headers: {
     'Content-Type': 'application/json',
   },
   timeout: 30000,
+  withCredentials: true,
 });
 
-// Request interceptor to add auth token
+// Request interceptor - no auth token needed, server uses cookies
 api.interceptors.request.use(
   (config) => {
-    const token = cookieAuth.getToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
     return config;
   },
 

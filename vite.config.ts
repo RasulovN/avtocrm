@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
+      'js-cookie': path.resolve(__dirname, 'node_modules/js-cookie/dist/js.cookie.mjs'),
       '@zxing/browser': path.resolve(__dirname, 'node_modules/@zxing/browser/esm/index.js'),
       '@zxing/library': path.resolve(__dirname, 'node_modules/@zxing/library/esm/index.js'),
     },

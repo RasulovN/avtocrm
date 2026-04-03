@@ -1,13 +1,15 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
-import { useThemeStore } from './app/store';
+import { useThemeStore, useAuthStore } from './app/store';
 import { useEffect } from 'react';
+import { authService } from './services/authService';
 
 // Layout
 import { MainLayout } from './components/shared/MainLayout';
 
 // Feature Pages
+import { LoginPage } from './features/auth/LoginPage';
 import { DashboardPage } from './features/dashboard/DashboardPage';
 import { ProductListPage } from './features/products/ProductListPage';
 import { ProductFormPage } from './features/products/ProductFormPage';
@@ -32,7 +34,18 @@ import './i18n';
 function App() {
   const { theme } = useThemeStore();
   const { i18n } = useTranslation();
-  
+  const checkAuth = useAuthStore((state) => state.checkAuth);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isAuthLoading = useAuthStore((state) => state.isLoading);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
+  if (isAuthLoading) {
+    return null;
+  }
+
   useEffect(() => {
     const root = window.document.documentElement;
     if (theme === 'dark') {
@@ -42,148 +55,194 @@ function App() {
     }
   }, [theme]);
 
-  // Get current language from i18n
   const currentLang = i18n.language || 'uz';
+
+  const requireAuth = (element: React.ReactNode) => {
+    return isAuthenticated() ? element : <Navigate to="/login" replace />;
+  };
 
   return (
     <BrowserRouter>
       <Toaster position="top-right" />
       <Routes>
+        {/* Login - accessible without auth */}
+        <Route path="/login" element={
+          isAuthenticated() ? <Navigate to={`/${currentLang}/dashboard`} replace /> : <LoginPage />
+        } />
+        
         {/* Language-prefixed routes */}
-        <Route path={`/${currentLang}`} element={<Navigate to={`/${currentLang}/dashboard`} replace />} />
+        <Route path={`/${currentLang}`} element={requireAuth(<Navigate to={`/${currentLang}/dashboard`} replace />)} />
         
         {/* Dashboard */}
         <Route path={`/:lang/dashboard`} element={
-          <MainLayout>
-            <DashboardPage />
-          </MainLayout>
+          requireAuth(
+            <MainLayout>
+              <DashboardPage />
+            </MainLayout>
+          )
         } />
         
         {/* Products */}
         <Route path={`/:lang/products`} element={
-          <MainLayout>
-            <ProductListPage />
-          </MainLayout>
+          requireAuth(
+            <MainLayout>
+              <ProductListPage />
+            </MainLayout>
+          )
         } />
         
         <Route path={`/:lang/products/new`} element={
-          <MainLayout>
-            <ProductFormPage />
-          </MainLayout>
+          requireAuth(
+            <MainLayout>
+              <ProductFormPage />
+            </MainLayout>
+          )
         } />
         
         <Route path={`/:lang/products/:id/edit`} element={
-          <MainLayout>
-            <ProductFormPage />
-          </MainLayout>
+          requireAuth(
+            <MainLayout>
+              <ProductFormPage />
+            </MainLayout>
+          )
         } />
         
         <Route path={`/:lang/products/:id/barcode`} element={
-          <MainLayout>
-            <ProductBarcodePage />
-          </MainLayout>
+          requireAuth(
+            <MainLayout>
+              <ProductBarcodePage />
+            </MainLayout>
+          )
         } />
         
         {/* Categories */}
         <Route path={`/:lang/categories`} element={
-          <MainLayout>
-            <CategoryListPage />
-          </MainLayout>
+          requireAuth(
+            <MainLayout>
+              <CategoryListPage />
+            </MainLayout>
+          )
         } />
         
         {/* Inventory (Kirim) - List */}
         <Route path={`/:lang/inventory`} element={
-          <MainLayout>
-            <InventoryListPage />
-          </MainLayout>
+          requireAuth(
+            <MainLayout>
+              <InventoryListPage />
+            </MainLayout>
+          )
         } />
         
         {/* Inventory - Create */}
         <Route path={`/:lang/inventory/new`} element={
-          <MainLayout>
-            <InventoryCreatePage />
-          </MainLayout>
+          requireAuth(
+            <MainLayout>
+              <InventoryCreatePage />
+            </MainLayout>
+          )
         } />
         
         {/* Transfers - List */}
         <Route path={`/:lang/transfers`} element={
-          <MainLayout>
-            <TransferListPage />
-          </MainLayout>
+          requireAuth(
+            <MainLayout>
+              <TransferListPage />
+            </MainLayout>
+          )
         } />
         
         {/* Transfers - Create */}
         <Route path={`/:lang/transfers/new`} element={
-          <MainLayout>
-            <TransferCreatePage />
-          </MainLayout>
+          requireAuth(
+            <MainLayout>
+              <TransferCreatePage />
+            </MainLayout>
+          )
         } />
         {/* Transfers - Request */}
         <Route path={`/:lang/transfers/requests`} element={
-          <MainLayout>
-            <TransferRequestsPage />
-          </MainLayout>
+          requireAuth(
+            <MainLayout>
+              <TransferRequestsPage />
+            </MainLayout>
+          )
         } />
         
         {/* Transfer Requests */}
         <Route path={`/:lang/transfer-requests`} element={
-          <MainLayout>
-            <TransferRequestsPage />
-          </MainLayout>
+          requireAuth(
+            <MainLayout>
+              <TransferRequestsPage />
+            </MainLayout>
+          )
         } />
         
         {/* Sales - List */}
         <Route path={`/:lang/sales`} element={
-          <MainLayout>
-            <SalesListPage />
-          </MainLayout>
+          requireAuth(
+            <MainLayout>
+              <SalesListPage />
+            </MainLayout>
+          )
         } />
         
         {/* Sales - Create (POS) */}
         <Route path={`/:lang/sales/new`} element={
-          <MainLayout>
-            <SalesPage />
-          </MainLayout>
+          requireAuth(
+            <MainLayout>
+              <SalesPage />
+            </MainLayout>
+          )
         } />
         
         {/* Suppliers */}
         <Route path={`/:lang/suppliers`} element={
-          <MainLayout>
-            <SupplierListPage />
-          </MainLayout>
+          requireAuth(
+            <MainLayout>
+              <SupplierListPage />
+            </MainLayout>
+          )
         } />
         
         {/* Stores */}
         <Route path={`/:lang/stores`} element={
-          <MainLayout>
-            <StoreListPage />
-          </MainLayout>
+          requireAuth(
+            <MainLayout>
+              <StoreListPage />
+            </MainLayout>
+          )
         } />
         
         {/* Users */}
         <Route path={`/:lang/stores/users`} element={
-          <MainLayout>
-            <UserListPage />
-          </MainLayout>
+          requireAuth(
+            <MainLayout>
+              <UserListPage />
+            </MainLayout>
+          )
         } />
         
         {/* Reports */}
         <Route path={`/:lang/reports`} element={
-          <MainLayout>
-            <ReportsPage />
-          </MainLayout>
+          requireAuth(
+            <MainLayout>
+              <ReportsPage />
+            </MainLayout>
+          )
         } />
         
         {/* Settings */}
         <Route path={`/:lang/settings`} element={
-          <MainLayout>
-            <SettingsPage />
-          </MainLayout>
+          requireAuth(
+            <MainLayout>
+              <SettingsPage />
+            </MainLayout>
+          )
         } />
         
         {/* Default route - redirect to /uz/dashboard */}
-        <Route path="/" element={<Navigate to={`/${currentLang}/dashboard`} replace />} />
-        <Route path="*" element={<Navigate to={`/${currentLang}/dashboard`} replace />} />
+        <Route path="/" element={requireAuth(<Navigate to={`/${currentLang}/dashboard`} replace />)} />
+        <Route path="*" element={requireAuth(<Navigate to={`/${currentLang}/dashboard`} replace />)} />
       </Routes>
     </BrowserRouter>
   );

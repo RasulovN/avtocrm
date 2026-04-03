@@ -4,25 +4,22 @@ import type { User, ApiResponse } from '../types';
 
 export const authService = {
   login: async (phone_number: string, password: string): Promise<User> => {
-    // Login - server sets cookie
-    await apiClient.post('/api/users/login/', {
+    await apiClient.post('/users/login/', {
       phone_number,
       password,
     });
 
-    // Fetch profile to get user data
-    const profileResponse = await apiClient.get<ApiResponse<User>>('/api/users/profile/');
+    const profileResponse = await apiClient.get<ApiResponse<User>>('/users/profile/');
     const user = profileResponse.data.data;
     
-    // Store user in cookie (token already in cookie from login)
-    cookieAuth.setAuth('', JSON.stringify(user)); 
+    cookieAuth.setAuth(JSON.stringify(user));
     
     return user;
   },
 
   logout: async (): Promise<void> => {
     try {
-      await apiClient.post('/api/users/logout/');
+      await apiClient.post('/users/logout/');
     } catch (error) {
       console.warn('Logout API failed:', error);
     }

@@ -96,9 +96,19 @@ export function MainLayout({ children }: MainLayoutProps) {
   const { theme, toggleTheme } = useThemeStore();
   const { user, logout } = useAuthStore();
 
+  useEffect(() => {
+    if (!user) {
+      navigate('/login');
+    }
+  }, [navigate, user]);
+
+  if (!user) {
+    return null;
+  }
+
+
   // Get current path without language prefix
   const currentPath = location.pathname;
-  // const pathWithoutLang = '/' + currentPath.split('/').slice(2).join('/');
   
   // Check if current path is part of a sub-nav module
   const activeSubNavKey = Object.keys(subNavs).find(key => 
@@ -158,14 +168,12 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   const goBackToMainNav = () => {
     setShowSubNav(false);
-    // Navigate to the parent page
     if (activeSubNavKey) {
       navigate(`/${lang}${activeSubNavKey}`);
     }
   };
 
   const handleMainNavClick = (item: NavItem) => {
-    // If this item has sub-nav, show sub-nav mode
     if (subNavs[item.href]) {
       setShowSubNav(true);
     } else {
@@ -177,13 +185,11 @@ export function MainLayout({ children }: MainLayoutProps) {
   const currentUser = user || {
     full_name: 'Admin',
     role: 'admin',
-    phone_number: '+998 90 123-45-67',
+    phone_number: '+998901234567',
   };
-
 
   return (
     <div className="flex min-h-screen">
-      {/* Mobile overlay */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 z-30 bg-black/50 lg:hidden"
@@ -191,7 +197,6 @@ export function MainLayout({ children }: MainLayoutProps) {
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={cn(
           'fixed inset-y-0 left-0 z-40 bg-card border-r transition-all duration-300',
@@ -200,7 +205,6 @@ export function MainLayout({ children }: MainLayoutProps) {
         )}
       >
         <div className="flex flex-col h-full">
-          {/* Logo */}
           <div className={cn(
             'p-4 border-b flex items-center justify-between',
             isCollapsed ? 'justify-center' : ''
@@ -225,12 +229,9 @@ export function MainLayout({ children }: MainLayoutProps) {
             </button>
           </div>
 
-          {/* Navigation */}
           <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
             {shouldShowSubNav && activeSubNav ? (
-              // Show sub-navigation items
               <>
-                {/* Back button */}
                 <button
                   onClick={goBackToMainNav}
                   className={cn(
@@ -245,14 +246,12 @@ export function MainLayout({ children }: MainLayoutProps) {
                 
                 <div className="my-2 border-t" />
                 
-                {/* Parent item */}
                 {parentNavItem && !isCollapsed && (
                   <div className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase">
                     {t(parentNavItem.titleKey)}
                   </div>
                 )}
                 
-                {/* Sub-nav items */}
                 {activeSubNav.map((subItem) => {
                   const href = `/${lang}${subItem.href}`;
                   const isActive = location.pathname === href;
@@ -277,13 +276,11 @@ export function MainLayout({ children }: MainLayoutProps) {
                 })}
               </>
             ) : (
-              // Show main navigation items
               navItems.map((item) => {
                 const href = `/${lang}${item.href}`;
                 const isActive = location.pathname.startsWith(`/${lang}${item.href}`) ||
                                (item.href === '/dashboard' && location.pathname === `/${lang}`);
                 
-                // Check if this item has sub-navigation
                 const hasSubNav = !!subNavs[item.href];
                 
                 return (
@@ -313,7 +310,6 @@ export function MainLayout({ children }: MainLayoutProps) {
             )}
           </nav>
 
-          {/* User section */}
           <div className={cn(
             'p-4 border-t',
             isCollapsed ? 'flex justify-center' : ''
@@ -329,30 +325,28 @@ export function MainLayout({ children }: MainLayoutProps) {
                       <User className="h-4 w-4 text-primary-foreground" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{currentUser.username}</p>
+                      <p className="text-sm font-medium truncate">{currentUser.full_name || currentUser.phone_number}</p>
                       <p className="text-xs text-muted-foreground capitalize">{currentUser.role}</p>
                     </div>
                   </div>
                   <ChevronDown className={cn('h-4 w-4 transition-transform', showProfileMenu && 'rotate-180')} />
                 </div>
 
-                {/* Profile Dropdown Menu */}
                 {showProfileMenu && (
                   <div className="absolute bottom-full left-0 right-0 mb-2 bg-card border rounded-lg shadow-lg p-3 space-y-3">
                     <div className="text-center">
                       <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
                         <User className="h-6 w-6 text-primary" />
                       </div>
-                      <p className="font-medium">{currentUser.username}</p>
+                      <p className="font-medium">{currentUser.full_name}</p>
                       <p className="text-xs text-muted-foreground capitalize">{currentUser.role}</p>
                     </div>
                     <div className="space-y-1 text-sm">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">{t('stores.phone')}:</span>
-                        <span>{currentUser.phone_number || '+998 90 123-45-67'}</span>
+                        <span>{currentUser.phone_number || '+998901234567'}</span>
                       </div>
                     </div>
-
                     <div className="pt-2 border-t space-y-2">
                       <Button 
                         variant="outline" 
@@ -383,7 +377,6 @@ export function MainLayout({ children }: MainLayoutProps) {
                   <User className="h-4 w-4 text-primary-foreground" />
                 </div>
 
-                {/* Profile Dropdown Menu for collapsed state */}
                 {showProfileMenu && (
                   <div className="absolute bottom-full left-0 mb-2 w-48 bg-card border rounded-lg shadow-lg p-3 space-y-3 z-50">
                     <div className="text-center">
@@ -392,10 +385,6 @@ export function MainLayout({ children }: MainLayoutProps) {
                       </div>
                       <p className="font-medium text-sm">{currentUser.full_name}</p>
                       <p className="text-xs text-muted-foreground capitalize">{currentUser.role}</p>
-</xai:function_call > 
-
-<xai:function_call name="edit_file">
-<parameter name="path">src/components/shared/MainLayout.tsx
                     </div>
                     <div className="pt-2 border-t space-y-2">
                       <Button 
@@ -425,15 +414,12 @@ export function MainLayout({ children }: MainLayoutProps) {
         </div>
       </aside>
 
-      {/* Main content */}
       <div className={cn(
         'flex-1 flex flex-col transition-all duration-300',
         isCollapsed ? 'lg:ml-16' : 'lg:ml-64'
       )}>
-        {/* Top Navbar */}
-        <header className="sticky top-0 z-20 h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter] :bg-background/60">
+        <header className="sticky top-0 z-20 h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="flex h-full items-center justify-end px-4 lg:px-6">
-            {/* Mobile menu button */}
             <button
               onClick={() => setIsSidebarOpen(true)}
               className="lg:hidden p-2 rounded-md hover:bg-accent"
@@ -441,18 +427,14 @@ export function MainLayout({ children }: MainLayoutProps) {
               <Menu className="h-5 w-5" />
             </button>
 
-            {/* Spacer for mobile */}
             <div className="lg:hidden w-8" />
 
-            {/* Right side - Theme, Language, Notifications */}
             <div className="flex items-center gap-2">
-              {/* Notifications */}
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
                 <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive" />
               </Button>
 
-              {/* Language Switcher */}
               <div className="flex items-center border rounded-md">
                 <Button
                   variant="ghost"
@@ -480,7 +462,6 @@ export function MainLayout({ children }: MainLayoutProps) {
                 </Button>
               </div>
 
-              {/* Theme Toggle */}
               <Button
                 variant="ghost"
                 size="icon"
@@ -497,7 +478,6 @@ export function MainLayout({ children }: MainLayoutProps) {
           </div>
         </header>
 
-        {/* Page content */}
         <main className="flex-1 p-4 lg:p-6">
           {children}
         </main>
@@ -505,3 +485,4 @@ export function MainLayout({ children }: MainLayoutProps) {
     </div>
   );
 }
+

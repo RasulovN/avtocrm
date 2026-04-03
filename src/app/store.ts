@@ -70,6 +70,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     return authService.isAuthenticated();
   },
 
+
   hasRole: (roles: string[]) => {
     const user = get().user;
     if (!user) return false;
