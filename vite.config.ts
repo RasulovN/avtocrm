@@ -1,8 +1,15 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
+import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      '@zxing/browser': path.resolve(__dirname, 'node_modules/@zxing/browser/esm/index.js'),
+      '@zxing/library': path.resolve(__dirname, 'node_modules/@zxing/library/esm/index.js'),
+    },
+  },
   test: {
     globals: true,
     environment: 'jsdom',
