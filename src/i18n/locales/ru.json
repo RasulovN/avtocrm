@@ -231,7 +231,6 @@
     "editUser": "Редактировать пользователя",
     "userId": "ID пользователя",
     "fullName": "ФИО",
-    "email": "Email",
     "phone": "Телефон",
     "password": "Пароль",
     "role": "Роль",

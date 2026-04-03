@@ -2,17 +2,17 @@ import { useState, useEffect, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, Save, ArrowRight } from 'lucide-react';
-import { PageHeader } from '../../components/shared/PageHeader';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
-import { Label } from '../../components/ui/Label';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../../components/ui/Card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/Table';
-import { transferService } from '../../services/transferService';
-import { storeService } from '../../services/storeService';
-import { productService } from '../../services/productService';
-import type { Store, Product } from '../../types';
+import { PageHeader } from '../../../components/shared/PageHeader';
+import { Button } from '../../../components/ui/Button';
+import { Input } from '../../../components/ui/Input';
+import { Label } from '../../../components/ui/Label';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../../../components/ui/Card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/Select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/Table';
+import { transferService } from '../../../services/transferService';
+import { storeService } from '../../../services/storeService';
+import { productService } from '../../../services/productService';
+import type { Store, Product } from '../../../types';
 
 interface TransferFormItem {
   product_id: string;

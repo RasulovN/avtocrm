@@ -1,5 +1,7 @@
 import axios from 'axios';
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import { handleError } from '../utils/errorHandler';
+import { isDev } from '../config/environment';
 
 // Create axios instance
 const api: AxiosInstance = axios.create({
@@ -20,6 +22,7 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
+    handleError(error, { showToast: false });
     return Promise.reject(error);
   }
 );
@@ -28,11 +31,22 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const errorData = error.response?.data;
+    const status = error.response?.status;
+    
+    if (status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
+      handleError(error, { showToast: false });
+    } else {
+      const message = errorData?.message || errorData?.msg || error.message || 'Server error';
+      handleError(new Error(message), { 
+        showToast: !isDev,
+        logData: { status, url: error.config?.url }
+      });
     }
+    
     return Promise.reject(error);
   }
 );

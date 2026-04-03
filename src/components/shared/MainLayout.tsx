@@ -25,7 +25,6 @@ import {
   Plus,
   List,
   ArrowLeft,
-  Upload,
   Download,
   Users,
 } from 'lucide-react';
@@ -99,7 +98,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   // Get current path without language prefix
   const currentPath = location.pathname;
-  const pathWithoutLang = '/' + currentPath.split('/').slice(2).join('/');
+  // const pathWithoutLang = '/' + currentPath.split('/').slice(2).join('/');
   
   // Check if current path is part of a sub-nav module
   const activeSubNavKey = Object.keys(subNavs).find(key => 
@@ -239,7 +238,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                   )}
                   title={isCollapsed ? t('common.back') : undefined}
                 >
-                  <ArrowLeft className="h-5 w-5 flex-shrink-0" />
+                  <ArrowLeft className="h-5 w-5 shrink-0" />
                   {!isCollapsed && <span>{t('common.back')}</span>}
                 </button>
                 
@@ -270,7 +269,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                       )}
                       title={isCollapsed ? t(subItem.titleKey) : undefined}
                     >
-                      <subItem.icon className="h-5 w-5 flex-shrink-0" />
+                      <subItem.icon className="h-5 w-5 shrink-0" />
                       {!isCollapsed && <span>{t(subItem.titleKey)}</span>}
                     </Link>
                   );
@@ -300,7 +299,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                     )}
                     title={isCollapsed ? t(item.titleKey) : undefined}
                   >
-                    <item.icon className="h-5 w-5 flex-shrink-0" />
+                    <item.icon className="h-5 w-5 shrink-0" />
                     {!isCollapsed && (
                       <span className="flex-1">{t(item.titleKey)}</span>
                     )}
@@ -325,7 +324,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                    <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center shrink-0">
                       <User className="h-4 w-4 text-primary-foreground" />
                     </div>
                     <div className="min-w-0">
@@ -426,7 +425,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         isCollapsed ? 'lg:ml-16' : 'lg:ml-64'
       )}>
         {/* Top Navbar */}
-        <header className="sticky top-0 z-20 h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <header className="sticky top-0 z-20 h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter] :bg-background/60">
           <div className="flex h-full items-center justify-end px-4 lg:px-6">
             {/* Mobile menu button */}
             <button

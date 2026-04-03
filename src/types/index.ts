@@ -136,8 +136,10 @@ export interface InventoryItem {
   product_id: string;
   product_name?: string;
   product_sku?: string;
+  product_barcode?: string;
   quantity: number;
   purchase_price: number;
+  selling_price?: number;
   total: number;
 }
 
@@ -168,6 +170,7 @@ export interface TransferItem {
   product_id: string;
   product_name?: string;
   product_sku?: string;
+  product_barcode?: string;
   quantity: number;
 }
 
