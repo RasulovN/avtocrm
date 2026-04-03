@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
+import { useState, useEffect, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
-import { ScanBarcode, Trash2, DollarSign, Search } from 'lucide-react';
+import { ScanBarcode, Trash2, DollarSign, Search, X } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
@@ -37,11 +37,11 @@ export function SalesPage() {
   const [discount, setDiscount] = useState(0);
   const [showReceipt, setShowReceipt] = useState(false);
   const [activePayment, setActivePayment] = useState<'cash' | 'card' | null>(null);
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
   const [showScanner, setShowScanner] = useState(false);
   const scannerVideoRef = useRef<HTMLVideoElement>(null);
   const scannerReaderRef = useRef<BrowserMultiFormatReader | null>(null);
-  const safeStores = useMemo(() => (Array.isArray(stores) ? stores : []), [stores]);
-  const safeProducts = useMemo(() => (Array.isArray(products) ? products : []), [products]);
 
   // Computed values
   const totalPrice = items.reduce((sum, item) => sum + item.total, 0);
@@ -51,10 +51,10 @@ export function SalesPage() {
   const debt = totalWithDiscount > totalPaid ? totalWithDiscount - totalPaid : 0;
 
   // Get unique categories from products
-  const categories = [...new Set(safeProducts.map((p) => p.category).filter((c) => c && c.trim()))];
+  const categories = [...new Set(products.map(p => p.category).filter(c => c && c.trim()))];
 
   // Filter products by store and category
-  const filteredProducts = safeProducts.filter(p => {
+  const filteredProducts = products.filter(p => {
     const matchStore = !storeId || p.store_id === storeId;
     const matchCategory = !categoryFilter || p.category === categoryFilter;
     return matchStore && matchCategory;
@@ -66,8 +66,8 @@ export function SalesPage() {
         storeService.getAll(),
         productService.getAll({ limit: 100 }),
       ]);
-      setStores(Array.isArray(storesRes.data) ? storesRes.data : []);
-      setProducts(Array.isArray(productsRes.data) ? productsRes.data : []);
+      setStores(storesRes.data);
+      setProducts(productsRes.data || []);
     } catch (error) {
       console.error('Failed to load data:', error);
       setStores([
@@ -107,7 +107,7 @@ export function SalesPage() {
 
   const handleBarcodeScan = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && barcode) {
-      const product = safeProducts.find(p => p.barcode === barcode || p.sku === barcode);
+      const product = products.find(p => p.barcode === barcode || p.sku === barcode);
       if (product) {
         addProduct(product);
       }
@@ -121,24 +121,24 @@ export function SalesPage() {
 
   useEffect(() => {
     if (!showScanner) return;
-    
+
     const reader = new BrowserMultiFormatReader();
     scannerReaderRef.current = reader;
-    
+
     let isActive = true;
-    
+
     const startScanner = async () => {
       const videoEl = scannerVideoRef.current;
       if (!videoEl || !isActive) return;
-      
+
       try {
         reader.decodeFromVideoDevice(
-          undefined, 
-          videoEl, 
-          (result) => {
+          undefined,
+          videoEl,
+          (result, err) => {
             if (result && isActive) {
               const text = result.getText();
-              const product = safeProducts.find(p => p.barcode === text || p.sku === text);
+              const product = products.find(p => p.barcode === text || p.sku === text);
               if (product) {
                 addProduct(product);
               }
@@ -158,10 +158,10 @@ export function SalesPage() {
       isActive = false;
       scannerReaderRef.current = null;
     };
-  }, [showScanner, safeProducts]);
+  }, [showScanner, products]);
 
   const updateQuantity = (index: number, quantity: number) => {
-    if (quantity < 1) return;
+    if (!Number.isFinite(quantity) || quantity < 1) return;
     const newItems = [...items];
     newItems[index].quantity = quantity;
     newItems[index].total = newItems[index].selling_price * quantity;
@@ -194,6 +194,7 @@ export function SalesPage() {
 
   const handleFinishSale = () => {
     if (items.length === 0) return;
+    if (!customerName.trim() || !customerPhone.trim()) return;
     setShowReceipt(true);
       setSaving(true);
       setTimeout(() => setSaving(false), 1000);
@@ -206,6 +207,8 @@ export function SalesPage() {
     setCardAmount(0);
     setDiscount(0);
     setActivePayment(null);
+    setCustomerName('');
+    setCustomerPhone('');
     barcodeInputRef.current?.focus();
   };
 
@@ -217,6 +220,13 @@ export function SalesPage() {
 
   return (
     <div>
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          .receipt-print, .receipt-print * { visibility: visible; }
+          .receipt-print { position: absolute; left: 0; top: 0; width: 100%; }
+        }
+      `}</style>
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
@@ -254,7 +264,7 @@ export function SalesPage() {
                       <SelectValue placeholder="Do'kon" />
                     </SelectTrigger>
                     <SelectContent>
-                      {safeStores.map(s => (
+                      {stores.map(s => (
                         <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                       ))}
                     </SelectContent>
@@ -325,7 +335,7 @@ export function SalesPage() {
                       <div className="flex items-start justify-between mb-1.5">
                         <div className="flex-1">
                           <div className="font-medium dark:text-white text-sm">{item.product_name}</div>
-                          <div className="text-xs text-muted-foreground dark:text-gray-400">{safeProducts.find(p => p.id === item.product_id)?.sku}</div>
+                          <div className="text-xs text-muted-foreground dark:text-gray-400">{products.find(p => p.id === item.product_id)?.sku}</div>
                         </div>
                         <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => removeItem(index)}>
                           <Trash2 className="h-3.5 w-3.5 text-red-500" />
@@ -334,13 +344,34 @@ export function SalesPage() {
                       <div className="grid grid-cols-3 gap-1.5 text-xs">
                         <div>
                           <div className="text-muted-foreground dark:text-gray-400 mb-1">Soni</div>
-                          <Input
-                            type="number"
-                            min="1"
-                            value={item.quantity}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => updateQuantity(index, Number(e.target.value))}
-                            className="h-7 text-center text-xs dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                          />
+                          <div className="flex items-center gap-1">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7 text-xs dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
+                              onClick={() => updateQuantity(index, item.quantity - 1)}
+                              disabled={item.quantity <= 1}
+                            >
+                              -
+                            </Button>
+                            <Input
+                              type="text"
+                              min="1"
+                              value={item.quantity}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => updateQuantity(index, Number(e.target.value))}
+                              className="h-7 w-12 text-center text-xs dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7 text-xs dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
+                              onClick={() => updateQuantity(index, item.quantity + 1)}
+                            >
+                              +
+                            </Button>
+                          </div>
                         </div>
                         <div>
                           <div className="text-muted-foreground dark:text-gray-400 mb-1">Narx</div>
@@ -392,6 +423,27 @@ export function SalesPage() {
                 <h4 className="text-base font-semibold dark:text-white">To'lov</h4>
               </div>
               <div className="px-3 flex-1 space-y-3">
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground dark:text-gray-400">Mijoz</Label>
+                  <div>
+                    <Input
+                      type="text"
+                      placeholder="F.I.O"
+                      value={customerName}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setCustomerName(e.target.value)}
+                      className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <Input
+                      type="tel"
+                      placeholder="Telefon"
+                      value={customerPhone}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setCustomerPhone(e.target.value)}
+                      className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white"
+                    />
+                  </div>
+                </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground dark:text-gray-400">Tezkor to'lov</Label>
                   <div className="grid grid-cols-2 gap-1.5">
@@ -476,7 +528,7 @@ export function SalesPage() {
                     </div>
                   )}
                 </div>
-                <Button type="button" className="w-full h-11 text-sm font-semibold dark:bg-green-600 dark:hover:bg-green-700" onClick={handleFinishSale} disabled={saving || items.length === 0}>
+                <Button type="button" className="w-full h-11 text-sm font-semibold dark:bg-green-600 dark:hover:bg-green-700" onClick={handleFinishSale} disabled={saving || items.length === 0 || !customerName.trim() || !customerPhone.trim()}>
                   {saving ? 'Yuklanmoqda...' : `Sotuvni yakunlash — ${formatCurrency(totalWithDiscount)}`}
                 </Button>
               </div>
@@ -487,11 +539,11 @@ export function SalesPage() {
 
       {showReceipt && (
         <div className="receipt-modal fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="receipt-content bg-white dark:bg-gray-800 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="receipt-content receipt-print bg-white dark:bg-gray-800 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-4 border-b dark:border-gray-600 flex justify-between items-center">
               <h3 className="text-lg font-bold dark:text-white">Chek</h3>
               <Button variant="ghost" size="icon" onClick={() => setShowReceipt(false)}>
-                <Trash2 className="h-4 w-4" />
+                <X className="h-4 w-4" />
               </Button>
             </div>
             <div className="p-4 space-y-3">
@@ -499,6 +551,16 @@ export function SalesPage() {
                 <h4 className="text-xl font-bold dark:text-white">AvtoCRM</h4>
                 <p className="text-sm text-muted-foreground dark:text-gray-400">Sotuv cheki</p>
                 <p className="text-xs text-muted-foreground dark:text-gray-400">{new Date().toLocaleString()}</p>
+              </div>
+              <div className="border-b dark:border-gray-600 pb-2 text-sm dark:text-gray-300">
+                <div className="flex justify-between">
+                  <span>Mijoz:</span>
+                  <span>{customerName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Telefon:</span>
+                  <span>{customerPhone}</span>
+                </div>
               </div>
 
               <div className="space-y-2 text-sm">
@@ -562,7 +624,7 @@ export function SalesPage() {
                 Xaridingiz uchun rahmat!
               </div>
             </div>
-            <div className="p-4 border-t dark:border-gray-600 flex gap-2">
+            <div className="p-4 border-t dark:border-gray-600 flex gap-2 print:hidden">
               <Button className="flex-1" onClick={printReceipt}>
                 Chop etish
               </Button>
@@ -576,3 +638,5 @@ export function SalesPage() {
     </div>
   );
 }
+
+

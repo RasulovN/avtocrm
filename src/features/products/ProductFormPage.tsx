@@ -7,7 +7,13 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/Select';
 import { productService } from '../../services/productService';
 import { storeService } from '../../services/storeService';
 import { supplierService } from '../../services/supplierService';
@@ -32,7 +38,10 @@ export function ProductFormPage() {
     category: '',
     supplier_id: '',
     store_id: '',
+    image: '',
+    images: [],
   });
+  const categories = ['Filters', 'Brakes', 'Engine'];
 
   const loadData = useCallback(async () => {
     try {
@@ -53,7 +62,14 @@ export function ProductFormPage() {
           category: product.category,
           supplier_id: product.supplier_id,
           store_id: product.store_id,
-          image: product.image,
+          image: product.image || '',
+          images: Array.isArray(product.images)
+            ? product.images
+            : product.images
+              ? [product.images]
+              : product.image
+                ? [product.image]
+                : [],
         });
       }
     } catch (error) {
@@ -94,8 +110,29 @@ export function ProductFormPage() {
     }
   };
 
-  const handleChange = (field: keyof ProductFormData, value: string | number) => {
+  const handleChange = (field: keyof ProductFormData, value: string | number | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    Promise.all(
+      files.map(
+        (file) =>
+          new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+            reader.readAsDataURL(file);
+          })
+      )
+    ).then((results) => {
+      const images = results.filter(Boolean);
+      setFormData((prev) => ({
+        ...prev,
+        images,
+        image: images[0] || '',
+      }));
+    });
   };
 
   return (
@@ -104,11 +141,11 @@ export function ProductFormPage() {
         title={isEditing ? t('products.editProduct') : t('products.addProduct')}
         description={isEditing ? t('products.productUpdated') : t('products.productAdded')}
         breadcrumbs={[
-          { label: t('nav.products'), href: '/products' },
+          { label: t('nav.products'), href: '/uz/products' },
           { label: isEditing ? t('common.edit') : t('common.add') },
         ]}
         actions={
-          <Button variant="outline" onClick={() => navigate('/products')}>
+          <Button variant="outline" onClick={() => navigate('/uz/products')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             {t('common.back')}
           </Button>
@@ -141,13 +178,43 @@ export function ProductFormPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="category">{t('products.category')}</Label>
+                <Select
+                  value={formData.category || ''}
+                  onValueChange={(value) => handleChange('category', value)}
+                >
+                  <SelectTrigger id="category">
+                    <SelectValue placeholder={t('products.category')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {cat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="image">{t('products.image') || 'Image'}</Label>
                 <Input
-                  id="category"
-                  value={formData.category}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('category', e.target.value)}
-                  placeholder="e.g., Filters, Brakes, Engine"
-                  required
+                  id="image"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageChange}
                 />
+                {Array.isArray(formData.images) && formData.images.length ? (
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    {formData.images.map((src, idx) => (
+                      <img
+                        key={`${src}-${idx}`}
+                        src={src}
+                        alt={formData.name || `Product image ${idx + 1}`}
+                        className="h-24 w-24 rounded-md object-cover border"
+                      />
+                    ))}
+                  </div>
+                ) : null}
               </div>
             </CardContent>
           </Card>
@@ -179,54 +246,10 @@ export function ProductFormPage() {
               </div>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('products.store')}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="store_id">{t('products.store')}</Label>
-                <Select
-                  value={formData.store_id}
-                  onValueChange={(value: string) => handleChange('store_id', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('products.store')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {stores.map((store) => (
-                      <SelectItem key={store.id} value={store.id}>
-                        {store.name} {store.is_warehouse ? '(Warehouse)' : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="supplier_id">{t('products.supplier')}</Label>
-                <Select
-                  value={formData.supplier_id}
-                  onValueChange={(value: string) => handleChange('supplier_id', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('products.supplier')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {suppliers.map((supplier) => (
-                      <SelectItem key={supplier.id} value={supplier.id}>
-                        {supplier.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
         <div className="mt-6 flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => navigate('/products')}>
+          <Button type="button" variant="outline" onClick={() => navigate('/uz/products')}>
             {t('common.cancel')}
           </Button>
           <Button type="submit" disabled={saving}>

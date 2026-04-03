@@ -201,7 +201,7 @@ export function DataTable<T extends { id: string }>({
   return (
     <div className="space-y-4">
       {/* Search */}
-      {onSearch && (
+      {/* {onSearch && (
         <div className="flex items-center gap-2">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -213,7 +213,7 @@ export function DataTable<T extends { id: string }>({
             />
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Table Container */}
       <div className="w-full overflow-x-auto rounded-lg border bg-card">
