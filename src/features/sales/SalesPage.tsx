@@ -24,8 +24,7 @@ export function SalesPage() {
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const [stores, setStores] = useState<Store[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [_loading, _setLoading] = useState(false);
-  const [_saving, _setSaving] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [barcode, setBarcode] = useState('');
 
   const [storeId, setStoreId] = useState('');
@@ -59,23 +58,8 @@ export function SalesPage() {
     return matchStore && matchCategory;
   });
 
-  useEffect(() => {
-    loadData();
-    barcodeInputRef.current?.focus();
-  }, []);
-
-  const handleDiscountChange = (value: number) => {
-    setDiscount(value);
-    if (activePayment === 'cash') {
-      setCashAmount(totalPrice - Math.min(value, totalPrice));
-    } else if (activePayment === 'card') {
-      setCardAmount(totalPrice - Math.min(value, totalPrice));
-    }
-  };
-
   const loadData = async () => {
     try {
-      _setLoading(true);
       const [storesRes, productsRes] = await Promise.all([
         storeService.getAll(),
         productService.getAll({ limit: 100 }),
@@ -91,10 +75,56 @@ export function SalesPage() {
         { id: '1', name: 'Oil Filter', purchase_price: 15000, selling_price: 25000, category: 'Filters', supplier_id: '1', store_id: '1', sku: 'SKU-001', barcode: '123456789', description: '', quantity: 100, created_at: '', updated_at: '' },
         { id: '2', name: 'Brake Pads', purchase_price: 45000, selling_price: 75000, category: 'Brakes', supplier_id: '1', store_id: '1', sku: 'SKU-002', barcode: '987654321', description: '', quantity: 50, created_at: '', updated_at: '' },
       ]);
-    } finally {
-      _setLoading(false);
     }
   };
+
+  const addProduct = (product: Product) => {
+    setItems(prevItems => {
+      const existingIndex = prevItems.findIndex(item => item.product_id === product.id);
+      if (existingIndex >= 0) {
+        const newItems = [...prevItems];
+        newItems[existingIndex].quantity += 1;
+        newItems[existingIndex].total = newItems[existingIndex].selling_price * newItems[existingIndex].quantity;
+        return newItems;
+      }
+      return [...prevItems, {
+        product_id: product.id,
+        product_name: product.name,
+        quantity: 1,
+        purchase_price: product.purchase_price ?? 0,
+        selling_price: product.selling_price ?? 0,
+        total: product.selling_price ?? 0,
+      }];
+    });
+  };
+
+   
+  const loadData = async () => {
+    try {
+      const [storesRes, productsRes] = await Promise.all([
+        storeService.getAll(),
+        productService.getAll({ limit: 100 }),
+      ]);
+      setStores(storesRes.data);
+      setProducts(productsRes.data || []);
+    } catch (error) {
+      console.error('Failed to load data:', error);
+      setStores([
+        { id: '1', name: 'Main Store', is_warehouse: false, created_at: '' },
+      ]);
+      setProducts([
+        { id: '1', name: 'Oil Filter', purchase_price: 15000, selling_price: 25000, category: 'Filters', supplier_id: '1', store_id: '1', sku: 'SKU-001', barcode: '123456789', description: '', quantity: 100, created_at: '', updated_at: '' },
+        { id: '2', name: 'Brake Pads', purchase_price: 45000, selling_price: 75000, category: 'Brakes', supplier_id: '1', store_id: '1', sku: 'SKU-002', barcode: '987654321', description: '', quantity: 50, created_at: '', updated_at: '' },
+      ]);
+    }
+  };
+
+   
+  useEffect(() => {
+    loadData();
+    barcodeInputRef.current?.focus();
+  }, []);
+   
 
   const handleBarcodeScan = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && barcode) {
@@ -136,26 +166,6 @@ export function SalesPage() {
     };
   }, [showScanner, products]);
 
-  const addProduct = (product: Product) => {
-    setItems(prevItems => {
-      const existingIndex = prevItems.findIndex(item => item.product_id === product.id);
-      if (existingIndex >= 0) {
-        const newItems = [...prevItems];
-        newItems[existingIndex].quantity += 1;
-        newItems[existingIndex].total = newItems[existingIndex].selling_price * newItems[existingIndex].quantity;
-        return newItems;
-      }
-      return [...prevItems, {
-        product_id: product.id,
-        product_name: product.name,
-        quantity: 1,
-        purchase_price: product.purchase_price ?? 0,
-        selling_price: product.selling_price ?? 0,
-        total: product.selling_price ?? 0,
-      }];
-    });
-  };
-
   const updateQuantity = (index: number, quantity: number) => {
     if (quantity < 1) return;
     const newItems = [...items];
@@ -191,8 +201,8 @@ export function SalesPage() {
   const handleFinishSale = () => {
     if (items.length === 0) return;
     setShowReceipt(true);
-    _setSaving(true);
-    setTimeout(() => _setSaving(false), 1000);
+      setSaving(true);
+      setTimeout(() => setSaving(false), 1000);
   };
 
   const resetSale = () => {
@@ -472,8 +482,8 @@ export function SalesPage() {
                     </div>
                   )}
                 </div>
-                <Button type="button" className="w-full h-11 text-sm font-semibold dark:bg-green-600 dark:hover:bg-green-700" onClick={handleFinishSale} disabled={_saving || items.length === 0}>
-                  {_saving ? 'Yuklanmoqda...' : `Sotuvni yakunlash — ${formatCurrency(totalWithDiscount)}`}
+                <Button type="button" className="w-full h-11 text-sm font-semibold dark:bg-green-600 dark:hover:bg-green-700" onClick={handleFinishSale} disabled={saving || items.length === 0}>
+                  {saving ? 'Yuklanmoqda...' : `Sotuvni yakunlash — ${formatCurrency(totalWithDiscount)}`}
                 </Button>
               </div>
             </div>
