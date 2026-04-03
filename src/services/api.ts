@@ -2,6 +2,7 @@ import axios from 'axios';
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { handleError } from '../utils/errorHandler';
 import { isDev } from '../config/environment';
+import cookieAuth from '../utils/cookie';
 
 // Create axios instance
 const api: AxiosInstance = axios.create({
@@ -15,12 +16,13 @@ const api: AxiosInstance = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = cookieAuth.getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
+
   (error) => {
     handleError(error, { showToast: false });
     return Promise.reject(error);
@@ -35,8 +37,7 @@ api.interceptors.response.use(
     const status = error.response?.status;
     
     if (status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      cookieAuth.removeAuth();
       window.location.href = '/login';
       handleError(error, { showToast: false });
     } else {
@@ -50,6 +51,7 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
 
 // Generic API methods
 export const apiClient = {

@@ -175,10 +175,11 @@ export function MainLayout({ children }: MainLayoutProps) {
   };
 
   const currentUser = user || {
-    username: 'Admin',
+    full_name: 'Admin',
     role: 'admin',
-    phone: '+998 90 123-45-67',
+    phone_number: '+998 90 123-45-67',
   };
+
 
   return (
     <div className="flex min-h-screen">
@@ -348,9 +349,10 @@ export function MainLayout({ children }: MainLayoutProps) {
                     <div className="space-y-1 text-sm">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">{t('stores.phone')}:</span>
-                        <span>{(currentUser as any).phone || '+998 90 123-45-67'}</span>
+                        <span>{currentUser.phone_number || '+998 90 123-45-67'}</span>
                       </div>
                     </div>
+
                     <div className="pt-2 border-t space-y-2">
                       <Button 
                         variant="outline" 
@@ -388,8 +390,12 @@ export function MainLayout({ children }: MainLayoutProps) {
                       <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
                         <User className="h-5 w-5 text-primary" />
                       </div>
-                      <p className="font-medium text-sm">{currentUser.username}</p>
+                      <p className="font-medium text-sm">{currentUser.full_name}</p>
                       <p className="text-xs text-muted-foreground capitalize">{currentUser.role}</p>
+</xai:function_call > 
+
+<xai:function_call name="edit_file">
+<parameter name="path">src/components/shared/MainLayout.tsx
                     </div>
                     <div className="pt-2 border-t space-y-2">
                       <Button 

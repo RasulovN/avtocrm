@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { authService } from '../services/authService';
-import type { User, UserRole } from '../types';
+import cookieAuth from '../utils/cookie';
+import type { User } from '../types';
 
 interface ThemeStore {
   theme: 'light' | 'dark';
@@ -25,27 +26,25 @@ export const useThemeStore = create<ThemeStore>((set) => ({
 
 interface AuthStore {
   user: User | null;
-  token: string | null;
   isLoading: boolean;
   error: string | null;
-  login: (username: string, password: string) => Promise<void>;
+  login: (phone_number: string, password: string) => Promise<void>;
   logout: () => void;
   checkAuth: () => void;
   isAuthenticated: () => boolean;
-  hasRole: (roles: UserRole[]) => boolean;
+  hasRole: (roles: string[]) => boolean;
 }
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
   user: null,
-  token: null,
   isLoading: false,
   error: null,
 
-  login: async (username: string, password: string) => {
+  login: async (phone_number: string, password: string) => {
     set({ isLoading: true, error: null });
     try {
-      const { token, user } = await authService.login(username, password);
-      set({ user, token, isLoading: false });
+      const user = await authService.login(phone_number, password);
+      set({ user, isLoading: false });
     } catch (error) {
       set({ 
         isLoading: false, 
@@ -57,24 +56,24 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   logout: () => {
     authService.logout();
-    set({ user: null, token: null });
+    set({ user: null });
   },
 
   checkAuth: () => {
     const user = authService.getCurrentUser();
-    const token = localStorage.getItem('token');
-    if (user && token) {
-      set({ user, token });
+    if (user) {
+      set({ user });
     }
   },
 
   isAuthenticated: () => {
-    return !!get().token;
+    return authService.isAuthenticated();
   },
 
-  hasRole: (roles: UserRole[]) => {
+  hasRole: (roles: string[]) => {
     const user = get().user;
     if (!user) return false;
     return roles.includes(user.role);
   },
 }));
+

@@ -1,32 +1,28 @@
 // User and Auth Types
-export type UserRole = 'admin' | 'store_user' | 'store_admin';
+export type UserRole = 'admin' | 'store_user' | 'store_admin' | 'su';
 
 export interface UserLog {
-  id: string;
+  id: number;
   action: string;
-  timestamp: string;
   ip_address?: string;
+  user_agent?: string;
+  created_at: string;
 }
 
 export interface User {
-  id: string;
-  user_id: string;
+  id: number;
+  role: string;
   full_name: string;
-  username?: string;
-  password?: string;
-  role: UserRole;
-  phone: string;
-  store_id?: string;
-  store_name?: string;
-  logs?: UserLog[];
-  created_at: string;
+  phone_number: string;
+  email?: string;
+  history?: UserLog[];
 }
 
 export interface UserFormData {
   full_name: string;
   password?: string;
   role: UserRole;
-  phone: string;
+  phone_number: string;
   store_id?: string;
 }
 

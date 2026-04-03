@@ -1,45 +1,46 @@
 import { apiClient } from './api';
-import type { User, UserRole, ApiResponse } from '../types';
-
-interface LoginResponse {
-  user: User;
-  token: string;
-}
+import cookieAuth from '../utils/cookie';
+import type { User, ApiResponse } from '../types';
 
 export const authService = {
-  login: async (username: string, password: string): Promise<LoginResponse> => {
-    const response = await apiClient.post<ApiResponse<LoginResponse>>('/auth/login', {
-      username,
+  login: async (phone_number: string, password: string): Promise<User> => {
+    // Login - server sets cookie
+    await apiClient.post('/api/users/login/', {
+      phone_number,
       password,
     });
-    const { token, user } = response.data.data;
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
-    return { token, user };
+
+    // Fetch profile to get user data
+    const profileResponse = await apiClient.get<ApiResponse<User>>('/api/users/profile/');
+    const user = profileResponse.data.data;
+    
+    // Store user in cookie (token already in cookie from login)
+    cookieAuth.setAuth('', JSON.stringify(user)); 
+    
+    return user;
   },
 
-  logout: (): void => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  logout: async (): Promise<void> => {
+    try {
+      await apiClient.post('/api/users/logout/');
+    } catch (error) {
+      console.warn('Logout API failed:', error);
+    }
+    cookieAuth.removeAuth();
   },
 
   getCurrentUser: (): User | null => {
-    const userStr = localStorage.getItem('user');
-    if (!userStr) return null;
-    try {
-      return JSON.parse(userStr) as User;
-    } catch {
-      return null;
-    }
+    return cookieAuth.getUser() as User | null;
   },
 
   isAuthenticated: (): boolean => {
-    return !!localStorage.getItem('token');
+    return cookieAuth.isAuthenticated();
   },
 
-  hasRole: (roles: UserRole[]): boolean => {
+  hasRole: (roles: string[]): boolean => {
     const user = authService.getCurrentUser();
     if (!user) return false;
     return roles.includes(user.role);
   },
 };
+

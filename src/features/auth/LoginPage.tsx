@@ -12,13 +12,13 @@ export function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { login, isLoading, error } = useAuthStore();
-  const [username, setUsername] = useState('');
+  const [phone_number, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await login(username, password);
+      await login(phone_number, password);
       navigate('/dashboard');
     } catch {
       // Error is handled in the store
@@ -40,16 +40,17 @@ export function LoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">{t('auth.username')}</Label>
+              <Label htmlFor="phone_number">{t('stores.phone') || t('auth.phoneNumber')}</Label>
               <Input
-                id="username"
-                type="text"
-                placeholder={t('auth.username')}
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                id="phone_number"
+                type="tel"
+                placeholder={t('stores.phone') || t('auth.phoneNumber') || '+998901234567'}
+                value={phone_number}
+                onChange={(e) => setPhoneNumber(e.target.value)}
                 required
               />
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="password">{t('auth.password')}</Label>
               <Input

@@ -48,7 +48,7 @@ export function Navbar() {
         
         <div className="hidden md:flex items-center gap-3 ml-2 border-l pl-3">
           <div className="flex flex-col items-end">
-            <span className="text-sm font-medium">{user?.username}</span>
+            <span className="text-sm font-medium">{user?.full_name || user?.phone_number}</span>
             <span className="text-xs text-muted-foreground capitalize">{user?.role}</span>
           </div>
           <button
@@ -63,3 +63,4 @@ export function Navbar() {
     </header>
   );
 }
+

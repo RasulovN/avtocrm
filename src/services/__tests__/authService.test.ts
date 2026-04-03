@@ -38,10 +38,10 @@ describe('authService', () => {
         },
       });
 
-      const result = await authService.login('admin', 'password');
+      const result = await authService.login('+998901234567', 'password');
 
-      expect(apiClient.post).toHaveBeenCalledWith('/auth/login', {
-        username: 'admin',
+      expect(apiClient.post).toHaveBeenCalledWith('/api/users/login/', {
+        phone_number: '+998901234567',
         password: 'password',
       });
       expect(result.token).toBe('test-token');
@@ -63,7 +63,7 @@ describe('authService', () => {
         data: { data: { token: 't', user: mockUser } },
       });
 
-      await authService.login('user', 'pass');
+      await authService.login('+998901234567', 'pass');
 
       expect(localStorage.setItem).toHaveBeenCalledWith(
         'user',
@@ -74,18 +74,32 @@ describe('authService', () => {
     it('throws error on API failure', async () => {
       vi.mocked(apiClient.post).mockRejectedValue(new Error('Network error'));
 
-      await expect(authService.login('admin', 'wrong')).rejects.toThrow('Network error');
+      await expect(authService.login('+998901234567', 'wrong')).rejects.toThrow('Network error');
     });
   });
 
+
   describe('logout', () => {
-    it('removes token and user from localStorage', () => {
-      authService.logout();
+    it('calls logout API and removes token and user from localStorage', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({ data: {} } as any);
+
+      await authService.logout();
+
+      expect(apiClient.post).toHaveBeenCalledWith('/api/users/logout/');
+      expect(localStorage.removeItem).toHaveBeenCalledWith('token');
+      expect(localStorage.removeItem).toHaveBeenCalledWith('user');
+    });
+
+    it('clears localStorage even if API fails', async () => {
+      vi.mocked(apiClient.post).mockRejectedValue(new Error('Logout failed'));
+
+      await authService.logout();
 
       expect(localStorage.removeItem).toHaveBeenCalledWith('token');
       expect(localStorage.removeItem).toHaveBeenCalledWith('user');
     });
   });
+
 
   describe('getCurrentUser', () => {
     it('returns user from localStorage', () => {
