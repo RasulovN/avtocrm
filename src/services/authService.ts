@@ -1,19 +1,24 @@
 import { apiClient } from './api';
 import type { User, ApiResponse } from '../types';
 
+const TOKEN_KEY = 'token';
 const USER_KEY = 'user';
 
 export const authService = {
   login: async (phone_number: string, password: string): Promise<User> => {
-    await apiClient.post('/users/login/', {
+    // Login request - server sets auth cookie
+    await apiClient.post<ApiResponse<{ token: string }>>('/users/login/', {
       phone_number,
       password,
     });
 
+    // Fetch profile to get user data
     const profileResponse = await apiClient.get<ApiResponse<User>>('/users/profile/');
     const user = profileResponse.data.data;
-    
+
+    // Store user and token in localStorage for persistence
     localStorage.setItem(USER_KEY, JSON.stringify(user));
+    localStorage.setItem(TOKEN_KEY, response.data.data.token);
     
     return user;
   },
@@ -25,6 +30,7 @@ export const authService = {
       console.warn('Logout API failed:', error);
     }
     localStorage.removeItem(USER_KEY);
+    localStorage.removeItem(TOKEN_KEY);
   },
 
   getCurrentUser: (): User | null => {
