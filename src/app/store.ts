@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { authService } from '../services/authService';
-import cookieAuth from '../utils/cookie';
 import type { User } from '../types';
 
 interface ThemeStore {
@@ -36,10 +35,7 @@ interface AuthStore {
 }
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
-  user: (() => {
-    const stored = localStorage.getItem('user');
-    return stored ? JSON.parse(stored) : null;
-  })(),
+  user: authService.getCurrentUser(),
   isLoading: false,
   error: null,
 
@@ -47,7 +43,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const user = await authService.login(phone_number, password);
-      localStorage.setItem('user', JSON.stringify(user));
       set({ user, isLoading: false });
     } catch (error) {
       set({ 
@@ -60,31 +55,22 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   logout: () => {
     authService.logout();
-    localStorage.removeItem('user');
     set({ user: null });
   },
 
   checkAuth: () => {
-    const stored = localStorage.getItem('user');
-    if (stored) {
-      try {
-        const user = JSON.parse(stored);
-        set({ user });
-      } catch {
-        localStorage.removeItem('user');
-      }
-    }
+    const user = authService.getCurrentUser();
+    set({ user });
   },
 
   isAuthenticated: () => {
     return !!get().user;
   },
 
-
   hasRole: (roles: string[]) => {
     const user = get().user;
     if (!user) return false;
-    return roles.includes(user.role);
+    return roles.includes(user.role as string);
   },
 }));
 

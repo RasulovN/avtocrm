@@ -1,56 +1,88 @@
 import { apiClient } from './api';
 import type { User, ApiResponse } from '../types';
 
-const TOKEN_KEY = 'token';
-const USER_KEY = 'user';
-
 export const authService = {
   login: async (phone_number: string, password: string): Promise<User> => {
-    // Login request - server sets auth cookie
-    await apiClient.post<ApiResponse<{ token: string }>>('/users/login/', {
+    console.log('Login attempt:', phone_number);
+    
+    // 1. Login - server sets httpOnly cookie
+    const loginResponse = await apiClient.post('/api/users/login/', {
       phone_number,
       password,
     });
-
-    // Fetch profile to get user data
-    const profileResponse = await apiClient.get<ApiResponse<User>>('/users/profile/');
-    const user = profileResponse.data.data;
-
-    // Store user and token in localStorage for persistence
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
-    localStorage.setItem(TOKEN_KEY, response.data.data.token);
+    console.log('Login response:', loginResponse.status, loginResponse.data);
+    
+    // 2. Fetch profile - uses server cookie
+    const profileResponse = await apiClient.get('/api/users/profile/');
+    console.log('Profile response:', profileResponse.status, profileResponse.data);
+    
+    const user = profileResponse.data;
+    
+    // 3. Store user in localStorage for UI (persistent)
+    localStorage.setItem('crm_user', JSON.stringify(user));
+    localStorage.setItem('crm_auth_time', Date.now().toString());
+    
+    console.log('User stored:', user);
     
     return user;
   },
 
   logout: async (): Promise<void> => {
+    console.log('Logout...');
     try {
-      await apiClient.post('/users/logout/');
+      await apiClient.post('/api/users/logout/');
     } catch (error) {
       console.warn('Logout API failed:', error);
     }
-    localStorage.removeItem(USER_KEY);
-    localStorage.removeItem(TOKEN_KEY);
+    
+    // Clear frontend storage
+    localStorage.removeItem('crm_user');
+    localStorage.removeItem('crm_auth_time');
   },
 
   getCurrentUser: (): User | null => {
-    const userStr = localStorage.getItem(USER_KEY);
+    const userStr = localStorage.getItem('crm_user');
     if (!userStr) return null;
+    
     try {
-      return JSON.parse(userStr);
+      const user = JSON.parse(userStr);
+      // Check age < 7 days
+      const authTime = localStorage.getItem('crm_auth_time');
+      if (authTime && (Date.now() - parseInt(authTime) > 7 * 24 * 60 * 60 * 1000)) {
+        localStorage.removeItem('crm_user');
+        localStorage.removeItem('crm_auth_time');
+        return null;
+      }
+      return user;
     } catch {
+      localStorage.removeItem('crm_user');
       return null;
     }
   },
 
   isAuthenticated: (): boolean => {
-    return !!localStorage.getItem(USER_KEY);
+    const user = authService.getCurrentUser();
+    return !!user;
   },
 
   hasRole: (roles: string[]): boolean => {
     const user = authService.getCurrentUser();
     if (!user) return false;
-    return roles.includes(user.role);
+    return roles.includes(user.role as string);
   },
+
+  refreshAuth: async (): Promise<User | null> => {
+    try {
+      const profileResponse = await apiClient.get('/api/users/profile/');
+      const user = profileResponse.data;
+      localStorage.setItem('crm_user', JSON.stringify(user));
+      localStorage.setItem('crm_auth_time', Date.now().toString());
+      return user;
+    } catch {
+      localStorage.removeItem('crm_user');
+      localStorage.removeItem('crm_auth_time');
+      return null;
+    }
+  }
 };
 
