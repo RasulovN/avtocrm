@@ -2,7 +2,13 @@ import axios from 'axios';
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { handleError } from '../utils/errorHandler';
 import { isDev } from '../config/environment';
-import cookieAuth from '../utils/cookie';
+
+const USER_KEY = 'user';
+
+const removeAuth = () => {
+  localStorage.removeItem(USER_KEY);
+  window.location.href = '/login';
+};
 
 // Create axios instance
 const api: AxiosInstance = axios.create({
@@ -34,8 +40,7 @@ api.interceptors.response.use(
     const status = error.response?.status;
     
     if (status === 401) {
-      cookieAuth.removeAuth();
-      window.location.href = '/login';
+      removeAuth();
       handleError(error, { showToast: false });
     } else {
       const message = errorData?.message || errorData?.msg || error.message || 'Server error';

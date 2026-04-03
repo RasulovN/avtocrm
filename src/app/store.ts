@@ -36,7 +36,10 @@ interface AuthStore {
 }
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
-  user: null,
+  user: (() => {
+    const stored = localStorage.getItem('user');
+    return stored ? JSON.parse(stored) : null;
+  })(),
   isLoading: false,
   error: null,
 
@@ -44,6 +47,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const user = await authService.login(phone_number, password);
+      localStorage.setItem('user', JSON.stringify(user));
       set({ user, isLoading: false });
     } catch (error) {
       set({ 
@@ -56,18 +60,24 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   logout: () => {
     authService.logout();
+    localStorage.removeItem('user');
     set({ user: null });
   },
 
   checkAuth: () => {
-    const user = authService.getCurrentUser();
-    if (user) {
-      set({ user });
+    const stored = localStorage.getItem('user');
+    if (stored) {
+      try {
+        const user = JSON.parse(stored);
+        set({ user });
+      } catch {
+        localStorage.removeItem('user');
+      }
     }
   },
 
   isAuthenticated: () => {
-    return authService.isAuthenticated();
+    return !!get().user;
   },
 
 

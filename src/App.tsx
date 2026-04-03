@@ -42,10 +42,6 @@ function App() {
     checkAuth();
   }, [checkAuth]);
 
-  if (isAuthLoading) {
-    return null;
-  }
-
   useEffect(() => {
     const root = window.document.documentElement;
     if (theme === 'dark') {
@@ -54,6 +50,10 @@ function App() {
       root.classList.remove('dark');
     }
   }, [theme]);
+
+  if (isAuthLoading) {
+    return null;
+  }
 
   const currentLang = i18n.language || 'uz';
 

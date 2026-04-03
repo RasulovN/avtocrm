@@ -100,7 +100,7 @@ export const productService = {
       if (filters?.limit) params.append('limit', filters.limit.toString());
       
       // Try to fetch from API first
-      const response = await fetch(`http://localhost:3000/api/products?${params.toString()}`);
+      const response = await fetch(`https://autocrm.pythonanywhere.com/api/products?${params.toString()}`);
       if (!response.ok) throw new Error('API not available');
       const data = await response.json();
       return data;
@@ -139,7 +139,7 @@ export const productService = {
 
   getById: async (id: string): Promise<Product> => {
     try {
-      const response = await fetch(`http://localhost:3000/api/products/${id}`);
+      const response = await fetch(`https://autocrm.pythonanywhere.com/api/products/${id}`);
       if (!response.ok) throw new Error('API not available');
       const data: ApiResponse<Product> = await response.json();
       return data.data;
@@ -152,7 +152,7 @@ export const productService = {
 
   create: async (data: ProductFormData): Promise<Product> => {
     try {
-      const response = await fetch('http://localhost:3000/api/products', {
+      const response = await fetch('https://autocrm.pythonanywhere.com/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -177,7 +177,7 @@ export const productService = {
 
   update: async (id: string, data: Partial<ProductFormData>): Promise<Product> => {
     try {
-      const response = await fetch(`http://localhost:3000/api/products/${id}`, {
+      const response = await fetch(`https://autocrm.pythonanywhere.com/api/products/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -201,7 +201,7 @@ export const productService = {
 
   delete: async (id: string): Promise<void> => {
     try {
-      const response = await fetch(`http://localhost:3000/api/products/${id}`, {
+      const response = await fetch(`https://autocrm.pythonanywhere.com/api/products/${id}`, {
         method: 'DELETE',
       });
       if (!response.ok) throw new Error('API not available');
@@ -215,7 +215,7 @@ export const productService = {
 
   getByBarcode: async (barcode: string): Promise<Product | null> => {
     try {
-      const response = await fetch(`http://localhost:3000/api/products/barcode/${barcode}`);
+      const response = await fetch(`https://autocrm.pythonanywhere.com/api/products/barcode/${barcode}`);
       if (!response.ok) throw new Error('API not available');
       const data: ApiResponse<Product> = await response.json();
       return data.data;
