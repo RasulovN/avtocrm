@@ -119,26 +119,41 @@ export function SalesPage() {
 
   useEffect(() => {
     if (!showScanner) return;
+    
     const reader = new BrowserMultiFormatReader();
     scannerReaderRef.current = reader;
-    const videoEl = scannerVideoRef.current;
-    if (!videoEl) return () => {
-      reader.reset();
-      scannerReaderRef.current = null;
-    };
-    reader.decodeFromVideoDevice(undefined, videoEl, (result) => {
-      if (result) {
-        const text = result.getText();
-        const product = products.find(p => p.barcode === text || p.sku === text);
-        if (product) {
-          addProduct(product);
-        }
-        setBarcode('');
-        setShowScanner(false);
+    
+    let isActive = true;
+    
+    const startScanner = async () => {
+      const videoEl = scannerVideoRef.current;
+      if (!videoEl || !isActive) return;
+      
+      try {
+        reader.decodeFromVideoDevice(
+          undefined, 
+          videoEl, 
+          (result, err) => {
+            if (result && isActive) {
+              const text = result.getText();
+              const product = products.find(p => p.barcode === text || p.sku === text);
+              if (product) {
+                addProduct(product);
+              }
+              setBarcode('');
+              setShowScanner(false);
+            }
+          }
+        );
+      } catch (error) {
+        console.error('Scanner error:', error);
       }
-    });
+    };
+
+    startScanner();
+
     return () => {
-      reader.reset();
+      isActive = false;
       scannerReaderRef.current = null;
     };
   }, [showScanner, products]);
@@ -426,7 +441,7 @@ export function SalesPage() {
                       min="0"
                       placeholder="0"
                       value={discount || ''}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => handleDiscountChange(Number(e.target.value))}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setDiscount(Number(e.target.value))}
                       className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white"
                     />
                   </div>
