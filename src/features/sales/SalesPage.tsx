@@ -98,33 +98,10 @@ export function SalesPage() {
     });
   };
 
-   
-  const loadData = async () => {
-    try {
-      const [storesRes, productsRes] = await Promise.all([
-        storeService.getAll(),
-        productService.getAll({ limit: 100 }),
-      ]);
-      setStores(storesRes.data);
-      setProducts(productsRes.data || []);
-    } catch (error) {
-      console.error('Failed to load data:', error);
-      setStores([
-        { id: '1', name: 'Main Store', is_warehouse: false, created_at: '' },
-      ]);
-      setProducts([
-        { id: '1', name: 'Oil Filter', purchase_price: 15000, selling_price: 25000, category: 'Filters', supplier_id: '1', store_id: '1', sku: 'SKU-001', barcode: '123456789', description: '', quantity: 100, created_at: '', updated_at: '' },
-        { id: '2', name: 'Brake Pads', purchase_price: 45000, selling_price: 75000, category: 'Brakes', supplier_id: '1', store_id: '1', sku: 'SKU-002', barcode: '987654321', description: '', quantity: 50, created_at: '', updated_at: '' },
-      ]);
-    }
-  };
-
-   
   useEffect(() => {
     loadData();
     barcodeInputRef.current?.focus();
   }, []);
-   
 
   const handleBarcodeScan = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && barcode) {
