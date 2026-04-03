@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Car } from 'lucide-react';
 import { useAuthStore } from '../../app/store';
@@ -72,6 +72,11 @@ export function LoginPage() {
             {error && (
               <p className="text-sm text-destructive">{error}</p>
             )}
+            <div className="flex justify-end">
+              <Link to="/forgot-password" className="text-sm text-primary hover:underline">
+                Parolni unutdingizmi?
+              </Link>
+            </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? t('common.loading') : t('auth.loginButton')}
             </Button>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
+import { useState, useEffect, useMemo, useCallback, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, Send, Check, X } from 'lucide-react';
 import { PageHeader } from '../../../components/shared/PageHeader';
@@ -37,6 +37,9 @@ export function TransferRequestsPage(): ReactElement {
   const [stores, setStores] = useState<Store[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [saving, setSaving] = useState(false);
+  const safeStores = useMemo(() => (Array.isArray(stores) ? stores : []), [stores]);
+  const safeProducts = useMemo(() => (Array.isArray(products) ? products : []), [products]);
+  const safeRequests = useMemo(() => (Array.isArray(requests) ? requests : []), [requests]);
 
   // Existing requests
   const [requests, setRequests] = useState<TransferRequest[]>([]);
@@ -54,8 +57,8 @@ export function TransferRequestsPage(): ReactElement {
         storeService.getAll(),
         productService.getAll({ limit: 100 }),
       ]);
-      setStores(storesRes.data);
-      setProducts(productsRes.data || []);
+      setStores(Array.isArray(storesRes.data) ? storesRes.data : []);
+      setProducts(Array.isArray(productsRes.data) ? productsRes.data : []);
 
       // Mock existing requests
       setRequests([
@@ -106,7 +109,7 @@ export function TransferRequestsPage(): ReactElement {
   const handleItemChange = (index: number, field: keyof TransferRequestItem, value: string | number) => {
     const newItems = [...items];
     if (field === 'product_id') {
-      const product = products.find(p => p.id === value);
+      const product = safeProducts.find(p => p.id === value);
       if (product) {
         newItems[index] = {
           ...newItems[index],
@@ -133,8 +136,8 @@ export function TransferRequestsPage(): ReactElement {
     try {
       setSaving(true);
 
-      const fromStore = stores.find(s => s.id === fromStoreId);
-      const toStore = stores.find(s => s.id === toStoreId);
+      const fromStore = safeStores.find(s => s.id === fromStoreId);
+      const toStore = safeStores.find(s => s.id === toStoreId);
 
       const newRequest: TransferRequest = {
         id: Date.now().toString(),
@@ -200,7 +203,7 @@ export function TransferRequestsPage(): ReactElement {
                       <SelectValue placeholder={t('transfers.fromStore')} />
                     </SelectTrigger>
                     <SelectContent>
-                      {stores.map(s => (
+                      {safeStores.map(s => (
                         <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                       ))}
                     </SelectContent>
@@ -213,7 +216,7 @@ export function TransferRequestsPage(): ReactElement {
                       <SelectValue placeholder={t('transfers.toStore')} />
                     </SelectTrigger>
                     <SelectContent>
-                      {stores.filter(s => s.id !== fromStoreId).map(s => (
+                      {safeStores.filter(s => s.id !== fromStoreId).map(s => (
                         <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                       ))}
                     </SelectContent>
@@ -252,7 +255,7 @@ export function TransferRequestsPage(): ReactElement {
                             <SelectValue placeholder={t('transfers.selectProduct')} />
                           </SelectTrigger>
                           <SelectContent>
-                            {products.map(p => (
+                            {safeProducts.map(p => (
                               <SelectItem key={p.id} value={p.id}>{p.name} ({p.sku})</SelectItem>
                             ))}
                           </SelectContent>
@@ -289,7 +292,7 @@ export function TransferRequestsPage(): ReactElement {
 
 
        {/* Existing Requests Table */}
-      {requests.length > 0 && (
+      {safeRequests.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>So'rovlar ro'yxati</CardTitle>
@@ -307,7 +310,7 @@ export function TransferRequestsPage(): ReactElement {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {requests.map((request) => (
+                {safeRequests.map((request) => (
                   <TableRow key={request.id}>
                     <TableCell>
                       <span className="text-orange-600 dark:text-orange-400">{request.from_store_name}</span>
@@ -316,12 +319,12 @@ export function TransferRequestsPage(): ReactElement {
                       <span className="text-green-600 dark:text-green-400">{request.to_store_name}</span>
                     </TableCell>
                     <TableCell>
-                      {request.items.map((item, idx) => (
+                      {(Array.isArray(request.items) ? request.items : []).map((item, idx) => (
                         <div key={idx}>{item.product_name}</div>
                       ))}
                     </TableCell>
                     <TableCell>
-                      {request.items.map((item, idx) => (
+                      {(Array.isArray(request.items) ? request.items : []).map((item, idx) => (
                         <div key={idx}>{item.quantity}</div>
                       ))}
                     </TableCell>

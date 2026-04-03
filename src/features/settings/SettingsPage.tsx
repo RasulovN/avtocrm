@@ -1,5 +1,6 @@
 import { useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
 import { Save, User, Phone, Lock, History, Clock } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { Button } from '../../components/ui/Button';
@@ -7,6 +8,7 @@ import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import { useAuthStore } from '../../app/store';
+import { authService } from '../../services/authService';
 
 interface LoginHistory {
   id: string;
@@ -18,8 +20,8 @@ interface LoginHistory {
 }
 
 interface ProfileFormData {
-  username: string;
-  phone: string;
+  full_name: string;
+  phone_number: string;
 }
 
 interface PasswordFormData {
@@ -39,11 +41,12 @@ const mockLoginHistory: LoginHistory[] = [
 export function SettingsPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
-  const [saving, setSaving] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [passwordSaving, setPasswordSaving] = useState(false);
   
   const [profileData, setProfileData] = useState<ProfileFormData>({
-    username: user?.username || 'Admin',
-    phone: user?.phone || '+998 90 123-45-67',
+    full_name: user?.full_name || 'Admin',
+    phone_number: user?.phone_number || '',
   });
 
   const [passwordData, setPasswordData] = useState<PasswordFormData>({
@@ -62,25 +65,34 @@ export function SettingsPage() {
 
   const handleProfileSubmit = async (e: ChangeEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setSaving(true);
-    // Simulate API call
+    setProfileSaving(true);
     setTimeout(() => {
-      setSaving(false);
-    }, 1000);
+      setProfileSaving(false);
+      toast.success('Profilni yangilash hali backendga ulanmagan');
+    }, 500);
   };
 
   const handlePasswordSubmit = async (e: ChangeEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert(t('errors.validationError'));
+      toast.error(t('errors.validationError'));
       return;
     }
-    setSaving(true);
-    // Simulate API call
-    setTimeout(() => {
-      setSaving(false);
+    try {
+      setPasswordSaving(true);
+      await authService.changePassword({
+        old_password: passwordData.currentPassword,
+        new_password: passwordData.newPassword,
+        confirm_password: passwordData.confirmPassword,
+      });
+      toast.success('Parol muvaffaqiyatli yangilandi');
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-    }, 1000);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t('errors.generic');
+      toast.error(message);
+    } finally {
+      setPasswordSaving(false);
+    }
   };
 
   return (
@@ -105,32 +117,32 @@ export function SettingsPage() {
           <CardContent>
             <form onSubmit={handleProfileSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username">{t('auth.username')}</Label>
+                <Label htmlFor="full_name">{t('users.fullName')}</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    id="username"
-                    value={profileData.username}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => handleProfileChange('username', e.target.value)}
+                    id="full_name"
+                    value={profileData.full_name}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => handleProfileChange('full_name', e.target.value)}
                     className="pl-10"
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">{t('stores.phone')}</Label>
+                <Label htmlFor="phone_number">{t('stores.phone')}</Label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    id="phone"
-                    value={profileData.phone}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => handleProfileChange('phone', e.target.value)}
+                    id="phone_number"
+                    value={profileData.phone_number}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => handleProfileChange('phone_number', e.target.value)}
                     className="pl-10"
                   />
                 </div>
               </div>
-              <Button type="submit" disabled={saving}>
+              <Button type="submit" disabled={profileSaving}>
                 <Save className="h-4 w-4 mr-2" />
-                {saving ? t('common.loading') : t('common.save')}
+                {profileSaving ? t('common.loading') : t('common.save')}
               </Button>
             </form>
           </CardContent>
@@ -176,9 +188,9 @@ export function SettingsPage() {
                   onChange={(e: ChangeEvent<HTMLInputElement>) => handlePasswordChange('confirmPassword', e.target.value)}
                 />
               </div>
-              <Button type="submit" disabled={saving}>
+              <Button type="submit" disabled={passwordSaving}>
                 <Save className="h-4 w-4 mr-2" />
-                {saving ? t('common.loading') : t('auth.updatePassword')}
+                {passwordSaving ? t('common.loading') : t('auth.updatePassword')}
               </Button>
             </form>
           </CardContent>

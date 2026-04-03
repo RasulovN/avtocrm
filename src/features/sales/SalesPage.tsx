@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
+import { useState, useEffect, useMemo, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import { ScanBarcode, Trash2, DollarSign, Search } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
@@ -40,6 +40,8 @@ export function SalesPage() {
   const [showScanner, setShowScanner] = useState(false);
   const scannerVideoRef = useRef<HTMLVideoElement>(null);
   const scannerReaderRef = useRef<BrowserMultiFormatReader | null>(null);
+  const safeStores = useMemo(() => (Array.isArray(stores) ? stores : []), [stores]);
+  const safeProducts = useMemo(() => (Array.isArray(products) ? products : []), [products]);
 
   // Computed values
   const totalPrice = items.reduce((sum, item) => sum + item.total, 0);
@@ -49,10 +51,10 @@ export function SalesPage() {
   const debt = totalWithDiscount > totalPaid ? totalWithDiscount - totalPaid : 0;
 
   // Get unique categories from products
-  const categories = [...new Set(products.map(p => p.category).filter(c => c && c.trim()))];
+  const categories = [...new Set(safeProducts.map((p) => p.category).filter((c) => c && c.trim()))];
 
   // Filter products by store and category
-  const filteredProducts = products.filter(p => {
+  const filteredProducts = safeProducts.filter(p => {
     const matchStore = !storeId || p.store_id === storeId;
     const matchCategory = !categoryFilter || p.category === categoryFilter;
     return matchStore && matchCategory;
@@ -64,8 +66,8 @@ export function SalesPage() {
         storeService.getAll(),
         productService.getAll({ limit: 100 }),
       ]);
-      setStores(storesRes.data);
-      setProducts(productsRes.data || []);
+      setStores(Array.isArray(storesRes.data) ? storesRes.data : []);
+      setProducts(Array.isArray(productsRes.data) ? productsRes.data : []);
     } catch (error) {
       console.error('Failed to load data:', error);
       setStores([
@@ -105,7 +107,7 @@ export function SalesPage() {
 
   const handleBarcodeScan = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && barcode) {
-      const product = products.find(p => p.barcode === barcode || p.sku === barcode);
+      const product = safeProducts.find(p => p.barcode === barcode || p.sku === barcode);
       if (product) {
         addProduct(product);
       }
@@ -136,7 +138,7 @@ export function SalesPage() {
           (result) => {
             if (result && isActive) {
               const text = result.getText();
-              const product = products.find(p => p.barcode === text || p.sku === text);
+              const product = safeProducts.find(p => p.barcode === text || p.sku === text);
               if (product) {
                 addProduct(product);
               }
@@ -156,7 +158,7 @@ export function SalesPage() {
       isActive = false;
       scannerReaderRef.current = null;
     };
-  }, [showScanner, products]);
+  }, [showScanner, safeProducts]);
 
   const updateQuantity = (index: number, quantity: number) => {
     if (quantity < 1) return;
@@ -252,7 +254,7 @@ export function SalesPage() {
                       <SelectValue placeholder="Do'kon" />
                     </SelectTrigger>
                     <SelectContent>
-                      {stores.map(s => (
+                      {safeStores.map(s => (
                         <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                       ))}
                     </SelectContent>
@@ -323,7 +325,7 @@ export function SalesPage() {
                       <div className="flex items-start justify-between mb-1.5">
                         <div className="flex-1">
                           <div className="font-medium dark:text-white text-sm">{item.product_name}</div>
-                          <div className="text-xs text-muted-foreground dark:text-gray-400">{products.find(p => p.id === item.product_id)?.sku}</div>
+                          <div className="text-xs text-muted-foreground dark:text-gray-400">{safeProducts.find(p => p.id === item.product_id)?.sku}</div>
                         </div>
                         <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => removeItem(index)}>
                           <Trash2 className="h-3.5 w-3.5 text-red-500" />

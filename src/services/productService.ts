@@ -1,5 +1,7 @@
 import type { Product, ProductFormData, ProductFilters, PaginatedResponse, ApiResponse } from '../types';
 
+const PRODUCTS_API_ENABLED = false;
+
 // Mock data for demo (when backend is not available)
 const mockProducts: Product[] = [
   {
@@ -98,12 +100,15 @@ export const productService = {
       if (filters?.store_id) params.append('store_id', filters.store_id);
       if (filters?.page) params.append('page', filters.page.toString());
       if (filters?.limit) params.append('limit', filters.limit.toString());
-      
-      // Try to fetch from API first
-      const response = await fetch(`https://autocrm.pythonanywhere.com/api/products?${params.toString()}`);
-      if (!response.ok) throw new Error('API not available');
-      const data = await response.json();
-      return data;
+
+      if (PRODUCTS_API_ENABLED) {
+        const response = await fetch(`https://autocrm.pythonanywhere.com/api/products?${params.toString()}`);
+        if (!response.ok) throw new Error('API not available');
+        const data = await response.json();
+        return data;
+      }
+
+      throw new Error('Products API disabled');
     } catch {
       // Use mock data if API is not available
       let filtered = [...mockProducts];
@@ -139,10 +144,14 @@ export const productService = {
 
   getById: async (id: string): Promise<Product> => {
     try {
-      const response = await fetch(`https://autocrm.pythonanywhere.com/api/products/${id}`);
-      if (!response.ok) throw new Error('API not available');
-      const data: ApiResponse<Product> = await response.json();
-      return data.data;
+      if (PRODUCTS_API_ENABLED) {
+        const response = await fetch(`https://autocrm.pythonanywhere.com/api/products/${id}`);
+        if (!response.ok) throw new Error('API not available');
+        const data: ApiResponse<Product> = await response.json();
+        return data.data;
+      }
+
+      throw new Error('Products API disabled');
     } catch {
       const product = mockProducts.find(p => p.id === id);
       if (!product) throw new Error('Product not found');
@@ -152,14 +161,18 @@ export const productService = {
 
   create: async (data: ProductFormData): Promise<Product> => {
     try {
-      const response = await fetch('https://autocrm.pythonanywhere.com/api/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error('API not available');
-      const result: ApiResponse<Product> = await response.json();
-      return result.data;
+      if (PRODUCTS_API_ENABLED) {
+        const response = await fetch('https://autocrm.pythonanywhere.com/api/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        if (!response.ok) throw new Error('API not available');
+        const result: ApiResponse<Product> = await response.json();
+        return result.data;
+      }
+
+      throw new Error('Products API disabled');
     } catch {
       const newProduct: Product = {
         id: Date.now().toString(),
@@ -177,14 +190,18 @@ export const productService = {
 
   update: async (id: string, data: Partial<ProductFormData>): Promise<Product> => {
     try {
-      const response = await fetch(`https://autocrm.pythonanywhere.com/api/products/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error('API not available');
-      const result: ApiResponse<Product> = await response.json();
-      return result.data;
+      if (PRODUCTS_API_ENABLED) {
+        const response = await fetch(`https://autocrm.pythonanywhere.com/api/products/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        if (!response.ok) throw new Error('API not available');
+        const result: ApiResponse<Product> = await response.json();
+        return result.data;
+      }
+
+      throw new Error('Products API disabled');
     } catch {
       const index = mockProducts.findIndex(p => p.id === id);
       if (index === -1) throw new Error('Product not found');
@@ -201,10 +218,15 @@ export const productService = {
 
   delete: async (id: string): Promise<void> => {
     try {
-      const response = await fetch(`https://autocrm.pythonanywhere.com/api/products/${id}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('API not available');
+      if (PRODUCTS_API_ENABLED) {
+        const response = await fetch(`https://autocrm.pythonanywhere.com/api/products/${id}`, {
+          method: 'DELETE',
+        });
+        if (!response.ok) throw new Error('API not available');
+        return;
+      }
+
+      throw new Error('Products API disabled');
     } catch {
       const index = mockProducts.findIndex(p => p.id === id);
       if (index !== -1) {
@@ -215,10 +237,14 @@ export const productService = {
 
   getByBarcode: async (barcode: string): Promise<Product | null> => {
     try {
-      const response = await fetch(`https://autocrm.pythonanywhere.com/api/products/barcode/${barcode}`);
-      if (!response.ok) throw new Error('API not available');
-      const data: ApiResponse<Product> = await response.json();
-      return data.data;
+      if (PRODUCTS_API_ENABLED) {
+        const response = await fetch(`https://autocrm.pythonanywhere.com/api/products/barcode/${barcode}`);
+        if (!response.ok) throw new Error('API not available');
+        const data: ApiResponse<Product> = await response.json();
+        return data.data;
+      }
+
+      throw new Error('Products API disabled');
     } catch {
       return mockProducts.find(p => p.barcode === barcode) || null;
     }

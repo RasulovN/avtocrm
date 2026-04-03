@@ -9,6 +9,8 @@ import { MainLayout } from './components/shared/MainLayout';
 
 // Feature Pages
 import { LoginPage } from './features/auth/LoginPage';
+import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage';
+import { ResetPasswordPage } from './features/auth/ResetPasswordPage';
 import { DashboardPage } from './features/dashboard/DashboardPage';
 import { ProductListPage } from './features/products/ProductListPage';
 import { ProductFormPage } from './features/products/ProductFormPage';
@@ -68,6 +70,8 @@ function App() {
         <Route path="/login" element={
           isAuthenticated() ? <Navigate to={`/${currentLang}/dashboard`} replace /> : <LoginPage />
         } />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password/:uidb64/:token" element={<ResetPasswordPage />} />
         
         {/* Language-prefixed routes */}
         <Route path={`/${currentLang}`} element={requireAuth(<Navigate to={`/${currentLang}/dashboard`} replace />)} />

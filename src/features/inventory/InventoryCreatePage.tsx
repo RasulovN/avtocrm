@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
+import { useState, useEffect, useCallback, useMemo, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, Save } from 'lucide-react';
@@ -31,6 +31,9 @@ export function InventoryCreatePage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [saving, setSaving] = useState(false);
+  const safeStores = useMemo(() => (Array.isArray(stores) ? stores : []), [stores]);
+  const safeSuppliers = useMemo(() => (Array.isArray(suppliers) ? suppliers : []), [suppliers]);
+  const safeProducts = useMemo(() => (Array.isArray(products) ? products : []), [products]);
 
   const [supplierId, setSupplierId] = useState('');
   const [storeId, setStoreId] = useState('');
@@ -46,9 +49,9 @@ export function InventoryCreatePage() {
         supplierService.getAll(),
         productService.getAll({ limit: 100 }),
       ]);
-      setStores(storesRes.data);
-      setSuppliers(suppliersRes.data);
-      setProducts(productsRes.data || []);
+      setStores(Array.isArray(storesRes.data) ? storesRes.data : []);
+      setSuppliers(Array.isArray(suppliersRes.data) ? suppliersRes.data : []);
+      setProducts(Array.isArray(productsRes.data) ? productsRes.data : []);
     } catch (error) {
       console.error('Failed to load data:', error);
       setStores([
@@ -72,7 +75,7 @@ export function InventoryCreatePage() {
   const handleItemChange = (index: number, field: keyof InventoryFormItem, value: string | number) => {
     const newItems = [...items];
     if (field === 'product_id') {
-      const product = products.find(p => p.id === value);
+      const product = safeProducts.find(p => p.id === value);
       if (product) {
         newItems[index] = {
           ...newItems[index],
@@ -158,7 +161,7 @@ export function InventoryCreatePage() {
                       <SelectValue placeholder={t('inventory.selectSupplier')} />
                     </SelectTrigger>
                     <SelectContent>
-                      {suppliers.map(s => (
+                      {safeSuppliers.map(s => (
                         <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                       ))}
                     </SelectContent>
@@ -171,7 +174,7 @@ export function InventoryCreatePage() {
                       <SelectValue placeholder={t('inventory.selectLocation')} />
                     </SelectTrigger>
                     <SelectContent>
-                      {stores.map(s => (
+                      {safeStores.map(s => (
                         <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                       ))}
                     </SelectContent>
@@ -220,7 +223,7 @@ export function InventoryCreatePage() {
                             <SelectValue placeholder={t('inventory.selectProduct')} />
                           </SelectTrigger>
                           <SelectContent>
-                            {products.map(p => (
+                            {safeProducts.map(p => (
                               <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                             ))}
                           </SelectContent>

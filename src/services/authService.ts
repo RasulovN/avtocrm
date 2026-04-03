@@ -1,6 +1,21 @@
 import { apiClient } from './api';
 import type { User } from '../types';
 
+interface ForgotPasswordPayload {
+  email: string;
+}
+
+interface ResetPasswordPayload {
+  new_password: string;
+  confirm_password: string;
+}
+
+interface ChangePasswordPayload {
+  old_password: string;
+  new_password: string;
+  confirm_password: string;
+}
+
 export const authService = {
   login: async (phone_number: string, password: string): Promise<User> => {
     // 1. Login - server sets httpOnly cookie
@@ -76,6 +91,18 @@ export const authService = {
       localStorage.removeItem('crm_auth_time');
       return null;
     }
+  },
+
+  forgotPassword: async ({ email }: ForgotPasswordPayload): Promise<void> => {
+    await apiClient.post('/users/auth/forgot-password/', { email });
+  },
+
+  resetPassword: async (uidb64: string, token: string, payload: ResetPasswordPayload): Promise<void> => {
+    await apiClient.post(`/users/auth/reset-password/${uidb64}/${token}/`, payload);
+  },
+
+  changePassword: async (payload: ChangePasswordPayload): Promise<void> => {
+    await apiClient.post('/users/change-password/', payload);
   }
 };
 

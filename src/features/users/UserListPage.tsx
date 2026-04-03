@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, type ChangeEvent, type MouseEvent } from 'react';
+import { useEffect, useState, useMemo, useCallback, type ChangeEvent, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Edit, Trash2, Eye } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
@@ -35,12 +35,18 @@ export function UserListPage() {
     store_id: '',
   });
   const [saving, setSaving] = useState(false);
+  const safeUsers = useMemo(() => (Array.isArray(users) ? users : []), [users]);
+  const safeStores = useMemo(() => (Array.isArray(stores) ? stores : []), [stores]);
+  const safeLogs = useMemo(() => {
+    const logs = (viewingUser as User & { logs?: Array<{ id?: string | number; action?: string; timestamp?: string; created_at?: string }> } | null)?.logs;
+    return Array.isArray(logs) ? logs : [];
+  }, [viewingUser]);
 
   const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
       const response = await userService.getAll({ page, limit });
-      setUsers(response.data);
+      setUsers(Array.isArray(response.data) ? response.data : []);
       setTotal(response.total);
     } catch (error) {
       console.error('Failed to load users:', error);
@@ -77,7 +83,7 @@ export function UserListPage() {
   const loadStores = useCallback(async () => {
     try {
       const response = await storeService.getAll({ page: 1, limit: 100 });
-      setStores(response.data);
+      setStores(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Failed to load stores:', error);
       setStores([
@@ -216,7 +222,7 @@ export function UserListPage() {
       />
 
       <DataTable
-        data={users}
+        data={safeUsers}
         columns={columns}
         loading={loading}
         pagination={{ page, limit, total, onPageChange: setPage }}
@@ -278,7 +284,7 @@ export function UserListPage() {
                   onChange={(e: ChangeEvent<HTMLSelectElement>) => setFormData({ ...formData, store_id: e.target.value })}
                 >
                   <option value="">{t('common.select')}</option>
-                  {stores.map((store) => (
+                  {safeStores.map((store) => (
                     <option key={store.id} value={store.id}>{store.name}</option>
                   ))}
                 </select>
@@ -308,11 +314,11 @@ export function UserListPage() {
             <DialogTitle>{t('users.logs')} - {viewingUser?.full_name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-2 max-h-96 overflow-y-auto">
-            {viewingUser?.logs && viewingUser.logs.length > 0 ? (
-              viewingUser.logs.map((log) => (
-                <div key={log.id} className="p-3 border rounded-md">
-                  <p className="text-sm font-medium">{log.action}</p>
-                  <p className="text-xs text-muted-foreground">{formatDate(log.timestamp)}</p>
+            {safeLogs.length > 0 ? (
+              safeLogs.map((log, index) => (
+                <div key={log.id ?? index} className="p-3 border rounded-md">
+                  <p className="text-sm font-medium">{log.action || '-'}</p>
+                  <p className="text-xs text-muted-foreground">{formatDate(log.timestamp || log.created_at || new Date().toISOString())}</p>
                 </div>
               ))
             ) : (

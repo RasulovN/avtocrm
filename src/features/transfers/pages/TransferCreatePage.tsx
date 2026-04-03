@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
+import { useState, useEffect, useMemo, useCallback, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, ArrowRight } from 'lucide-react';
@@ -26,6 +26,8 @@ export function TransferCreatePage() {
   const [stores, setStores] = useState<Store[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [saving, setSaving] = useState(false);
+  const safeStores = useMemo(() => (Array.isArray(stores) ? stores : []), [stores]);
+  const safeProducts = useMemo(() => (Array.isArray(products) ? products : []), [products]);
 
   const [fromStoreId, setFromStoreId] = useState('');
   const [toStoreId, setToStoreId] = useState('');
@@ -39,8 +41,8 @@ export function TransferCreatePage() {
         storeService.getAll(),
         productService.getAll({ limit: 100 }),
       ]);
-      setStores(storesRes.data);
-      setProducts(productsRes.data || []);
+      setStores(Array.isArray(storesRes.data) ? storesRes.data : []);
+      setProducts(Array.isArray(productsRes.data) ? productsRes.data : []);
     } catch (error) {
       console.error('Failed to load data:', error);
       setStores([
@@ -60,7 +62,7 @@ export function TransferCreatePage() {
   const handleItemChange = (index: number, field: keyof TransferFormItem, value: string | number) => {
     const newItems = [...items];
     if (field === 'product_id') {
-      const product = products.find(p => p.id === value);
+      const product = safeProducts.find(p => p.id === value);
       if (product) {
         newItems[index] = {
           ...newItems[index],
@@ -128,7 +130,7 @@ export function TransferCreatePage() {
                       <SelectValue placeholder={t('transfers.selectProduct')} />
                     </SelectTrigger>
                     <SelectContent>
-                      {stores.map(s => (
+                      {safeStores.map(s => (
                         <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                       ))}
                     </SelectContent>
@@ -141,7 +143,7 @@ export function TransferCreatePage() {
                       <SelectValue placeholder={t('transfers.selectProduct')} />
                     </SelectTrigger>
                     <SelectContent>
-                      {stores.filter(s => s.id !== fromStoreId).map(s => (
+                      {safeStores.filter(s => s.id !== fromStoreId).map(s => (
                         <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                       ))}
                     </SelectContent>
@@ -180,7 +182,7 @@ export function TransferCreatePage() {
                             <SelectValue placeholder={t('transfers.selectProduct')} />
                           </SelectTrigger>
                           <SelectContent>
-                            {products.map(p => (
+                            {safeProducts.map(p => (
                               <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                             ))}
                           </SelectContent>
