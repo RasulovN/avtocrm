@@ -49,14 +49,20 @@ export interface ProductStoreInventory {
 
 export interface Product {
   id: string;
+  product_id?: string;
   name: string;
   description: string;
+  category_id?: string;
   category: string;
   supplier_id: string;
   supplier_name?: string;
   sku: string;
   image?: string;
+  images?: string[] | string;
   barcode?: string;
+  barcode_img?: string;
+  total_count?: number;
+  is_active?: boolean;
   created_at: string;
   updated_at: string;
   // Aggregated data (new format for list page)
@@ -75,16 +81,23 @@ export interface Product {
 }
 
 export interface ProductFormData {
+  product_id?: string;
   name: string;
-  description: string;
-  purchase_price: number;
-  selling_price: number;
-  category: string;
-  supplier_id: string;
-  store_id: string;
-  image?: string;
+  description?: string;
+  category_id?: string;
+  images?: string[] | string;
   sku?: string;
   barcode?: string;
+  barcode_img?: string;
+  total_count?: number;
+  is_active?: boolean;
+  // Legacy fields (optional for backward compatibility)
+  purchase_price?: number;
+  selling_price?: number;
+  category?: string;
+  supplier_id?: string;
+  store_id?: string;
+  image?: string;
 }
 
 // Category Types

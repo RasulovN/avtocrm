@@ -15,15 +15,14 @@ import {
   SelectValue,
 } from '../../components/ui/Select';
 import { productService } from '../../services/productService';
-import { storeService } from '../../services/storeService';
-import type { Product, ProductFilters, Store } from '../../types';
+import type { Product, ProductFilters } from '../../types';
 import { formatCurrency } from '../../utils';
 
 export function ProductListPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const lang = i18n.language || 'uz';
   const [products, setProducts] = useState<Product[]>([]);
-  const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ProductFilters>({});
   const [page, setPage] = useState(1);
@@ -35,22 +34,8 @@ export function ProductListPage() {
 
   useEffect(() => {
     loadProducts();
-    loadStores();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, page]);
-
-  const loadStores = async () => {
-    try {
-      const response = await storeService.getAll();
-      setStores(response.data);
-    } catch (error) {
-      console.error('Failed to load stores:', error);
-      // Mock stores for demo
-      setStores([
-        { id: '1', name: 'Main Store', is_warehouse: false, created_at: '' },
-        { id: '2', name: 'Warehouse', is_warehouse: true, created_at: '' },
-      ]);
-    }
-  };
 
   const loadProducts = async () => {
     try {
@@ -60,7 +45,6 @@ export function ProductListPage() {
       setTotal(response.total);
     } catch (error) {
       console.error('Failed to load products:', error);
-      // Mock data for demo
       setProducts([
         {
           id: '1',
@@ -154,7 +138,6 @@ export function ProductListPage() {
     }
   };
 
-  // Get inventory by store for each product
   const getInventoryByStore = (item: Product): StoreInventory[] => {
     return item.inventory_by_store || [];
   };
@@ -195,13 +178,13 @@ export function ProductListPage() {
       header: t('common.actions'),
       className: 'text-right',
       render: (item: Product) => (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-end gap-1">
           <Button
             variant="ghost"
             size="icon"
             onClick={(e: MouseEvent<HTMLButtonElement>) => {
               e.stopPropagation();
-              navigate(`/products/${item.id}/barcode`);
+              navigate(`/${lang}/products/${item.id}/barcode`);
             }}
             title={t('products.printBarcode')}
           >
@@ -212,7 +195,7 @@ export function ProductListPage() {
             size="icon"
             onClick={(e: MouseEvent<HTMLButtonElement>) => {
               e.stopPropagation();
-              navigate(`/products/${item.id}/edit`);
+              navigate(`/${lang}/products/${item.id}/edit`);
             }}
             title={t('common.edit')}
           >
@@ -240,14 +223,13 @@ export function ProductListPage() {
         title={t('products.title')}
         description={t('products.productList')}
         actions={
-          <Button onClick={() => navigate('/products/new')}>
+          <Button onClick={() => navigate(`/${lang}/products/new`)}>
             <Plus className="h-4 w-4 mr-2" />
             {t('products.addProduct')}
           </Button>
         }
       />
 
-      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -263,7 +245,7 @@ export function ProductListPage() {
           value={filters.category || 'all'}
           onValueChange={(value) => handleFilterChange('category', value === 'all' ? '' : value)}
         >
-          <SelectTrigger className="w-full sm:w-[180px]">
+          <SelectTrigger className="w-full sm:w-45">
             <SelectValue placeholder={t('products.filterByCategory')} />
           </SelectTrigger>
           <SelectContent>
@@ -278,7 +260,7 @@ export function ProductListPage() {
           value={filters.store_id || 'all'}
           onValueChange={(value) => handleFilterChange('store_id', value === 'all' ? '' : value)}
         >
-          <SelectTrigger className="w-full sm:w-[180px]">
+          <SelectTrigger className="w-full sm:w-45">
             <SelectValue placeholder={t('products.filterByStore')} />
           </SelectTrigger>
           <SelectContent>
@@ -295,14 +277,13 @@ export function ProductListPage() {
         loading={loading}
         searchPlaceholder={t('products.searchPlaceholder')}
         onSearch={handleSearch}
-        onRowClick={(item: Product) => navigate(`/products/${item.id}/edit`)}
+        onRowClick={(item: Product) => navigate(`/${lang}/products/${item.id}/edit`)}
         pagination={{
           page,
           limit,
           total,
           onPageChange: setPage,
         }}
-        // Use inventoryByStore to render nested store quantities
         inventoryByStore={getInventoryByStore}
         itemNameKey={'name' as keyof Product}
         showFooter={true}
@@ -321,6 +302,8 @@ export function ProductListPage() {
         variant="destructive"
         loading={deleting}
       />
+
+
     </div>
   );
 }
