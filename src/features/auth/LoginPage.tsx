@@ -12,7 +12,7 @@ export function LoginPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { login, isLoading, error } = useAuthStore();
-  const [phone_number, setPhoneNumber] = useState('');
+  const [phone_number, setPhoneNumber] = useState('+998');
   const [password, setPassword] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {

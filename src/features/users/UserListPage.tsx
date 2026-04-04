@@ -30,7 +30,9 @@ export function UserListPage() {
   const [formData, setFormData] = useState<UserFormData>({
     full_name: '',
     password: '',
-    role: 'store_user',
+    confirm_password: '',
+    email: '',
+    role: 's',
     phone_number: '',
     store_id: '',
   });
@@ -38,7 +40,11 @@ export function UserListPage() {
   const safeUsers = useMemo(() => (Array.isArray(users) ? users : []), [users]);
   const safeStores = useMemo(() => (Array.isArray(stores) ? stores : []), [stores]);
   const safeLogs = useMemo(() => {
-    const logs = (viewingUser as User & { logs?: Array<{ id?: string | number; action?: string; timestamp?: string; created_at?: string }> } | null)?.logs;
+    const source = viewingUser as User & {
+      logs?: Array<{ id?: string | number; action?: string; timestamp?: string; created_at?: string }>;
+      history?: Array<{ id?: string | number; action?: string; created_at?: string }>;
+    } | null;
+    const logs = source?.logs ?? source?.history;
     return Array.isArray(logs) ? logs : [];
   }, [viewingUser]);
 
@@ -50,35 +56,12 @@ export function UserListPage() {
       setTotal(response.total);
     } catch (error) {
       console.error('Failed to load users:', error);
-      setUsers([
-        {
-          id: '1',
-          user_id: 'USR001',
-          full_name: 'Admin User',
-          role: 'admin',
-          phone: '+998901234567',
-          store_id: undefined,
-          store_name: undefined,
-          created_at: new Date().toISOString(),
-          logs: []
-        },
-        {
-          id: '2',
-          user_id: 'USR002',
-          full_name: 'Store Manager',
-          role: 'store_admin',
-          phone: '+998901234568',
-          store_id: '1',
-          store_name: 'Main Store',
-          created_at: new Date().toISOString(),
-          logs: []
-        },
-      ]);
-      setTotal(2);
+      setUsers([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, limit]);
 
   const loadStores = useCallback(async () => {
     try {
@@ -103,7 +86,7 @@ export function UserListPage() {
     try {
       setDeleting(true);
       await userService.delete(deleteId);
-      loadUsers();
+      await loadUsers();
     } catch (error) {
       console.error('Failed to delete user:', error);
     } finally {
@@ -118,6 +101,8 @@ export function UserListPage() {
       setFormData({
         full_name: user.full_name,
         password: '',
+        confirm_password: '',
+        email: user.email || '',
         role: user.role,
         phone_number: user.phone_number,
         store_id: user.store_id || '',
@@ -127,7 +112,9 @@ export function UserListPage() {
       setFormData({
         full_name: '',
         password: '',
-        role: 'store_user',
+        confirm_password: '',
+        email: '',
+        role: 's',
         phone_number: '',
         store_id: '',
       });
@@ -142,18 +129,40 @@ export function UserListPage() {
 
   const handleSave = async () => {
     try {
+      if (!formData.full_name || !formData.phone_number || !formData.email || !formData.role || !formData.store_id) {
+        console.error('Missing required fields');
+        return;
+      }
+      if (!editingUser && (!formData.password || !formData.confirm_password)) {
+        console.error('Password and confirm password are required');
+        return;
+      }
+      if (formData.password && !formData.confirm_password) {
+        console.error('Confirm password is required');
+        return;
+      }
+      if (formData.password && formData.confirm_password && formData.password !== formData.confirm_password) {
+        console.error('Passwords do not match');
+        return;
+      }
       setSaving(true);
       if (editingUser) {
+        const id = editingUser.id ?? editingUser.user_id;
+        if (!id) {
+          console.error('Missing user id for update');
+          return;
+        }
         const updateData = { ...formData };
         if (!updateData.password) {
           delete updateData.password;
+          delete updateData.confirm_password;
         }
-        await userService.update(editingUser.id, updateData);
+        await userService.update(String(id), updateData);
       } else {
         await userService.create(formData);
       }
       setDialogOpen(false);
-      loadUsers();
+      await loadUsers();
     } catch (error) {
       console.error('Failed to save user:', error);
     } finally {
@@ -162,7 +171,7 @@ export function UserListPage() {
   };
 
   const columns: Column<User>[] = [
-    { key: 'user_id', header: t('users.userId') },
+    { key: 'id', header: t('users.userId'), render: (item: User) => String(item.user_id || item.id || '') },
     { key: 'full_name', header: t('users.fullName') },
     { key: 'phone_number', header: t('users.phone') },
     {
@@ -174,7 +183,7 @@ export function UserListPage() {
           item.role === 'store_admin' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
           'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
         }`}>
-          {item.role === 'admin' ? t('users.admin') : item.role === 'store_admin' ? t('users.storeAdmin') : t('users.storeUser')}
+          {item.role === 's' ? t('users.seller') : item.role === 'su' ? t('users.superUser') : item.role === 'admin' ? t('users.admin') : item.role === 'store_admin' ? t('users.storeAdmin') : t('users.storeUser')}
         </span>
       ),
     },
@@ -200,7 +209,16 @@ export function UserListPage() {
           <Button variant="ghost" size="icon" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleOpenDialog(item); }}>
             <Edit className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); setDeleteId(item.id); }}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e: MouseEvent<HTMLButtonElement>) => {
+              e.stopPropagation();
+              const id = item.id ?? item.user_id;
+              if (!id) return;
+              setDeleteId(String(id));
+            }}
+          >
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -246,11 +264,20 @@ export function UserListPage() {
             <DialogTitle>{editingUser ? t('users.editUser') : t('users.addUser')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-<div className="space-y-2">
+            <div className="space-y-2">
               <Label>{t('users.fullName')}</Label>
               <Input
                 value={formData.full_name}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, full_name: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('users.email')}</Label>
+              <Input
+                type="email"
+                value={formData.email}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, email: e.target.value })}
                 required
               />
             </div>
@@ -264,38 +291,34 @@ export function UserListPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>{t('users.role')}</Label>
+              <Label>{t('users.store')}</Label>
               <select
                 className="w-full px-3 py-2 border rounded-md bg-background"
-                value={formData.role}
-                onChange={(e: ChangeEvent<HTMLSelectElement>) => setFormData({ ...formData, role: e.target.value as 'admin' | 'store_admin' | 'store_user' })}
+                value={formData.store_id || ''}
+                onChange={(e: ChangeEvent<HTMLSelectElement>) => setFormData({ ...formData, store_id: e.target.value })}
+                required
               >
-                <option value="store_user">{t('users.storeUser')}</option>
-                <option value="store_admin">{t('users.storeAdmin')}</option>
-                <option value="admin">{t('users.admin')}</option>
+                <option value="">{t('common.select')}</option>
+                {safeStores.map((store) => (
+                  <option key={store.id} value={store.id}>{store.name}</option>
+                ))}
               </select>
             </div>
-            {formData.role !== 'admin' && (
-              <div className="space-y-2">
-                <Label>{t('users.store')}</Label>
-                <select
-                  className="w-full px-3 py-2 border rounded-md bg-background"
-                  value={formData.store_id || ''}
-                  onChange={(e: ChangeEvent<HTMLSelectElement>) => setFormData({ ...formData, store_id: e.target.value })}
-                >
-                  <option value="">{t('common.select')}</option>
-                  {safeStores.map((store) => (
-                    <option key={store.id} value={store.id}>{store.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
             <div className="space-y-2">
               <Label>{t('users.password')} {editingUser && `(${t('users.optional')})`}</Label>
               <Input
                 type="password"
                 value={formData.password}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, password: e.target.value })}
+                required={!editingUser}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('users.confirmPassword')} {editingUser && `(${t('users.optional')})`}</Label>
+              <Input
+                type="password"
+                value={formData.confirm_password}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, confirm_password: e.target.value })}
                 required={!editingUser}
               />
             </div>

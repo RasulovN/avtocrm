@@ -9,6 +9,7 @@ import { Label } from '../../components/ui/Label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import { useAuthStore } from '../../app/store';
 import { authService } from '../../services/authService';
+import { formatDateShort, formatTime } from '../../utils';
 
 interface LoginHistory {
   id: string;
@@ -30,14 +31,6 @@ interface PasswordFormData {
   confirmPassword: string;
 }
 
-// Mock login history data
-const mockLoginHistory: LoginHistory[] = [
-  { id: '1', date: '01.04.2026', time: '09:30:45', ip: '192.168.1.100', device: 'Chrome / Windows', location: 'Tashkent, UZB' },
-  { id: '2', date: '31.03.2026', time: '14:22:18', ip: '192.168.1.100', device: 'Chrome / Windows', location: 'Tashkent, UZB' },
-  { id: '3', date: '30.03.2026', time: '10:15:33', ip: '192.168.1.105', device: 'Safari / macOS', location: 'Tashkent, UZB' },
-  { id: '4', date: '29.03.2026', time: '16:45:12', ip: '192.168.1.100', device: 'Firefox / Linux', location: 'Tashkent, UZB' },
-];
-
 export function SettingsPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
@@ -53,6 +46,18 @@ export function SettingsPage() {
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
+  });
+
+  const loginHistory: LoginHistory[] = (user?.history ?? []).map((log, index) => {
+    const deviceLine = [log.user_agent, log.action].filter(Boolean).join(' • ') || '-';
+    return {
+      id: String(log.id ?? index),
+      date: formatDateShort(log.created_at),
+      time: formatTime(log.created_at),
+      ip: log.ip_address || '-',
+      device: deviceLine,
+      location: '-',
+    };
   });
 
   const handleProfileChange = (field: keyof ProfileFormData, value: string) => {
@@ -210,7 +215,10 @@ export function SettingsPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {mockLoginHistory.map((login) => (
+            {loginHistory.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t('common.noData')}</p>
+            ) : (
+              loginHistory.slice(0, 5).map((login) => (
               <div key={login.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/50 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -223,10 +231,11 @@ export function SettingsPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-mono text-muted-foreground">{login.ip}</p>
-                  <p className="text-sm text-muted-foreground">{login.location}</p>
+                  {/* <p className="text-sm text-muted-foreground">{login.location}</p> */}
                 </div>
               </div>
-            ))}
+            ))
+            )}
           </div>
         </CardContent>
       </Card>

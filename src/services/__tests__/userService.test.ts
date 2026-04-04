@@ -35,7 +35,7 @@ describe('userService', () => {
 
       const result = await userService.getAll({ page: 1, limit: 10 });
 
-      expect(apiClient.get).toHaveBeenCalledWith('/users?page=1&limit=10');
+      expect(apiClient.get).toHaveBeenCalledWith('/users/?page=1&limit=10');
       expect(result.data).toHaveLength(2);
     });
 
@@ -47,7 +47,7 @@ describe('userService', () => {
       await userService.getAll({ page: 1, limit: 10, store_id: 'store-1' });
 
       expect(apiClient.get).toHaveBeenCalledWith(
-        '/users?page=1&limit=10&store_id=store-1'
+        '/users/?page=1&limit=10&store_id=store-1'
       );
     });
 
@@ -58,7 +58,7 @@ describe('userService', () => {
 
       await userService.getAll();
 
-      expect(apiClient.get).toHaveBeenCalledWith('/users?');
+      expect(apiClient.get).toHaveBeenCalledWith('/users/?');
     });
   });
 
@@ -71,7 +71,7 @@ describe('userService', () => {
 
       const result = await userService.getById('1');
 
-      expect(apiClient.get).toHaveBeenCalledWith('/users/1');
+      expect(apiClient.get).toHaveBeenCalledWith('/users/1/');
       expect(result).toEqual(mockUser);
     });
   });
@@ -80,9 +80,12 @@ describe('userService', () => {
     it('creates user with form data', async () => {
       const formData = {
         full_name: 'New User',
-        phone: '+998901234567',
-        role: 'store_user' as const,
+        phone_number: '+998901234567',
+        email: 'test@example.com',
+        role: 's' as const,
         password: 'password123',
+        confirm_password: 'password123',
+        store_id: 'store-1',
       };
 
       const mockUser = { id: '1', ...formData, user_id: 'USR001', created_at: '' };
@@ -92,7 +95,7 @@ describe('userService', () => {
 
       const result = await userService.create(formData);
 
-      expect(apiClient.post).toHaveBeenCalledWith('/users', formData);
+      expect(apiClient.post).toHaveBeenCalledWith('/users/seller-create/', formData);
       expect(result).toEqual(mockUser);
     });
   });
@@ -108,7 +111,7 @@ describe('userService', () => {
 
       const result = await userService.update('1', updateData);
 
-      expect(apiClient.put).toHaveBeenCalledWith('/users/1', updateData);
+      expect(apiClient.put).toHaveBeenCalledWith('/users/1/', updateData);
       expect(result).toEqual(mockUser);
     });
   });
@@ -119,7 +122,7 @@ describe('userService', () => {
 
       await userService.delete('1');
 
-      expect(apiClient.delete).toHaveBeenCalledWith('/users/1');
+      expect(apiClient.delete).toHaveBeenCalledWith('/users/1/');
     });
   });
 
@@ -136,7 +139,7 @@ describe('userService', () => {
 
       const result = await userService.getByStore('store-1');
 
-      expect(apiClient.get).toHaveBeenCalledWith('/users?store_id=store-1');
+      expect(apiClient.get).toHaveBeenCalledWith('/users/?store_id=store-1');
       expect(result).toEqual(mockUsers);
     });
   });

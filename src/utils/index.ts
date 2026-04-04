@@ -40,11 +40,24 @@ export function formatDate(date: string | Date | undefined | null): string {
 }
 
 export function formatDateShort(date: string | Date): string {
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '-';
   return new Intl.DateTimeFormat('uz-UZ', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).format(new Date(date));
+  }).format(d);
+}
+
+export function formatTime(date: string | Date | undefined | null): string {
+  if (!date) return '-';
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '-';
+  return new Intl.DateTimeFormat('uz-UZ', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(d);
 }
 
 export function calculateProfit(purchasePrice: number, sellingPrice: number, quantity: number): number {

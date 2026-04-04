@@ -4,6 +4,7 @@ import { handleError } from '../utils/errorHandler';
 import { isDev } from '../config/environment';
 
 const USER_KEY = 'user';
+const BaSE_URL = 'https://autocrm.pythonanywhere.com/api';
 
 const removeAuth = () => {
   localStorage.removeItem(USER_KEY);
@@ -12,7 +13,7 @@ const removeAuth = () => {
 
 // Create axios instance
 const api: AxiosInstance = axios.create({
-  baseURL: 'http://localhost:5173/api',
+  baseURL: BaSE_URL,
 
   headers: {
     'Content-Type': 'application/json',
