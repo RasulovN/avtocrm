@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback, useRef, type ChangeEvent, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Edit, Trash2 } from 'lucide-react';
-import { latinToCyrillic } from 'uzbek-transliterator';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
@@ -12,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { storeService } from '../../services/storeService';
 import { useAuthStore } from '../../app/store';
 import type { Store, StoreFormData } from '../../types';
+import { latinToCyrillic } from '../../utils/transliteration';
 
 export function StoreListPage() {
   const { t } = useTranslation();
