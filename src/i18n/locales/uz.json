@@ -302,7 +302,7 @@
   },
   "reports": {
     "title": "Hisobotlar",
-    "description": "Hisobotlarni ko'rish va yaratish",
+    "description": "Sotuv, kirim va o'tkazmalar bo'yicha real analitika",
     "stats": {
       "totalSales": "Jami sotuvlar",
       "totalPurchases": "Jami xaridlar",
@@ -311,6 +311,23 @@
     },
     "filters": "Filtrlar",
     "allTypes": "Barcha turlar",
+    "refresh": "Yangilash",
+    "liveSnapshot": "Jonli kesim",
+    "overviewTitle": "Operatsion ko'rsatkichlar paneli",
+    "overviewDescription": "Tanlangan davr bo'yicha asosiy oqimlar, trend va eng muhim nuqtalar bitta joyda ko'rsatiladi.",
+    "performanceTrend": "Dinamik trend",
+    "performanceTrendDescription": "Davr bo'yicha tushum, kirim yoki foyda trendi.",
+    "transferFlow": "O'tkazmalar oqimi",
+    "transferFlowDescription": "Do'konlar o'rtasidagi o'tkazmalar holati.",
+    "storePerformance": "Do'konlar kesimidagi natija",
+    "storePerformanceDescription": "Eng faol filiallar va ularning tushumi.",
+    "stockMix": "Zaxira tarkibi",
+    "stockMixDescription": "Kategoriya kesimidagi joriy mahsulot hajmi.",
+    "topProducts": "Eng kuchli mahsulotlar",
+    "topProductsDescription": "Tanlangan davrda eng ko'p daromad keltirgan mahsulotlar.",
+    "generatedReports": "Avto-yig'ilgan hisobotlar",
+    "generatedReportsDescription": "Joriy filtrlar asosida shakllangan qisqa hisobotlar.",
+    "uncategorized": "Kategoriyasiz",
     "types": {
       "sales": "Sotuvlar",
       "inventory": "Ombor",
@@ -322,6 +339,23 @@
       "month": "Oy",
       "quarter": "Chorak",
       "year": "Yil"
+    },
+    "labels": {
+      "averageReceipt": "O'rtacha chek",
+      "margin": "Marja",
+      "stockLoad": "Kirim hajmi",
+      "transactions": "Tranzaksiyalar",
+      "unitsSold": "Sotilgan dona",
+      "supplierDebt": "Ta'minotchi qarzi",
+      "units": "Dona",
+      "receipts": "Kirimlar",
+      "movements": "O'tkazmalar"
+    },
+    "generated": {
+      "sales": "Sotuv hisobotlari",
+      "inventory": "Kirim va zaxira hisobotlari",
+      "financial": "Moliyaviy natijalar",
+      "transfer": "O'tkazmalar monitoringi"
     },
     "ready": "Tayyor",
     "processing": "Qayta ishlanmoqda"

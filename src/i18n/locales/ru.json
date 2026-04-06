@@ -287,7 +287,7 @@
                },
     "reports":  {
                     "title":  "Отчёты",
-                    "description":  "Просмотр и генерация отчётов",
+                    "description":  "Живая аналитика по продажам, приходу и перемещениям",
                     "stats":  {
                                   "totalSales":  "Всего продаж",
                                   "totalPurchases":  "Всего закупок",
@@ -296,6 +296,23 @@
                               },
                     "filters":  "Фильтры",
                     "allTypes":  "Все типы",
+                    "refresh":  "Обновить",
+                    "liveSnapshot":  "Живой срез",
+                    "overviewTitle":  "Панель операционных показателей",
+                    "overviewDescription":  "Ключевые потоки, тренды и важные точки за выбранный период в одном месте.",
+                    "performanceTrend":  "Тренд динамики",
+                    "performanceTrendDescription":  "Динамика выручки, прихода или прибыли по периоду.",
+                    "transferFlow":  "Поток перемещений",
+                    "transferFlowDescription":  "Статусы перемещений между магазинами.",
+                    "storePerformance":  "Результат по магазинам",
+                    "storePerformanceDescription":  "Самые активные точки и их выручка.",
+                    "stockMix":  "Структура запасов",
+                    "stockMixDescription":  "Текущий объём товара по категориям.",
+                    "topProducts":  "Сильнейшие товары",
+                    "topProductsDescription":  "Товары, давшие наибольшую выручку за выбранный период.",
+                    "generatedReports":  "Собранные отчёты",
+                    "generatedReportsDescription":  "Краткие отчёты, сформированные из текущих фильтров.",
+                    "uncategorized":  "Без категории",
                     "types":  {
                                   "sales":  "Продажи",
                                   "inventory":  "Склад",
@@ -308,6 +325,23 @@
                                     "quarter":  "Квартал",
                                     "year":  "Год"
                                 },
+                    "labels":  {
+                                   "averageReceipt":  "Средний чек",
+                                   "margin":  "Маржа",
+                                   "stockLoad":  "Объём прихода",
+                                   "transactions":  "Транзакции",
+                                   "unitsSold":  "Продано единиц",
+                                   "supplierDebt":  "Долг поставщикам",
+                                   "units":  "ед.",
+                                   "receipts":  "Приходы",
+                                   "movements":  "Перемещения"
+                               },
+                    "generated":  {
+                                      "sales":  "Отчёт по продажам",
+                                      "inventory":  "Отчёт по приходу и запасам",
+                                      "financial":  "Финансовый результат",
+                                      "transfer":  "Мониторинг перемещений"
+                                  },
                     "ready":  "Готов",
                     "processing":  "Обработка"
                 }
