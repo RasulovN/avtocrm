@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
 import {
   LayoutDashboard,
   Package,
@@ -31,6 +32,7 @@ import {
 import { cn } from '../../utils';
 import { useThemeStore, useAuthStore } from '../../app/store';
 import { Button } from '../ui/Button';
+import { notificationService, type AppNotification } from '../../services/notificationService';
 
 interface NavItem {
   titleKey: string;
@@ -93,16 +95,60 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const profileRef = useRef<HTMLDivElement>(null);
+  const notificationRef = useRef<HTMLDivElement>(null);
+  const latestPlayedIdRef = useRef<string | null>(null);
   const { theme, toggleTheme } = useThemeStore();
   const { user, logout } = useAuthStore();
   const isSuperUser = Boolean(user?.is_superuser);
+  const unreadCount = notifications.filter((item) => !item.read).length;
 
   useEffect(() => {
     if (!user) {
       navigate('/login');
     }
   }, [navigate, user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    notificationService.connect(user);
+    const unsubscribe = notificationService.subscribe((items) => {
+      setNotifications(items);
+      const newestUnread = items.find((item) => !item.read);
+      if (!newestUnread) return;
+      if (latestPlayedIdRef.current === newestUnread.id) return;
+      if (latestPlayedIdRef.current !== null) {
+        const audio = new Audio('/sounds/notification.mp3');
+        audio.volume = 0.7;
+        void audio.play().catch(() => undefined);
+        toast.success(newestUnread.title, { duration: 4500 });
+      }
+      latestPlayedIdRef.current = newestUnread.id;
+    });
+
+    return () => {
+      unsubscribe();
+      notificationService.disconnect();
+    };
+  }, [user]);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (profileRef.current && !profileRef.current.contains(target)) {
+        setShowProfileMenu(false);
+      }
+      if (notificationRef.current && !notificationRef.current.contains(target)) {
+        setShowNotifications(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
 
   // Get current path without language prefix
   const currentPath = location.pathname;
@@ -439,10 +485,72 @@ export function MainLayout({ children }: MainLayoutProps) {
             <div className="lg:hidden w-8" />
 
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive" />
-              </Button>
+              <div className="relative" ref={notificationRef}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative"
+                  onClick={() => setShowNotifications((prev) => !prev)}
+                >
+                  <Bell className="h-5 w-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-white">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </Button>
+
+                {showNotifications && (
+                  <div className="absolute right-0 top-12 z-50 w-80 rounded-xl border bg-background p-3 shadow-lg">
+                    <div className="mb-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold">Bildirishnomalar</p>
+                        <p className="text-xs text-muted-foreground">
+                          {unreadCount > 0 ? `${unreadCount} ta yangi xabar` : 'Yangi xabar yo\'q'}
+                        </p>
+                      </div>
+                      {unreadCount > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => notificationService.markAllAsRead()}
+                        >
+                          O\'qildi
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="max-h-96 space-y-2 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                          Bildirishnoma topilmadi
+                        </div>
+                      ) : (
+                        notifications.map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => notificationService.markAsRead(item.id)}
+                            className={cn(
+                              'w-full rounded-lg border p-3 text-left transition-colors hover:bg-accent/50',
+                              !item.read && 'border-primary/30 bg-primary/5'
+                            )}
+                          >
+                            <div className="mb-1 flex items-start justify-between gap-3">
+                              <p className="text-sm font-medium">{item.title}</p>
+                              {!item.read && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-destructive" />}
+                            </div>
+                            <p className="text-xs text-muted-foreground">{item.message}</p>
+                            <p className="mt-2 text-[11px] text-muted-foreground">
+                              {new Date(item.created_at).toLocaleString()}
+                            </p>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <div className="flex items-center border rounded-md">
                 <Button
