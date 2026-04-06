@@ -42,7 +42,6 @@ function App() {
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
-
   useEffect(() => {
     const root = window.document.documentElement;
     if (theme === 'dark') {

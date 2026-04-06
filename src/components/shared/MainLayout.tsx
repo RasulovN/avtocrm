@@ -91,7 +91,6 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [showSubNav, setShowSubNav] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const { theme, toggleTheme } = useThemeStore();
   const { user, logout } = useAuthStore();
@@ -113,6 +112,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   
   // Check if we're on a sub-nav page (but not the main page of that module)
   const isOnSubNavPage = activeSubNavKey && !currentPath.endsWith(`/${lang}${activeSubNavKey}`) && !currentPath.endsWith(`/${lang}${activeSubNavKey}/`);
+  const [showSubNav, setShowSubNav] = useState(() => Boolean(activeSubNavKey));
   
   // Determine if we should show sub-nav sidebar
   const shouldShowSubNav = isOnSubNavPage || showSubNav;
@@ -122,12 +122,12 @@ export function MainLayout({ children }: MainLayoutProps) {
     ? navItems.find(item => item.href === activeSubNavKey) 
     : null;
 
-  // Update showSubNav based on current location
+  // Keep sub-navigation open when the current route is inside a submenu page.
   useEffect(() => {
-    if (activeSubNavKey) {
+    if (isOnSubNavPage) {
       setShowSubNav(true);
     }
-  }, [activeSubNavKey]);
+  }, [isOnSubNavPage]);
 
   // Update lang in URL when language changes
   useEffect(() => {
@@ -289,7 +289,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                     onClick={() => handleMainNavClick(item)}
                     className={cn(
                       'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
-                      isActive && !showSubNav
+                      isActive && !shouldShowSubNav
                         ? 'bg-primary text-primary-foreground'
                         : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
                       isCollapsed && 'justify-center px-2'
