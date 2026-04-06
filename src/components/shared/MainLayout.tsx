@@ -36,6 +36,7 @@ interface NavItem {
   titleKey: string;
   href: string;
   icon: React.ElementType;
+  access?: 'superuser' | 'store' | 'all';
 }
 
 interface SubNavItem {
@@ -45,16 +46,17 @@ interface SubNavItem {
 }
 
 const navItems: NavItem[] = [
-  { titleKey: 'nav.dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { titleKey: 'nav.products', href: '/products', icon: Package },
-  { titleKey: 'nav.categories', href: '/categories', icon: Tags },
-  { titleKey: 'nav.inventory', href: '/inventory', icon: ArrowDownToLine },
-  { titleKey: 'nav.transfers', href: '/transfers', icon: ArrowRightLeft },
-  { titleKey: 'nav.sales', href: '/sales', icon: DollarSign },
-  { titleKey: 'nav.suppliers', href: '/suppliers', icon: Truck },
-  { titleKey: 'nav.stores', href: '/stores', icon: Store }, 
-  { titleKey: 'nav.reports', href: '/reports', icon: BarChart3 },
-  { titleKey: 'nav.settings', href: '/settings', icon: Settings },
+  { titleKey: 'nav.dashboard', href: '/dashboard', icon: LayoutDashboard, access: 'all' },
+  { titleKey: 'nav.products', href: '/products', icon: Package, access: 'all' },
+  { titleKey: 'nav.categories', href: '/categories', icon: Tags, access: 'all' },
+  { titleKey: 'nav.inventory', href: '/inventory', icon: ArrowDownToLine, access: 'superuser' },
+  { titleKey: 'nav.transfers', href: '/transfers', icon: ArrowRightLeft, access: 'all' },
+  { titleKey: 'nav.sales', href: '/sales', icon: DollarSign, access: 'all' },
+  { titleKey: 'nav.suppliers', href: '/suppliers', icon: Truck, access: 'superuser' },
+  { titleKey: 'nav.stores', href: '/stores', icon: Store, access: 'superuser' },
+  { titleKey: 'nav.storeInfo', href: '/stores', icon: Store, access: 'store' },
+  { titleKey: 'nav.reports', href: '/reports', icon: BarChart3, access: 'all' },
+  { titleKey: 'nav.settings', href: '/settings', icon: Settings, access: 'all' },
 ];
 
 // Sub-navigation for modules that have both list and create pages
@@ -94,6 +96,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const profileRef = useRef<HTMLDivElement>(null);
   const { theme, toggleTheme } = useThemeStore();
   const { user, logout } = useAuthStore();
+  const isSuperUser = Boolean(user?.is_superuser);
 
   useEffect(() => {
     if (!user) {
@@ -184,6 +187,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const currentUser = user || {
     full_name: 'Admin',
     role: 'admin',
+    is_superuser: true,
     phone_number: '+998901234567',
   };
 
@@ -275,12 +279,18 @@ export function MainLayout({ children }: MainLayoutProps) {
                 })}
               </>
             ) : (
-              navItems.map((item) => {
+              navItems
+              .filter((item) => {
+                if (!item.access || item.access === 'all') return true;
+                if (item.access === 'superuser') return isSuperUser;
+                return !isSuperUser;
+              })
+              .map((item) => {
                 const href = `/${lang}${item.href}`;
                 const isActive = location.pathname.startsWith(`/${lang}${item.href}`) ||
                                (item.href === '/dashboard' && location.pathname === `/${lang}`);
                 
-                const hasSubNav = !!subNavs[item.href];
+                const hasSubNav = isSuperUser && !!subNavs[item.href];
                 
                 return (
                   <Link

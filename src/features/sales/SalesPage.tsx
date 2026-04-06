@@ -7,6 +7,7 @@ import { Label } from '../../components/ui/Label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
 import { storeService } from '../../services/storeService';
 import { productService } from '../../services/productService';
+import { useAuthStore } from '../../app/store';
 import type { Store, Product } from '../../types';
 import { formatCurrency } from '../../utils';
 
@@ -21,13 +22,16 @@ interface CartItem {
 }
 
 export function SalesPage() {
+  const { user } = useAuthStore();
+  const isAdmin = Boolean(user?.is_superuser);
+  const userStoreId = user?.store_id || '';
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const [stores, setStores] = useState<Store[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [saving, setSaving] = useState(false);
   const [barcode, setBarcode] = useState('');
 
-  const [storeId, setStoreId] = useState('');
+  const [storeId, setStoreId] = useState(userStoreId);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [items, setItems] = useState<CartItem[]>([]);
 
@@ -57,7 +61,8 @@ export function SalesPage() {
 
   // Filter products by store and category
   const filteredProducts = safeProducts.filter((p) => {
-    const matchStore = !storeId || p.store_id === storeId;
+    const effectiveStoreId = isAdmin ? storeId : userStoreId;
+    const matchStore = !effectiveStoreId || p.store_id === effectiveStoreId;
     const matchCategory = !categoryFilter || p.category === categoryFilter;
     return matchStore && matchCategory;
   });
@@ -68,17 +73,21 @@ export function SalesPage() {
         storeService.getAll(),
         productService.getAll({ limit: 100 }),
       ]);
-      setStores(Array.isArray(storesRes.data) ? storesRes.data : []);
-      setProducts(Array.isArray(productsRes.data) ? productsRes.data : []);
+      const loadedStores = Array.isArray(storesRes.data) ? storesRes.data : [];
+      const loadedProducts = Array.isArray(productsRes.data) ? productsRes.data : [];
+      setStores(isAdmin ? loadedStores : loadedStores.filter((store) => store.id === userStoreId));
+      setProducts(isAdmin ? loadedProducts : loadedProducts.filter((product) => product.store_id === userStoreId));
     } catch (error) {
       console.error('Failed to load data:', error);
-      setStores([
+      const fallbackStores = [
         { id: '1', name: 'Main Store', is_warehouse: false, created_at: '' },
-      ]);
-      setProducts([
+      ];
+      const fallbackProducts = [
         { id: '1', name: 'Oil Filter', purchase_price: 15000, selling_price: 25000, category: 'Filters', supplier_id: '1', store_id: '1', sku: 'SKU-001', barcode: '123456789', description: '', quantity: 100, created_at: '', updated_at: '' },
         { id: '2', name: 'Brake Pads', purchase_price: 45000, selling_price: 75000, category: 'Brakes', supplier_id: '1', store_id: '1', sku: 'SKU-002', barcode: '987654321', description: '', quantity: 50, created_at: '', updated_at: '' },
-      ]);
+      ];
+      setStores(isAdmin ? fallbackStores : fallbackStores.filter((store) => store.id === userStoreId));
+      setProducts(isAdmin ? fallbackProducts : fallbackProducts.filter((product) => product.store_id === userStoreId));
     }
   };
 
@@ -106,6 +115,12 @@ export function SalesPage() {
     loadData();
     barcodeInputRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    if (!isAdmin && userStoreId) {
+      setStoreId(userStoreId);
+    }
+  }, [isAdmin, userStoreId]);
 
   const handleBarcodeScan = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && barcode) {
@@ -261,7 +276,7 @@ export function SalesPage() {
                   </Button>
                 </div>
                 <div className="flex gap-2 mt-2">
-                  <Select value={storeId} onValueChange={setStoreId}>
+                  {isAdmin && <Select value={storeId} onValueChange={setStoreId}>
                     <SelectTrigger className="w-30 h-8 dark:bg-gray-900 dark:border-gray-600 dark:text-white">
                       <SelectValue placeholder="Do'kon" />
                     </SelectTrigger>
@@ -270,7 +285,7 @@ export function SalesPage() {
                         <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                       ))}
                     </SelectContent>
-                  </Select>
+                  </Select>}
                   <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                     <SelectTrigger className="w-[120px] h-8 dark:bg-gray-900 dark:border-gray-600 dark:text-white">
                       <SelectValue placeholder="Kategoriya" />

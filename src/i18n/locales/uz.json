@@ -49,7 +49,8 @@
     "users": "Foydalanuvchilar",
     "reports": "Hisobotlar",
     "settings": "Sozlamalar",
-    "inventory": "Kirim"
+    "inventory": "Kirim",
+    "storeInfo": "Do'kon ma'lumotlari"
   },
   "auth": {
     "login": "Kirish",
@@ -258,7 +259,8 @@
     "logs": "Loglar",
     "noLogs": "Loglar yo'q",
     "admin": "Admin",
-    "list": "Do'konlar ro'yxati"
+    "list": "Do'konlar ro'yxati",
+    "storeInfoDescription": "Foydalanuvchiga biriktirilgan do'kon ma'lumotlari"
   },
   "users": {
     "title": "Foydalanuvchilar",

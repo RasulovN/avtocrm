@@ -22,6 +22,7 @@ import {
   TableRow,
 } from '../../components/ui/Table';
 import { Label } from '../../components/ui/Label';
+import { useAuthStore } from '../../app/store';
 import type { Category } from '../../types';
 
 const mockCategories: Category[] = [
@@ -34,6 +35,8 @@ const mockCategories: Category[] = [
 
 export function CategoryListPage() {
   const { t } = useTranslation();
+  const { user } = useAuthStore();
+  const isAdmin = Boolean(user?.is_superuser);
   const [categories, setCategories] = useState<Category[]>(mockCategories);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -99,12 +102,12 @@ export function CategoryListPage() {
     <div className="space-y-6">
       <PageHeader
         title={t('categories.title')}
-        actions={
+        actions={isAdmin ? (
           <Button onClick={() => handleOpenDialog()}>
             <Plus className="h-4 w-4 mr-2" />
             {t('categories.addCategory')}
           </Button>
-        }
+        ) : undefined}
       />
 
       <Card>
@@ -132,7 +135,7 @@ export function CategoryListPage() {
                 <TableRow>
                   <TableHead>{t('common.name')}</TableHead>
                   <TableHead>{t('common.description')}</TableHead>
-                  <TableHead>{t('common.actions')}</TableHead>
+                  {isAdmin && <TableHead>{t('common.actions')}</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -140,7 +143,7 @@ export function CategoryListPage() {
                   <TableRow key={category.id}>
                     <TableCell className="font-medium">{category.name}</TableCell>
                     <TableCell>{category.description}</TableCell>
-                    <TableCell>
+                    {isAdmin && <TableCell>
                       <div className="flex items-center gap-2">
                         <Button
                           variant="ghost"
@@ -157,7 +160,7 @@ export function CategoryListPage() {
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
-                    </TableCell>
+                    </TableCell>}
                   </TableRow>
                 ))}
               </TableBody>
@@ -166,7 +169,7 @@ export function CategoryListPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isAdmin && isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>

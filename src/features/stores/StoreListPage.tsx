@@ -9,10 +9,14 @@ import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/Dialog';
 import { storeService } from '../../services/storeService';
+import { useAuthStore } from '../../app/store';
 import type { Store, StoreFormData } from '../../types';
 
 export function StoreListPage() {
   const { t } = useTranslation();
+  const { user } = useAuthStore();
+  const isAdmin = Boolean(user?.is_superuser);
+  const userStoreId = user?.store_id;
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -45,8 +49,9 @@ export function StoreListPage() {
     try {
       setLoading(true);
       const response = await storeService.getAll({ page, limit });
-      setStores(response.data);
-      setTotal(response.total);
+      const scopedStores = isAdmin ? response.data : response.data.filter((item) => item.id === userStoreId);
+      setStores(scopedStores);
+      setTotal(scopedStores.length);
     } catch (error) {
       console.error('Failed to load stores:', error);
       setTotal(2);
@@ -240,7 +245,7 @@ export function StoreListPage() {
       key: 'actions',
       header: t('common.actions'),
       className: 'text-right',
-      render: (item: Store) => (
+      render: (item: Store) => isAdmin ? (
         <div className="flex items-center justify-end gap-2">
           <Button variant="ghost" size="icon" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleOpenDialog(item); }}>
             <Edit className="h-4 w-4" />
@@ -249,21 +254,21 @@ export function StoreListPage() {
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
-      ),
+      ) : null,
     },
   ];
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t('stores.title')}
-        description={t('stores.title')}
-        actions={
+        title={isAdmin ? t('stores.title') : t('nav.storeInfo')}
+        description={isAdmin ? t('stores.title') : t('stores.storeInfoDescription')}
+        actions={isAdmin ? (
           <Button onClick={() => handleOpenDialog()}>
             <Plus className="h-4 w-4 mr-2" />
             {t('stores.addStore')}
           </Button>
-        }
+        ) : undefined}
       />
 
       <DataTable
@@ -273,7 +278,7 @@ export function StoreListPage() {
         pagination={{ page, limit, total, onPageChange: setPage }}
       />
 
-      <ConfirmDialog
+      {isAdmin && <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open: boolean) => !open && setDeleteId(null)}
         onConfirm={handleDelete}
@@ -282,9 +287,9 @@ export function StoreListPage() {
         confirmText={t('common.delete')}
         variant="destructive"
         loading={deleting}
-      />
+      />}
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={isAdmin && dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingStore ? t('stores.editStore') : t('stores.addStore')}</DialogTitle>

@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from '../../components/ui/Select';
 import { productService } from '../../services/productService';
+import { useAuthStore } from '../../app/store';
 import type { Product, ProductFilters } from '../../types';
 import { formatCurrency } from '../../utils';
 
@@ -22,6 +23,9 @@ export function ProductListPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const lang = i18n.language || 'uz';
+  const { user } = useAuthStore();
+  const isAdmin = Boolean(user?.is_superuser);
+  const userStoreId = user?.store_id;
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ProductFilters>({});
@@ -40,7 +44,7 @@ export function ProductListPage() {
   const loadProducts = async () => {
     try {
       setLoading(true);
-      const response = await productService.getAll({ ...filters, page, limit });
+      const response = await productService.getAll({ ...filters, store_id: !isAdmin ? userStoreId : filters.store_id, page, limit });
       setProducts(response.data);
       setTotal(response.total);
     } catch (error) {
@@ -190,7 +194,7 @@ export function ProductListPage() {
           >
             <Barcode className="h-4 w-4" />
           </Button>
-          <Button
+          {isAdmin && <Button
             variant="ghost"
             size="icon"
             onClick={(e: MouseEvent<HTMLButtonElement>) => {
@@ -200,8 +204,8 @@ export function ProductListPage() {
             title={t('common.edit')}
           >
             <Edit className="h-4 w-4" />
-          </Button>
-          <Button
+          </Button>}
+          {isAdmin && <Button
             variant="ghost"
             size="icon"
             onClick={(e: MouseEvent<HTMLButtonElement>) => {
@@ -211,7 +215,7 @@ export function ProductListPage() {
             title={t('common.delete')}
           >
             <Trash2 className="h-4 w-4" />
-          </Button>
+          </Button>}
         </div>
       ),
     },
@@ -222,12 +226,12 @@ export function ProductListPage() {
       <PageHeader
         title={t('products.title')}
         description={t('products.productList')}
-        actions={
+        actions={isAdmin ? (
           <Button onClick={() => navigate(`/${lang}/products/new`)}>
             <Plus className="h-4 w-4 mr-2" />
             {t('products.addProduct')}
           </Button>
-        }
+        ) : undefined}
       />
 
       <div className="flex flex-col sm:flex-row gap-4">
@@ -256,7 +260,7 @@ export function ProductListPage() {
           </SelectContent>
         </Select>
         
-        <Select
+        {isAdmin && <Select
           value={filters.store_id || 'all'}
           onValueChange={(value) => handleFilterChange('store_id', value === 'all' ? '' : value)}
         >
@@ -268,7 +272,7 @@ export function ProductListPage() {
             <SelectItem value="1">Main Store</SelectItem>
             <SelectItem value="2">Warehouse</SelectItem>
           </SelectContent>
-        </Select>
+        </Select>}
       </div>
 
       <DataTable
@@ -277,7 +281,7 @@ export function ProductListPage() {
         loading={loading}
         searchPlaceholder={t('products.searchPlaceholder')}
         onSearch={handleSearch}
-        onRowClick={(item: Product) => navigate(`/${lang}/products/${item.id}/edit`)}
+        onRowClick={(item: Product) => isAdmin ? navigate(`/${lang}/products/${item.id}/edit`) : undefined}
         pagination={{
           page,
           limit,
