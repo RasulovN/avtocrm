@@ -21,8 +21,10 @@ import {
 } from '../ui/Table';
 
 // Column interface with optional properties for styling
+export type ColumnKey<T> = keyof T | (string & {});
+
 export interface Column<T> {
-  key: keyof T;
+  key: ColumnKey<T>;
   header: string;
   render?: (item: T) => React.ReactNode;
   className?: string;
@@ -281,7 +283,7 @@ export function DataTable<T extends { id: string }>({
                           renderStoreInventory(item)
                         ) : column.render
                           ? column.render(item)
-                          : String(item[column.key] ?? '')}
+                          : (column.key in item ? String(item[column.key as keyof T] ?? '') : '')}
                       </TableCell>
                     ))}
                   </TableRow>

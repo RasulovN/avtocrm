@@ -136,6 +136,12 @@ export interface Store {
   name: string;
   address?: string;
   phone?: string;
+  phone_number?: string;
+  type?: string;
+  latitude?: string;
+  longitude?: string;
+  is_active?: boolean;
+  sellers?: unknown[];
   is_warehouse: boolean;
   created_at: string;
 }
@@ -144,6 +150,10 @@ export interface StoreFormData {
   name: string;
   address?: string;
   phone?: string;
+  phone_number?: string;
+  type?: string;
+  latitude?: string;
+  longitude?: string;
   is_warehouse: boolean;
 }
 
