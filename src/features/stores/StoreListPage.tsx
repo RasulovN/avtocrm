@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef, type ChangeEvent, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Edit, Trash2 } from 'lucide-react';
+import { latinToCyrillic } from 'uzbek-transliterator';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
@@ -40,6 +41,24 @@ export function StoreListPage() {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const placemarkRef = useRef<any>(null);
+
+  const handleNameChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      name: value,
+      name_uz: value,
+      name_uz_cyrl: latinToCyrillic(value),
+    }));
+  };
+
+  const handleAddressChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      address: value,
+      address_uz: value,
+      address_uz_cyrl: latinToCyrillic(value),
+    }));
+  };
 
   const loadStores = useCallback(async () => {
     try {
@@ -285,7 +304,7 @@ export function StoreListPage() {
       />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent size='lg'>
           <DialogHeader>
             <DialogTitle>{editingStore ? t('stores.editStore') : t('stores.addStore')}</DialogTitle>
           </DialogHeader>
@@ -294,20 +313,17 @@ export function StoreListPage() {
               <Label>{t('stores.storeName')}</Label>
               <Input
                 value={formData.name_uz ?? formData.name}
-                onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  setFormData({ ...formData, name: e.target.value, name_uz: e.target.value })
-                }
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handleNameChange(e.target.value)}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label>{t('stores.storeName')} (Кирилл)</Label>
+              <Label>{t('stores.storeName')}</Label>
               <Input
                 value={formData.name_uz_cyrl ?? ''}
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
                   setFormData({ ...formData, name_uz_cyrl: e.target.value })
                 }
-                required
               />
             </div>
             <div className="space-y-2">
@@ -336,9 +352,7 @@ export function StoreListPage() {
               <Label>{t('stores.address')}</Label>
               <Input
                 value={formData.address_uz ?? formData.address ?? ''}
-                onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  setFormData({ ...formData, address: e.target.value, address_uz: e.target.value })
-                }
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handleAddressChange(e.target.value)}
               />
             </div>
             <div className="space-y-2">
