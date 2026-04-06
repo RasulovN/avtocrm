@@ -63,7 +63,15 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Toaster position="top-right" />
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          duration: 2500,
+        }}
+        containerStyle={{
+          top: 80,
+        }}
+      />
       <Routes>
         {/* Login - accessible without auth */}
         <Route path="/login" element={
