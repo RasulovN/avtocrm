@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, type ChangeEvent, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Edit, Trash2 } from 'lucide-react';
+import { latinToCyrillic } from 'uzbek-transliterator';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
@@ -10,7 +11,6 @@ import { Label } from '../../components/ui/Label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/Dialog';
 import { supplierService } from '../../services/supplierService';
 import type { Supplier, SupplierFormData } from '../../types';
-import { formatCurrency, formatDate } from '../../utils';
 
 export function SupplierListPage() {
   const { t } = useTranslation();
@@ -24,12 +24,40 @@ export function SupplierListPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [formData, setFormData] = useState<SupplierFormData>({
-    name: '',
+    name_uz: '',
+    name_uz_cyrl: '',
+    description_uz: '',
+    description_uz_cyrl: '',
+    address_uz: '',
+    address_uz_cyrl: '',
+    phone_number: '',
     inn: '',
-    phone: '',
-    address: '',
   });
   const [saving, setSaving] = useState(false);
+
+  const handleNameChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      name_uz: value,
+      name_uz_cyrl: latinToCyrillic(value),
+    }));
+  };
+
+  const handleDescriptionChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      description_uz: value,
+      description_uz_cyrl: latinToCyrillic(value),
+    }));
+  };
+
+  const handleAddressChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      address_uz: value,
+      address_uz_cyrl: latinToCyrillic(value),
+    }));
+  };
 
   const loadSuppliers = useCallback(async () => {
     try {
@@ -39,10 +67,6 @@ export function SupplierListPage() {
       setTotal(response.total);
     } catch (error) {
       console.error('Failed to load suppliers:', error);
-      setSuppliers([
-        { id: '1', name: 'AutoParts Co', inn: '305123456', phone: '+998901234567', address: 'Toshkent', debt: 5000000, created_at: new Date().toISOString() },
-        { id: '2', name: 'Global Parts', inn: '305123457', phone: '+998901234568', address: 'Samarqand', debt: 3500000, created_at: new Date().toISOString() },
-      ]);
       setTotal(2);
     } finally {
       setLoading(false);
@@ -67,20 +91,50 @@ export function SupplierListPage() {
     }
   };
 
-  const handleOpenDialog = (supplier?: Supplier) => {
+  const handleOpenDialog = async (supplier?: Supplier) => {
     if (supplier) {
       setEditingSupplier(supplier);
-      setFormData({
-        name: supplier.name,
-        inn: supplier.inn || '',
-        phone: supplier.phone || '',
-        address: supplier.address || '',
-      });
+      setDialogOpen(true);
+      try {
+        const fresh = await supplierService.getById(supplier.id);
+        setEditingSupplier(fresh);
+        setFormData({
+          name_uz: fresh.name_uz || fresh.name || '',
+          name_uz_cyrl: fresh.name_uz_cyrl || '',
+          description_uz: fresh.description_uz || fresh.description || '',
+          description_uz_cyrl: fresh.description_uz_cyrl || '',
+          address_uz: fresh.address_uz || fresh.address || '',
+          address_uz_cyrl: fresh.address_uz_cyrl || '',
+          phone_number: fresh.phone_number || fresh.phone || '',
+          inn: fresh.inn || '',
+        });
+      } catch (error) {
+        console.error('Failed to load supplier:', error);
+        setFormData({
+          name_uz: supplier.name_uz || supplier.name || '',
+          name_uz_cyrl: supplier.name_uz_cyrl || '',
+          description_uz: supplier.description_uz || supplier.description || '',
+          description_uz_cyrl: supplier.description_uz_cyrl || '',
+          address_uz: supplier.address_uz || supplier.address || '',
+          address_uz_cyrl: supplier.address_uz_cyrl || '',
+          phone_number: supplier.phone_number || supplier.phone || '',
+          inn: supplier.inn || '',
+        });
+      }
     } else {
       setEditingSupplier(null);
-      setFormData({ name: '', inn: '', phone: '', address: '' });
+      setFormData({
+        name_uz: '',
+        name_uz_cyrl: '',
+        description_uz: '',
+        description_uz_cyrl: '',
+        address_uz: '',
+        address_uz_cyrl: '',
+        phone_number: '',
+        inn: '',
+      });
+      setDialogOpen(true);
     }
-    setDialogOpen(true);
   };
 
   const handleSave = async () => {
@@ -103,18 +157,16 @@ export function SupplierListPage() {
   const columns: Column<Supplier>[] = [
     { key: 'name', header: t('suppliers.supplierName') },
     { key: 'inn', header: t('suppliers.inn') },
-    { key: 'phone', header: t('suppliers.phone') },
     {
-      key: 'debt',
-      header: t('suppliers.debt'),
-      className: 'text-right',
-      render: (item: Supplier) => formatCurrency(item.debt),
+      key: 'phone',
+      header: t('suppliers.phone'),
+      render: (item: Supplier) => item.phone_number || item.phone || '-',
     },
     { key: 'address', header: t('suppliers.address') },
     {
-      key: 'created_at',
-      header: t('common.createdAt'),
-      render: (item: Supplier) => formatDate(item.created_at),
+      key: 'description',
+      header: t('common.description'),
+      render: (item: Supplier) => item.description ?? item.description_uz ?? '-',
     },
     {
       key: 'actions',
@@ -167,24 +219,67 @@ export function SupplierListPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingSupplier ? 'Edit Supplier' : 'Add Supplier'}</DialogTitle>
+            <DialogTitle>{editingSupplier ? t('suppliers.editSupplier') : t('suppliers.addSupplier')}</DialogTitle>
           </DialogHeader>
-            <div className="space-y-4">
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label>{t('suppliers.supplierName')}</Label>
-              <Input value={formData.name} onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, name: e.target.value })} required />
+              <Input
+                value={formData.name_uz}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handleNameChange(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('suppliers.supplierName')} (Cyrillic)</Label>
+              <Input
+                value={formData.name_uz_cyrl}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, name_uz_cyrl: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('common.description')}</Label>
+              <Input
+                value={formData.description_uz}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handleDescriptionChange(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('common.description')} (Cyrillic)</Label>
+              <Input
+                value={formData.description_uz_cyrl}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, description_uz_cyrl: e.target.value })}
+              />
             </div>
             <div className="space-y-2">
               <Label>{t('suppliers.phone')}</Label>
-              <Input value={formData.phone} onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, phone: e.target.value })} />
+              <Input
+                value={formData.phone_number}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setFormData({ ...formData, phone_number: e.target.value })
+                }
+              />
             </div>
             <div className="space-y-2">
               <Label>{t('suppliers.inn')}</Label>
-              <Input value={formData.inn} onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, inn: e.target.value })} />
+              <Input
+                value={formData.inn}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, inn: e.target.value })}
+              />
             </div>
             <div className="space-y-2">
               <Label>{t('suppliers.address')}</Label>
-              <Input value={formData.address} onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, address: e.target.value })} />
+              <Input
+                value={formData.address_uz}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handleAddressChange(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('suppliers.address')} (Cyrillic)</Label>
+              <Input
+                value={formData.address_uz_cyrl}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, address_uz_cyrl: e.target.value })}
+              />
             </div>
           </div>
           <DialogFooter>

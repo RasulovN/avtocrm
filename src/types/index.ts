@@ -115,19 +115,32 @@ export interface Category {
 export interface Supplier {
   id: string;
   name: string;
+  name_uz?: string;
+  name_uz_cyrl?: string;
+  description?: string;
+  description_uz?: string;
+  description_uz_cyrl?: string;
   inn?: string;
   phone?: string;
+  phone_number?: string;
   email?: string;
   address?: string;
+  address_uz?: string;
+  address_uz_cyrl?: string;
+  is_active?: boolean;
   debt: number;
-  created_at: string;
+  created_at?: string;
 }
 
 export interface SupplierFormData {
-  name: string;
-  inn?: string;
-  phone?: string;
-  address?: string;
+  name_uz: string;
+  name_uz_cyrl: string;
+  description_uz: string;
+  description_uz_cyrl: string;
+  address_uz: string;
+  address_uz_cyrl: string;
+  phone_number: string;
+  inn: string;
 }
 
 // Store Types
