@@ -24,7 +24,11 @@ export function StoreListPage() {
   const [editingStore, setEditingStore] = useState<Store | null>(null);
   const [formData, setFormData] = useState<StoreFormData>({
     name: '',
+    name_uz: '',
+    name_uz_cyrl: '',
     address: '',
+    address_uz: '',
+    address_uz_cyrl: '',
     phone: '',
     phone_number: '',
     type: 's',
@@ -74,7 +78,11 @@ export function StoreListPage() {
       setEditingStore(store);
       setFormData({
         name: store.name,
+        name_uz: store.name_uz || store.name,
+        name_uz_cyrl: store.name_uz_cyrl || '',
         address: store.address || '',
+        address_uz: store.address_uz || store.address || '',
+        address_uz_cyrl: store.address_uz_cyrl || '',
         phone: store.phone_number || store.phone || '',
         phone_number: store.phone_number || store.phone || '',
         type: store.type || (store.is_warehouse ? 'w' : 's'),
@@ -86,7 +94,11 @@ export function StoreListPage() {
       setEditingStore(null);
       setFormData({
         name: '',
+        name_uz: '',
+        name_uz_cyrl: '',
         address: '',
+        address_uz: '',
+        address_uz_cyrl: '',
         phone: '',
         phone_number: '',
         type: 's',
@@ -280,7 +292,23 @@ export function StoreListPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>{t('stores.storeName')}</Label>
-              <Input value={formData.name} onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, name: e.target.value })} required />
+              <Input
+                value={formData.name_uz ?? formData.name}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setFormData({ ...formData, name: e.target.value, name_uz: e.target.value })
+                }
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('stores.storeName')} (Кирилл)</Label>
+              <Input
+                value={formData.name_uz_cyrl ?? ''}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setFormData({ ...formData, name_uz_cyrl: e.target.value })
+                }
+                required
+              />
             </div>
             <div className="space-y-2">
               <Label>{t('stores.phone')}</Label>
@@ -306,7 +334,21 @@ export function StoreListPage() {
             </div>
             <div className="space-y-2">
               <Label>{t('stores.address')}</Label>
-              <Input value={formData.address} onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, address: e.target.value })} />
+              <Input
+                value={formData.address_uz ?? formData.address ?? ''}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setFormData({ ...formData, address: e.target.value, address_uz: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('stores.address')} (Кирилл)</Label>
+              <Input
+                value={formData.address_uz_cyrl ?? ''}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setFormData({ ...formData, address_uz_cyrl: e.target.value })
+                }
+              />
             </div>
             <div className="space-y-2">
               <Label>{t('stores.map')}</Label>

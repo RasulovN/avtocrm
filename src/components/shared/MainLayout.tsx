@@ -457,7 +457,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                   )}
                   onClick={() => switchLanguage('ru')}
                 >
-                  Ru
+                  Кир
                 </Button>
               </div>
 

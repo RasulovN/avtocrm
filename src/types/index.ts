@@ -134,7 +134,11 @@ export interface SupplierFormData {
 export interface Store {
   id: string;
   name: string;
+  name_uz?: string;
+  name_uz_cyrl?: string;
   address?: string;
+  address_uz?: string;
+  address_uz_cyrl?: string;
   phone?: string;
   phone_number?: string;
   type?: string;
@@ -148,7 +152,11 @@ export interface Store {
 
 export interface StoreFormData {
   name: string;
+  name_uz?: string;
+  name_uz_cyrl?: string;
   address?: string;
+  address_uz?: string;
+  address_uz_cyrl?: string;
   phone?: string;
   phone_number?: string;
   type?: string;

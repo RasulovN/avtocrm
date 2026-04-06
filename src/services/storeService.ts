@@ -16,8 +16,12 @@ const normalizeStore = (raw: unknown): Store => {
 
   return {
     id: String(item.id ?? ''),
-    name: item.name ?? '',
-    address: item.address ?? '',
+    name: item.name ?? item.name_uz ?? item.name_uz_cyrl ?? '',
+    name_uz: item.name_uz ?? item.name ?? '',
+    name_uz_cyrl: item.name_uz_cyrl ?? '',
+    address: item.address ?? item.address_uz ?? item.address_uz_cyrl ?? '',
+    address_uz: item.address_uz ?? item.address ?? '',
+    address_uz_cyrl: item.address_uz_cyrl ?? '',
     phone: item.phone ?? item.phone_number ?? '',
     phone_number: item.phone_number ?? item.phone ?? '',
     type: item.type,
@@ -31,18 +35,24 @@ const normalizeStore = (raw: unknown): Store => {
 };
 
 const mapStorePayload = (data: StoreFormData): Record<string, unknown> => ({
-  name: data.name,
-  address: data.address,
+  name_uz: data.name_uz ?? data.name,
+  name_uz_cyrl: data.name_uz_cyrl ?? '',
   phone_number: data.phone_number ?? data.phone,
   type: data.type ?? (data.is_warehouse ? 'w' : 's'),
+  address_uz: data.address_uz ?? data.address,
+  address_uz_cyrl: data.address_uz_cyrl ?? '',
   latitude: data.latitude,
   longitude: data.longitude,
 });
 
 const mapStoreUpdatePayload = (data: Partial<StoreFormData>): Record<string, unknown> => {
   const payload: Record<string, unknown> = {};
-  if (typeof data.name === 'string') payload.name = data.name;
-  if (typeof data.address === 'string') payload.address = data.address;
+  if (typeof data.name_uz === 'string') payload.name_uz = data.name_uz;
+  if (typeof data.name === 'string' && typeof payload.name_uz !== 'string') payload.name_uz = data.name;
+  if (typeof data.name_uz_cyrl === 'string') payload.name_uz_cyrl = data.name_uz_cyrl;
+  if (typeof data.address_uz === 'string') payload.address_uz = data.address_uz;
+  if (typeof data.address === 'string' && typeof payload.address_uz !== 'string') payload.address_uz = data.address;
+  if (typeof data.address_uz_cyrl === 'string') payload.address_uz_cyrl = data.address_uz_cyrl;
   if (typeof data.phone_number === 'string') payload.phone_number = data.phone_number;
   if (typeof data.phone === 'string') payload.phone_number = data.phone;
   if (typeof data.type === 'string') payload.type = data.type;

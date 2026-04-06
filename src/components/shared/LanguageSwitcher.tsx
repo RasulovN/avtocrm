@@ -13,7 +13,7 @@ export function LanguageSwitcher() {
 
   const languages = [
     { code: 'uz', label: 'O\'zbekcha' },
-    { code: 'ru', label: 'Русский' },
+    { code: 'ru', label: 'Кириллча' },
   ];
 
   const currentLanguage = languages.find((lang) => lang.code === i18n.language) || languages[0];
