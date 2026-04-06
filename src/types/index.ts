@@ -107,8 +107,19 @@ export interface ProductFormData {
 // Category Types
 export interface Category {
   id: string;
+  slug?: string;
   name: string;
   description?: string;
+  image?: string;
+  created_at?: string;
+}
+
+export interface CategoryFormData {
+  name_uz: string;
+  name_uz_cyrl: string;
+  description_uz: string;
+  description_uz_cyrl: string;
+  image?: File | string | null;
 }
 
 // Supplier Types
