@@ -34,7 +34,7 @@ export function SalesListPage() {
     } catch (error) {
       console.error('Failed to load sales:', error);
       // Demo data
-      const fallbackSales = [
+      const fallbackSales: Sale[] = [
         {
           id: '1',
           store_id: '1',
