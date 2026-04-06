@@ -1,15 +1,18 @@
 import toast from 'react-hot-toast';
 import { isDev } from '../config/environment';
 import { logger } from './logger';
+import type { LogLevel } from './logger';
 
 export interface ErrorHandlerOptions {
   showToast?: boolean;
   customMessage?: string;
   logData?: unknown;
+  logLevel?: Exclude<LogLevel, 'info'>;
+  silent?: boolean;
 }
 
 export function handleError(error: unknown, options: ErrorHandlerOptions = {}) {
-  const { showToast = true, customMessage, logData } = options;
+  const { showToast = true, customMessage, logData, logLevel = 'error', silent = false } = options;
   
   let errorMessage = 'An error occurred';
   let errorDetails: unknown = error;
@@ -27,14 +30,25 @@ export function handleError(error: unknown, options: ErrorHandlerOptions = {}) {
 
   const displayMessage = customMessage || errorMessage;
 
-  if (isDev) {
-    logger.error(displayMessage, { error: errorDetails, ...(logData && { additionalData: logData }) });
-  } else {
-    logger.error(displayMessage, { error: errorDetails, ...(logData && { additionalData: logData }) });
-    
+  if (silent) {
     if (showToast) {
       toast.error(displayMessage);
     }
+    return;
+  }
+
+  const payload = { error: errorDetails, ...(logData && { additionalData: logData }) };
+
+  if (logLevel === 'warn') {
+    logger.warn(displayMessage, payload);
+  } else if (logLevel === 'debug') {
+    logger.debug(displayMessage, payload);
+  } else {
+    logger.error(displayMessage, payload);
+  }
+
+  if (!isDev && showToast) {
+    toast.error(displayMessage);
   }
 }
 

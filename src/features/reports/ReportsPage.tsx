@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import * as XLSX from 'xlsx';
 import {
   ArrowRightLeft,
   BarChart3,
@@ -7,6 +8,7 @@ import {
   CircleDollarSign,
   CreditCard,
   Database,
+  Download,
   RefreshCw,
   ShoppingCart,
   TrendingDown,
@@ -53,6 +55,30 @@ interface GeneratedReport {
   periodLabel: string;
   generatedAt: string;
   status: 'ready';
+}
+
+interface ReportsAnalytics {
+  revenue: number;
+  purchase: number;
+  profit: number;
+  debt: number;
+  supplierDebt: number;
+  avgReceipt: number;
+  margin: number;
+  salesCount: number;
+  totalUnitsSold: number;
+  totalUnitsReceived: number;
+  revenueChange: number;
+  purchaseChange: number;
+  profitChange: number;
+  debtChange: number;
+  trend: TrendPoint[];
+  chartValues: number[];
+  storePerformance: { id: string; name: string; revenue: number; profit: number; salesCount: number; transferCount: number }[];
+  topSelling: { name: string; quantity: number; revenue: number }[];
+  stockMix: { name: string; quantity: number }[];
+  transfersByStatus: { completed: number; pending: number; rejected: number };
+  generatedReports: GeneratedReport[];
 }
 
 const EMPTY_DATA: ReportsData = {
@@ -301,7 +327,7 @@ export function ReportsPage() {
     }
   };
 
-  const analytics = useMemo(() => {
+  const analytics = useMemo<ReportsAnalytics>(() => {
     const now = new Date();
     const periodStart = getRangeStart(selectedPeriod, now);
     const previousRange = getPreviousRange(selectedPeriod, now);
@@ -471,6 +497,118 @@ export function ReportsPage() {
   const storeMax = Math.max(...analytics.storePerformance.map((item) => item.revenue), 1);
   const stockMax = Math.max(...analytics.stockMix.map((item) => item.quantity), 1);
 
+  const handleExportExcel = () => {
+    const now = new Date();
+    const rangeStart = getRangeStart(selectedPeriod, now);
+    const salesInRange = data.sales.filter((sale) => isWithinRange(sale.created_at, rangeStart, now));
+    const inventoryInRange = data.inventory.filter((item) => isWithinRange(item.created_at, rangeStart, now));
+    const transfersInRange = data.transfers.filter((item) => isWithinRange(item.created_at, rangeStart, now));
+
+    const workbook = XLSX.utils.book_new();
+
+    const summarySheet = XLSX.utils.json_to_sheet([
+      { metric: t('reports.stats.totalSales'), value: analytics.revenue },
+      { metric: t('reports.stats.totalPurchases'), value: analytics.purchase },
+      { metric: t('reports.stats.netProfit'), value: analytics.profit },
+      { metric: t('reports.stats.totalDebt'), value: analytics.debt + analytics.supplierDebt },
+      { metric: t('reports.labels.averageReceipt'), value: analytics.avgReceipt },
+      { metric: t('reports.labels.margin'), value: Number(analytics.margin.toFixed(2)) },
+      { metric: t('reports.labels.transactions'), value: analytics.salesCount },
+      { metric: t('reports.labels.unitsSold'), value: analytics.totalUnitsSold },
+      { metric: t('reports.labels.stockLoad'), value: analytics.totalUnitsReceived },
+    ]);
+    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
+
+    const trendSheet = XLSX.utils.json_to_sheet(
+      analytics.trend.map((item) => ({
+        period: item.label,
+        revenue: item.revenue,
+        purchase: item.purchase,
+        profit: item.profit,
+      }))
+    );
+    XLSX.utils.book_append_sheet(workbook, trendSheet, 'Trend');
+
+    const storesSheet = XLSX.utils.json_to_sheet(
+      analytics.storePerformance.map((item) => ({
+        store: item.name,
+        revenue: item.revenue,
+        profit: item.profit,
+        sales_count: item.salesCount,
+        transfer_count: item.transferCount,
+      }))
+    );
+    XLSX.utils.book_append_sheet(workbook, storesSheet, 'Stores');
+
+    if (analytics.topSelling.length > 0) {
+      const productsSheet = XLSX.utils.json_to_sheet(
+        analytics.topSelling.map((item) => ({
+          product: item.name,
+          quantity: item.quantity,
+          revenue: item.revenue,
+        }))
+      );
+      XLSX.utils.book_append_sheet(workbook, productsSheet, 'TopProducts');
+    }
+
+    if (analytics.stockMix.length > 0) {
+      const stockSheet = XLSX.utils.json_to_sheet(
+        analytics.stockMix.map((item) => ({
+          category: item.name,
+          quantity: item.quantity,
+        }))
+      );
+      XLSX.utils.book_append_sheet(workbook, stockSheet, 'StockMix');
+    }
+
+    if (selectedType === 'all' || selectedType === 'sales') {
+      const salesSheet = XLSX.utils.json_to_sheet(
+        salesInRange.map((sale) => ({
+          date: sale.created_at,
+          store: sale.store_name || sale.store_id,
+          total_price: sale.total_price || sale.total || 0,
+          total_cost: sale.total_cost,
+          profit: sale.profit,
+          items_count: sale.items.reduce((sum, item) => sum + item.quantity, 0),
+          payment_method: sale.payment_method || '',
+        }))
+      );
+      XLSX.utils.book_append_sheet(workbook, salesSheet, 'Sales');
+    }
+
+    if (selectedType === 'all' || selectedType === 'inventory') {
+      const inventorySheet = XLSX.utils.json_to_sheet(
+        inventoryInRange.map((entry) => ({
+          date: entry.created_at,
+          supplier: entry.supplier_name || entry.supplier_id,
+          store: entry.store_name || entry.store_id,
+          total: entry.total,
+          paid: entry.paid,
+          debt: entry.debt,
+          items_count: entry.items.reduce((sum, item) => sum + item.quantity, 0),
+          status: entry.status,
+        }))
+      );
+      XLSX.utils.book_append_sheet(workbook, inventorySheet, 'Inventory');
+    }
+
+    if (selectedType === 'all' || selectedType === 'transfer') {
+      const transfersSheet = XLSX.utils.json_to_sheet(
+        transfersInRange.map((transfer) => ({
+          date: transfer.created_at,
+          from_store: transfer.from_store_name || transfer.from_store_id,
+          to_store: transfer.to_store_name || transfer.to_store_id,
+          items_count: transfer.items.reduce((sum, item) => sum + item.quantity, 0),
+          status: transfer.status,
+        }))
+      );
+      XLSX.utils.book_append_sheet(workbook, transfersSheet, 'Transfers');
+    }
+
+    const fileSuffix = selectedType === 'all' ? 'full' : selectedType;
+    XLSX.writeFile(workbook, `reports-${fileSuffix}-${selectedPeriod}.xlsx`);
+  };
+
   const statCards = [
     {
       key: 'revenue',
@@ -569,6 +707,10 @@ export function ReportsPage() {
               <Button variant="outline" size="sm" onClick={() => void loadReportsData()} disabled={loading}>
                 <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                 {t('reports.refresh')}
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleExportExcel} disabled={loading}>
+                <Download className="mr-2 h-4 w-4" />
+                {t('common.export')}
               </Button>
             </div>
           </div>

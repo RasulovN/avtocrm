@@ -70,6 +70,10 @@ interface DataTableProps<T extends { id: string }> {
   // New prop for displaying inventory by store (nested format)
   inventoryByStore?: (item: T) => StoreInventory[];
   itemNameKey?: keyof T;
+  selectableRows?: boolean;
+  selectedRowIds?: string[];
+  onToggleRowSelection?: (id: string) => void;
+  onToggleAllRows?: (ids: string[]) => void;
 }
 
 export function DataTable<T extends { id: string }>({
@@ -89,6 +93,10 @@ export function DataTable<T extends { id: string }>({
   loadingMessage = 'Loading data...',
   inventoryByStore,
   itemNameKey,
+  selectableRows = false,
+  selectedRowIds = [],
+  onToggleRowSelection,
+  onToggleAllRows,
 }: DataTableProps<T>) {
   const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const safeColumns = useMemo(() => (Array.isArray(columns) ? columns : []), [columns]);
@@ -96,6 +104,7 @@ export function DataTable<T extends { id: string }>({
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedInventory, setSelectedInventory] = useState<StoreInventory[]>([]);
   const [selectedItemName, setSelectedItemName] = useState('');
+  const allSelected = selectableRows && safeData.length > 0 && safeData.every((item) => selectedRowIds.includes(item.id));
 
   // Calculate totals
   const stats = useMemo(() => {
@@ -223,6 +232,17 @@ export function DataTable<T extends { id: string }>({
             {/* Sticky Header */}
             <TableHeader className="sticky top-0 bg-muted/50 backdrop-blur-sm z-10">
               <TableRow className="hover:bg-transparent">
+                {selectableRows && (
+                  <TableHead className="w-12">
+                    <input
+                      type="checkbox"
+                      aria-label="Select all rows"
+                      checked={allSelected}
+                      onChange={() => onToggleAllRows?.(safeData.map((item) => item.id))}
+                      className="h-4 w-4 rounded border-border"
+                    />
+                  </TableHead>
+                )}
                 {safeColumns.map((column) => (
                   <TableHead
                     key={column.key}
@@ -243,7 +263,7 @@ export function DataTable<T extends { id: string }>({
               {/* Loading State */}
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={safeColumns.length || 1} className="h-32 text-center">
+                  <TableCell colSpan={(safeColumns.length || 1) + (selectableRows ? 1 : 0)} className="h-32 text-center">
                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
                       <Loader2 className="h-6 w-6 animate-spin" />
                       <span className="text-sm">{loadingMessage}</span>
@@ -253,7 +273,7 @@ export function DataTable<T extends { id: string }>({
               ) : safeData.length === 0 ? (
                 /* Empty State */
                 <TableRow>
-                  <TableCell colSpan={safeColumns.length || 1} className="h-32 text-center">
+                  <TableCell colSpan={(safeColumns.length || 1) + (selectableRows ? 1 : 0)} className="h-32 text-center">
                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
                       <Package className="h-8 w-8 opacity-50" />
                       <span className="text-sm">{emptyMessage}</span>
@@ -271,6 +291,18 @@ export function DataTable<T extends { id: string }>({
                       'transition-colors hover:bg-muted/50'
                     )}
                   >
+                    {selectableRows && (
+                      <TableCell className="w-12">
+                        <input
+                          type="checkbox"
+                          aria-label="Select row"
+                          checked={selectedRowIds.includes(item.id)}
+                          onChange={() => onToggleRowSelection?.(item.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-4 w-4 rounded border-border"
+                        />
+                      </TableCell>
+                    )}
                     {safeColumns.map((column) => (
                       <TableCell
                         key={column.key}

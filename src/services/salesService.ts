@@ -27,8 +27,17 @@ export const salesService = {
 };
 
 export const dashboardService = {
-  getStats: async (): Promise<DashboardStats> => {
-    const response = await apiClient.get<ApiResponse<DashboardStats>>('/dashboard/stats');
-    return response.data.data;
+  getStats: async (): Promise<DashboardStats | null> => {
+    try {
+      const response = await apiClient.get<ApiResponse<DashboardStats>>('/dashboard/stats', {
+        expectedErrorStatuses: [404],
+      });
+      return response.data.data;
+    } catch (error: any) {
+      if (error?.response?.status === 404) {
+        return null;
+      }
+      throw error;
+    }
   },
 };

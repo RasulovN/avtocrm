@@ -7,6 +7,18 @@ import { dashboardService } from '../../services/salesService';
 import { useAuthStore } from '../../app/store';
 import type { DashboardStats } from '../../types';
 import { formatCurrency } from '../../utils';
+import { logger } from '../../utils/logger';
+
+const fallbackDashboardStats: DashboardStats = {
+  total_products: 1250,
+  total_sales: 89000000,
+  total_debt: 12500000,
+  supplier_debt: 8500000,
+  store_stats: [
+    { store_id: '1', store_name: 'Main Store', product_count: 800, sales_count: 450 },
+    { store_id: '2', store_name: 'Warehouse', product_count: 450, sales_count: 0 },
+  ],
+};
 
 export function DashboardPage() {
   const { t } = useTranslation();
@@ -24,6 +36,15 @@ export function DashboardPage() {
     try {
       setLoading(true);
       const data = await dashboardService.getStats();
+      if (!data) {
+        logger.warn('Dashboard stats endpoint returned 404, fallback data applied', {
+          source: 'DashboardPage.loadStats',
+          endpoint: '/dashboard/stats',
+        });
+        setStats(fallbackDashboardStats);
+        return;
+      }
+
       if (isAdmin || !userStoreId) {
         setStats(data);
       } else {
@@ -38,18 +59,11 @@ export function DashboardPage() {
         });
       }
     } catch (error) {
-      console.error('Failed to load stats:', error);
-      // Mock data for demo
-      setStats({
-        total_products: 1250,
-        total_sales: 89000000,
-        total_debt: 12500000,
-        supplier_debt: 8500000,
-        store_stats: [
-          { store_id: '1', store_name: 'Main Store', product_count: 800, sales_count: 450 },
-          { store_id: '2', store_name: 'Warehouse', product_count: 450, sales_count: 0 },
-        ],
+      logger.warn('Dashboard stats fallback applied', {
+        reason: error instanceof Error ? error.message : 'unknown',
+        source: 'DashboardPage.loadStats',
       });
+      setStats(fallbackDashboardStats);
     } finally {
       setLoading(false);
     }
