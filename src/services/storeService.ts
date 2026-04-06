@@ -34,16 +34,25 @@ const normalizeStore = (raw: unknown): Store => {
   };
 };
 
-const mapStorePayload = (data: StoreFormData): Record<string, unknown> => ({
-  name_uz: data.name_uz ?? data.name,
-  name_uz_cyrl: data.name_uz_cyrl ?? '',
-  phone_number: data.phone_number ?? data.phone,
-  type: data.type ?? (data.is_warehouse ? 'w' : 's'),
-  address_uz: data.address_uz ?? data.address,
-  address_uz_cyrl: data.address_uz_cyrl ?? '',
-  latitude: data.latitude,
-  longitude: data.longitude,
-});
+const mapStorePayload = (data: StoreFormData): Record<string, unknown> => {
+  const payload: Record<string, unknown> = {
+    name_uz: data.name_uz ?? data.name,
+    name_uz_cyrl: data.name_uz_cyrl ?? '',
+    phone_number: data.phone_number ?? data.phone,
+    type: data.type ?? (data.is_warehouse ? 'w' : 's'),
+    address_uz: data.address_uz ?? data.address,
+    address_uz_cyrl: data.address_uz_cyrl ?? '',
+  };
+
+  if (typeof data.latitude === 'string' && data.latitude.trim() !== '') {
+    payload.latitude = data.latitude.trim();
+  }
+  if (typeof data.longitude === 'string' && data.longitude.trim() !== '') {
+    payload.longitude = data.longitude.trim();
+  }
+
+  return payload;
+};
 
 const mapStoreUpdatePayload = (data: Partial<StoreFormData>): Record<string, unknown> => {
   const payload: Record<string, unknown> = {};
@@ -59,8 +68,8 @@ const mapStoreUpdatePayload = (data: Partial<StoreFormData>): Record<string, unk
   if (typeof data.is_warehouse === 'boolean' && typeof payload.type !== 'string') {
     payload.type = data.is_warehouse ? 'w' : 's';
   }
-  if (typeof data.latitude === 'string') payload.latitude = data.latitude;
-  if (typeof data.longitude === 'string') payload.longitude = data.longitude;
+  if (typeof data.latitude === 'string' && data.latitude.trim() !== '') payload.latitude = data.latitude.trim();
+  if (typeof data.longitude === 'string' && data.longitude.trim() !== '') payload.longitude = data.longitude.trim();
   return payload;
 };
 
