@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, Trash2, Search } from 'lucide-react';
-import { latinToCyrillic } from 'uzbek-transliterator';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '../../app/store';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
@@ -18,9 +18,12 @@ import {
 import { Label } from '../../components/ui/Label';
 import { categoryService } from '../../services/categoryService';
 import type { Category, CategoryFormData } from '../../types';
+import { latinToCyrillic } from '../../utils/transliteration';
 
 export function CategoryListPage() {
   const { t } = useTranslation();
+  const { user } = useAuthStore();
+  const isSuperUser = Boolean(user?.is_superuser);
   const [categories, setCategories] = useState<Category[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -195,7 +198,10 @@ export function CategoryListPage() {
       key: 'description',
       header: t('common.description'),
     },
-    {
+  ];
+
+  if (isSuperUser) {
+    columns.push({
       key: 'actions',
       header: t('common.actions'),
       className: 'text-right',
@@ -223,19 +229,19 @@ export function CategoryListPage() {
           </Button>
         </div>
       ),
-    },
-  ];
+    });
+  }
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={t('categories.title')}
-        actions={
+        actions={isSuperUser ? (
           <Button onClick={() => handleOpenDialog()}>
             <Plus className="h-4 w-4 mr-2" />
             {t('categories.addCategory')}
           </Button>
-        }
+        ) : undefined}
       />
 
       <div className="flex items-center gap-4">
@@ -256,98 +262,102 @@ export function CategoryListPage() {
         loading={loading}
         emptyMessage={t('categories.noCategories')}
         loadingMessage={t('common.loading')}
-        onRowClick={(item: Category) => handleOpenDialog(item)}
+        onRowClick={isSuperUser ? (item: Category) => handleOpenDialog(item) : undefined}
       />
 
-      <ConfirmDialog
-        open={!!deleteId}
-        onOpenChange={(open: boolean) => !open && setDeleteId(null)}
-        onConfirm={() => deleteId && handleDelete(deleteId)}
-        title={t('common.delete')}
-        description={t('categories.categoryDeleted')}
-        confirmText={t('common.delete')}
-        variant="destructive"
-        loading={deleting}
-      />
+      {isSuperUser && (
+        <>
+          <ConfirmDialog
+            open={!!deleteId}
+            onOpenChange={(open: boolean) => !open && setDeleteId(null)}
+            onConfirm={() => deleteId && handleDelete(deleteId)}
+            title={t('common.delete')}
+            description={t('categories.categoryDeleted')}
+            confirmText={t('common.delete')}
+            variant="destructive"
+            loading={deleting}
+          />
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingCategory
-                ? t('categories.editCategory')
-                : t('categories.addCategory')}
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">{t('categories.categoryName')}</Label>
-                <Input
-                  id="name"
-                  value={formData.name_uz}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleNameChange(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="name_cyrl">{t('categories.categoryName')} (Cyrillic)</Label>
-                <Input
-                  id="name_cyrl"
-                  value={formData.name_uz_cyrl}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                    setFormData((prev) => ({ ...prev, name_uz_cyrl: e.target.value }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">{t('common.description')}</Label>
-                <Input
-                  id="description"
-                  value={formData.description_uz}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleDescriptionChange(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description_cyrl">{t('common.description')} (Cyrillic)</Label>
-                <Input
-                  id="description_cyrl"
-                  value={formData.description_uz_cyrl}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                    setFormData((prev) => ({ ...prev, description_uz_cyrl: e.target.value }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="image">{t('products.image') || 'Image'}</Label>
-                <Input
-                  id="image"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                />
-                {imagePreview ? (
-                  <div className="mt-2">
-                    <img
-                      src={imagePreview}
-                      alt={formData.name_uz || 'Category image'}
-                      className="h-24 w-24 rounded-md object-cover border"
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
+                  {editingCategory
+                    ? t('categories.editCategory')
+                    : t('categories.addCategory')}
+                </DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit}>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">{t('categories.categoryName')}</Label>
+                    <Input
+                      id="name"
+                      value={formData.name_uz}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => handleNameChange(e.target.value)}
+                      required
                     />
                   </div>
-                ) : null}
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                {t('common.cancel')}
-              </Button>
-              <Button type="submit" disabled={saving}>
-                {saving ? t('common.loading') : t('common.save')}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+                  <div className="space-y-2">
+                    <Label htmlFor="name_cyrl">{t('categories.categoryName')} (Cyrillic)</Label>
+                    <Input
+                      id="name_cyrl"
+                      value={formData.name_uz_cyrl}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                        setFormData((prev) => ({ ...prev, name_uz_cyrl: e.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="description">{t('common.description')}</Label>
+                    <Input
+                      id="description"
+                      value={formData.description_uz}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => handleDescriptionChange(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="description_cyrl">{t('common.description')} (Cyrillic)</Label>
+                    <Input
+                      id="description_cyrl"
+                      value={formData.description_uz_cyrl}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                        setFormData((prev) => ({ ...prev, description_uz_cyrl: e.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="image">{t('products.image') || 'Image'}</Label>
+                    <Input
+                      id="image"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                    />
+                    {imagePreview ? (
+                      <div className="mt-2">
+                        <img
+                          src={imagePreview}
+                          alt={formData.name_uz || 'Category image'}
+                          className="h-24 w-24 rounded-md object-cover border"
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                    {t('common.cancel')}
+                  </Button>
+                  <Button type="submit" disabled={saving}>
+                    {saving ? t('common.loading') : t('common.save')}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
     </div>
   );
 }
