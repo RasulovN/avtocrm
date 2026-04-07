@@ -76,12 +76,13 @@ export function InventoryCreatePage() {
     if (field === 'product_id') {
       const product = safeProducts.find(p => p.id === value);
       if (product) {
+        const purchasePrice = product.purchase_price ?? 0;
         newItems[index] = {
           ...newItems[index],
           product_id: value as string,
           product_name: product.name,
-          purchase_price: product.purchase_price,
-          total: product.purchase_price * newItems[index].quantity,
+          purchase_price: purchasePrice,
+          total: purchasePrice * newItems[index].quantity,
         };
       }
     } else if (field === 'quantity') {
