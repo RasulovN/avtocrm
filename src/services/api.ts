@@ -8,6 +8,11 @@ const BaSE_URL = 'https://autocrm.pythonanywhere.com/api';
 export const API_BASE_URL = BaSE_URL;
 export const API_ORIGIN = BaSE_URL.replace(/\/api\/?$/, '');
 
+export interface ApiRequestConfig extends AxiosRequestConfig {
+  expectedErrorStatuses?: number[];
+  skipGlobalErrorHandler?: boolean;
+}
+
 const removeAuth = () => {
   localStorage.removeItem(USER_KEY);
   window.location.href = '/login';
@@ -48,6 +53,12 @@ api.interceptors.response.use(
   (error) => {
     const errorData = error.response?.data;
     const status = error.response?.status;
+    const config = (error.config || {}) as ApiRequestConfig;
+    const isExpectedStatus = typeof status === 'number' && config.expectedErrorStatuses?.includes(status);
+
+    if (config.skipGlobalErrorHandler || isExpectedStatus) {
+      return Promise.reject(error);
+    }
     
     if (status === 401) {
       removeAuth();
@@ -67,19 +78,19 @@ api.interceptors.response.use(
 
 // Generic API methods
 export const apiClient = {
-  get: <T>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> =>
+  get: <T>(url: string, config?: ApiRequestConfig): Promise<AxiosResponse<T>> =>
     api.get<T>(url, config),
 
-  post: <T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> =>
+  post: <T>(url: string, data?: unknown, config?: ApiRequestConfig): Promise<AxiosResponse<T>> =>
     api.post<T>(url, data, config),
 
-  put: <T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> =>
+  put: <T>(url: string, data?: unknown, config?: ApiRequestConfig): Promise<AxiosResponse<T>> =>
     api.put<T>(url, data, config),
 
-  patch: <T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> =>
+  patch: <T>(url: string, data?: unknown, config?: ApiRequestConfig): Promise<AxiosResponse<T>> =>
     api.patch<T>(url, data, config),
 
-  delete: <T>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> =>
+  delete: <T>(url: string, config?: ApiRequestConfig): Promise<AxiosResponse<T>> =>
     api.delete<T>(url, config),
 };
 

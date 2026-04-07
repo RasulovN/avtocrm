@@ -7,11 +7,15 @@ import { Button } from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/Table';
 import { salesService } from '../../services/salesService';
+import { useAuthStore } from '../../app/store';
 import { formatCurrency, formatDate } from '../../utils';
 import type { Sale } from '../../types';
 
 export function SalesListPage() {
   const { t } = useTranslation();
+  const { user } = useAuthStore();
+  const isAdmin = Boolean(user?.is_superuser);
+  const userStoreId = user?.store_id;
   const params = useParams();
   const lang = params.lang || 'uz';
   const [sales, setSales] = useState<Sale[]>([]);
@@ -25,11 +29,12 @@ export function SalesListPage() {
     try {
       setLoading(true);
       const res = await salesService.getAll();
-      setSales(res.data || []);
+      const scopedSales = isAdmin ? (res.data || []) : (res.data || []).filter((sale) => sale.store_id === userStoreId);
+      setSales(scopedSales);
     } catch (error) {
       console.error('Failed to load sales:', error);
       // Demo data
-      setSales([
+      const fallbackSales: Sale[] = [
         {
           id: '1',
           store_id: '1',
@@ -60,7 +65,8 @@ export function SalesListPage() {
           created_at: new Date().toISOString(),
           items: []
         }
-      ]);
+      ];
+      setSales(isAdmin ? fallbackSales : fallbackSales.filter((sale) => sale.store_id === userStoreId));
     } finally {
       setLoading(false);
     }

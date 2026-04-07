@@ -207,7 +207,19 @@ export function InventoryListPage() {
               </div>
               
               {selectedInventory.items && selectedInventory.items.length > 0 && (
-                <div className="border rounded">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-semibold">Products</h4>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePrintBarcodes(selectedInventory)}
+                    >
+                      <Printer className="mr-2 h-4 w-4" />
+                      {t('products.printBarcode')}
+                    </Button>
+                  </div>
+                  <div className="border rounded">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -232,6 +244,7 @@ export function InventoryListPage() {
                       ))}
                     </TableBody>
                   </Table>
+                </div>
                 </div>
               )}
             </div>

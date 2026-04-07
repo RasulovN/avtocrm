@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback, type ChangeEvent, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Edit, Trash2 } from 'lucide-react';
-import { latinToCyrillic } from 'uzbek-transliterator';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
@@ -11,6 +10,7 @@ import { Label } from '../../components/ui/Label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/Dialog';
 import { supplierService } from '../../services/supplierService';
 import type { Supplier, SupplierFormData } from '../../types';
+import { latinToCyrillic } from '../../utils/transliteration';
 
 export function SupplierListPage() {
   const { t } = useTranslation();

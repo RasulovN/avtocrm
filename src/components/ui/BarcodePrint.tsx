@@ -15,11 +15,12 @@ export function BarcodePrint({ value, productName, showName = true }: BarcodePri
       try {
         JsBarcode(svgRef.current, value, {
           format: 'CODE128',
-          width: 1.5,
-          height: 40,
+          width: 1.8,
+          height: 52,
           displayValue: true,
-          fontSize: 10,
-          margin: 5,
+          fontSize: 11,
+          margin: 0,
+          textMargin: 4,
         });
       } catch (error) {
         console.error('Failed to generate barcode:', error);
@@ -158,11 +159,12 @@ function BarcodeDisplay({ value }: { value: string }) {
       try {
         JsBarcode(svgRef.current, value, {
           format: 'CODE128',
-          width: 1.5,
-          height: 35,
+          width: 1.8,
+          height: 48,
           displayValue: true,
-          fontSize: 9,
-          margin: 3,
+          fontSize: 10,
+          margin: 0,
+          textMargin: 4,
         });
       } catch (error) {
         console.error('Failed to generate barcode:', error);

@@ -33,6 +33,8 @@ interface AuthStore {
   checkAuth: () => void;
   isAuthenticated: () => boolean;
   hasRole: (roles: string[]) => boolean;
+  isSuperUser: () => boolean;
+  isStoreScopedUser: () => boolean;
 }
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
@@ -73,6 +75,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const user = get().user;
     if (!user) return false;
     return roles.includes(user.role as string);
+  },
+
+  isSuperUser: () => {
+    const user = get().user;
+    return Boolean(user?.is_superuser);
+  },
+
+  isStoreScopedUser: () => {
+    const user = get().user;
+    return Boolean(user) && !Boolean(user?.is_superuser);
   },
 }));
 

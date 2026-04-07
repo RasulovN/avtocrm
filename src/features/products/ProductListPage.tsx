@@ -1,12 +1,13 @@
-import { useEffect, useState, type MouseEvent } from 'react';
+import { useEffect, useMemo, useState, type MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Edit, Trash2, Barcode, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Barcode, Search, Printer } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column, type StoreInventory } from '../../components/shared/DataTable';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { BarcodePrint } from '../../components/ui/BarcodePrint';
 import {
   Select,
   SelectContent,
@@ -15,6 +16,7 @@ import {
   SelectValue,
 } from '../../components/ui/Select';
 import { productService } from '../../services/productService';
+import { useAuthStore } from '../../app/store';
 import type { Product, ProductFilters } from '../../types';
 import { formatCurrency } from '../../utils';
 
@@ -22,6 +24,9 @@ export function ProductListPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const lang = i18n.language || 'uz';
+  const { user } = useAuthStore();
+  const isAdmin = Boolean(user?.is_superuser);
+  const userStoreId = user?.store_id;
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ProductFilters>({});
@@ -31,6 +36,7 @@ export function ProductListPage() {
   const limit = 10;
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
 
   useEffect(() => {
     loadProducts();
@@ -40,7 +46,7 @@ export function ProductListPage() {
   const loadProducts = async () => {
     try {
       setLoading(true);
-      const response = await productService.getAll({ ...filters, page, limit });
+      const response = await productService.getAll({ ...filters, store_id: !isAdmin ? userStoreId : filters.store_id, page, limit });
       setProducts(response.data);
       setTotal(response.total);
     } catch (error) {
@@ -142,6 +148,91 @@ export function ProductListPage() {
     return item.inventory_by_store || [];
   };
 
+  const selectedProducts = useMemo(
+    () => products.filter((product) => selectedProductIds.includes(product.id)),
+    [products, selectedProductIds]
+  );
+
+  const handleToggleProductSelection = (id: string) => {
+    setSelectedProductIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleAllProducts = (ids: string[]) => {
+    setSelectedProductIds((prev) => (ids.every((id) => prev.includes(id)) ? prev.filter((id) => !ids.includes(id)) : Array.from(new Set([...prev, ...ids]))));
+  };
+
+  const handlePrintSelected = () => {
+    const printContent = document.getElementById('selected-products-barcode-print-area');
+    if (!printContent || selectedProducts.length === 0) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Print Selected Barcodes</title>
+          <style>
+            @page {
+              size: auto;
+              margin: 4mm;
+            }
+            html, body {
+              margin: 0;
+              padding: 0;
+              background: #fff;
+              font-family: Arial, sans-serif;
+            }
+            body {
+              padding: 2mm;
+            }
+            .barcode-sheet {
+              display: flex;
+              flex-wrap: wrap;
+              align-items: flex-start;
+              gap: 3mm;
+            }
+            .barcode-label {
+              display: inline-flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              gap: 1.5mm;
+              width: fit-content;
+              max-width: 58mm;
+              padding: 2mm 3mm;
+              box-sizing: border-box;
+              break-inside: avoid;
+              page-break-inside: avoid;
+            }
+            .barcode-label-name {
+              margin: 0;
+              font-size: 11px;
+              font-weight: 600;
+              line-height: 1.2;
+              text-align: center;
+            }
+            .barcode-label svg {
+              display: block;
+              width: auto !important;
+              max-width: 52mm;
+              height: 18mm !important;
+              overflow: visible;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="barcode-sheet">${printContent.innerHTML}</div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
+
   const columns: Column<Product>[] = [
     {
       key: 'sku',
@@ -190,7 +281,7 @@ export function ProductListPage() {
           >
             <Barcode className="h-4 w-4" />
           </Button>
-          <Button
+          {isAdmin && <Button
             variant="ghost"
             size="icon"
             onClick={(e: MouseEvent<HTMLButtonElement>) => {
@@ -200,8 +291,8 @@ export function ProductListPage() {
             title={t('common.edit')}
           >
             <Edit className="h-4 w-4" />
-          </Button>
-          <Button
+          </Button>}
+          {isAdmin && <Button
             variant="ghost"
             size="icon"
             onClick={(e: MouseEvent<HTMLButtonElement>) => {
@@ -211,7 +302,7 @@ export function ProductListPage() {
             title={t('common.delete')}
           >
             <Trash2 className="h-4 w-4" />
-          </Button>
+          </Button>}
         </div>
       ),
     },
@@ -222,12 +313,12 @@ export function ProductListPage() {
       <PageHeader
         title={t('products.title')}
         description={t('products.productList')}
-        actions={
+        actions={isAdmin ? (
           <Button onClick={() => navigate(`/${lang}/products/new`)}>
             <Plus className="h-4 w-4 mr-2" />
             {t('products.addProduct')}
           </Button>
-        }
+        ) : undefined}
       />
 
       <div className="flex flex-col sm:flex-row gap-4">
@@ -256,7 +347,7 @@ export function ProductListPage() {
           </SelectContent>
         </Select>
         
-        <Select
+        {isAdmin && <Select
           value={filters.store_id || 'all'}
           onValueChange={(value) => handleFilterChange('store_id', value === 'all' ? '' : value)}
         >
@@ -268,8 +359,20 @@ export function ProductListPage() {
             <SelectItem value="1">Main Store</SelectItem>
             <SelectItem value="2">Warehouse</SelectItem>
           </SelectContent>
-        </Select>
+        </Select>}
       </div>
+
+      {selectedProducts.length > 0 && (
+        <div className="flex items-center justify-between rounded-lg border bg-muted/20 px-4 py-3">
+          <p className="text-sm text-muted-foreground">
+            {selectedProducts.length} ta mahsulot tanlandi
+          </p>
+          <Button onClick={handlePrintSelected}>
+            <Printer className="mr-2 h-4 w-4" />
+            {t('products.printBarcode')}
+          </Button>
+        </div>
+      )}
 
       <DataTable
         data={products}
@@ -277,7 +380,7 @@ export function ProductListPage() {
         loading={loading}
         searchPlaceholder={t('products.searchPlaceholder')}
         onSearch={handleSearch}
-        onRowClick={(item: Product) => navigate(`/${lang}/products/${item.id}/edit`)}
+        onRowClick={(item: Product) => isAdmin ? navigate(`/${lang}/products/${item.id}/edit`) : undefined}
         pagination={{
           page,
           limit,
@@ -290,6 +393,10 @@ export function ProductListPage() {
         showStoreStats={true}
         storeKey={'store_name' as keyof Product}
         quantityKey={'quantity' as keyof Product}
+        selectableRows={true}
+        selectedRowIds={selectedProductIds}
+        onToggleRowSelection={handleToggleProductSelection}
+        onToggleAllRows={handleToggleAllProducts}
       />
 
       <ConfirmDialog
@@ -303,6 +410,20 @@ export function ProductListPage() {
         loading={deleting}
       />
 
+      <div className="absolute -left-[99999px] top-0 opacity-0 pointer-events-none">
+        <div id="selected-products-barcode-print-area" className="barcode-sheet">
+          {selectedProducts.map((product) => (
+            <div key={product.id} className="barcode-label">
+              <p className="barcode-label-name">{product.name}</p>
+              <BarcodePrint
+                value={product.barcode || product.sku}
+                productName={product.name}
+                showName={false}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
 
     </div>
   );

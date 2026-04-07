@@ -13,6 +13,7 @@ export interface User {
   id: number;
   user_id?: string;
   role: string;
+  is_superuser?: boolean;
   full_name: string;
   phone_number: string;
   email?: string;
