@@ -270,6 +270,44 @@ export interface SaleFormData {
   items: Omit<SaleItem, 'id' | 'product_name' | 'product_sku' | 'total'>[];
 }
 
+// Customer Types
+export interface CustomerOrderItem {
+  product_id: string;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  total: number;
+}
+
+export interface CustomerOrder {
+  id: string;
+  order_id: string;
+  sale_id?: string;
+  store_id: string;
+  store_name?: string;
+  created_at: string;
+  total_amount: number;
+  paid_amount: number;
+  debt_amount: number;
+  payment_method?: 'cash' | 'card' | 'mixed';
+  items: CustomerOrderItem[];
+}
+
+export interface Customer {
+  id: string;
+  full_name: string;
+  phone_number: string;
+  store_id: string;
+  store_name?: string;
+  latest_order_id?: string;
+  order_count: number;
+  total_spent: number;
+  total_paid: number;
+  total_debt: number;
+  last_order_at?: string;
+  orders: CustomerOrder[];
+}
+
 // Dashboard Stats Types
 export interface DashboardStats {
   total_products: number;

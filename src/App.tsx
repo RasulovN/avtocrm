@@ -23,6 +23,7 @@ import { TransferCreatePage } from './features/transfers/pages/TransferCreatePag
 import { TransferRequestsPage } from './features/transfers/pages/TransferRequestsPage';
 import { SalesListPage } from './features/sales/SalesListPage';
 import { SalesPage } from './features/sales/SalesPage';
+import { CustomerListPage } from './features/customers/CustomerListPage';
 import { SupplierListPage } from './features/suppliers/SupplierListPage';
 import { StoreListPage } from './features/stores/StoreListPage';
 import { UserListPage } from './features/users/UserListPage';
@@ -201,6 +202,15 @@ function App() {
           requireAuth(
             <MainLayout>
               <SalesPage />
+            </MainLayout>
+          )
+        } />
+
+        {/* Customers */}
+        <Route path={`/:lang/customers`} element={
+          requireAuth(
+            <MainLayout>
+              <CustomerListPage />
             </MainLayout>
           )
         } />

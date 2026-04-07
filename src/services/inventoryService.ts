@@ -16,7 +16,7 @@ export const inventoryService = {
     return response.data.data;
   },
 
-  create: async (data: InventoryFormData): Promise<Inventory> => {
+  create: async (data: InventoryFormData): Promise<Inventory> => {  
     const response = await apiClient.post<ApiResponse<Inventory>>('/inventory', data);
     return response.data.data;
   },

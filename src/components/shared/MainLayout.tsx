@@ -54,6 +54,7 @@ const navItems: NavItem[] = [
   { titleKey: 'nav.inventory', href: '/inventory', icon: ArrowDownToLine, access: 'superuser' },
   { titleKey: 'nav.transfers', href: '/transfers', icon: ArrowRightLeft, access: 'all' },
   { titleKey: 'nav.sales', href: '/sales', icon: DollarSign, access: 'all' },
+  { titleKey: 'nav.customers', href: '/customers', icon: Users, access: 'all' },
   { titleKey: 'nav.suppliers', href: '/suppliers', icon: Truck, access: 'superuser' },
   { titleKey: 'nav.stores', href: '/stores', icon: Store, access: 'superuser' },
   { titleKey: 'nav.storeInfo', href: '/stores', icon: Store, access: 'store' },
