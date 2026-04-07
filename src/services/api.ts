@@ -3,6 +3,7 @@ import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { handleError } from '../utils/errorHandler';
 import { authService } from './authService';
 import { isDev } from '../config/environment';
+import i18n from '../i18n';
 
 const USER_KEY = 'crm_user';
 const BaSE_URL = 'https://autocrm.pythonanywhere.com/api';
@@ -40,6 +41,12 @@ const api: AxiosInstance = axios.create({
 // Request interceptor - no auth token needed, server uses cookies
 api.interceptors.request.use(
   (config) => {
+    // Add Accept-Language header based on current i18n language
+    // 'uz' -> 'uz', 'cyrl' or 'ru' -> 'ru'
+    const currentLang = i18n.language || 'uz';
+    const acceptLang = currentLang === 'cyrl' ? 'ru' : currentLang;
+    config.headers['Accept-Language'] = acceptLang;
+
     if (config.data instanceof FormData) {
       if (config.headers) {
         const headers = config.headers as unknown as Record<string, string>;
