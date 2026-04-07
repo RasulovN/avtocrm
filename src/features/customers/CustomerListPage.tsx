@@ -176,44 +176,94 @@ export function CustomerListPage() {
               {t('customers.noCustomers')}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('customers.customerId')}</TableHead>
-                  <TableHead>{t('customers.fullName')}</TableHead>
-                  <TableHead>{t('customers.phone')}</TableHead>
-                  <TableHead>{t('customers.orderId')}</TableHead>
-                  <TableHead>{t('stores.title')}</TableHead>
-                  <TableHead>{t('customers.totalOrders')}</TableHead>
-                  <TableHead>{t('customers.totalPaid')}</TableHead>
-                  <TableHead>{t('customers.totalDebt')}</TableHead>
-                  <TableHead>{t('customers.lastOrder')}</TableHead>
-                  <TableHead>{t('common.actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Mobile Card View */}
+              <div className="space-y-3 md:hidden">
                 {filteredCustomers.map((customer) => (
-                  <TableRow key={`${customer.store_id}-${customer.id}`}>
-                    <TableCell className="font-medium">{customer.id}</TableCell>
-                    <TableCell>{customer.full_name}</TableCell>
-                    <TableCell>{customer.phone_number}</TableCell>
-                    <TableCell>{customer.latest_order_id || '-'}</TableCell>
-                    <TableCell>{customer.store_name || '-'}</TableCell>
-                    <TableCell>{customer.order_count}</TableCell>
-                    <TableCell>{formatCurrency(customer.total_paid)}</TableCell>
-                    <TableCell className={customer.total_debt > 0 ? 'text-amber-600' : ''}>
-                      {formatCurrency(customer.total_debt)}
-                    </TableCell>
-                    <TableCell>{formatDate(customer.last_order_at)}</TableCell>
-                    <TableCell>
-                      <Button variant="outline" size="sm" onClick={() => setSelectedCustomer(customer)}>
+                  <div key={`${customer.store_id}-${customer.id}`} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground">ID: {customer.id}</p>
+                        <p className="font-semibold text-foreground">{customer.full_name}</p>
+                        <p className="mt-1 text-sm text-muted-foreground">{customer.phone_number}</p>
+                      </div>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {customer.store_name || '-'}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                      <div className="rounded-lg bg-muted/40 p-3">
+                        <p className="text-xs text-muted-foreground">{t('customers.totalOrders')}</p>
+                        <p className="mt-1 font-semibold">{customer.order_count}</p>
+                      </div>
+                      <div className="rounded-lg bg-muted/40 p-3">
+                        <p className="text-xs text-muted-foreground">{t('customers.totalPaid')}</p>
+                        <p className="mt-1 font-semibold">{formatCurrency(customer.total_paid)}</p>
+                      </div>
+                      <div className="rounded-lg bg-muted/40 p-3">
+                        <p className="text-xs text-muted-foreground">{t('customers.totalDebt')}</p>
+                        <p className={`mt-1 font-semibold ${customer.total_debt > 0 ? 'text-amber-600' : ''}`}>
+                          {formatCurrency(customer.total_debt)}
+                        </p>
+                      </div>
+                      <div className="rounded-lg bg-muted/40 p-3">
+                        <p className="text-xs text-muted-foreground">{t('customers.lastOrder')}</p>
+                        <p className="mt-1 font-medium">{formatDate(customer.last_order_at)}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <Button variant="outline" className="w-full" onClick={() => setSelectedCustomer(customer)}>
                         {t('customers.viewDetails')}
                       </Button>
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('customers.customerId')}</TableHead>
+                      <TableHead>{t('customers.fullName')}</TableHead>
+                      <TableHead>{t('customers.phone')}</TableHead>
+                      <TableHead>{t('customers.orderId')}</TableHead>
+                      <TableHead>{t('stores.title')}</TableHead>
+                      <TableHead>{t('customers.totalOrders')}</TableHead>
+                      <TableHead>{t('customers.totalPaid')}</TableHead>
+                      <TableHead>{t('customers.totalDebt')}</TableHead>
+                      <TableHead>{t('customers.lastOrder')}</TableHead>
+                      <TableHead>{t('common.actions')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredCustomers.map((customer) => (
+                      <TableRow key={`${customer.store_id}-${customer.id}`}>
+                        <TableCell className="font-medium">{customer.id}</TableCell>
+                        <TableCell>{customer.full_name}</TableCell>
+                        <TableCell>{customer.phone_number}</TableCell>
+                        <TableCell>{customer.latest_order_id || '-'}</TableCell>
+                        <TableCell>{customer.store_name || '-'}</TableCell>
+                        <TableCell>{customer.order_count}</TableCell>
+                        <TableCell>{formatCurrency(customer.total_paid)}</TableCell>
+                        <TableCell className={customer.total_debt > 0 ? 'text-amber-600' : ''}>
+                          {formatCurrency(customer.total_debt)}
+                        </TableCell>
+                        <TableCell>{formatDate(customer.last_order_at)}</TableCell>
+                        <TableCell>
+                          <Button variant="outline" size="sm" onClick={() => setSelectedCustomer(customer)}>
+                            {t('customers.viewDetails')}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

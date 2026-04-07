@@ -291,86 +291,142 @@ export function TransferRequestsPage(): ReactElement {
       </form>
 
 
-       {/* Existing Requests Table */}
+        {/* Existing Requests Table */}
       {safeRequests.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>So'rovlar ro'yxati</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('transfers.fromStore')}</TableHead>
-                  <TableHead>{t('transfers.toStore')}</TableHead>
-                  <TableHead>{t('products.title')}</TableHead>
-                  <TableHead>{t('products.quantity')}</TableHead>
-                  <TableHead>{t('common.status')}</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {safeRequests.map((request) => (
-                  <TableRow key={request.id}>
-                    <TableCell>
-                      <span className="text-orange-600 dark:text-orange-400">{request.from_store_name}</span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-green-600 dark:text-green-400">{request.to_store_name}</span>
-                    </TableCell>
-                    <TableCell>
-                      {(Array.isArray(request.items) ? request.items : []).map((item, idx) => (
-                        <div key={idx}>{item.product_name}</div>
-                      ))}
-                    </TableCell>
-                    <TableCell>
-                      {(Array.isArray(request.items) ? request.items : []).map((item, idx) => (
-                        <div key={idx}>{item.quantity}</div>
-                      ))}
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          request.status === 'pending'
-                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                            : request.status === 'accepted'
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                            : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                        }`}
+            {/* Mobile Card View */}
+            <div className="space-y-3 md:hidden">
+              {safeRequests.map((request) => (
+                <div key={request.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">ID: {request.id}</p>
+                      <p className="font-semibold text-foreground">{request.from_store_name} → {request.to_store_name}</p>
+                    </div>
+                    <span className={`shrink-0 rounded-full px-2 py-1 text-xs ${
+                      request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      request.status === 'accepted' ? 'bg-green-100 text-green-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {request.status === 'pending' && t('transfers.pending')}
+                      {request.status === 'accepted' && t('transfers.accepted')}
+                      {request.status === 'rejected' && t('transfers.rejected')}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 space-y-2">
+                    {request.items.map((item, idx) => (
+                      <div key={idx} className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">{item.product_name}</span>
+                        <span className="font-medium">{item.quantity}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {request.status === 'pending' && (
+                    <div className="mt-4 flex gap-2">
+                      <Button
+                        variant="outline"
+                        className="flex-1 text-green-600 border-green-600 hover:bg-green-50"
+                        onClick={() => handleAcceptRequest(request.id)}
                       >
-                        {request.status === 'pending' && t('transfers.pending')}
-                        {request.status === 'accepted' && t('transfers.accepted')}
-                        {request.status === 'rejected' && t('transfers.rejected')}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {request.status === 'pending' && (
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleAcceptRequest(request.id)}
-                            title={t('transfers.accepted')}
-                            className="text-green-600 hover:text-green-700 hover:bg-green-100 dark:hover:bg-green-900 h-8 w-8"
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRejectRequest(request.id)}
-                            title={t('transfers.rejected')}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900 h-8 w-8"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </TableCell>
+                        <Check className="mr-2 h-4 w-4" />
+                        {t('transfers.accepted')}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="flex-1 text-red-600 border-red-600 hover:bg-red-50"
+                        onClick={() => handleRejectRequest(request.id)}
+                      >
+                        <X className="mr-2 h-4 w-4" />
+                        {t('transfers.rejected')}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('transfers.fromStore')}</TableHead>
+                    <TableHead>{t('transfers.toStore')}</TableHead>
+                    <TableHead>{t('products.title')}</TableHead>
+                    <TableHead>{t('products.quantity')}</TableHead>
+                    <TableHead>{t('common.status')}</TableHead>
+                    <TableHead></TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {safeRequests.map((request) => (
+                    <TableRow key={request.id}>
+                      <TableCell>
+                        <span className="text-orange-600 dark:text-orange-400">{request.from_store_name}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-green-600 dark:text-green-400">{request.to_store_name}</span>
+                      </TableCell>
+                      <TableCell>
+                        {(Array.isArray(request.items) ? request.items : []).map((item, idx) => (
+                          <div key={idx}>{item.product_name}</div>
+                        ))}
+                      </TableCell>
+                      <TableCell>
+                        {(Array.isArray(request.items) ? request.items : []).map((item, idx) => (
+                          <div key={idx}>{item.quantity}</div>
+                        ))}
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            request.status === 'pending'
+                              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                              : request.status === 'accepted'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                          }`}
+                        >
+                          {request.status === 'pending' && t('transfers.pending')}
+                          {request.status === 'accepted' && t('transfers.accepted')}
+                          {request.status === 'rejected' && t('transfers.rejected')}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {request.status === 'pending' && (
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleAcceptRequest(request.id)}
+                              title={t('transfers.accepted')}
+                              className="text-green-600 hover:text-green-700 hover:bg-green-100 dark:hover:bg-green-900 h-8 w-8"
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRejectRequest(request.id)}
+                              title={t('transfers.rejected')}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900 h-8 w-8"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       )}

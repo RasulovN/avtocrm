@@ -239,12 +239,70 @@ export function UserListPage() {
         }
       />
 
-      <DataTable
-        data={safeUsers}
-        columns={columns}
-        loading={loading}
-        pagination={{ page, limit, total, onPageChange: setPage }}
-      />
+      {safeUsers.length > 0 && (
+        <div className="space-y-3 md:hidden">
+          {safeUsers.map((item, index) => {
+            const userId = item.user_id || item.id || '';
+            return (
+              <div key={userId} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground">ID: {userId}</p>
+                    <p className="font-semibold text-foreground">{item.full_name}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{item.phone_number}</p>
+                  </div>
+                  <span className={`shrink-0 rounded-full px-2 py-1 text-xs ${
+                    item.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                    item.role === 'store_admin' ? 'bg-blue-100 text-blue-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {item.role === 's' ? t('users.seller') : item.role === 'su' ? t('users.superUser') : item.role === 'admin' ? t('users.admin') : item.role === 'store_admin' ? t('users.storeAdmin') : t('users.storeUser')}
+                  </span>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  <div className="rounded-lg bg-muted/40 p-3">
+                    <p className="text-xs text-muted-foreground">{t('users.store')}</p>
+                    <p className="mt-1 font-medium">{item.store_name || '-'}</p>
+                  </div>
+                  <div className="rounded-lg bg-muted/40 p-3">
+                    <p className="text-xs text-muted-foreground">{t('common.email')}</p>
+                    <p className="mt-1 font-medium text-xs truncate">{item.email || '-'}</p>
+                  </div>
+                  <div className="col-span-2 rounded-lg bg-muted/40 p-3">
+                    <p className="text-xs text-muted-foreground">{t('common.createdAt')}</p>
+                    <p className="mt-1 font-medium">{formatDate(item.created_at)}</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex gap-2">
+                  <Button variant="outline" className="flex-1" onClick={() => handleViewLogs(item)}>
+                    <Eye className="mr-2 h-4 w-4" />
+                    {t('users.logs')}
+                  </Button>
+                  <Button variant="outline" className="flex-1" onClick={() => handleOpenDialog(item)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    {t('common.edit')}
+                  </Button>
+                  <Button variant="outline" className="flex-1" onClick={() => setDeleteId(String(userId))}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {t('common.delete')}
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="hidden md:block">
+        <DataTable
+          data={safeUsers}
+          columns={columns}
+          loading={loading}
+          pagination={{ page, limit, total, onPageChange: setPage }}
+        />
+      </div>
 
       <ConfirmDialog
         open={!!deleteId}

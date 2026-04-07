@@ -8,7 +8,6 @@ import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../../components/ui/Card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/Table';
 import { inventoryService } from '../../services/inventoryService';
 import { storeService } from '../../services/storeService';
 import { supplierService } from '../../services/supplierService';
@@ -147,47 +146,45 @@ export function InventoryCreatePage() {
       />
 
       <form onSubmit={handleSubmit}>
-        <div className="grid gap-6">
+        <div className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>{t('inventory.basicInfo')}</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label>{t('suppliers.title')}</Label>
-                  <Select value={supplierId} onValueChange={setSupplierId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={t('inventory.selectSupplier')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {safeSuppliers.map(s => (
-                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('stores.title')}</Label>
-                  <Select value={storeId} onValueChange={setStoreId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={t('inventory.selectLocation')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {safeStores.map(s => (
-                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('inventory.paidAmount')}</Label>
-                  <Input
-                    type="number"
-                    value={paid}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setPaid(Number(e.target.value))}
-                  />
-                </div>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>{t('suppliers.title')}</Label>
+                <Select value={supplierId} onValueChange={setSupplierId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('inventory.selectSupplier')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {safeSuppliers.map(s => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>{t('stores.title')}</Label>
+                <Select value={storeId} onValueChange={setStoreId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('inventory.selectLocation')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {safeStores.map(s => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>{t('inventory.paidAmount')}</Label>
+                <Input
+                  type="number"
+                  value={paid}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setPaid(Number(e.target.value))}
+                />
               </div>
             </CardContent>
           </Card>
@@ -197,74 +194,68 @@ export function InventoryCreatePage() {
               <CardTitle>{t('products.title')}</CardTitle>
               <Button type="button" variant="outline" size="sm" onClick={addItem}>
                 <Plus className="h-4 w-4 mr-2" />
-                {t('inventory.addProduct')}
+                <span className="hidden sm:inline">{t('inventory.addProduct')}</span>
               </Button>
             </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('products.title')}</TableHead>
-                    <TableHead>{t('inventory.quantity')}</TableHead>
-                    <TableHead>{t('inventory.purchasePrice')}</TableHead>
-                    <TableHead>{t('common.total')}</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((item, index) => (
-                    <TableRow key={index}>
-                      <TableCell>
-                        <Select
-                          value={item.product_id}
-                          onValueChange={(v: string) => handleItemChange(index, 'product_id', v)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={t('inventory.selectProduct')} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {safeProducts.map(p => (
-                              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min="1"
-                          value={item.quantity}
-                          onChange={(e: ChangeEvent<HTMLInputElement>) => handleItemChange(index, 'quantity', Number(e.target.value))}
-                          className="w-24"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          value={item.purchase_price}
-                          onChange={(e: ChangeEvent<HTMLInputElement>) => handleItemChange(index, 'purchase_price', Number(e.target.value))}
-                          className="w-32"
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {formatCurrency(item.total)}
-                      </TableCell>
-                      <TableCell>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(index)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <CardContent className="space-y-4">
+              {items.map((item, index) => (
+                <div key={index} className="rounded-lg border p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">#{index + 1}</span>
+                    {items.length > 1 && (
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(index)}>
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">{t('products.title')}</Label>
+                    <Select
+                      value={item.product_id}
+                      onValueChange={(v: string) => handleItemChange(index, 'product_id', v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('inventory.selectProduct')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {safeProducts.map(p => (
+                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label className="text-xs">{t('inventory.quantity')}</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleItemChange(index, 'quantity', Number(e.target.value))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs">{t('inventory.purchasePrice')}</Label>
+                      <Input
+                        type="number"
+                        value={item.purchase_price}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleItemChange(index, 'purchase_price', Number(e.target.value))}
+                      />
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-sm text-muted-foreground">{t('common.total')}: </span>
+                    <span className="font-medium">{formatCurrency(item.total)}</span>
+                  </div>
+                </div>
+              ))}
             </CardContent>
-            <CardFooter className="flex justify-between">
-              <div className="space-y-1">
+            <CardFooter className="flex flex-col gap-4">
+              <div className="space-y-1 text-center sm:text-left">
                 <p className="text-lg font-medium">{t('common.total')}: {formatCurrency(total)}</p>
                 <p className="text-sm text-muted-foreground">{t('suppliers.debt')}: {formatCurrency(debt)}</p>
               </div>
-              <Button type="submit" disabled={saving}>
+              <Button type="submit" disabled={saving} className="w-full">
                 <Save className="h-4 w-4 mr-2" />
                 {saving ? t('common.loading') : t('inventory.createIncomingStock')}
               </Button>

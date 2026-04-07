@@ -106,8 +106,8 @@ export function TransferListPage() {
       />
 
       <div className="flex justify-end">
-        <Link to={`/${lang}/transfers/new`}>
-          <Button>
+        <Link to={`/${lang}/transfers/new`} className="w-full sm:w-auto">
+          <Button className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             {t('transfers.createTransfer')}
           </Button>
@@ -129,56 +129,104 @@ export function TransferListPage() {
               <p>{t('transfers.noData')}</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>#</TableHead>
-                  <TableHead>{t('transfers.fromStore')}</TableHead>
-                  <TableHead></TableHead>
-                  <TableHead>{t('transfers.toStore')}</TableHead>
-                  <TableHead>{t('common.date')}</TableHead>
-                  <TableHead>{t('common.status')}</TableHead>
-                  <TableHead>{t('common.actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              <div className="space-y-3 md:hidden">
                 {transfers.map((item, index) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{index + 1}</TableCell>
-                    <TableCell>{item.from_store_name || item.from_store_id}</TableCell>
-                    <TableCell>
-                      <ArrowRight className="h-4 w-4" />
-                    </TableCell>
-                    <TableCell>{item.to_store_name || item.to_store_id}</TableCell>
-                    <TableCell>{formatDate(item.created_at)}</TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadge(item.status)}`}>
+                  <div key={item.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground">#{index + 1}</p>
+                        <p className="font-semibold text-foreground">{item.from_store_name || item.from_store_id}</p>
+                        <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                          <ArrowRight className="h-4 w-4 shrink-0" />
+                          <span>{item.to_store_name || item.to_store_id}</span>
+                        </div>
+                      </div>
+                      <span className={`shrink-0 rounded-full px-2 py-1 text-xs ${getStatusBadge(item.status)}`}>
                         {getStatusLabel(item.status)}
                       </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => handleShowDetails(item)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        {item.items && item.items.length > 0 && (
-                          <Button variant="ghost" size="sm" onClick={() => handlePrintBarcodes(item)} title="Print Barcodes">
-                            <Printer className="h-4 w-4" />
-                          </Button>
-                        )}
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                      <div className="rounded-lg bg-muted/40 p-3">
+                        <p className="text-xs text-muted-foreground">{t('common.date')}</p>
+                        <p className="mt-1 font-medium">{formatDate(item.created_at)}</p>
                       </div>
-                    </TableCell>
-                  </TableRow>
+                      <div className="rounded-lg bg-muted/40 p-3">
+                        <p className="text-xs text-muted-foreground">Products</p>
+                        <p className="mt-1 font-medium">{item.items?.length || 0}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex gap-2">
+                      <Button variant="outline" className="flex-1" onClick={() => handleShowDetails(item)}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        {t('common.view')}
+                      </Button>
+                      {item.items && item.items.length > 0 && (
+                        <Button variant="outline" className="flex-1" onClick={() => handlePrintBarcodes(item)}>
+                          <Printer className="mr-2 h-4 w-4" />
+                          Print
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>#</TableHead>
+                      <TableHead>{t('transfers.fromStore')}</TableHead>
+                      <TableHead></TableHead>
+                      <TableHead>{t('transfers.toStore')}</TableHead>
+                      <TableHead>{t('common.date')}</TableHead>
+                      <TableHead>{t('common.status')}</TableHead>
+                      <TableHead>{t('common.actions')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {transfers.map((item, index) => (
+                      <TableRow key={item.id}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell>{item.from_store_name || item.from_store_id}</TableCell>
+                        <TableCell>
+                          <ArrowRight className="h-4 w-4" />
+                        </TableCell>
+                        <TableCell>{item.to_store_name || item.to_store_id}</TableCell>
+                        <TableCell>{formatDate(item.created_at)}</TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadge(item.status)}`}>
+                            {getStatusLabel(item.status)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleShowDetails(item)}>
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            {item.items && item.items.length > 0 && (
+                              <Button variant="ghost" size="sm" onClick={() => handlePrintBarcodes(item)} title="Print Barcodes">
+                                <Printer className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
 
       {/* Details Dialog */}
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Transfer Details</DialogTitle>
             <DialogDescription>
@@ -187,44 +235,68 @@ export function TransferListPage() {
           </DialogHeader>
           {selectedTransfer && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
+              <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                <div className="rounded-lg bg-muted/40 p-3">
                   <span className="text-muted-foreground">From:</span>
-                  <span className="ml-2 font-medium">{selectedTransfer.from_store_name || selectedTransfer.from_store_id}</span>
+                  <p className="mt-1 font-medium">{selectedTransfer.from_store_name || selectedTransfer.from_store_id}</p>
                 </div>
-                <div>
+                <div className="rounded-lg bg-muted/40 p-3">
                   <span className="text-muted-foreground">To:</span>
-                  <span className="ml-2 font-medium">{selectedTransfer.to_store_name || selectedTransfer.to_store_id}</span>
+                  <p className="mt-1 font-medium">{selectedTransfer.to_store_name || selectedTransfer.to_store_id}</p>
                 </div>
-                <div>
+                <div className="rounded-lg bg-muted/40 p-3 sm:col-span-2">
                   <span className="text-muted-foreground">Status:</span>
-                  <span className="ml-2 font-medium">{getStatusLabel(selectedTransfer.status)}</span>
+                  <p className="mt-1 font-medium">{getStatusLabel(selectedTransfer.status)}</p>
                 </div>
               </div>
               
               {selectedTransfer.items && selectedTransfer.items.length > 0 && (
-                <div className="border rounded">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Product</TableHead>
-                        <TableHead>SKU</TableHead>
-                        <TableHead>Barcode</TableHead>
-                        <TableHead>Qty</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {selectedTransfer.items.map((item, idx) => (
-                        <TableRow key={idx}>
-                          <TableCell>{item.product_name}</TableCell>
-                          <TableCell className="font-mono text-xs">{item.product_sku || '-'}</TableCell>
-                          <TableCell className="font-mono text-xs">{item.product_barcode || '-'}</TableCell>
-                          <TableCell>{item.quantity}</TableCell>
+                <>
+                  <div className="space-y-3 md:hidden">
+                    {selectedTransfer.items.map((item, idx) => (
+                      <div key={idx} className="rounded-lg border border-border p-3">
+                        <p className="font-medium text-foreground">{item.product_name}</p>
+                        <div className="mt-3 grid grid-cols-1 gap-2 text-sm">
+                          <div>
+                            <p className="text-xs text-muted-foreground">SKU</p>
+                            <p className="font-mono text-xs">{item.product_sku || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Barcode</p>
+                            <p className="font-mono text-xs break-all">{item.product_barcode || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Qty</p>
+                            <p className="font-medium">{item.quantity}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="hidden rounded border md:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Product</TableHead>
+                          <TableHead>SKU</TableHead>
+                          <TableHead>Barcode</TableHead>
+                          <TableHead>Qty</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedTransfer.items.map((item, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell>{item.product_name}</TableCell>
+                            <TableCell className="font-mono text-xs">{item.product_sku || '-'}</TableCell>
+                            <TableCell className="font-mono text-xs">{item.product_barcode || '-'}</TableCell>
+                            <TableCell>{item.quantity}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
             </div>
           )}

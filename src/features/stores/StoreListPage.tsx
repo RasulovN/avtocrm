@@ -290,12 +290,61 @@ export function StoreListPage() {
         ) : undefined}
       />
 
-      <DataTable
-        data={stores}
-        columns={columns}
-        loading={loading}
-        pagination={{ page, limit, total, onPageChange: setPage }}
-      />
+      {isAdmin && stores.length > 0 && (
+        <div className="space-y-3 md:hidden">
+          {stores.map((item, index) => (
+            <div key={item.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">#{index + 1}</p>
+                  <p className="font-semibold text-foreground">{item.name}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{item.address || '-'}</p>
+                </div>
+                <span className={`shrink-0 rounded-full px-2 py-1 text-xs ${
+                  item.type === 'b' ? 'bg-blue-100 text-blue-800' :
+                  item.is_warehouse ? 'bg-purple-100 text-purple-800' :
+                  'bg-green-100 text-green-800'
+                }`}>
+                  {item.type === 'b' ? t('stores.base') : item.is_warehouse ? t('stores.warehouse') : t('stores.store')}
+                </span>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <div className="rounded-lg bg-muted/40 p-3">
+                  <p className="text-xs text-muted-foreground">{t('stores.phone')}</p>
+                  <p className="mt-1 font-medium">{item.phone_number || item.phone || '-'}</p>
+                </div>
+                <div className="rounded-lg bg-muted/40 p-3">
+                  <p className="text-xs text-muted-foreground">ID</p>
+                  <p className="mt-1 font-medium">#{item.id}</p>
+                </div>
+              </div>
+
+              <div className="mt-4 flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => handleOpenDialog(item)}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  {t('common.edit')}
+                </Button>
+                <Button variant="outline" className="flex-1" onClick={() => setDeleteId(item.id)}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  {t('common.delete')}
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {isAdmin && (
+        <div className="hidden md:block">
+          <DataTable
+            data={stores}
+            columns={columns}
+            loading={loading}
+            pagination={{ page, limit, total, onPageChange: setPage }}
+          />
+        </div>
+      )}
 
       {isAdmin && <ConfirmDialog
         open={!!deleteId}
