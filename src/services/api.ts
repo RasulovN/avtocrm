@@ -90,10 +90,13 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const config = (error.config || {}) as ApiRequestConfig;
     const isExpectedStatus = typeof status === 'number' && config.expectedErrorStatuses?.includes(status);
+    const url = error.config?.url || '';
 
-    // Prevent logout recursion
-    if (error.config?.url?.includes('/users/logout/') && status === 401) {
-      return Promise.reject(error);
+    // Prevent logout recursion and suppress logging for these endpoints
+    if (url.includes('/users/logout/') || url.includes('/products/categories')) {
+      if (status === 401) {
+        return Promise.reject(error);
+      }
     }
     
     if (config.skipGlobalErrorHandler || isExpectedStatus) {
@@ -102,7 +105,7 @@ api.interceptors.response.use(
     
     if (status === 401) {
       void removeAuth();
-      handleError(error, { showToast: false });
+      return Promise.reject(error);
     } else {
       const message = errorData?.message || errorData?.msg || error.message || 'Server error';
       handleError(new Error(message), { 
