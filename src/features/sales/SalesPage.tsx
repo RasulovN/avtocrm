@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { storeService } from '../../services/storeService';
 import { productService } from '../../services/productService';
 import { useAuthStore } from '../../app/store';
+import { useCategories } from '../../context/CategoryContext';
 import type { Store, Product } from '../../types';
 import { formatCurrency } from '../../utils';
 
@@ -30,6 +31,7 @@ export function SalesPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [saving, setSaving] = useState(false);
   const [barcode, setBarcode] = useState('');
+  const { categories } = useCategories();
 
   const [storeId, setStoreId] = useState(userStoreId);
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -56,14 +58,13 @@ export function SalesPage() {
   const change = totalPaid > totalWithDiscount ? totalPaid - totalWithDiscount : 0;
   const debt = totalWithDiscount > totalPaid ? totalWithDiscount - totalPaid : 0;
 
-  // Get unique categories from products
-  const categories = [...new Set(safeProducts.map((p) => p.category).filter((c) => c && c.trim()))];
-
   // Filter products by store and category
   const filteredProducts = safeProducts.filter((p) => {
     const effectiveStoreId = isAdmin ? storeId : userStoreId;
     const matchStore = !effectiveStoreId || p.store_id === effectiveStoreId;
-    const matchCategory = !categoryFilter || p.category === categoryFilter;
+    const matchCategory = !categoryFilter
+      || p.category_id === categoryFilter
+      || p.category === categoryFilter;
     return matchStore && matchCategory;
   });
 
@@ -291,8 +292,8 @@ export function SalesPage() {
                       <SelectValue placeholder="Kategoriya" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories.map(cat => (
-                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

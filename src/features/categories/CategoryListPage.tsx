@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, type ChangeEvent } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, Trash2, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -18,27 +18,29 @@ import {
 } from '../../components/ui/Dialog';
 import { Label } from '../../components/ui/Label';
 import { categoryService } from '../../services/categoryService';
-import type { Category, CategoryFormData } from '../../types';
+import { useCategories } from '../../context/CategoryContext';
 import { latinToCyrillic } from '../../utils/transliteration';
+import type { Category, CategoryFormData } from '../../types';
 
 export function CategoryListPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const isSuperUser = Boolean(user?.is_superuser);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const { categories, loading, refreshCategories } = useCategories();
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [loadingCategory, setLoadingCategory] = useState(false);
+  const [imageFileName, setImageFileName] = useState('');
   const [formData, setFormData] = useState<CategoryFormData>({
     name_uz: '',
     name_uz_cyrl: '',
     description_uz: '',
     description_uz_cyrl: '',
-    image: null,
+    image: '',
   });
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>('');
 
@@ -61,78 +63,88 @@ export function CategoryListPage() {
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (imagePreview.startsWith('blob:')) {
-      URL.revokeObjectURL(imagePreview);
-    }
-    const previewUrl = URL.createObjectURL(file);
-    setImagePreview(previewUrl);
-    setFormData((prev) => ({
-      ...prev,
-      image: file,
-    }));
+
+    setImageFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      setFormData((prev) => ({
+        ...prev,
+        image: file,
+      }));
+      setImagePreview(result);
+    };
+    reader.readAsDataURL(file);
   };
 
-  const loadCategories = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await categoryService.getAll();
-      setCategories(response.data);
-    } catch (error) {
-      console.error('Failed to load categories:', error);
-      setCategories([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadCategories();
-  }, [loadCategories]);
-
-  const handleOpenDialog = (category?: Category) => {
-    if (imagePreview.startsWith('blob:')) {
-      URL.revokeObjectURL(imagePreview);
-    }
+  const handleOpenDialog = async (category?: Category) => {
     if (category) {
+      setIsDialogOpen(true);
       setEditingCategory(category);
-      const nameValue = category.name || '';
-      const descriptionValue = category.description || '';
-      setFormData({
-        name_uz: nameValue,
-        name_uz_cyrl: latinToCyrillic(nameValue),
-        description_uz: descriptionValue,
-        description_uz_cyrl: latinToCyrillic(descriptionValue),
-        image: category.image || '',
-      });
-      setImagePreview(category.image || '');
-    } else {
-      setEditingCategory(null);
-      setFormData({
-        name_uz: '',
-        name_uz_cyrl: '',
-        description_uz: '',
-        description_uz_cyrl: '',
-        image: null,
-      });
-      setImagePreview('');
+      setLoadingCategory(true);
+      try {
+        const fresh = await categoryService.getById(category.id);
+        const nameValue = fresh.name_uz ?? fresh.name ?? '';
+        const descriptionValue = fresh.description_uz ?? fresh.description ?? '';
+        setFormData({
+          name_uz: nameValue,
+          name_uz_cyrl: fresh.name_uz_cyrl ?? latinToCyrillic(nameValue),
+          description_uz: descriptionValue,
+          description_uz_cyrl: fresh.description_uz_cyrl ?? latinToCyrillic(descriptionValue),
+          image: null,
+        });
+        setImagePreview(fresh.image || '');
+        const fileLabel = fresh.image ? fresh.image.split('/').pop() || '' : '';
+        setImageFileName(fileLabel);
+      } catch (error) {
+        console.error('Failed to load category by id:', error);
+        const nameValue = category.name_uz ?? category.name ?? '';
+        const descriptionValue = category.description_uz ?? category.description ?? '';
+        setFormData({
+          name_uz: nameValue,
+          name_uz_cyrl: category.name_uz_cyrl ?? latinToCyrillic(nameValue),
+          description_uz: descriptionValue,
+          description_uz_cyrl: category.description_uz_cyrl ?? latinToCyrillic(descriptionValue),
+          image: null,
+        });
+        setImagePreview(category.image || '');
+        const fileLabel = category.image ? category.image.split('/').pop() || '' : '';
+        setImageFileName(fileLabel);
+      } finally {
+        setLoadingCategory(false);
+      }
+      return;
     }
-    setIsDialogOpen(true);
-  };
 
-  const handleCloseDialog = () => {
-    setIsDialogOpen(false);
     setEditingCategory(null);
     setFormData({
       name_uz: '',
       name_uz_cyrl: '',
       description_uz: '',
       description_uz_cyrl: '',
-      image: null,
+      image: '',
+    });
+    setImagePreview('');
+    setImageFileName('');
+    setIsDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setEditingCategory(null);
+    setLoadingCategory(false);
+    setFormData({
+      name_uz: '',
+      name_uz_cyrl: '',
+      description_uz: '',
+      description_uz_cyrl: '',
+      image: '',
     });
     if (imagePreview.startsWith('blob:')) {
       URL.revokeObjectURL(imagePreview);
     }
     setImagePreview('');
+    setImageFileName('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -147,7 +159,7 @@ export function CategoryListPage() {
         await categoryService.create(formData);
         toast.success(t('categories.categoryAdded'));
       }
-      await loadCategories();
+      await refreshCategories();
       handleCloseDialog();
     } catch (error) {
       console.error('Failed to save category:', error);
@@ -162,7 +174,7 @@ export function CategoryListPage() {
       setDeleting(true);
       await categoryService.delete(id);
       toast.success(t('categories.categoryDeleted'));
-      loadCategories();
+      refreshCategories();
     } catch (error) {
       console.error('Failed to delete category:', error);
     } finally {
@@ -171,9 +183,10 @@ export function CategoryListPage() {
     }
   };
 
-  const filteredCategories = categories.filter((category) =>
-    category.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCategories = categories.filter((category) => {
+    const nameValue = category.name_uz ?? category.name ?? '';
+    return nameValue.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   const columns: Column<Category>[] = [
     {
@@ -183,7 +196,7 @@ export function CategoryListPage() {
         item.image ? (
           <img
             src={item.image}
-            alt={item.name || 'Category image'}
+            alt={item.name_uz ?? item.name ?? 'Category image'}
             className="h-10 w-10 rounded-md object-cover"
           />
         ) : (
@@ -194,10 +207,12 @@ export function CategoryListPage() {
       key: 'name',
       header: t('common.name'),
       className: 'font-medium',
+      render: (item: Category) => item.name_uz ?? item.name ?? '',
     },
     {
       key: 'description',
       header: t('common.description'),
+      render: (item: Category) => item.description_uz ?? item.description ?? '',
     },
   ];
 
@@ -257,6 +272,7 @@ export function CategoryListPage() {
         </div>
       </div>
 
+      {/* Mobile View */}
       <div className="space-y-3 md:hidden">
         {loading ? (
           <div className="rounded-lg border bg-card px-4 py-10 text-center text-sm text-muted-foreground">
@@ -283,9 +299,9 @@ export function CategoryListPage() {
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="text-base font-semibold">{category.name}</p>
+                    <p className="text-base font-semibold">{category.name_uz ?? category.name ?? ''}</p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      {category.description || t('common.noData')}
+                      {category.description_uz ?? category.description ?? t('common.noData')}
                     </p>
                   </div>
                 </div>
@@ -318,6 +334,7 @@ export function CategoryListPage() {
         )}
       </div>
 
+      {/* Desktop View */}
       <div className="hidden md:block">
         <DataTable
           data={filteredCategories}
@@ -397,7 +414,13 @@ export function CategoryListPage() {
                       type="file"
                       accept="image/*"
                       onChange={handleImageChange}
+                      disabled={loadingCategory}
                     />
+                    {imageFileName ? (
+                      <p className="text-sm text-muted-foreground">
+                        {imageFileName}
+                      </p>
+                    ) : null}
                     {imagePreview ? (
                       <div className="mt-2">
                         <img
@@ -413,8 +436,8 @@ export function CategoryListPage() {
                   <Button type="button" variant="outline" onClick={handleCloseDialog}>
                     {t('common.cancel')}
                   </Button>
-                  <Button type="submit" disabled={saving}>
-                    {saving ? t('common.loading') : t('common.save')}
+                  <Button type="submit" disabled={saving || loadingCategory}>
+                    {saving || loadingCategory ? t('common.loading') : t('common.save')}
                   </Button>
                 </DialogFooter>
               </form>

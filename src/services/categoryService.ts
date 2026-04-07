@@ -5,7 +5,7 @@ const resolveImageUrl = (image?: string) => {
   if (!image) return '';
   if (image.startsWith('http://') || image.startsWith('https://')) return image;
   if (image.startsWith('/')) return `${API_ORIGIN}${image}`;
-  return image;
+  return `${API_ORIGIN}/${image}`;
 };
 
 const normalizeCategory = (raw: unknown): Category => {
@@ -22,11 +22,18 @@ const normalizeCategory = (raw: unknown): Category => {
     created_at?: string;
   };
 
+  const name = item.name ?? item.name_uz ?? item.name_uz_cyrl ?? '';
+  const description = item.description ?? item.description_uz ?? item.description_uz_cyrl ?? '';
+
   return {
     id: String(item.id ?? ''),
     slug: item.slug ?? '',
-    name: item.name ?? item.name_uz ?? item.name_uz_cyrl ?? '',
-    description: item.description ?? item.description_uz ?? item.description_uz_cyrl ?? '',
+    name,
+    name_uz: item.name_uz ?? (item.name ? item.name : ''),
+    name_uz_cyrl: item.name_uz_cyrl ?? '',
+    description,
+    description_uz: item.description_uz ?? (item.description ? item.description : ''),
+    description_uz_cyrl: item.description_uz_cyrl ?? '',
     image: resolveImageUrl(item.image),
     created_at: item.created_at ?? '',
   };

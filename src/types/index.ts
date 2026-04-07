@@ -88,9 +88,11 @@ export interface Product {
 export interface ProductFormData {
   product_id?: string;
   name: string;
+  name_uz_cyrl?: string;
   description?: string;
+  description_uz_cyrl?: string;
   category_id?: string;
-  images?: string[] | string;
+  images?: string[] | string | File[];
   sku?: string;
   barcode?: string;
   barcode_img?: string;
@@ -102,7 +104,7 @@ export interface ProductFormData {
   category?: string;
   supplier_id?: string;
   store_id?: string;
-  image?: string;
+  image?: string | File | null;
 }
 
 // Category Types
@@ -110,7 +112,11 @@ export interface Category {
   id: string;
   slug?: string;
   name: string;
+  name_uz?: string;
+  name_uz_cyrl?: string;
   description?: string;
+  description_uz?: string;
+  description_uz_cyrl?: string;
   image?: string;
   created_at?: string;
 }
