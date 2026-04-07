@@ -332,7 +332,7 @@
   "language": {
     "switch": "Tilni o'zgartirish",
     "uz": "O'zbekcha",
-    "ru": "РљРёСЂРёР»Р»С‡Р°"
+    "cyrl": "Кириллча"
   },
   "errors": {
     "generic": "Xatolik yuz berdi",
@@ -402,3 +402,4 @@
     "processing": "Qayta ishlanmoqda"
   }
 }
+

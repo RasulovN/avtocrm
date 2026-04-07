@@ -184,7 +184,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     const currentPath = location.pathname;
     const pathParts = currentPath.split('/').filter(Boolean);
     
-    if (pathParts[0] !== 'uz' && pathParts[0] !== 'ru') {
+    if (pathParts[0] !== 'uz' && pathParts[0] !== 'cyrl') {
       // Already handled by routing
     } else if (pathParts[0] !== i18n.language) {
       i18n.changeLanguage(pathParts[0]);
@@ -202,7 +202,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     const currentPath = location.pathname;
     const pathParts = currentPath.split('/').filter(Boolean);
     
-    if (pathParts[0] === 'uz' || pathParts[0] === 'ru') {
+    if (pathParts[0] === 'uz' || pathParts[0] === 'cyrl') {
       pathParts[0] = newLang;
       navigate('/' + pathParts.join('/'));
     } else {
@@ -578,9 +578,9 @@ export function MainLayout({ children }: MainLayoutProps) {
                   size="sm"
                   className={cn(
                     'h-8 px-2 rounded-l-none',
-                    i18n.language === 'ru' && 'bg-accent'
+                    i18n.language === 'cyrl' && 'bg-accent'
                   )}
-                  onClick={() => switchLanguage('ru')}
+                  onClick={() => switchLanguage('cyrl')}
                 >
                   Кир
                 </Button>
@@ -609,4 +609,5 @@ export function MainLayout({ children }: MainLayoutProps) {
     </div>
   );
 }
+
 
