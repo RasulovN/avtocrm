@@ -240,6 +240,12 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <div className="flex min-h-screen">
+      <a
+        href="#main-content"
+        className="sr-only fixed left-4 top-4 z-[100] rounded-md bg-background px-4 py-2 text-sm font-medium text-foreground shadow focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-primary"
+      >
+        Skip to main content
+      </a>
       {isSidebarOpen && (
         <div
           className="fixed inset-0 z-30 bg-black/50 lg:hidden"
@@ -596,7 +602,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           </div>
         </header>
 
-        <main className="flex-1 p-4 lg:p-6">
+        <main id="main-content" className="flex-1 p-4 lg:p-6" tabIndex={-1}>
           {children}
         </main>
       </div>

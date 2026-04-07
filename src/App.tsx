@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { useThemeStore, useAuthStore } from './app/store';
@@ -33,6 +33,66 @@ import { ReportsPage } from './features/reports/ReportsPage';
 // Styles
 import './i18n';
 
+const DEFAULT_META = {
+  title: 'AvtoCRM - Avto ehtiyot qismlar boshqaruv tizimi',
+  description: "Avto ehtiyot qismlar do'konlari uchun professional CRM tizimi. Mahsulotlar, sotuvlar, kirim-chiqim va hisobotlarni bitta panelda boshqaring.",
+};
+
+function DocumentMetaSync() {
+  const location = useLocation();
+  const { i18n } = useTranslation();
+
+  useEffect(() => {
+    const path = location.pathname.toLowerCase();
+    const html = document.documentElement;
+    html.lang = i18n.language || 'uz';
+    html.dir = 'ltr';
+
+    let title = DEFAULT_META.title;
+    let description = DEFAULT_META.description;
+
+    if (path.includes('/dashboard')) {
+      title = 'Bosh sahifa - AvtoCRM';
+      description = "AvtoCRM bosh sahifasi. Do'konlar, sotuvlar va ombor holatini real vaqtda kuzating.";
+    } else if (path.includes('/products')) {
+      title = 'Mahsulotlar - AvtoCRM';
+      description = "AvtoCRM mahsulotlar bo'limi. Avto ehtiyot qismlar katalogi, barcode va zaxiralarni boshqaring.";
+    } else if (path.includes('/sales')) {
+      title = 'Sotuvlar - AvtoCRM';
+      description = "AvtoCRM sotuvlar bo'limi. Chek, to'lov usullari va buyurtmalar oqimini boshqaring.";
+    } else if (path.includes('/reports')) {
+      title = 'Hisobotlar - AvtoCRM';
+      description = "AvtoCRM hisobotlar bo'limi. Sotuv, kirim, foyda va o'tkazmalar bo'yicha analitik hisobotlarni ko'ring.";
+    } else if (path.includes('/inventory')) {
+      title = 'Kirim - AvtoCRM';
+      description = "AvtoCRM kirim bo'limi. Ta'minotchilardan kelgan mahsulotlar, xarid summasi va qarzdorlikni nazorat qiling.";
+    } else if (path.includes('/transfers')) {
+      title = "O'tkazmalar - AvtoCRM";
+      description = "AvtoCRM o'tkazmalar bo'limi. Do'konlar orasidagi mahsulot harakatini boshqaring.";
+    } else if (path.includes('/customers')) {
+      title = 'Mijozlar - AvtoCRM';
+      description = "AvtoCRM mijozlar bo'limi. Mijozlar ro'yxati, buyurtmalari, to'lovlari va qarz tarixini ko'ring.";
+    } else if (path.includes('/categories')) {
+      title = 'Kategoriyalar - AvtoCRM';
+      description = "AvtoCRM kategoriyalar bo'limi. Mahsulot kategoriyalarini tartibli boshqarish uchun mo'ljallangan sahifa.";
+    } else if (path.includes('/stores')) {
+      title = "Do'konlar - AvtoCRM";
+      description = "AvtoCRM do'konlar bo'limi. Filiallar, do'kon ma'lumotlari va foydalanuvchilarni boshqaring.";
+    } else if (path === '/login') {
+      title = 'Kirish - AvtoCRM';
+      description = "AvtoCRM tizimiga xavfsiz kirish sahifasi.";
+    }
+
+    document.title = title;
+    const descriptionMeta = document.querySelector('meta[name="description"]');
+    if (descriptionMeta) {
+      descriptionMeta.setAttribute('content', description);
+    }
+  }, [i18n.language, location.pathname]);
+
+  return null;
+}
+
 function App() {
   const { theme } = useThemeStore();
   const { i18n } = useTranslation();
@@ -53,7 +113,11 @@ function App() {
   }, [theme]);
 
   if (isAuthLoading) {
-    return null;
+    return (
+      <main id="main-content" className="flex min-h-screen items-center justify-center" aria-busy="true">
+        <div className="text-sm text-muted-foreground">Yuklanmoqda...</div>
+      </main>
+    );
   }
 
   const currentLang = i18n.language || 'uz';
@@ -64,6 +128,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <DocumentMetaSync />
       <Toaster
         position="top-center"
         toastOptions={{

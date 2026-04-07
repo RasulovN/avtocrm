@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import * as XLSX from 'XLSX';
 import {
   ArrowRightLeft,
   BarChart3,
@@ -80,6 +79,8 @@ interface ReportsAnalytics {
   transfersByStatus: { completed: number; pending: number; rejected: number };
   generatedReports: GeneratedReport[];
 }
+
+type ExportRow = Record<string, string | number>;
 
 const EMPTY_DATA: ReportsData = {
   sales: [],
@@ -237,6 +238,58 @@ const buildLinePath = (values: number[], width: number, height: number) => {
       return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
     })
     .join(' ');
+};
+
+const toExportValue = (value: string | number) => value;
+
+const createWorksheet = (
+  workbook: { addWorksheet: (name: string) => { columns?: Array<{ header: string; key: string; width: number }>; addRows: (rows: ExportRow[]) => void; addRow: (row: string[]) => void; getRow: (index: number) => { font?: { bold: boolean } } } },
+  name: string,
+  rows: ExportRow[]
+) => {
+  const worksheet = workbook.addWorksheet(name);
+
+  if (rows.length === 0) {
+    worksheet.addRow(['No data']);
+    return;
+  }
+
+  const headers = Object.keys(rows[0]);
+  worksheet.columns = headers.map((header) => ({
+    header,
+    key: header,
+    width: Math.min(Math.max(header.length + 2, 14), 28),
+  }));
+
+  worksheet.addRows(
+    rows.map((row) =>
+      Object.fromEntries(Object.entries(row).map(([key, value]) => [key, toExportValue(value)]))
+    )
+  );
+
+  headers.forEach((header, index) => {
+    const maxLength = Math.max(
+      header.length,
+      ...rows.map((row) => String(row[header] ?? '').length)
+    );
+    if (worksheet.columns?.[index]) {
+      worksheet.columns[index].width = Math.min(Math.max(maxLength + 2, 14), 36);
+    }
+  });
+
+  worksheet.getRow(1).font = { bold: true };
+};
+
+const downloadFile = (buffer: ArrayBuffer, fileName: string) => {
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  URL.revokeObjectURL(url);
 };
 
 const DonutChart = ({
@@ -497,16 +550,19 @@ export function ReportsPage() {
   const storeMax = Math.max(...analytics.storePerformance.map((item) => item.revenue), 1);
   const stockMax = Math.max(...analytics.stockMix.map((item) => item.quantity), 1);
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     const now = new Date();
     const rangeStart = getRangeStart(selectedPeriod, now);
     const salesInRange = data.sales.filter((sale) => isWithinRange(sale.created_at, rangeStart, now));
     const inventoryInRange = data.inventory.filter((item) => isWithinRange(item.created_at, rangeStart, now));
     const transfersInRange = data.transfers.filter((item) => isWithinRange(item.created_at, rangeStart, now));
 
-    const workbook = XLSX.utils.book_new();
+    const ExcelJS = await import('exceljs');
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'AvtoCRM';
+    workbook.created = new Date();
 
-    const summarySheet = XLSX.utils.json_to_sheet([
+    createWorksheet(workbook, 'Summary', [
       { metric: t('reports.stats.totalSales'), value: analytics.revenue },
       { metric: t('reports.stats.totalPurchases'), value: analytics.purchase },
       { metric: t('reports.stats.netProfit'), value: analytics.profit },
@@ -517,9 +573,10 @@ export function ReportsPage() {
       { metric: t('reports.labels.unitsSold'), value: analytics.totalUnitsSold },
       { metric: t('reports.labels.stockLoad'), value: analytics.totalUnitsReceived },
     ]);
-    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
 
-    const trendSheet = XLSX.utils.json_to_sheet(
+    createWorksheet(
+      workbook,
+      'Trend',
       analytics.trend.map((item) => ({
         period: item.label,
         revenue: item.revenue,
@@ -527,9 +584,10 @@ export function ReportsPage() {
         profit: item.profit,
       }))
     );
-    XLSX.utils.book_append_sheet(workbook, trendSheet, 'Trend');
 
-    const storesSheet = XLSX.utils.json_to_sheet(
+    createWorksheet(
+      workbook,
+      'Stores',
       analytics.storePerformance.map((item) => ({
         store: item.name,
         revenue: item.revenue,
@@ -538,31 +596,34 @@ export function ReportsPage() {
         transfer_count: item.transferCount,
       }))
     );
-    XLSX.utils.book_append_sheet(workbook, storesSheet, 'Stores');
 
     if (analytics.topSelling.length > 0) {
-      const productsSheet = XLSX.utils.json_to_sheet(
+      createWorksheet(
+        workbook,
+        'TopProducts',
         analytics.topSelling.map((item) => ({
           product: item.name,
           quantity: item.quantity,
           revenue: item.revenue,
         }))
       );
-      XLSX.utils.book_append_sheet(workbook, productsSheet, 'TopProducts');
     }
 
     if (analytics.stockMix.length > 0) {
-      const stockSheet = XLSX.utils.json_to_sheet(
+      createWorksheet(
+        workbook,
+        'StockMix',
         analytics.stockMix.map((item) => ({
           category: item.name,
           quantity: item.quantity,
         }))
       );
-      XLSX.utils.book_append_sheet(workbook, stockSheet, 'StockMix');
     }
 
     if (selectedType === 'all' || selectedType === 'sales') {
-      const salesSheet = XLSX.utils.json_to_sheet(
+      createWorksheet(
+        workbook,
+        'Sales',
         salesInRange.map((sale) => ({
           date: sale.created_at,
           store: sale.store_name || sale.store_id,
@@ -573,11 +634,12 @@ export function ReportsPage() {
           payment_method: sale.payment_method || '',
         }))
       );
-      XLSX.utils.book_append_sheet(workbook, salesSheet, 'Sales');
     }
 
     if (selectedType === 'all' || selectedType === 'inventory') {
-      const inventorySheet = XLSX.utils.json_to_sheet(
+      createWorksheet(
+        workbook,
+        'Inventory',
         inventoryInRange.map((entry) => ({
           date: entry.created_at,
           supplier: entry.supplier_name || entry.supplier_id,
@@ -589,11 +651,12 @@ export function ReportsPage() {
           status: entry.status,
         }))
       );
-      XLSX.utils.book_append_sheet(workbook, inventorySheet, 'Inventory');
     }
 
     if (selectedType === 'all' || selectedType === 'transfer') {
-      const transfersSheet = XLSX.utils.json_to_sheet(
+      createWorksheet(
+        workbook,
+        'Transfers',
         transfersInRange.map((transfer) => ({
           date: transfer.created_at,
           from_store: transfer.from_store_name || transfer.from_store_id,
@@ -602,11 +665,11 @@ export function ReportsPage() {
           status: transfer.status,
         }))
       );
-      XLSX.utils.book_append_sheet(workbook, transfersSheet, 'Transfers');
     }
 
     const fileSuffix = selectedType === 'all' ? 'full' : selectedType;
-    XLSX.writeFile(workbook, `reports-${fileSuffix}-${selectedPeriod}.xlsx`);
+    const buffer = await workbook.xlsx.writeBuffer();
+    downloadFile(buffer as ArrayBuffer, `reports-${fileSuffix}-${selectedPeriod}.xlsx`);
   };
 
   const statCards = [

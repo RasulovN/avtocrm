@@ -6,7 +6,7 @@ import { authService } from '../../services/authService';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/Card';
+import { Card, CardContent, CardDescription, CardHeader } from '../../components/ui/Card';
 
 export function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -18,7 +18,7 @@ export function ResetPasswordPage() {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!uidb64 || !token) {
-      toast.error('Reset havolasi noto‘g‘ri');
+      toast.error("Reset havolasi noto'g'ri");
       return;
     }
 
@@ -44,15 +44,15 @@ export function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      <Card className="w-full max-w-md mx-4">
+    <main id="main-content" className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      <Card className="mx-4 w-full max-w-md">
         <CardHeader className="space-y-4 text-center">
-          <div className="mx-auto w-16 h-16 bg-primary rounded-xl flex items-center justify-center">
-            <KeyRound className="w-8 h-8 text-primary-foreground" />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-xl bg-primary">
+            <KeyRound className="h-8 w-8 text-primary-foreground" />
           </div>
           <div>
-            <CardTitle className="text-2xl">Yangi parol</CardTitle>
-            <CardDescription>Hisobingiz uchun yangi parol o‘rnating</CardDescription>
+            <h1 className="text-2xl font-semibold">Yangi parol</h1>
+            <CardDescription>Hisobingiz uchun yangi parol o'rnating</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
@@ -86,6 +86,6 @@ export function ResetPasswordPage() {
           </form>
         </CardContent>
       </Card>
-    </div>
+    </main>
   );
 }

@@ -6,7 +6,7 @@ import { useAuthStore } from '../../app/store';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/Card';
+import { Card, CardContent, CardDescription, CardHeader } from '../../components/ui/Card';
 
 export function LoginPage() {
   const { t, i18n } = useTranslation();
@@ -33,14 +33,14 @@ export function LoginPage() {
 
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+    <main id="main-content" className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       <Card className="w-full max-w-md mx-4">
         <CardHeader className="space-y-4 text-center">
           <div className="mx-auto w-16 h-16 bg-primary rounded-xl flex items-center justify-center">
             <Car className="w-8 h-8 text-primary-foreground" />
           </div>
           <div>
-            <CardTitle className="text-2xl">AvtoCRM</CardTitle>
+            <h1 className="text-2xl font-semibold">AvtoCRM</h1>
             <CardDescription>{t('auth.login')}</CardDescription>
           </div>
         </CardHeader>
@@ -83,6 +83,6 @@ export function LoginPage() {
           </form>
         </CardContent>
       </Card>
-    </div>
+    </main>
   );
 }
