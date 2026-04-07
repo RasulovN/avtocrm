@@ -81,7 +81,7 @@ function DocumentMetaSync() {
   useEffect(() => {
     const path = location.pathname.toLowerCase();
     const html = document.documentElement;
-    html.lang = i18n.language || 'uz';
+    html.lang = i18n.language === 'cyrl' ? 'uz-Cyrl' : 'uz';
     html.dir = 'ltr';
 
     let title = DEFAULT_META.title;
@@ -158,9 +158,11 @@ function App() {
 
   const currentLang = i18n.language || 'uz';
 
-  const requireAuth = (element: React.ReactNode) => {
-    return isAuthenticated() ? element : <Navigate to="/login" replace />;
-  };
+  const requireAuth = (element: React.ReactNode) =>
+    isAuthenticated() ? element : <Navigate to="/login" replace />;
+
+  const withLayout = (page: React.ReactNode) =>
+    requireAuth(<MainLayout key={currentLang}>{page}</MainLayout>);
 
   const routeFallback = (
     <main id="main-content" className="flex min-h-screen items-center justify-center" aria-busy="true">
@@ -181,7 +183,7 @@ function App() {
         }}
       />
       <Suspense fallback={routeFallback}>
-        <Routes>
+        <Routes key={currentLang}>
           {/* Login - accessible without auth */}
           <Route path="/login" element={
             isAuthenticated() ? <Navigate to={`/${currentLang}/dashboard`} replace /> : <LoginPage />
@@ -194,178 +196,98 @@ function App() {
           
           {/* Dashboard */}
           <Route path={`/:lang/dashboard`} element={
-            requireAuth(
-              <MainLayout>
-                <DashboardPage />
-              </MainLayout>
-            )
+            withLayout(<DashboardPage />)
           } />
           
           {/* Products */}
           <Route path={`/:lang/products`} element={
-            requireAuth(
-              <MainLayout>
-                <ProductListPage />
-              </MainLayout>
-            )
+            withLayout(<ProductListPage />)
           } />
           
           <Route path={`/:lang/products/new`} element={
-            requireAuth(
-              <MainLayout>
-                <ProductFormPage />
-              </MainLayout>
-            )
+            withLayout(<ProductFormPage />)
           } />
           
           <Route path={`/:lang/products/:id/edit`} element={
-            requireAuth(
-              <MainLayout>
-                <ProductFormPage />
-              </MainLayout>
-            )
+            withLayout(<ProductFormPage />)
           } />
           
           <Route path={`/:lang/products/:id/barcode`} element={
-            requireAuth(
-              <MainLayout>
-                <ProductBarcodePage />
-              </MainLayout>
-            )
+            withLayout(<ProductBarcodePage />)
           } />
           
           {/* Categories */}
           <Route path={`/:lang/categories`} element={
-            requireAuth(
-              <MainLayout>
-                <CategoryListPage />
-              </MainLayout>
-            )
+            withLayout(<CategoryListPage />)
           } />
           
           {/* Inventory (Kirim) - List */}
           <Route path={`/:lang/inventory`} element={
-            requireAuth(
-              <MainLayout>
-                <InventoryListPage />
-              </MainLayout>
-            )
+            withLayout(<InventoryListPage />)
           } />
           
           {/* Inventory - Create */}
           <Route path={`/:lang/inventory/new`} element={
-            requireAuth(
-              <MainLayout>
-                <InventoryCreatePage />
-              </MainLayout>
-            )
+            withLayout(<InventoryCreatePage />)
           } />
           
           {/* Transfers - List */}
           <Route path={`/:lang/transfers`} element={
-            requireAuth(
-              <MainLayout>
-                <TransferListPage />
-              </MainLayout>
-            )
+            withLayout(<TransferListPage />)
           } />
           
           {/* Transfers - Create */}
           <Route path={`/:lang/transfers/new`} element={
-            requireAuth(
-              <MainLayout>
-                <TransferCreatePage />
-              </MainLayout>
-            )
+            withLayout(<TransferCreatePage />)
           } />
           {/* Transfers - Request */}
           <Route path={`/:lang/transfers/requests`} element={
-            requireAuth(
-              <MainLayout>
-                <TransferRequestsPage />
-              </MainLayout>
-            )
+            withLayout(<TransferRequestsPage />)
           } />
           
           {/* Transfer Requests */}
           <Route path={`/:lang/transfer-requests`} element={
-            requireAuth(
-              <MainLayout>
-                <TransferRequestsPage />
-              </MainLayout>
-            )
+            withLayout(<TransferRequestsPage />)
           } />
           
           {/* Sales - List */}
           <Route path={`/:lang/sales`} element={
-            requireAuth(
-              <MainLayout>
-                <SalesListPage />
-              </MainLayout>
-            )
+            withLayout(<SalesListPage />)
           } />
           
           {/* Sales - Create (POS) */}
           <Route path={`/:lang/sales/new`} element={
-            requireAuth(
-              <MainLayout>
-                <SalesPage />
-              </MainLayout>
-            )
+            withLayout(<SalesPage />)
           } />
 
           {/* Customers */}
           <Route path={`/:lang/customers`} element={
-            requireAuth(
-              <MainLayout>
-                <CustomerListPage />
-              </MainLayout>
-            )
+            withLayout(<CustomerListPage />)
           } />
           
           {/* Suppliers */}
           <Route path={`/:lang/suppliers`} element={
-            requireAuth(
-              <MainLayout>
-                <SupplierListPage />
-              </MainLayout>
-            )
+            withLayout(<SupplierListPage />)
           } />
           
           {/* Stores */}
           <Route path={`/:lang/stores`} element={
-            requireAuth(
-              <MainLayout>
-                <StoreListPage />
-              </MainLayout>
-            )
+            withLayout(<StoreListPage />)
           } />
           
           {/* Users */}
           <Route path={`/:lang/stores/users`} element={
-            requireAuth(
-              <MainLayout>
-                <UserListPage />
-              </MainLayout>
-            )
+            withLayout(<UserListPage />)
           } />
           
           {/* Reports */}
           <Route path={`/:lang/reports`} element={
-            requireAuth(
-              <MainLayout>
-                <ReportsPage />
-              </MainLayout>
-            )
+            withLayout(<ReportsPage />)
           } />
           
           {/* Settings */}
           <Route path={`/:lang/settings`} element={
-            requireAuth(
-              <MainLayout>
-                <SettingsPage />
-              </MainLayout>
-            )
+            withLayout(<SettingsPage />)
           } />
           
           {/* Default route - redirect to /uz/dashboard */}

@@ -1,9 +1,8 @@
-import axios from 'axios';
+import axios, { AxiosHeaders } from 'axios';
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { handleError } from '../utils/errorHandler';
 import { authService } from './authService';
 import { isDev } from '../config/environment';
-import i18n from '../i18n';
 
 const USER_KEY = 'crm_user';
 const BaSE_URL = 'https://autocrm.pythonanywhere.com/api';
@@ -38,20 +37,41 @@ const api: AxiosInstance = axios.create({
   withCredentials: true,
 });
 
+const normalizeLanguage = (lang: string | null | undefined): 'uz' | 'cyrl' => {
+  if (!lang) return 'uz';
+  const lower = lang.toLowerCase();
+  if (lower.startsWith('uz-cyrl') || lower.startsWith('cyrl')) return 'cyrl';
+  if (lower.startsWith('uz')) return 'uz';
+  return 'uz';
+};
+
+const getCurrentLanguage = (): 'uz' | 'cyrl' => {
+  if (typeof window === 'undefined') return 'uz';
+  const stored = localStorage.getItem('i18nextLng');
+  if (stored) {
+    const normalized = normalizeLanguage(stored);
+    if (stored !== normalized) {
+      localStorage.setItem('i18nextLng', normalized);
+    }
+    return normalized;
+  }
+  const htmlLang = document?.documentElement?.lang;
+  const normalized = normalizeLanguage(htmlLang || 'uz');
+  localStorage.setItem('i18nextLng', normalized);
+  return normalized;
+};
+
 // Request interceptor - no auth token needed, server uses cookies
 api.interceptors.request.use(
   (config) => {
-    // Add Accept-Language header based on current i18n language
-    // 'uz' -> 'uz', 'cyrl' or 'ru' -> 'ru'
-    const currentLang = i18n.language || 'uz';
-    const acceptLang = currentLang === 'cyrl' ? 'ru' : currentLang;
-    config.headers['Accept-Language'] = acceptLang;
+    const lang = getCurrentLanguage();
+    const apiLang = lang === 'cyrl' ? 'uz-Cyrl' : 'uz';
+    const headers = AxiosHeaders.from(config.headers ?? {});
+    headers.set('Accept-Language', apiLang);
+    config.headers = headers;
 
     if (config.data instanceof FormData) {
-      if (config.headers) {
-        const headers = config.headers as unknown as Record<string, string>;
-        delete headers['Content-Type'];
-      }
+      headers.delete('Content-Type');
     }
     return config;
   },
