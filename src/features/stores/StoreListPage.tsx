@@ -73,6 +73,8 @@ export function StoreListPage() {
       setStores(scopedStores);
       setTotal(scopedStores.length);
     } catch (error) {
+      const axiosErr = error as { response?: { status?: number } };
+      if (axiosErr.response?.status === 401) return;
       console.error('Failed to load stores:', error);
       setTotal(2);
     } finally {

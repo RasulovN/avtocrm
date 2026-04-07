@@ -32,6 +32,8 @@ export function SalesListPage() {
       const scopedSales = isAdmin ? (res.data || []) : (res.data || []).filter((sale) => sale.store_id === userStoreId);
       setSales(scopedSales);
     } catch (error) {
+      const axiosErr = error as { response?: { status?: number } };
+      if (axiosErr.response?.status === 401) return;
       console.error('Failed to load sales:', error);
       // Demo data
       const fallbackSales: Sale[] = [

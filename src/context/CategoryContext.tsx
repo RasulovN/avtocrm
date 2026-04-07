@@ -27,6 +27,10 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
       setCategories(data);
       setError(null);
     } catch (err) {
+      const axiosErr = err as { response?: { status?: number } };
+      if (axiosErr.response?.status === 401) {
+        return;
+      }
       console.error('Failed to load categories:', err);
       setError(err instanceof Error ? err.message : 'Failed to load categories');
       setCategories([]);

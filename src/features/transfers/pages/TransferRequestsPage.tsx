@@ -76,6 +76,8 @@ export function TransferRequestsPage(): ReactElement {
         },
       ]);
     } catch (error) {
+      const axiosErr = error as { response?: { status?: number } };
+      if (axiosErr.response?.status === 401) return;
       console.error('Failed to load data:', error);
       setStores([
         { id: '1', name: 'Main Store', is_warehouse: false, created_at: '' },

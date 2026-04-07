@@ -33,6 +33,8 @@ export function TransferListPage() {
       const res = await transferService.getAll();
       setTransfers(res.data || []);
     } catch (error) {
+      const axiosErr = error as { response?: { status?: number } };
+      if (axiosErr.response?.status === 401) return;
       console.error('Failed to load transfers:', error);
       setTransfers([
         {

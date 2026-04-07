@@ -79,6 +79,8 @@ export function SalesPage() {
       setStores(isAdmin ? loadedStores : loadedStores.filter((store) => store.id === userStoreId));
       setProducts(isAdmin ? loadedProducts : loadedProducts.filter((product) => product.store_id === userStoreId));
     } catch (error) {
+      const axiosErr = error as { response?: { status?: number } };
+      if (axiosErr.response?.status === 401) return;
       console.error('Failed to load data:', error);
       const fallbackStores = [
         { id: '1', name: 'Main Store', is_warehouse: false, created_at: '' },

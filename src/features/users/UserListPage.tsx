@@ -10,7 +10,7 @@ import { Label } from '../../components/ui/Label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/Dialog';
 import { userService } from '../../services/userService';
 import { storeService } from '../../services/storeService';
-import type { User, UserFormData, Store } from '../../types';
+import type { User, UserFormData, UserRole, Store } from '../../types';
 import { formatDate } from '../../utils';
 
 export function UserListPage() {
@@ -42,7 +42,7 @@ export function UserListPage() {
   const safeLogs = useMemo(() => {
     const source = viewingUser as User & {
       logs?: Array<{ id?: string | number; action?: string; timestamp?: string; created_at?: string }>;
-      history?: Array<{ id?: string | number; action?: string; created_at?: string }>;
+      history?: Array<{ id?: string | number; action?: string; timestamp?: string; created_at?: string }>;
     } | null;
     const logs = source?.logs ?? source?.history;
     return Array.isArray(logs) ? logs : [];
@@ -55,6 +55,8 @@ export function UserListPage() {
       setUsers(Array.isArray(response.data) ? response.data : []);
       setTotal(response.total);
     } catch (error) {
+      const axiosErr = error as { response?: { status?: number } };
+      if (axiosErr.response?.status === 401) return;
       console.error('Failed to load users:', error);
       setUsers([]);
       setTotal(0);
@@ -68,6 +70,8 @@ export function UserListPage() {
       const response = await storeService.getAll({ page: 1, limit: 100 });
       setStores(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
+      const axiosErr = error as { response?: { status?: number } };
+      if (axiosErr.response?.status === 401) return;
       console.error('Failed to load stores:', error);
       setStores([
         { id: '1', name: 'Main Store', address: 'Tashkent', phone: '+998901234567', is_warehouse: false, created_at: new Date().toISOString() },
@@ -103,7 +107,7 @@ export function UserListPage() {
         password: '',
         confirm_password: '',
         email: user.email || '',
-        role: user.role,
+        role: user.role as UserRole,
         phone_number: user.phone_number,
         store_id: user.store_id || '',
       });
@@ -114,7 +118,7 @@ export function UserListPage() {
         password: '',
         confirm_password: '',
         email: '',
-        role: 's',
+        role: 's' as UserRole,
         phone_number: '',
         store_id: '',
       });
@@ -241,7 +245,7 @@ export function UserListPage() {
 
       {safeUsers.length > 0 && (
         <div className="space-y-3 md:hidden">
-          {safeUsers.map((item, index) => {
+          {safeUsers.map((item) => {
             const userId = item.user_id || item.id || '';
             return (
               <div key={userId} className="rounded-xl border border-border bg-card p-4 shadow-sm">

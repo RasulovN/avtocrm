@@ -47,6 +47,8 @@ export function ProductListPage() {
       setProducts(response.data);
       setTotal(response.total);
     } catch (error) {
+      const axiosErr = error as { response?: { status?: number } };
+      if (axiosErr.response?.status === 401) return;
       console.error('Failed to load products:', error);
       setProducts([
         {

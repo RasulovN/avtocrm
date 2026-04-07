@@ -2,7 +2,7 @@
 export type UserRole = 'admin' | 'store_user' | 'store_admin' | 's' | 'su';
 
 export interface UserLog {
-  id: number;
+  id: string;
   action: string;
   ip_address?: string;
   user_agent?: string;
@@ -10,7 +10,7 @@ export interface UserLog {
 }
 
 export interface User {
-  id: number;
+  id: string;
   user_id?: string;
   role: string;
   is_superuser?: boolean;

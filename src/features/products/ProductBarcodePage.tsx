@@ -45,6 +45,8 @@ export function ProductBarcodePage() {
       setProduct(data);
       setBarcodeValue(data.barcode || data.sku);
     } catch (error) {
+      const axiosErr = error as { response?: { status?: number } };
+      if (axiosErr.response?.status === 401) return;
       console.error('Failed to load product:', error);
       // Mock data
       setProduct({

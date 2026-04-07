@@ -52,6 +52,8 @@ export function InventoryCreatePage() {
       setSuppliers(Array.isArray(suppliersRes.data) ? suppliersRes.data : []);
       setProducts(Array.isArray(productsRes.data) ? productsRes.data : []);
     } catch (error) {
+      const axiosErr = error as { response?: { status?: number } };
+      if (axiosErr.response?.status === 401) return;
       console.error('Failed to load data:', error);
       setStores([
         { id: '1', name: 'Main Store', is_warehouse: false, created_at: '' },

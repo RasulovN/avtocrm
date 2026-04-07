@@ -66,6 +66,8 @@ export function SupplierListPage() {
       setSuppliers(response.data);
       setTotal(response.total);
     } catch (error) {
+      const axiosErr = error as { response?: { status?: number } };
+      if (axiosErr.response?.status === 401) return;
       console.error('Failed to load suppliers:', error);
       setTotal(2);
     } finally {
@@ -109,6 +111,8 @@ export function SupplierListPage() {
           inn: fresh.inn || '',
         });
       } catch (error) {
+        const axiosErr = error as { response?: { status?: number } };
+        if (axiosErr.response?.status === 401) return;
         console.error('Failed to load supplier:', error);
         setFormData({
           name_uz: supplier.name_uz || supplier.name || '',
