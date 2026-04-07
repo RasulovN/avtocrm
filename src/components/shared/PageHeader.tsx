@@ -18,7 +18,7 @@ export function PageHeader({
   return (
     <div className="flex flex-col space-y-4 pb-6">
       {breadcrumbs && breadcrumbs.length > 0 && (
-        <nav className="flex text-sm text-muted-foreground">
+        <nav className="flex flex-wrap text-sm text-muted-foreground">
           {breadcrumbs.map((item, index) => (
             <span key={index} className="flex items-center">
               {index > 0 && <ChevronRight className="mx-2 h-4 w-4" />}
@@ -36,14 +36,14 @@ export function PageHeader({
           ))}
         </nav>
       )}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{title}</h1>
           {description && (
-            <p className="text-muted-foreground mt-1">{description}</p>
+            <p className="mt-1 text-sm text-muted-foreground sm:text-base">{description}</p>
           )}
         </div>
-        {actions && <div className="flex items-center gap-2">{actions}</div>}
+        {actions && <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end">{actions}</div>}
       </div>
     </div>
   );

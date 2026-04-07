@@ -8,6 +8,7 @@ import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { BarcodePrint } from '../../components/ui/BarcodePrint';
+import { Card, CardContent } from '../../components/ui/Card';
 import {
   Select,
   SelectContent,
@@ -146,6 +147,14 @@ export function ProductListPage() {
 
   const getInventoryByStore = (item: Product): StoreInventory[] => {
     return item.inventory_by_store || [];
+  };
+
+  const getProductTotalQuantity = (product: Product) => {
+    if (product.inventory_by_store?.length) {
+      return product.inventory_by_store.reduce((sum, item) => sum + item.quantity, 0);
+    }
+
+    return product.total_quantity ?? product.quantity ?? product.total_count ?? 0;
   };
 
   const selectedProducts = useMemo(
@@ -321,8 +330,8 @@ export function ProductListPage() {
         ) : undefined}
       />
 
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col gap-4 sm:flex-row">
+        <div className="relative w-full flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={t('products.searchPlaceholder')}
@@ -363,41 +372,154 @@ export function ProductListPage() {
       </div>
 
       {selectedProducts.length > 0 && (
-        <div className="flex items-center justify-between rounded-lg border bg-muted/20 px-4 py-3">
+        <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">
             {selectedProducts.length} ta mahsulot tanlandi
           </p>
-          <Button onClick={handlePrintSelected}>
+          <Button onClick={handlePrintSelected} className="w-full sm:w-auto">
             <Printer className="mr-2 h-4 w-4" />
             {t('products.printBarcode')}
           </Button>
         </div>
       )}
 
-      <DataTable
-        data={products}
-        columns={columns}
-        loading={loading}
-        searchPlaceholder={t('products.searchPlaceholder')}
-        onSearch={handleSearch}
-        onRowClick={(item: Product) => isAdmin ? navigate(`/${lang}/products/${item.id}/edit`) : undefined}
-        pagination={{
-          page,
-          limit,
-          total,
-          onPageChange: setPage,
-        }}
-        inventoryByStore={getInventoryByStore}
-        itemNameKey={'name' as keyof Product}
-        showFooter={true}
-        showStoreStats={true}
-        storeKey={'store_name' as keyof Product}
-        quantityKey={'quantity' as keyof Product}
-        selectableRows={true}
-        selectedRowIds={selectedProductIds}
-        onToggleRowSelection={handleToggleProductSelection}
-        onToggleAllRows={handleToggleAllProducts}
-      />
+      <div className="md:hidden space-y-3">
+        {loading ? (
+          <div className="rounded-lg border bg-card px-4 py-10 text-center text-sm text-muted-foreground">
+            {t('common.loading')}
+          </div>
+        ) : products.length === 0 ? (
+          <div className="rounded-lg border bg-card px-4 py-10 text-center text-sm text-muted-foreground">
+            {t('products.noProducts')}
+          </div>
+        ) : (
+          products.map((product) => {
+            const isSelected = selectedProductIds.includes(product.id);
+            const totalQuantity = getProductTotalQuantity(product);
+
+            return (
+              <Card key={product.id} className="overflow-hidden">
+                <CardContent className="p-4 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${product.name}`}
+                      checked={isSelected}
+                      onChange={() => handleToggleProductSelection(product.id)}
+                      className="mt-1 h-4 w-4 rounded border-border"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-col gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-base font-semibold">{product.name}</p>
+                          <p className="mt-1 text-xs font-mono text-muted-foreground">{product.sku}</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                            {product.category || t('common.noData')}
+                          </span>
+                          <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                            {totalQuantity} {t('products.quantity').toLowerCase()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="rounded-lg bg-muted/30 p-3">
+                      <p className="text-xs text-muted-foreground">{t('products.purchasePrice')}</p>
+                      <p className="mt-1 font-semibold">{formatCurrency(product.purchase_price ?? 0)}</p>
+                    </div>
+                    <div className="rounded-lg bg-muted/30 p-3">
+                      <p className="text-xs text-muted-foreground">{t('products.sellingPrice')}</p>
+                      <p className="mt-1 font-semibold">{formatCurrency(product.selling_price ?? 0)}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 min-w-[120px]"
+                      onClick={() => navigate(`/${lang}/products/${product.id}/barcode`)}
+                    >
+                      <Barcode className="mr-2 h-4 w-4" />
+                      {t('products.printBarcode')}
+                    </Button>
+                    {isAdmin && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 min-w-[100px]"
+                        onClick={() => navigate(`/${lang}/products/${product.id}/edit`)}
+                      >
+                        <Edit className="mr-2 h-4 w-4" />
+                        {t('common.edit')}
+                      </Button>
+                    )}
+                    {isAdmin && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 min-w-[100px]"
+                        onClick={() => setDeleteId(product.id)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        {t('common.delete')}
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
+
+        {total > limit && (
+          <div className="flex flex-col gap-3 rounded-lg border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-sm text-muted-foreground">
+              {(page - 1) * limit + 1}-{Math.min(page * limit, total)} / {total}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setPage(page - 1)} disabled={page === 1}>
+                Oldingi
+              </Button>
+              <span className="text-sm">{page}</span>
+              <Button variant="outline" size="sm" onClick={() => setPage(page + 1)} disabled={page * limit >= total}>
+                Keyingi
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="hidden md:block">
+        <DataTable
+          data={products}
+          columns={columns}
+          loading={loading}
+          searchPlaceholder={t('products.searchPlaceholder')}
+          onSearch={handleSearch}
+          onRowClick={(item: Product) => isAdmin ? navigate(`/${lang}/products/${item.id}/edit`) : undefined}
+          pagination={{
+            page,
+            limit,
+            total,
+            onPageChange: setPage,
+          }}
+          inventoryByStore={getInventoryByStore}
+          itemNameKey={'name' as keyof Product}
+          showFooter={true}
+          showStoreStats={true}
+          storeKey={'store_name' as keyof Product}
+          quantityKey={'quantity' as keyof Product}
+          selectableRows={true}
+          selectedRowIds={selectedProductIds}
+          onToggleRowSelection={handleToggleProductSelection}
+          onToggleAllRows={handleToggleAllProducts}
+        />
+      </div>
 
       <ConfirmDialog
         open={!!deleteId}

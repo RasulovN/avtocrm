@@ -88,7 +88,7 @@ export function DataTable<T extends { id: string }>({
   showStoreStats = false,
   storeKey,
   quantityKey,
-  minWidth = '800px',
+  minWidth = '640px',
   emptyMessage = 'No data available',
   loadingMessage = 'Loading data...',
   inventoryByStore,
@@ -213,7 +213,7 @@ export function DataTable<T extends { id: string }>({
     <div className="space-y-4">
       {onSearch && (
         <div className="flex items-center gap-2">
-          <div className="relative flex-1 max-w-sm">
+          <div className="relative w-full flex-1 sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder={searchPlaceholder}
@@ -227,7 +227,7 @@ export function DataTable<T extends { id: string }>({
 
       {/* Table Container */}
       <div className="w-full overflow-x-auto rounded-lg border bg-card">
-        <div className="min-w-[800px]" style={{ minWidth }}>
+        <div className="min-w-[640px] sm:min-w-[720px]" style={{ minWidth }}>
           <Table>
             {/* Sticky Header */}
             <TableHeader className="sticky top-0 bg-muted/50 backdrop-blur-sm z-10">
@@ -328,14 +328,14 @@ export function DataTable<T extends { id: string }>({
 
       {/* Footer with Stats */}
       {showFooter && stats && (
-        <div className="flex flex-wrap gap-4 p-3 bg-muted/30 rounded-lg border">
+        <div className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-3 sm:flex-row sm:flex-wrap sm:gap-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Total:</span>
             <span className="font-semibold">{stats.totalQuantity.toLocaleString()}</span>
           </div>
           
           {showStoreStats && Object.keys(stats.storeQuantities).length > 0 && (
-            <div className="flex flex-wrap gap-3 border-l pl-3">
+            <div className="flex flex-wrap gap-3 border-t pt-3 sm:border-l sm:border-t-0 sm:pl-3 sm:pt-0">
               {Object.entries(stats.storeQuantities).map(([store, qty]) => (
                 <div key={store} className="flex items-center gap-1 text-sm">
                   <span className="text-muted-foreground">{store}:</span>
@@ -352,7 +352,7 @@ export function DataTable<T extends { id: string }>({
 
       {/* Pagination */}
       {pagination && totalPages > 1 && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-sm text-muted-foreground">
             {(pagination.page - 1) * pagination.limit + 1}-
             {Math.min(pagination.page * pagination.limit, pagination.total)} / {pagination.total}

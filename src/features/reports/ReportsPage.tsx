@@ -716,7 +716,7 @@ export function ReportsPage() {
       <PageHeader title={t('nav.reports')} description={t('reports.description')} />
 
       <Card className="overflow-hidden border-primary/10 bg-gradient-to-br from-primary/5 via-background to-background">
-        <CardContent className="p-6">
+        <CardContent className="p-4 sm:p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-2">
               <div className="inline-flex items-center gap-2 rounded-full border bg-background/80 px-3 py-1 text-xs text-muted-foreground">
@@ -743,9 +743,9 @@ export function ReportsPage() {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:w-auto">
               <Select value={selectedType} onValueChange={(value) => setSelectedType(value as ReportType)}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <SelectValue placeholder={t('reports.allTypes')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -757,7 +757,7 @@ export function ReportsPage() {
                 </SelectContent>
               </Select>
               <Select value={selectedPeriod} onValueChange={(value) => setSelectedPeriod(value as PeriodType)}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <SelectValue placeholder={t('reports.periods.month')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -767,11 +767,11 @@ export function ReportsPage() {
                   <SelectItem value="year">{t('reports.periods.year')}</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" size="sm" onClick={() => void loadReportsData()} disabled={loading}>
+              <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => void loadReportsData()} disabled={loading}>
                 <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                 {t('reports.refresh')}
               </Button>
-              <Button variant="outline" size="sm" onClick={handleExportExcel} disabled={loading}>
+              <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={handleExportExcel} disabled={loading}>
                 <Download className="mr-2 h-4 w-4" />
                 {t('common.export')}
               </Button>
@@ -902,7 +902,7 @@ export function ReportsPage() {
             ) : (
               analytics.storePerformance.map((store) => (
                 <div key={store.id} className="space-y-2 rounded-2xl border p-4">
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <div className="font-medium">{store.name}</div>
                       <div className="text-xs text-muted-foreground">
@@ -974,7 +974,7 @@ export function ReportsPage() {
               </div>
             ) : (
               analytics.topSelling.map((product, index) => (
-                <div key={`${product.name}-${index}`} className="flex items-center justify-between rounded-2xl border p-4">
+                <div key={`${product.name}-${index}`} className="flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 font-semibold">
                       {index + 1}
@@ -986,7 +986,7 @@ export function ReportsPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="text-right font-medium">{formatCurrency(product.revenue)}</div>
+                  <div className="text-left font-medium sm:text-right">{formatCurrency(product.revenue)}</div>
                 </div>
               ))
             )}
@@ -1003,8 +1003,8 @@ export function ReportsPage() {
               const style = REPORT_TYPE_STYLES[report.type];
               const Icon = style.icon;
               return (
-                <div key={report.id} className="flex items-center justify-between gap-4 rounded-2xl border p-4">
-                  <div className="flex items-center gap-4">
+                <div key={report.id} className="flex flex-col gap-4 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-4 sm:items-center">
                     <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${style.soft}`}>
                       <Icon className={`h-5 w-5 ${style.accent}`} />
                     </div>
@@ -1020,7 +1020,7 @@ export function ReportsPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-700">
+                  <div className="self-start rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-700 sm:self-center">
                     {t('reports.ready')}
                   </div>
                 </div>

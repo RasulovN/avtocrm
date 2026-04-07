@@ -8,6 +8,7 @@ import { DataTable, type Column } from '../../components/shared/DataTable';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { Card, CardContent } from '../../components/ui/Card';
 import {
   Dialog,
   DialogContent,
@@ -245,7 +246,7 @@ export function CategoryListPage() {
       />
 
       <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative w-full flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={t('common.search')}
@@ -256,14 +257,77 @@ export function CategoryListPage() {
         </div>
       </div>
 
-      <DataTable
-        data={filteredCategories}
-        columns={columns}
-        loading={loading}
-        emptyMessage={t('categories.noCategories')}
-        loadingMessage={t('common.loading')}
-        onRowClick={isSuperUser ? (item: Category) => handleOpenDialog(item) : undefined}
-      />
+      <div className="space-y-3 md:hidden">
+        {loading ? (
+          <div className="rounded-lg border bg-card px-4 py-10 text-center text-sm text-muted-foreground">
+            {t('common.loading')}
+          </div>
+        ) : filteredCategories.length === 0 ? (
+          <div className="rounded-lg border bg-card px-4 py-10 text-center text-sm text-muted-foreground">
+            {t('categories.noCategories')}
+          </div>
+        ) : (
+          filteredCategories.map((category) => (
+            <Card key={category.id}>
+              <CardContent className="space-y-4 p-4">
+                <div className="flex items-start gap-3">
+                  {category.image ? (
+                    <img
+                      src={category.image}
+                      alt={category.name || 'Category image'}
+                      className="h-14 w-14 rounded-lg border object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-14 w-14 items-center justify-center rounded-lg border bg-muted text-xs text-muted-foreground">
+                      IMG
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-base font-semibold">{category.name}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {category.description || t('common.noData')}
+                    </p>
+                  </div>
+                </div>
+
+                {isSuperUser && (
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 min-w-[120px]"
+                      onClick={() => handleOpenDialog(category)}
+                    >
+                      <Pencil className="mr-2 h-4 w-4" />
+                      {t('common.edit')}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 min-w-[120px]"
+                      onClick={() => setDeleteId(category.id)}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      {t('common.delete')}
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+
+      <div className="hidden md:block">
+        <DataTable
+          data={filteredCategories}
+          columns={columns}
+          loading={loading}
+          emptyMessage={t('categories.noCategories')}
+          loadingMessage={t('common.loading')}
+          onRowClick={isSuperUser ? (item: Category) => handleOpenDialog(item) : undefined}
+        />
+      </div>
 
       {isSuperUser && (
         <>

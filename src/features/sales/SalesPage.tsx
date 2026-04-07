@@ -244,22 +244,22 @@ export function SalesPage() {
           .receipt-print { position: absolute; left: 0; top: 0; width: 100%; }
         }
       `}</style>
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
+      <div className="space-y-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-2xl font-bold tracking-tight dark:text-white">Sotuvlar (POS)</h2>
             <p className="text-sm text-muted-foreground dark:text-gray-400">Panel prodaj</p>
           </div>
         </div>
-        <div className="grid grid-cols-12 gap-2 lg:gap-3 h-[calc(100vh-11rem)]">
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-12 xl:gap-3 xl:h-[calc(100vh-11rem)]">
           {/* Katalog (chap panel) */}
-          <div className="col-span-5 flex flex-col space-y-2">
-            <div className="bg-card border border-gray-900 rounded-lg flex-1 flex flex-col p-3">
+          <div className="flex flex-col space-y-2 xl:col-span-5">
+            <div className="bg-card border border-gray-900 rounded-lg flex min-h-[320px] flex-col p-3 xl:min-h-0 xl:flex-1">
               <div className="mb-3">
                 <h4 className="text-base font-semibold flex items-center gap-2 dark:text-white mb-2">
                   Katalog tovarov
                 </h4>
-                <div className='flex justify-between gap-2'>
+                <div className='flex flex-col justify-between gap-2 sm:flex-row'>
                   <div className="relative w-full">
                     <Search className="absolute left-2.5 top-3 h-4 w-4 text-muted-foreground dark:text-gray-400" />
                     <Input
@@ -271,13 +271,13 @@ export function SalesPage() {
                       className="pl-9 dark:bg-gray-900 dark:border-gray-600 dark:text-white"
                     />
                   </div>
-                  <Button className='dark:bg-gray-900 dark:border-gray-600 dark:text-white hover:bg-gray-700 px-3' onClick={handleOpenScanner}>
+                  <Button className='w-full px-3 dark:bg-gray-900 dark:border-gray-600 dark:text-white hover:bg-gray-700 sm:w-auto' onClick={handleOpenScanner}>
                     <ScanBarcode className="w-5 text-muted-foreground dark:text-gray-400" />
                   </Button>
                 </div>
-                <div className="flex gap-2 mt-2">
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                   {isAdmin && <Select value={storeId} onValueChange={setStoreId}>
-                    <SelectTrigger className="w-30 h-8 dark:bg-gray-900 dark:border-gray-600 dark:text-white">
+                    <SelectTrigger className="h-8 w-full dark:bg-gray-900 dark:border-gray-600 dark:text-white sm:w-40">
                       <SelectValue placeholder="Do'kon" />
                     </SelectTrigger>
                     <SelectContent>
@@ -287,7 +287,7 @@ export function SalesPage() {
                     </SelectContent>
                   </Select>}
                   <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                    <SelectTrigger className="w-[120px] h-8 dark:bg-gray-900 dark:border-gray-600 dark:text-white">
+                    <SelectTrigger className="h-8 w-full dark:bg-gray-900 dark:border-gray-600 dark:text-white sm:w-[160px]">
                       <SelectValue placeholder="Kategoriya" />
                     </SelectTrigger>
                     <SelectContent>
@@ -325,17 +325,17 @@ export function SalesPage() {
             </div>
           </div>
           {/* Chek (o'rta panel) */}
-          <div className="col-span-4 flex flex-col space-y-2">
-            <div className="bg-card border border-gray-900 rounded-lg flex-1 flex flex-col">
+          <div className="flex flex-col space-y-2 xl:col-span-4">
+            <div className="bg-card border border-gray-900 rounded-lg flex min-h-[320px] flex-col xl:flex-1">
               <div className="p-3 pb-2">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <h4 className="text-base font-semibold flex items-center gap-2 dark:text-white">
                     <DollarSign className="h-4 w-4" /> Chek
                     <span className="inline-flex items-center rounded bg-secondary dark:bg-gray-800 px-1.5 py-0.5 text-xs font-medium dark:text-gray-200 ml-1">
                       {items.length}
                     </span>
                   </h4>
-                  <Button type="button" variant="ghost" className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 h-7 px-2 text-sm" onClick={() => setItems([])}>
+                  <Button type="button" variant="ghost" className="h-7 self-start px-2 text-sm text-red-500 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-900/20 sm:self-auto" onClick={() => setItems([])}>
                     <Trash2 className="h-3.5 w-3.5 mr-1" /> Tozalash
                   </Button>
                 </div>
@@ -358,7 +358,7 @@ export function SalesPage() {
                           <Trash2 className="h-3.5 w-3.5 text-red-500" />
                         </Button>
                       </div>
-                      <div className="grid grid-cols-3 gap-1.5 text-xs">
+                      <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-3 sm:gap-1.5">
                         <div>
                           <div className="text-muted-foreground dark:text-gray-400 mb-1">Soni</div>
                           <div className="flex items-center gap-1">
@@ -434,8 +434,8 @@ export function SalesPage() {
             </div>
           </div>
           {/* Oplata (o'ng panel) */}
-          <div className="col-span-3 flex flex-col space-y-2">
-            <div className="bg-card border border-gray-900 rounded-lg flex-1 flex flex-col">
+          <div className="flex flex-col space-y-2 xl:col-span-3">
+            <div className="bg-card border border-gray-900 rounded-lg flex min-h-[320px] flex-col xl:flex-1">
               <div className="p-3 pb-2">
                 <h4 className="text-base font-semibold dark:text-white">To'lov</h4>
               </div>
@@ -641,7 +641,7 @@ export function SalesPage() {
                 Xaridingiz uchun rahmat!
               </div>
             </div>
-            <div className="p-4 border-t dark:border-gray-600 flex gap-2 print:hidden">
+            <div className="p-4 border-t dark:border-gray-600 flex flex-col gap-2 print:hidden sm:flex-row">
               <Button className="flex-1" onClick={printReceipt}>
                 Chop etish
               </Button>
