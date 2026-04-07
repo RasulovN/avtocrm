@@ -3,8 +3,8 @@ import type { Resource } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 
-import uz from './locales/uz.json';
-import cyrl from './locales/cyrl.json';
+import uz from './locales/uz.json' with { type: 'json' };
+import cyrl from './locales/cyrl.json' with { type: 'json' };
 
 const resources: Resource = {
   uz: { translation: uz },
