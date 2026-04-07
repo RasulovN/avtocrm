@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { Plus, FileText, Eye, Printer } from 'lucide-react';
@@ -23,11 +23,7 @@ export function InventoryListPage() {
   const [showBarcodeDialog, setShowBarcodeDialog] = useState(false);
   const [barcodeItems, setBarcodeItems] = useState<Inventory['items']>([]);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const res = await inventoryService.getAll();
@@ -70,7 +66,11 @@ export function InventoryListPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleShowDetails = (item: Inventory) => {
     setSelectedInventory(item);

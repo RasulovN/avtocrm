@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type MouseEvent } from 'react';
+import { useEffect, useMemo, useState, useCallback, type MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Plus, Edit, Trash2, Barcode, Search, Printer } from 'lucide-react';
@@ -40,12 +40,7 @@ export function ProductListPage() {
   const [deleting, setDeleting] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
 
-  useEffect(() => {
-    loadProducts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, page]);
-
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     try {
       setLoading(true);
       const response = await productService.getAll({ ...filters, store_id: !isAdmin ? userStoreId : filters.store_id, page, limit });
@@ -103,8 +98,8 @@ export function ProductListPage() {
           category: 'Electrical',
           supplier_id: '1',
           supplier_name: 'AutoParts Co',
-          store_id: '2',
-          store_name: 'Warehouse',
+          store_id: '1',
+          store_name: 'Main Store',
           sku: 'SKU-003',
           quantity: 200,
           inventory_by_store: [
@@ -119,7 +114,11 @@ export function ProductListPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters, page, isAdmin, userStoreId]);
+
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
 
   const handleSearch = (value: string) => {
     setSearchQuery(value);

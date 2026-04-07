@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef, type ChangeEvent, type MouseEvent } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo, type ChangeEvent, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
@@ -14,7 +14,8 @@ import type { Store, StoreFormData } from '../../types';
 import { latinToCyrillic } from '../../utils/transliteration';
 
 export function StoreListPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language || 'uz';
   const { user } = useAuthStore();
   const isAdmin = Boolean(user?.is_superuser);
   const userStoreId = user?.store_id;
@@ -243,9 +244,29 @@ export function StoreListPage() {
     }
   };
 
-  const columns: Column<Store>[] = [
-    { key: 'name', header: t('stores.storeName') },
-    { key: 'address', header: t('stores.address') },
+  const getLocalizedName = (item: Store) => {
+    if (lang === 'uz') return item.name_uz || item.name;
+    if (lang === 'cyrl') return item.name_uz_cyrl || item.name;
+    return item.name;
+  };
+
+  const getLocalizedAddress = (item: Store) => {
+    if (lang === 'uz') return item.address_uz || item.address;
+    if (lang === 'cyrl') return item.address_uz_cyrl || item.address;
+    return item.address;
+  };
+
+  const columns: Column<Store>[] = useMemo(() => [
+    { 
+      key: 'name', 
+      header: t('stores.storeName'),
+      render: (item: Store) => getLocalizedName(item)
+    },
+    { 
+      key: 'address', 
+      header: t('stores.address'),
+      render: (item: Store) => getLocalizedAddress(item)
+    },
     {
       key: 'phone',
       header: t('stores.phone'),
@@ -275,7 +296,7 @@ export function StoreListPage() {
         </div>
       ) : null,
     },
-  ];
+  ], [t, lang, isAdmin, handleOpenDialog]);
 
   return (
     <div className="space-y-6">
@@ -297,8 +318,8 @@ export function StoreListPage() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs text-muted-foreground">#{index + 1}</p>
-                  <p className="font-semibold text-foreground">{item.name}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">{item.address || '-'}</p>
+                  <p className="font-semibold text-foreground">{getLocalizedName(item)}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{getLocalizedAddress(item) || '-'}</p>
                 </div>
                 <span className={`shrink-0 rounded-full px-2 py-1 text-xs ${
                   item.type === 'b' ? 'bg-blue-100 text-blue-800' :

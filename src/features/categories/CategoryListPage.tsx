@@ -27,7 +27,6 @@ export function CategoryListPage() {
   const { user } = useAuthStore();
   const isSuperUser = Boolean(user?.is_superuser);
   const { categories, refreshCategories } = useCategories();
-  const [localLoading] = useState(false);
   const [localLoadingCategory, setLocalLoadingCategory] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -275,7 +274,7 @@ export function CategoryListPage() {
 
       {/* Mobile View */}
       <div className="space-y-3 md:hidden">
-        {localLoading ? (
+        {false ? (
           <div className="rounded-lg border bg-card px-4 py-10 text-center text-sm text-muted-foreground">
             {t('common.localLoading')}
           </div>
@@ -340,7 +339,7 @@ export function CategoryListPage() {
         <DataTable
           data={filteredCategories}
           columns={columns}
-          loading={localLoading}
+          loading={false}
           emptyMessage={t('categories.noCategories')}
           loadingMessage={t('common.localLoading')}
           onRowClick={isSuperUser ? (item: Category) => handleOpenDialog(item) : undefined}
