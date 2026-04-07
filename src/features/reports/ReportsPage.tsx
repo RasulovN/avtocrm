@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'XLSX';
 import {
   ArrowRightLeft,
   BarChart3,

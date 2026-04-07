@@ -5,6 +5,8 @@ import { isDev } from '../config/environment';
 
 const USER_KEY = 'user';
 const BaSE_URL = 'https://autocrm.pythonanywhere.com/api';
+export const API_BASE_URL = BaSE_URL;
+export const API_ORIGIN = BaSE_URL.replace(/\/api\/?$/, '');
 
 export interface ApiRequestConfig extends AxiosRequestConfig {
   expectedErrorStatuses?: number[];
@@ -30,6 +32,12 @@ const api: AxiosInstance = axios.create({
 // Request interceptor - no auth token needed, server uses cookies
 api.interceptors.request.use(
   (config) => {
+    if (config.data instanceof FormData) {
+      if (config.headers) {
+        const headers = config.headers as unknown as Record<string, string>;
+        delete headers['Content-Type'];
+      }
+    }
     return config;
   },
 
