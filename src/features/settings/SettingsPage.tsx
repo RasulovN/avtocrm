@@ -1,12 +1,13 @@
 import { useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { Save, User, Phone, Lock, History, Clock } from 'lucide-react';
+import { Save, User, Phone, Lock, History, Clock, KeyRound } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/Dialog';
 import { useAuthStore } from '../../app/store';
 import { authService } from '../../services/authService';
 import { formatDateShort, formatTime } from '../../utils';
@@ -36,6 +37,9 @@ export function SettingsPage() {
   const { user } = useAuthStore();
   const [profileSaving, setProfileSaving] = useState(false);
   const [passwordSaving, setPasswordSaving] = useState(false);
+  const [forgotDialogOpen, setForgotDialogOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSending, setForgotSending] = useState(false);
   
   const [profileData, setProfileData] = useState<ProfileFormData>({
     full_name: user?.full_name || 'Admin',
@@ -66,6 +70,25 @@ export function SettingsPage() {
 
   const handlePasswordChange = (field: keyof PasswordFormData, value: string) => {
     setPasswordData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleForgotPassword = async () => {
+    if (!forgotEmail) {
+      toast.error(t('auth.emailRequired'));
+      return;
+    }
+    try {
+      setForgotSending(true);
+      await authService.forgotPassword({ email: forgotEmail });
+      toast.success('Parolni tiklash uchun emailingizga havola yuborildi');
+      setForgotDialogOpen(false);
+      setForgotEmail('');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t('errors.generic');
+      toast.error(message);
+    } finally {
+      setForgotSending(false);
+    }
   };
 
   const handleProfileSubmit = async (e: ChangeEvent<HTMLFormElement>) => {
@@ -167,7 +190,16 @@ export function SettingsPage() {
           <CardContent>
             <form onSubmit={handlePasswordSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="currentPassword">{t('auth.currentPassword')}</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="currentPassword">{t('auth.currentPassword')}</Label>
+                  <button
+                    type="button"
+                    onClick={() => setForgotDialogOpen(true)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    {t('auth.forgotPassword')}
+                  </button>
+                </div>
                 <Input
                   id="currentPassword"
                   type="password"
@@ -239,6 +271,41 @@ export function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Forgot Password Dialog */}
+      <Dialog open={forgotDialogOpen} onOpenChange={setForgotDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5" />
+              {t('auth.forgotPassword')}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {t('auth.forgotPasswordDescription')}
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="forgotEmail">{t('common.email')}</Label>
+              <Input
+                id="forgotEmail"
+                type="email"
+                placeholder="email@example.com"
+                value={forgotEmail}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setForgotEmail(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setForgotDialogOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleForgotPassword} disabled={forgotSending}>
+              {forgotSending ? t('common.loading') : t('auth.sendResetLink')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

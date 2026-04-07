@@ -70,7 +70,11 @@
     "updatePassword": "Parolni yangilash",
     "email": "Email",
     "loginHistory": "Kirishlar tarixi",
-    "loginHistoryDescription": "Hisobingizga oxirgi kirishlar ro'yxati"
+    "loginHistoryDescription": "Hisobingizga oxirgi kirishlar ro'yxati",
+    "forgotPassword": "Parolni unutdingizmi?",
+    "forgotPasswordDescription": "Parolni tiklash uchun emailingizni kiriting. Sizga tiklash havolasi yuboriladi.",
+    "sendResetLink": "Havola yuborish",
+    "emailRequired": "Email kiritish majburiy"
   },
   "dashboard": {
     "title": "Bosh sahifa",

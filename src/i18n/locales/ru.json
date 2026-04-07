@@ -70,7 +70,11 @@
     "updatePassword": "Паролни янгилаш",
     "email": "Емаил",
     "loginHistory": "Киришлар тарихи",
-    "loginHistoryDescription": "Ҳисобингизга охирги киришлар рўйхати"
+    "loginHistoryDescription": "Ҳисобингизга охирги киришлар рўйхати",
+    "forgotPassword": "Паролни унутдингизми?",
+    "forgotPasswordDescription": "Паролни тиклаш учун емаилингизни киритинг. Сизга тиклаш ҳаволаси юборилади.",
+    "sendResetLink": "Ҳавола юбориш",
+    "emailRequired": "Емаил киритиш мажбурий"
   },
   "dashboard": {
     "title": "Бош саҳифа",
