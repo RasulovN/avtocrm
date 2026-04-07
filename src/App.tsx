@@ -1,34 +1,70 @@
+import { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { useThemeStore, useAuthStore } from './app/store';
-import { useEffect } from 'react';
 
 // Layout
 import { MainLayout } from './components/shared/MainLayout';
 
 // Feature Pages
-import { LoginPage } from './features/auth/LoginPage';
-import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage';
-import { ResetPasswordPage } from './features/auth/ResetPasswordPage';
-import { DashboardPage } from './features/dashboard/DashboardPage';
-import { ProductListPage } from './features/products/ProductListPage';
-import { ProductFormPage } from './features/products/ProductFormPage';
-import { ProductBarcodePage } from './features/products/ProductBarcodePage';
-import { CategoryListPage } from './features/categories/CategoryListPage';
-import { InventoryListPage } from './features/inventory/InventoryListPage';
-import { InventoryCreatePage } from './features/inventory/InventoryCreatePage';
-import { TransferListPage } from './features/transfers/pages/TransferListPage';
-import { TransferCreatePage } from './features/transfers/pages/TransferCreatePage';
-import { TransferRequestsPage } from './features/transfers/pages/TransferRequestsPage';
-import { SalesListPage } from './features/sales/SalesListPage';
-import { SalesPage } from './features/sales/SalesPage';
-import { CustomerListPage } from './features/customers/CustomerListPage';
-import { SupplierListPage } from './features/suppliers/SupplierListPage';
-import { StoreListPage } from './features/stores/StoreListPage';
-import { UserListPage } from './features/users/UserListPage';
-import { SettingsPage } from './features/settings/SettingsPage';
-import { ReportsPage } from './features/reports/ReportsPage';
+const LoginPage = lazy(() => import('./features/auth/LoginPage').then((module) => ({ default: module.LoginPage })));
+const ForgotPasswordPage = lazy(() =>
+  import('./features/auth/ForgotPasswordPage').then((module) => ({ default: module.ForgotPasswordPage }))
+);
+const ResetPasswordPage = lazy(() =>
+  import('./features/auth/ResetPasswordPage').then((module) => ({ default: module.ResetPasswordPage }))
+);
+const DashboardPage = lazy(() =>
+  import('./features/dashboard/DashboardPage').then((module) => ({ default: module.DashboardPage }))
+);
+const ProductListPage = lazy(() =>
+  import('./features/products/ProductListPage').then((module) => ({ default: module.ProductListPage }))
+);
+const ProductFormPage = lazy(() =>
+  import('./features/products/ProductFormPage').then((module) => ({ default: module.ProductFormPage }))
+);
+const ProductBarcodePage = lazy(() =>
+  import('./features/products/ProductBarcodePage').then((module) => ({ default: module.ProductBarcodePage }))
+);
+const CategoryListPage = lazy(() =>
+  import('./features/categories/CategoryListPage').then((module) => ({ default: module.CategoryListPage }))
+);
+const InventoryListPage = lazy(() =>
+  import('./features/inventory/InventoryListPage').then((module) => ({ default: module.InventoryListPage }))
+);
+const InventoryCreatePage = lazy(() =>
+  import('./features/inventory/InventoryCreatePage').then((module) => ({ default: module.InventoryCreatePage }))
+);
+const TransferListPage = lazy(() =>
+  import('./features/transfers/pages/TransferListPage').then((module) => ({ default: module.TransferListPage }))
+);
+const TransferCreatePage = lazy(() =>
+  import('./features/transfers/pages/TransferCreatePage').then((module) => ({ default: module.TransferCreatePage }))
+);
+const TransferRequestsPage = lazy(() =>
+  import('./features/transfers/pages/TransferRequestsPage').then((module) => ({ default: module.TransferRequestsPage }))
+);
+const SalesListPage = lazy(() =>
+  import('./features/sales/SalesListPage').then((module) => ({ default: module.SalesListPage }))
+);
+const SalesPage = lazy(() => import('./features/sales/SalesPage').then((module) => ({ default: module.SalesPage })));
+const CustomerListPage = lazy(() =>
+  import('./features/customers/CustomerListPage').then((module) => ({ default: module.CustomerListPage }))
+);
+const SupplierListPage = lazy(() =>
+  import('./features/suppliers/SupplierListPage').then((module) => ({ default: module.SupplierListPage }))
+);
+const StoreListPage = lazy(() =>
+  import('./features/stores/StoreListPage').then((module) => ({ default: module.StoreListPage }))
+);
+const UserListPage = lazy(() => import('./features/users/UserListPage').then((module) => ({ default: module.UserListPage })));
+const SettingsPage = lazy(() =>
+  import('./features/settings/SettingsPage').then((module) => ({ default: module.SettingsPage }))
+);
+const ReportsPage = lazy(() =>
+  import('./features/reports/ReportsPage').then((module) => ({ default: module.ReportsPage }))
+);
 
 // Styles
 import './i18n';
@@ -126,6 +162,12 @@ function App() {
     return isAuthenticated() ? element : <Navigate to="/login" replace />;
   };
 
+  const routeFallback = (
+    <main id="main-content" className="flex min-h-screen items-center justify-center" aria-busy="true">
+      <div className="text-sm text-muted-foreground">Yuklanmoqda...</div>
+    </main>
+  );
+
   return (
     <BrowserRouter>
       <DocumentMetaSync />
@@ -138,197 +180,199 @@ function App() {
           top: 80,
         }}
       />
-      <Routes>
-        {/* Login - accessible without auth */}
-        <Route path="/login" element={
-          isAuthenticated() ? <Navigate to={`/${currentLang}/dashboard`} replace /> : <LoginPage />
-        } />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password/:uidb64/:token" element={<ResetPasswordPage />} />
-        
-        {/* Language-prefixed routes */}
-        <Route path={`/${currentLang}`} element={requireAuth(<Navigate to={`/${currentLang}/dashboard`} replace />)} />
-        
-        {/* Dashboard */}
-        <Route path={`/:lang/dashboard`} element={
-          requireAuth(
-            <MainLayout>
-              <DashboardPage />
-            </MainLayout>
-          )
-        } />
-        
-        {/* Products */}
-        <Route path={`/:lang/products`} element={
-          requireAuth(
-            <MainLayout>
-              <ProductListPage />
-            </MainLayout>
-          )
-        } />
-        
-        <Route path={`/:lang/products/new`} element={
-          requireAuth(
-            <MainLayout>
-              <ProductFormPage />
-            </MainLayout>
-          )
-        } />
-        
-        <Route path={`/:lang/products/:id/edit`} element={
-          requireAuth(
-            <MainLayout>
-              <ProductFormPage />
-            </MainLayout>
-          )
-        } />
-        
-        <Route path={`/:lang/products/:id/barcode`} element={
-          requireAuth(
-            <MainLayout>
-              <ProductBarcodePage />
-            </MainLayout>
-          )
-        } />
-        
-        {/* Categories */}
-        <Route path={`/:lang/categories`} element={
-          requireAuth(
-            <MainLayout>
-              <CategoryListPage />
-            </MainLayout>
-          )
-        } />
-        
-        {/* Inventory (Kirim) - List */}
-        <Route path={`/:lang/inventory`} element={
-          requireAuth(
-            <MainLayout>
-              <InventoryListPage />
-            </MainLayout>
-          )
-        } />
-        
-        {/* Inventory - Create */}
-        <Route path={`/:lang/inventory/new`} element={
-          requireAuth(
-            <MainLayout>
-              <InventoryCreatePage />
-            </MainLayout>
-          )
-        } />
-        
-        {/* Transfers - List */}
-        <Route path={`/:lang/transfers`} element={
-          requireAuth(
-            <MainLayout>
-              <TransferListPage />
-            </MainLayout>
-          )
-        } />
-        
-        {/* Transfers - Create */}
-        <Route path={`/:lang/transfers/new`} element={
-          requireAuth(
-            <MainLayout>
-              <TransferCreatePage />
-            </MainLayout>
-          )
-        } />
-        {/* Transfers - Request */}
-        <Route path={`/:lang/transfers/requests`} element={
-          requireAuth(
-            <MainLayout>
-              <TransferRequestsPage />
-            </MainLayout>
-          )
-        } />
-        
-        {/* Transfer Requests */}
-        <Route path={`/:lang/transfer-requests`} element={
-          requireAuth(
-            <MainLayout>
-              <TransferRequestsPage />
-            </MainLayout>
-          )
-        } />
-        
-        {/* Sales - List */}
-        <Route path={`/:lang/sales`} element={
-          requireAuth(
-            <MainLayout>
-              <SalesListPage />
-            </MainLayout>
-          )
-        } />
-        
-        {/* Sales - Create (POS) */}
-        <Route path={`/:lang/sales/new`} element={
-          requireAuth(
-            <MainLayout>
-              <SalesPage />
-            </MainLayout>
-          )
-        } />
+      <Suspense fallback={routeFallback}>
+        <Routes>
+          {/* Login - accessible without auth */}
+          <Route path="/login" element={
+            isAuthenticated() ? <Navigate to={`/${currentLang}/dashboard`} replace /> : <LoginPage />
+          } />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password/:uidb64/:token" element={<ResetPasswordPage />} />
+          
+          {/* Language-prefixed routes */}
+          <Route path={`/${currentLang}`} element={requireAuth(<Navigate to={`/${currentLang}/dashboard`} replace />)} />
+          
+          {/* Dashboard */}
+          <Route path={`/:lang/dashboard`} element={
+            requireAuth(
+              <MainLayout>
+                <DashboardPage />
+              </MainLayout>
+            )
+          } />
+          
+          {/* Products */}
+          <Route path={`/:lang/products`} element={
+            requireAuth(
+              <MainLayout>
+                <ProductListPage />
+              </MainLayout>
+            )
+          } />
+          
+          <Route path={`/:lang/products/new`} element={
+            requireAuth(
+              <MainLayout>
+                <ProductFormPage />
+              </MainLayout>
+            )
+          } />
+          
+          <Route path={`/:lang/products/:id/edit`} element={
+            requireAuth(
+              <MainLayout>
+                <ProductFormPage />
+              </MainLayout>
+            )
+          } />
+          
+          <Route path={`/:lang/products/:id/barcode`} element={
+            requireAuth(
+              <MainLayout>
+                <ProductBarcodePage />
+              </MainLayout>
+            )
+          } />
+          
+          {/* Categories */}
+          <Route path={`/:lang/categories`} element={
+            requireAuth(
+              <MainLayout>
+                <CategoryListPage />
+              </MainLayout>
+            )
+          } />
+          
+          {/* Inventory (Kirim) - List */}
+          <Route path={`/:lang/inventory`} element={
+            requireAuth(
+              <MainLayout>
+                <InventoryListPage />
+              </MainLayout>
+            )
+          } />
+          
+          {/* Inventory - Create */}
+          <Route path={`/:lang/inventory/new`} element={
+            requireAuth(
+              <MainLayout>
+                <InventoryCreatePage />
+              </MainLayout>
+            )
+          } />
+          
+          {/* Transfers - List */}
+          <Route path={`/:lang/transfers`} element={
+            requireAuth(
+              <MainLayout>
+                <TransferListPage />
+              </MainLayout>
+            )
+          } />
+          
+          {/* Transfers - Create */}
+          <Route path={`/:lang/transfers/new`} element={
+            requireAuth(
+              <MainLayout>
+                <TransferCreatePage />
+              </MainLayout>
+            )
+          } />
+          {/* Transfers - Request */}
+          <Route path={`/:lang/transfers/requests`} element={
+            requireAuth(
+              <MainLayout>
+                <TransferRequestsPage />
+              </MainLayout>
+            )
+          } />
+          
+          {/* Transfer Requests */}
+          <Route path={`/:lang/transfer-requests`} element={
+            requireAuth(
+              <MainLayout>
+                <TransferRequestsPage />
+              </MainLayout>
+            )
+          } />
+          
+          {/* Sales - List */}
+          <Route path={`/:lang/sales`} element={
+            requireAuth(
+              <MainLayout>
+                <SalesListPage />
+              </MainLayout>
+            )
+          } />
+          
+          {/* Sales - Create (POS) */}
+          <Route path={`/:lang/sales/new`} element={
+            requireAuth(
+              <MainLayout>
+                <SalesPage />
+              </MainLayout>
+            )
+          } />
 
-        {/* Customers */}
-        <Route path={`/:lang/customers`} element={
-          requireAuth(
-            <MainLayout>
-              <CustomerListPage />
-            </MainLayout>
-          )
-        } />
-        
-        {/* Suppliers */}
-        <Route path={`/:lang/suppliers`} element={
-          requireAuth(
-            <MainLayout>
-              <SupplierListPage />
-            </MainLayout>
-          )
-        } />
-        
-        {/* Stores */}
-        <Route path={`/:lang/stores`} element={
-          requireAuth(
-            <MainLayout>
-              <StoreListPage />
-            </MainLayout>
-          )
-        } />
-        
-        {/* Users */}
-        <Route path={`/:lang/stores/users`} element={
-          requireAuth(
-            <MainLayout>
-              <UserListPage />
-            </MainLayout>
-          )
-        } />
-        
-        {/* Reports */}
-        <Route path={`/:lang/reports`} element={
-          requireAuth(
-            <MainLayout>
-              <ReportsPage />
-            </MainLayout>
-          )
-        } />
-        
-        {/* Settings */}
-        <Route path={`/:lang/settings`} element={
-          requireAuth(
-            <MainLayout>
-              <SettingsPage />
-            </MainLayout>
-          )
-        } />
-        
-        {/* Default route - redirect to /uz/dashboard */}
-        <Route path="/" element={requireAuth(<Navigate to={`/${currentLang}/dashboard`} replace />)} />
-        <Route path="*" element={requireAuth(<Navigate to={`/${currentLang}/dashboard`} replace />)} />
-      </Routes>
+          {/* Customers */}
+          <Route path={`/:lang/customers`} element={
+            requireAuth(
+              <MainLayout>
+                <CustomerListPage />
+              </MainLayout>
+            )
+          } />
+          
+          {/* Suppliers */}
+          <Route path={`/:lang/suppliers`} element={
+            requireAuth(
+              <MainLayout>
+                <SupplierListPage />
+              </MainLayout>
+            )
+          } />
+          
+          {/* Stores */}
+          <Route path={`/:lang/stores`} element={
+            requireAuth(
+              <MainLayout>
+                <StoreListPage />
+              </MainLayout>
+            )
+          } />
+          
+          {/* Users */}
+          <Route path={`/:lang/stores/users`} element={
+            requireAuth(
+              <MainLayout>
+                <UserListPage />
+              </MainLayout>
+            )
+          } />
+          
+          {/* Reports */}
+          <Route path={`/:lang/reports`} element={
+            requireAuth(
+              <MainLayout>
+                <ReportsPage />
+              </MainLayout>
+            )
+          } />
+          
+          {/* Settings */}
+          <Route path={`/:lang/settings`} element={
+            requireAuth(
+              <MainLayout>
+                <SettingsPage />
+              </MainLayout>
+            )
+          } />
+          
+          {/* Default route - redirect to /uz/dashboard */}
+          <Route path="/" element={requireAuth(<Navigate to={`/${currentLang}/dashboard`} replace />)} />
+          <Route path="*" element={requireAuth(<Navigate to={`/${currentLang}/dashboard`} replace />)} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }
