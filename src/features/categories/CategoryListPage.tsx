@@ -27,7 +27,7 @@ export function CategoryListPage() {
   const { user } = useAuthStore();
   const isSuperUser = Boolean(user?.is_superuser);
   const { categories, refreshCategories } = useCategories();
-  const [localLoading, setLocalLoading] = useState(false);
+  const [localLoading] = useState(false);
   const [localLoadingCategory, setLocalLoadingCategory] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -82,7 +82,7 @@ export function CategoryListPage() {
     if (category) {
       setIsDialogOpen(true);
       setEditingCategory(category);
-      setLoadingCategory(true);
+      setLocalLoadingCategory(true);
       try {
         const fresh = await categoryService.getById(category.id);
         const nameValue = fresh.name_uz ?? fresh.name ?? '';
@@ -112,7 +112,7 @@ export function CategoryListPage() {
         const fileLabel = category.image ? category.image.split('/').pop() || '' : '';
         setImageFileName(fileLabel);
       } finally {
-        setLoadingCategory(false);
+        setLocalLoadingCategory(false);
       }
       return;
     }
@@ -133,7 +133,7 @@ export function CategoryListPage() {
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setEditingCategory(null);
-    setLoadingCategory(false);
+    setLocalLoadingCategory(false);
     setFormData({
       name_uz: '',
       name_uz_cyrl: '',
@@ -312,7 +312,7 @@ export function CategoryListPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1 min-w-[120px]"
+                      className="flex-1 min-w-30"
                       onClick={() => handleOpenDialog(category)}
                     >
                       <Pencil className="mr-2 h-4 w-4" />
@@ -321,7 +321,7 @@ export function CategoryListPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1 min-w-[120px]"
+                      className="flex-1 min-w-30"
                       onClick={() => setDeleteId(category.id)}
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
@@ -340,9 +340,9 @@ export function CategoryListPage() {
         <DataTable
           data={filteredCategories}
           columns={columns}
-          localLoading={localLoading}
+          loading={localLoading}
           emptyMessage={t('categories.noCategories')}
-          localLoadingMessage={t('common.localLoading')}
+          loadingMessage={t('common.localLoading')}
           onRowClick={isSuperUser ? (item: Category) => handleOpenDialog(item) : undefined}
         />
       </div>
@@ -357,7 +357,7 @@ export function CategoryListPage() {
             description={t('categories.categoryDeleted')}
             confirmText={t('common.delete')}
             variant="destructive"
-            localLoading={deleting}
+            loading={deleting}
           />
 
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
