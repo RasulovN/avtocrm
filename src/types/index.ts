@@ -112,7 +112,11 @@ export interface Category {
   id: string;
   slug?: string;
   name: string;
+  name_uz?: string;
+  name_uz_cyrl?: string;
   description?: string;
+  description_uz?: string;
+  description_uz_cyrl?: string;
   image?: string;
   created_at?: string;
 }
