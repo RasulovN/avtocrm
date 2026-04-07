@@ -19,6 +19,8 @@ import { storeService } from '../../services/storeService';
 import { supplierService } from '../../services/supplierService';
 import type { ProductFormData, Store, Supplier } from '../../types';
 import { generateSKU, generateBarcode } from '../../utils';
+import { latinToCyrillic } from '../../utils/transliteration';
+import { useCategories } from '../../context/CategoryContext';
 
 export function ProductFormPage() {
   const { t } = useTranslation();
@@ -29,19 +31,24 @@ export function ProductFormPage() {
   const [saving, setSaving] = useState(false);
   const [stores, setStores] = useState<Store[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const { categories, refreshCategories } = useCategories();
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   
   const [formData, setFormData] = useState<ProductFormData>({
     name: '',
+    name_uz_cyrl: '',
     description: '',
+    description_uz_cyrl: '',
     purchase_price: 0,
     selling_price: 0,
-    category: '',
+    total_count: 0,
+    category_id: '',
     supplier_id: '',
     store_id: '',
-    image: '',
+    image: null,
     images: [],
   });
-  const categories = ['Filters', 'Brakes', 'Engine'];
 
   const loadData = useCallback(async () => {
     try {
@@ -56,10 +63,13 @@ export function ProductFormPage() {
         const product = await productService.getById(id);
         setFormData({
           name: product.name,
+          name_uz_cyrl: latinToCyrillic(product.name ?? ''),
           description: product.description,
+          description_uz_cyrl: latinToCyrillic(product.description ?? ''),
           purchase_price: product.purchase_price,
           selling_price: product.selling_price,
-          category: product.category,
+          total_count: product.total_count ?? product.quantity ?? 0,
+          category_id: product.category_id ?? '',
           supplier_id: product.supplier_id,
           store_id: product.store_id,
           image: product.image || '',
@@ -71,6 +81,15 @@ export function ProductFormPage() {
                 ? [product.image]
                 : [],
         });
+        const previews = Array.isArray(product.images)
+          ? product.images.filter(Boolean) as string[]
+          : product.images
+            ? [product.images as string]
+            : product.image
+              ? [product.image]
+              : [];
+        setImagePreviews(previews);
+        setImageFiles([]);
       }
     } catch (error) {
       console.error('Failed to load data:', error);
@@ -89,6 +108,20 @@ export function ProductFormPage() {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+  useEffect(() => {
+    if (categories.length === 0) {
+      void refreshCategories();
+    }
+  }, [categories.length, refreshCategories]);
+  useEffect(() => {
+    return () => {
+      imagePreviews.forEach((preview) => {
+        if (preview.startsWith('blob:')) {
+          URL.revokeObjectURL(preview);
+        }
+      });
+    };
+  }, [imagePreviews]);
 
   const handleSubmit = async (e: ChangeEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -96,11 +129,16 @@ export function ProductFormPage() {
       setSaving(true);
       const sku = generateSKU();
       const barcode = generateBarcode();
+      const payload: ProductFormData = {
+        ...formData,
+        image: imageFiles[0] ?? (formData.image ?? null),
+        images: imageFiles.length ? imageFiles : formData.images,
+      };
       
       if (isEditing && id) {
-        await productService.update(id, formData);
+        await productService.update(id, payload);
       } else {
-        await productService.create({ ...formData, sku, barcode });
+        await productService.create({ ...payload, sku, barcode });
       }
       navigate('/products');
     } catch (error) {
@@ -113,26 +151,31 @@ export function ProductFormPage() {
   const handleChange = (field: keyof ProductFormData, value: string | number | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
+  const handleNameChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      name: value,
+      name_uz_cyrl: latinToCyrillic(value),
+    }));
+  };
+  const handleDescriptionChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      description: value,
+      description_uz_cyrl: latinToCyrillic(value),
+    }));
+  };
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    Promise.all(
-      files.map(
-        (file) =>
-          new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(typeof reader.result === 'string' ? reader.result : '');
-            reader.readAsDataURL(file);
-          })
-      )
-    ).then((results) => {
-      const images = results.filter(Boolean);
-      setFormData((prev) => ({
-        ...prev,
-        images,
-        image: images[0] || '',
-      }));
+    imagePreviews.forEach((preview) => {
+      if (preview.startsWith('blob:')) {
+        URL.revokeObjectURL(preview);
+      }
     });
+    const previews = files.map((file) => URL.createObjectURL(file));
+    setImageFiles(files);
+    setImagePreviews(previews);
   };
 
   return (
@@ -164,8 +207,16 @@ export function ProductFormPage() {
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('name', e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleNameChange(e.target.value)}
                   required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="name_cyrl">{t('products.productName')} (Cyrillic)</Label>
+                <Input
+                  id="name_cyrl"
+                  value={formData.name_uz_cyrl || ''}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('name_uz_cyrl', e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -173,22 +224,30 @@ export function ProductFormPage() {
                 <Input
                   id="description"
                   value={formData.description}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('description', e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleDescriptionChange(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description_cyrl">{t('common.description')} (Cyrillic)</Label>
+                <Input
+                  id="description_cyrl"
+                  value={formData.description_uz_cyrl || ''}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('description_uz_cyrl', e.target.value)}
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="category">{t('products.category')}</Label>
                 <Select
-                  value={formData.category || ''}
-                  onValueChange={(value) => handleChange('category', value)}
+                  value={formData.category_id || ''}
+                  onValueChange={(value) => handleChange('category_id', value)}
                 >
                   <SelectTrigger id="category">
                     <SelectValue placeholder={t('products.category')} />
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat}
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -203,9 +262,9 @@ export function ProductFormPage() {
                   multiple
                   onChange={handleImageChange}
                 />
-                {Array.isArray(formData.images) && formData.images.length ? (
+                {imagePreviews.length ? (
                   <div className="mt-2 grid grid-cols-3 gap-2">
-                    {formData.images.map((src, idx) => (
+                    {imagePreviews.map((src, idx) => (
                       <img
                         key={`${src}-${idx}`}
                         src={src}
@@ -241,6 +300,16 @@ export function ProductFormPage() {
                   type="number"
                   value={formData.selling_price}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('selling_price', Number(e.target.value))}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="total_count">{t('products.quantity')}</Label>
+                <Input
+                  id="total_count"
+                  type="number"
+                  value={formData.total_count ?? 0}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('total_count', Number(e.target.value))}
                   required
                 />
               </div>

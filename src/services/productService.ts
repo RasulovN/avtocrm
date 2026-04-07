@@ -1,291 +1,268 @@
+import { apiClient, API_ORIGIN } from './api';
+import { latinToCyrillic } from '../utils/transliteration';
 import type { Product, ProductFormData, ProductFilters, PaginatedResponse, ApiResponse } from '../types';
 
-const PRODUCTS_API_ENABLED = false;
+const resolveImageUrl = (image?: string) => {
+  if (!image) return '';
+  if (image.startsWith('http://') || image.startsWith('https://')) return image;
+  if (image.startsWith('/')) return `${API_ORIGIN}${image}`;
+  return image;
+};
 
-// Mock data for demo (when backend is not available)
-const mockProducts: Product[] = [
-  {
-    id: '1',
-    product_id: 'PR-001',
-    name: 'Oil Filter X500',
-    description: 'Premium oil filter for cars',
-    purchase_price: 15000,
-    selling_price: 25000,
-    category_id: 'Filters',
-    category: 'Filters',
-    supplier_id: '1',
-    supplier_name: 'AutoParts Co',
-    store_id: '1',
-    store_name: 'Main Store',
-    sku: 'SKU-001',
-    barcode: '1234567890123',
-    barcode_img: '',
-    images: '',
-    total_count: 100,
-    is_active: true,
-    quantity: 100,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    product_id: 'PR-002',
-    name: 'Brake Pads Premium',
-    description: 'Ceramic brake pads',
-    purchase_price: 45000,
-    selling_price: 75000,
-    category_id: 'Brakes',
-    category: 'Brakes',
-    supplier_id: '1',
-    supplier_name: 'AutoParts Co',
-    store_id: '1',
-    store_name: 'Main Store',
-    sku: 'SKU-002',
-    barcode: '1234567890124',
-    barcode_img: '',
-    images: '',
-    total_count: 50,
-    is_active: true,
-    quantity: 50,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: '3',
-    product_id: 'PR-003',
-    name: 'Air Filter AF200',
-    description: 'High quality air filter',
-    purchase_price: 20000,
-    selling_price: 35000,
-    category_id: 'Filters',
-    category: 'Filters',
-    supplier_id: '2',
-    supplier_name: 'Parts Plus',
-    store_id: '1',
-    store_name: 'Main Store',
-    sku: 'SKU-003',
-    barcode: '1234567890125',
-    barcode_img: '',
-    images: '',
-    total_count: 75,
-    is_active: true,
-    quantity: 75,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: '4',
-    product_id: 'PR-004',
-    name: 'Spark Plug SP11',
-    description: 'Iridium spark plugs',
-    purchase_price: 8000,
-    selling_price: 15000,
-    category_id: 'Electrical',
-    category: 'Electrical',
-    supplier_id: '2',
-    supplier_name: 'Parts Plus',
-    store_id: '2',
-    store_name: 'Warehouse',
-    sku: 'SKU-004',
-    barcode: '1234567890126',
-    barcode_img: '',
-    images: '',
-    total_count: 200,
-    is_active: true,
-    quantity: 200,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: '5',
-    product_id: 'PR-005',
-    name: 'Wiper Blades WB15',
-    description: 'Universal wiper blades',
-    purchase_price: 12000,
-    selling_price: 22000,
-    category_id: 'Body Parts',
-    category: 'Body Parts',
-    supplier_id: '1',
-    supplier_name: 'AutoParts Co',
-    store_id: '1',
-    store_name: 'Main Store',
-    sku: 'SKU-005',
-    barcode: '1234567890127',
-    barcode_img: '',
-    images: '',
-    total_count: 80,
-    is_active: true,
-    quantity: 80,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
+const normalizeNumber = (value: unknown): number | undefined => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+};
+
+const resolveCategory = (raw: unknown): { id?: string; name?: string } => {
+  if (!raw) return {};
+  if (typeof raw === 'string' || typeof raw === 'number') {
+    const text = String(raw);
+    return { id: text, name: text };
+  }
+  if (typeof raw === 'object') {
+    const item = raw as { id?: string | number; name?: string; name_uz?: string; name_uz_cyrl?: string };
+    const id = item.id !== undefined ? String(item.id) : undefined;
+    const name = item.name ?? item.name_uz ?? item.name_uz_cyrl;
+    return { id, name };
+  }
+  return {};
+};
+
+const normalizeImages = (images?: string[] | string, image?: string) => {
+  if (Array.isArray(images)) {
+    return images.map((item) => resolveImageUrl(item)).filter(Boolean);
+  }
+  if (typeof images === 'string' && images.trim() !== '') {
+    return resolveImageUrl(images);
+  }
+  if (typeof image === 'string' && image.trim() !== '') {
+    return resolveImageUrl(image);
+  }
+  return undefined;
+};
+
+const normalizeProduct = (raw: unknown): Product => {
+  const item = (raw ?? {}) as Partial<Product> & {
+    id?: string | number;
+    name_uz?: string;
+    name_uz_cyrl?: string;
+    description_uz?: string;
+    description_uz_cyrl?: string;
+    category?: unknown;
+    category_id?: string | number;
+    price?: number | string;
+    quantity?: number | string;
+    image?: string;
+    images?: string[] | string;
+    supplier?: { id?: string | number; name?: string; name_uz?: string; name_uz_cyrl?: string };
+    store?: { id?: string | number; name?: string; name_uz?: string; name_uz_cyrl?: string };
+  };
+
+  const categoryInfo = resolveCategory(item.category ?? item.category_id);
+  const images = normalizeImages(item.images, item.image);
+  const image = resolveImageUrl(item.image) || (Array.isArray(images) ? images[0] : images || '');
+  const quantity = normalizeNumber(item.quantity ?? item.total_count ?? item.total_quantity);
+  const purchasePrice = normalizeNumber(item.purchase_price);
+  const sellingPrice = normalizeNumber(item.selling_price ?? item.price);
+
+  return {
+    id: String(item.id ?? item.product_id ?? ''),
+    product_id: item.product_id ? String(item.product_id) : undefined,
+    name: item.name ?? item.name_uz ?? item.name_uz_cyrl ?? '',
+    description: item.description ?? item.description_uz ?? item.description_uz_cyrl ?? '',
+    category_id: categoryInfo.id ?? (item.category_id !== undefined ? String(item.category_id) : undefined),
+    category: categoryInfo.name ?? (typeof item.category === 'string' ? item.category : '') ?? '',
+    supplier_id: String(item.supplier_id ?? item.supplier?.id ?? ''),
+    supplier_name: item.supplier_name ?? item.supplier?.name ?? item.supplier?.name_uz ?? item.supplier?.name_uz_cyrl,
+    store_id: item.store_id !== undefined ? String(item.store_id) : (item.store?.id !== undefined ? String(item.store.id) : undefined),
+    store_name: item.store_name ?? item.store?.name ?? item.store?.name_uz ?? item.store?.name_uz_cyrl,
+    sku: item.sku ?? '',
+    barcode: item.barcode ?? item.sku,
+    barcode_img: resolveImageUrl(item.barcode_img),
+    image,
+    images,
+    total_count: normalizeNumber(item.total_count),
+    is_active: item.is_active,
+    quantity,
+    purchase_price: purchasePrice,
+    selling_price: sellingPrice,
+    total_quantity: normalizeNumber(item.total_quantity),
+    min_purchase_price: normalizeNumber(item.min_purchase_price),
+    max_purchase_price: normalizeNumber(item.max_purchase_price),
+    min_selling_price: normalizeNumber(item.min_selling_price),
+    max_selling_price: normalizeNumber(item.max_selling_price),
+    inventory_by_store: item.inventory_by_store,
+    created_at: item.created_at ?? '',
+    updated_at: item.updated_at ?? item.created_at ?? '',
+  };
+};
+
+const hasFile = (value: unknown): value is File =>
+  typeof File !== 'undefined' && value instanceof File;
+
+const toFileList = (images?: ProductFormData['images']): File[] => {
+  if (!images) return [];
+  if (Array.isArray(images)) {
+    return images.filter(hasFile);
+  }
+  return [];
+};
+
+const mapProductPayload = (data: Partial<ProductFormData>): Record<string, unknown> | FormData => {
+  const imageFile = hasFile(data.image) ? data.image : undefined;
+  const imageFiles = toFileList(data.images);
+  const useFormData = Boolean(imageFile || imageFiles.length);
+
+  const categoryId = typeof data.category_id === 'string' && data.category_id.trim() !== '' ? data.category_id.trim() : undefined;
+
+  if (useFormData) {
+    const payload = new FormData();
+    if (categoryId) payload.append('category', categoryId);
+    if (typeof data.name === 'string') {
+      payload.append('name_uz', data.name);
+      const cyr = typeof data.name_uz_cyrl === 'string' ? data.name_uz_cyrl : latinToCyrillic(data.name);
+      payload.append('name_uz_cyrl', cyr);
+    }
+    if (typeof data.description === 'string') {
+      payload.append('description_uz', data.description);
+      const cyr = typeof data.description_uz_cyrl === 'string'
+        ? data.description_uz_cyrl
+        : latinToCyrillic(data.description);
+      payload.append('description_uz_cyrl', cyr);
+    }
+    const quantity = normalizeNumber(data.total_count);
+    if (typeof quantity === 'number') payload.append('quantity', quantity.toString());
+    const price = normalizeNumber(data.selling_price ?? data.purchase_price);
+    if (typeof price === 'number') payload.append('price', price.toString());
+
+    const image = imageFile ?? imageFiles[0];
+    if (image) payload.append('image', image);
+    return payload;
+  }
+
+  const payload: Record<string, unknown> = {};
+  if (categoryId) payload.category = categoryId;
+  if (typeof data.name === 'string') {
+    payload.name_uz = data.name;
+    payload.name_uz_cyrl = typeof data.name_uz_cyrl === 'string' ? data.name_uz_cyrl : latinToCyrillic(data.name);
+  }
+  if (typeof data.description === 'string') {
+    payload.description_uz = data.description;
+    payload.description_uz_cyrl = typeof data.description_uz_cyrl === 'string'
+      ? data.description_uz_cyrl
+      : latinToCyrillic(data.description);
+  }
+  const quantity = normalizeNumber(data.total_count);
+  if (typeof quantity === 'number') payload.quantity = quantity;
+  const price = normalizeNumber(data.selling_price ?? data.purchase_price);
+  if (typeof price === 'number') payload.price = price;
+  return payload;
+};
+
+const parsePaginatedProducts = (
+  payload: unknown,
+  params?: { page?: number; limit?: number }
+): PaginatedResponse<Product> => {
+  if (Array.isArray(payload)) {
+    const data = payload.map(normalizeProduct);
+    return {
+      data,
+      total: data.length,
+      page: params?.page ?? 1,
+      limit: params?.limit ?? data.length,
+    };
+  }
+
+  if (payload && typeof payload === 'object') {
+    const anyPayload = payload as { data?: unknown; results?: unknown; count?: number; total?: number; page?: number; limit?: number };
+    if (anyPayload.data && typeof anyPayload.data === 'object') {
+      const nested = anyPayload.data as { data?: unknown; results?: unknown; count?: number; total?: number; page?: number; limit?: number };
+      if (Array.isArray(nested.data)) {
+        const data = nested.data.map(normalizeProduct);
+        return {
+          data,
+          total: typeof nested.total === 'number' ? nested.total : data.length,
+          page: typeof nested.page === 'number' ? nested.page : (params?.page ?? 1),
+          limit: typeof nested.limit === 'number' ? nested.limit : (params?.limit ?? data.length),
+        };
+      }
+      if (Array.isArray(nested.results)) {
+        const data = nested.results.map(normalizeProduct);
+        return {
+          data,
+          total: typeof nested.count === 'number' ? nested.count : data.length,
+          page: params?.page ?? 1,
+          limit: params?.limit ?? data.length,
+        };
+      }
+    }
+    if (Array.isArray(anyPayload.data)) {
+      const data = anyPayload.data.map(normalizeProduct);
+      return {
+        data,
+        total: typeof anyPayload.total === 'number' ? anyPayload.total : data.length,
+        page: typeof anyPayload.page === 'number' ? anyPayload.page : (params?.page ?? 1),
+        limit: typeof anyPayload.limit === 'number' ? anyPayload.limit : (params?.limit ?? data.length),
+      };
+    }
+    if (Array.isArray(anyPayload.results)) {
+      const data = anyPayload.results.map(normalizeProduct);
+      return {
+        data,
+        total: typeof anyPayload.count === 'number' ? anyPayload.count : data.length,
+        page: params?.page ?? 1,
+        limit: params?.limit ?? data.length,
+      };
+    }
+  }
+
+  return { data: [], total: 0, page: params?.page ?? 1, limit: params?.limit ?? 10 };
+};
 
 export const productService = {
   getAll: async (filters?: ProductFilters & { page?: number; limit?: number }): Promise<PaginatedResponse<Product>> => {
-    try {
-      const params = new URLSearchParams();
-      if (filters?.search) params.append('search', filters.search);
-      if (filters?.category) params.append('category', filters.category);
-      if (filters?.store_id) params.append('store_id', filters.store_id);
-      if (filters?.page) params.append('page', filters.page.toString());
-      if (filters?.limit) params.append('limit', filters.limit.toString());
+    const params = new URLSearchParams();
+    if (filters?.search) params.append('search', filters.search);
+    if (filters?.category) params.append('category', filters.category);
+    if (filters?.store_id) params.append('store_id', filters.store_id);
+    if (filters?.page) params.append('page', filters.page.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
 
-      if (PRODUCTS_API_ENABLED) {
-        const response = await fetch(`https://autocrm.pythonanywhere.com/api/products?${params.toString()}`);
-        if (!response.ok) throw new Error('API not available');
-        const data = await response.json();
-        return data;
-      }
-
-      throw new Error('Products API disabled');
-    } catch {
-      // Use mock data if API is not available
-      let filtered = [...mockProducts];
-      
-      if (filters?.search) {
-        filtered = filtered.filter(p => 
-          p.name.toLowerCase().includes(filters.search!.toLowerCase()) ||
-          p.sku.toLowerCase().includes(filters.search!.toLowerCase())
-        );
-      }
-      
-      if (filters?.category) {
-        filtered = filtered.filter(p => p.category === filters.category);
-      }
-      
-      if (filters?.store_id) {
-        filtered = filtered.filter(p => p.store_id === filters.store_id);
-      }
-      
-      const page = filters?.page || 1;
-      const limit = filters?.limit || 10;
-      const start = (page - 1) * limit;
-      const end = start + limit;
-      
-      return {
-        data: filtered.slice(start, end),
-        total: filtered.length,
-        page,
-        limit,
-      };
-    }
+    const response = await apiClient.get(`/products/?${params.toString()}`);
+    return parsePaginatedProducts(response.data, filters);
   },
 
   getById: async (id: string): Promise<Product> => {
-    try {
-      if (PRODUCTS_API_ENABLED) {
-        const response = await fetch(`https://autocrm.pythonanywhere.com/api/products/${id}`);
-        if (!response.ok) throw new Error('API not available');
-        const data: ApiResponse<Product> = await response.json();
-        return data.data;
-      }
-
-      throw new Error('Products API disabled');
-    } catch {
-      const product = mockProducts.find(p => p.id === id);
-      if (!product) throw new Error('Product not found');
-      return product;
-    }
+    const response = await apiClient.get<ApiResponse<Product>>(`/products/${id}/`);
+    const payload = response.data?.data ?? response.data;
+    return normalizeProduct(payload);
   },
 
   create: async (data: ProductFormData): Promise<Product> => {
-    try {
-      if (PRODUCTS_API_ENABLED) {
-        const response = await fetch('https://autocrm.pythonanywhere.com/api/products', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        });
-        if (!response.ok) throw new Error('API not available');
-        const result: ApiResponse<Product> = await response.json();
-        return result.data;
-      }
-
-      throw new Error('Products API disabled');
-    } catch {
-      const newProduct: Product = {
-        id: Date.now().toString(),
-        ...data,
-        description: data.description ?? '',
-        sku: data.sku || `SKU-${Date.now()}`,
-        barcode: data.barcode || `1234567890${Date.now()}`,
-        category: data.category || data.category_id || '',
-        image: data.image,
-        supplier_id: data.supplier_id || '',
-        total_count: data.total_count ?? 0,
-        is_active: data.is_active ?? true,
-        quantity: data.total_count ?? 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      mockProducts.push(newProduct);
-      return newProduct;
-    }
+    const response = await apiClient.post<ApiResponse<Product>>('/products/create/', mapProductPayload(data));
+    const payload = response.data?.data ?? response.data;
+    return normalizeProduct(payload);
   },
 
   update: async (id: string, data: Partial<ProductFormData>): Promise<Product> => {
-    try {
-      if (PRODUCTS_API_ENABLED) {
-        const response = await fetch(`https://autocrm.pythonanywhere.com/api/products/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        });
-        if (!response.ok) throw new Error('API not available');
-        const result: ApiResponse<Product> = await response.json();
-        return result.data;
-      }
-
-      throw new Error('Products API disabled');
-    } catch {
-      const index = mockProducts.findIndex(p => p.id === id);
-      if (index === -1) throw new Error('Product not found');
-      
-      const updated: Product = {
-        ...mockProducts[index],
-        ...data,
-        description: data.description ?? mockProducts[index].description ?? '',
-        category: data.category || data.category_id || mockProducts[index].category,
-        supplier_id: data.supplier_id || mockProducts[index].supplier_id,
-        updated_at: new Date().toISOString(),
-      };
-      mockProducts[index] = updated;
-      return updated;
-    }
+    const response = await apiClient.put<ApiResponse<Product>>(`/products/${id}/`, mapProductPayload(data));
+    const payload = response.data?.data ?? response.data;
+    return normalizeProduct(payload);
   },
 
   delete: async (id: string): Promise<void> => {
-    try {
-      if (PRODUCTS_API_ENABLED) {
-        const response = await fetch(`https://autocrm.pythonanywhere.com/api/products/${id}`, {
-          method: 'DELETE',
-        });
-        if (!response.ok) throw new Error('API not available');
-        return;
-      }
-
-      throw new Error('Products API disabled');
-    } catch {
-      const index = mockProducts.findIndex(p => p.id === id);
-      if (index !== -1) {
-        mockProducts.splice(index, 1);
-      }
-    }
+    await apiClient.delete(`/products/${id}/`);
   },
 
   getByBarcode: async (barcode: string): Promise<Product | null> => {
-    try {
-      if (PRODUCTS_API_ENABLED) {
-        const response = await fetch(`https://autocrm.pythonanywhere.com/api/products/barcode/${barcode}`);
-        if (!response.ok) throw new Error('API not available');
-        const data: ApiResponse<Product> = await response.json();
-        return data.data;
-      }
-
-      throw new Error('Products API disabled');
-    } catch {
-      return mockProducts.find(p => p.barcode === barcode) || null;
-    }
+    const response = await apiClient.get<ApiResponse<Product>>(`/products/barcode/${barcode}/`);
+    const payload = response.data?.data ?? response.data;
+    if (!payload) return null;
+    return normalizeProduct(payload);
   },
 };

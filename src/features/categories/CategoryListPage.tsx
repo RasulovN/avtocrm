@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, type ChangeEvent } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, Trash2, Search } from 'lucide-react';
 import { latinToCyrillic } from 'uzbek-transliterator';
@@ -18,10 +18,11 @@ import {
 import { Label } from '../../components/ui/Label';
 import { categoryService } from '../../services/categoryService';
 import type { Category, CategoryFormData } from '../../types';
+import { useCategories } from '../../context/CategoryContext';
 
 export function CategoryListPage() {
   const { t } = useTranslation();
-  const [categories, setCategories] = useState<Category[]>([]);
+  const { categories, loading, refreshCategories } = useCategories();
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -34,7 +35,6 @@ export function CategoryListPage() {
     description_uz_cyrl: '',
     image: null,
   });
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>('');
 
@@ -67,23 +67,6 @@ export function CategoryListPage() {
       image: file,
     }));
   };
-
-  const loadCategories = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await categoryService.getAll();
-      setCategories(response.data);
-    } catch (error) {
-      console.error('Failed to load categories:', error);
-      setCategories([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadCategories();
-  }, [loadCategories]);
 
   const handleOpenDialog = (category?: Category) => {
     if (imagePreview.startsWith('blob:')) {
@@ -143,7 +126,7 @@ export function CategoryListPage() {
         await categoryService.create(formData);
         toast.success(t('categories.categoryAdded'));
       }
-      await loadCategories();
+      await refreshCategories();
       handleCloseDialog();
     } catch (error) {
       console.error('Failed to save category:', error);
@@ -158,7 +141,7 @@ export function CategoryListPage() {
       setDeleting(true);
       await categoryService.delete(id);
       toast.success(t('categories.categoryDeleted'));
-      loadCategories();
+      refreshCategories();
     } catch (error) {
       console.error('Failed to delete category:', error);
     } finally {

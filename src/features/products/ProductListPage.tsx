@@ -17,6 +17,7 @@ import {
 } from '../../components/ui/Select';
 import { productService } from '../../services/productService';
 import { useAuthStore } from '../../app/store';
+import { useCategories } from '../../context/CategoryContext';
 import type { Product, ProductFilters } from '../../types';
 import { formatCurrency } from '../../utils';
 
@@ -27,6 +28,7 @@ export function ProductListPage() {
   const { user } = useAuthStore();
   const isAdmin = Boolean(user?.is_superuser);
   const userStoreId = user?.store_id;
+  const { categories } = useCategories();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ProductFilters>({});
@@ -341,9 +343,11 @@ export function ProductListPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t('common.all')}</SelectItem>
-            <SelectItem value="Filters">Filters</SelectItem>
-            <SelectItem value="Brakes">Brakes</SelectItem>
-            <SelectItem value="Engine">Engine</SelectItem>
+            {categories.map((category) => (
+              <SelectItem key={category.id} value={category.id}>
+                {category.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         
@@ -378,8 +382,6 @@ export function ProductListPage() {
         data={products}
         columns={columns}
         loading={loading}
-        searchPlaceholder={t('products.searchPlaceholder')}
-        onSearch={handleSearch}
         onRowClick={(item: Product) => isAdmin ? navigate(`/${lang}/products/${item.id}/edit`) : undefined}
         pagination={{
           page,
