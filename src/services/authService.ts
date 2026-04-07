@@ -38,7 +38,7 @@ export const authService = {
 
   logout: async (): Promise<void> => {
     try {
-      await apiClient.post('/users/logout/');
+      await apiClient.post('/users/logout/', { skipGlobalErrorHandler: true });
     } catch {
       // Ignore logout errors
     }

@@ -1,9 +1,10 @@
 import axios from 'axios';
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { handleError } from '../utils/errorHandler';
+import { authService } from './authService';
 import { isDev } from '../config/environment';
 
-const USER_KEY = 'user';
+const USER_KEY = 'crm_user';
 const BaSE_URL = 'https://autocrm.pythonanywhere.com/api';
 export const API_BASE_URL = BaSE_URL;
 export const API_ORIGIN = BaSE_URL.replace(/\/api\/?$/, '');
@@ -13,9 +14,16 @@ export interface ApiRequestConfig extends AxiosRequestConfig {
   skipGlobalErrorHandler?: boolean;
 }
 
-const removeAuth = () => {
-  localStorage.removeItem(USER_KEY);
-  window.location.href = '/login';
+const removeAuth = async () => {
+  try {
+    await authService.logout();
+  } catch (error) {
+    console.warn('Logout API call failed:', error);
+  }
+  
+  // Clear localStorage - triggers route guard re-evaluation
+  localStorage.removeItem('crm_user');
+  localStorage.removeItem('crm_auth_time');
 };
 
 // Create axios instance
@@ -56,12 +64,17 @@ api.interceptors.response.use(
     const config = (error.config || {}) as ApiRequestConfig;
     const isExpectedStatus = typeof status === 'number' && config.expectedErrorStatuses?.includes(status);
 
+    // Prevent logout recursion
+    if (error.config?.url?.includes('/users/logout/') && status === 401) {
+      return Promise.reject(error);
+    }
+    
     if (config.skipGlobalErrorHandler || isExpectedStatus) {
       return Promise.reject(error);
     }
     
     if (status === 401) {
-      removeAuth();
+      void removeAuth();
       handleError(error, { showToast: false });
     } else {
       const message = errorData?.message || errorData?.msg || error.message || 'Server error';

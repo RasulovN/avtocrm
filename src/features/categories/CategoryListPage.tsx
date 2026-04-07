@@ -26,13 +26,14 @@ export function CategoryListPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const isSuperUser = Boolean(user?.is_superuser);
-  const { categories, loading, refreshCategories } = useCategories();
+  const { categories, refreshCategories } = useCategories();
+  const [localLoading, setLocalLoading] = useState(false);
+  const [localLoadingCategory, setLocalLoadingCategory] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [loadingCategory, setLoadingCategory] = useState(false);
   const [imageFileName, setImageFileName] = useState('');
   const [formData, setFormData] = useState<CategoryFormData>({
     name_uz: '',
@@ -274,9 +275,9 @@ export function CategoryListPage() {
 
       {/* Mobile View */}
       <div className="space-y-3 md:hidden">
-        {loading ? (
+        {localLoading ? (
           <div className="rounded-lg border bg-card px-4 py-10 text-center text-sm text-muted-foreground">
-            {t('common.loading')}
+            {t('common.localLoading')}
           </div>
         ) : filteredCategories.length === 0 ? (
           <div className="rounded-lg border bg-card px-4 py-10 text-center text-sm text-muted-foreground">
@@ -339,9 +340,9 @@ export function CategoryListPage() {
         <DataTable
           data={filteredCategories}
           columns={columns}
-          loading={loading}
+          localLoading={localLoading}
           emptyMessage={t('categories.noCategories')}
-          loadingMessage={t('common.loading')}
+          localLoadingMessage={t('common.localLoading')}
           onRowClick={isSuperUser ? (item: Category) => handleOpenDialog(item) : undefined}
         />
       </div>
@@ -356,7 +357,7 @@ export function CategoryListPage() {
             description={t('categories.categoryDeleted')}
             confirmText={t('common.delete')}
             variant="destructive"
-            loading={deleting}
+            localLoading={deleting}
           />
 
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -414,7 +415,7 @@ export function CategoryListPage() {
                       type="file"
                       accept="image/*"
                       onChange={handleImageChange}
-                      disabled={loadingCategory}
+                      disabled={localLoadingCategory}
                     />
                     {imageFileName ? (
                       <p className="text-sm text-muted-foreground">
@@ -436,8 +437,8 @@ export function CategoryListPage() {
                   <Button type="button" variant="outline" onClick={handleCloseDialog}>
                     {t('common.cancel')}
                   </Button>
-                  <Button type="submit" disabled={saving || loadingCategory}>
-                    {saving || loadingCategory ? t('common.loading') : t('common.save')}
+                  <Button type="submit" disabled={saving || localLoadingCategory}>
+                    {saving || localLoadingCategory ? t('common.localLoading') : t('common.save')}
                   </Button>
                 </DialogFooter>
               </form>
