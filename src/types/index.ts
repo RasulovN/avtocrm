@@ -52,24 +52,40 @@ export interface ProductStoreInventory {
   selling_price?: number;
 }
 
+export interface ProductBatch {
+  id: number;
+  product: number;
+  store: number;
+  store_name: string;
+  quantity: number;
+  purchase_price: string;
+  selling_price: string;
+  barcode: string;
+  shtrix_code: string | null;
+}
+
 export interface Product {
   id: string;
   product_id?: string;
   name: string;
+  name_uz_cyrl?: string;
   description: string;
-  category_id?: string;
-  category: string;
-  supplier_id: string;
+  description_uz_cyrl?: string;
+  category: number;
+  category_name?: string;
+  supplier_id?: string;
   supplier_name?: string;
-  sku: string;
+  sku?: string;
   image?: string;
   images?: string[] | string;
   barcode?: string;
   barcode_img?: string;
+  shtrix_code?: string | null;
   total_count?: number;
   is_active?: boolean;
   created_at: string;
   updated_at: string;
+  batches?: ProductBatch[];
   // Aggregated data (new format for list page)
   total_quantity?: number;
   min_purchase_price?: number;
@@ -86,22 +102,18 @@ export interface Product {
 }
 
 export interface ProductFormData {
-  product_id?: string;
+  category?: string;
   name: string;
   name_uz_cyrl?: string;
   description?: string;
   description_uz_cyrl?: string;
-  category_id?: string;
-  images?: string[] | string | File[];
+  images?: string[] | string | File[] | (string | File)[];
+  is_active?: boolean;
   sku?: string;
   barcode?: string;
   barcode_img?: string;
   total_count?: number;
-  is_active?: boolean;
-  // Legacy fields (optional for backward compatibility)
-  purchase_price?: number;
-  selling_price?: number;
-  category?: string;
+  category_id?: string;
   supplier_id?: string;
   store_id?: string;
   image?: string | File | null;

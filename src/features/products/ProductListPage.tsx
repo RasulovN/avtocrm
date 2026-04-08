@@ -58,7 +58,7 @@ export function ProductListPage() {
           description: 'Premium oil filter for cars',
           purchase_price: 15000,
           selling_price: 25000,
-          category: 'Filters',
+          category: 1,
           supplier_id: '1',
           supplier_name: 'AutoParts Co',
           store_id: '1',
@@ -78,7 +78,7 @@ export function ProductListPage() {
           description: 'Ceramic brake pads',
           purchase_price: 45000,
           selling_price: 75000,
-          category: 'Brakes',
+          category: 2,
           supplier_id: '1',
           supplier_name: 'AutoParts Co',
           store_id: '1',
@@ -98,7 +98,7 @@ export function ProductListPage() {
           description: 'IRidium spark plug',
           purchase_price: 8000,
           selling_price: 15000,
-          category: 'Electrical',
+          category: 3,
           supplier_id: '1',
           supplier_name: 'AutoParts Co',
           store_id: '1',
@@ -422,7 +422,7 @@ export function ProductListPage() {
             <div key={product.id} className="barcode-label">
               <p className="barcode-label-name">{product.name}</p>
               <BarcodePrint
-                value={product.barcode || product.sku}
+                value={product.barcode || product.sku || ''}
                 productName={product.name}
                 showName={false}
               />

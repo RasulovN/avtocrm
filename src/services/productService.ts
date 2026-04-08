@@ -1,6 +1,6 @@
 import { apiClient, API_ORIGIN } from './api';
 import { latinToCyrillic } from '../utils/transliteration';
-import type { Product, ProductFormData, ProductFilters, PaginatedResponse, ApiResponse } from '../types';
+import type { Product, ProductFormData, ProductFilters, PaginatedResponse, ApiResponse, ProductStoreInventory } from '../types';
 
 const resolveImageUrl = (image?: string) => {
   if (!image) return '';
@@ -61,22 +61,65 @@ const normalizeProduct = (raw: unknown): Product => {
     images?: string[] | string;
     supplier?: { id?: string | number; name?: string; name_uz?: string; name_uz_cyrl?: string };
     store?: { id?: string | number; name?: string; name_uz?: string; name_uz_cyrl?: string };
+    batches?: Array<{
+      id: number;
+      product: number;
+      store: number;
+      store_name: string;
+      quantity: number;
+      purchase_price: string;
+      selling_price: string;
+      barcode: string;
+      shtrix_code: string | null;
+    }>;
   };
 
   const categoryInfo = resolveCategory(item.category ?? item.category_id);
   const images = normalizeImages(item.images, item.image);
   const image = resolveImageUrl(item.image) || (Array.isArray(images) ? images[0] : images || '');
-  const quantity = normalizeNumber(item.quantity ?? item.total_count ?? item.total_quantity);
-  const purchasePrice = normalizeNumber(item.purchase_price);
-  const sellingPrice = normalizeNumber(item.selling_price ?? item.price);
+  
+  const batches = item.batches;
+  let totalQuantity = 0;
+  let minPurchasePrice: number | undefined;
+  let maxPurchasePrice: number | undefined;
+  let minSellingPrice: number | undefined;
+  let maxSellingPrice: number | undefined;
+  let inventoryByStore: ProductStoreInventory[] | undefined;
+  
+  if (batches && Array.isArray(batches)) {
+    inventoryByStore = batches.map((batch) => {
+      totalQuantity += batch.quantity;
+      const purchasePrice = Number(batch.purchase_price);
+      const sellingPrice = Number(batch.selling_price);
+      if (!isNaN(purchasePrice)) {
+        if (minPurchasePrice === undefined || purchasePrice < minPurchasePrice) minPurchasePrice = purchasePrice;
+        if (maxPurchasePrice === undefined || purchasePrice > maxPurchasePrice) maxPurchasePrice = purchasePrice;
+      }
+      if (!isNaN(sellingPrice)) {
+        if (minSellingPrice === undefined || sellingPrice < minSellingPrice) minSellingPrice = sellingPrice;
+        if (maxSellingPrice === undefined || sellingPrice > maxSellingPrice) maxSellingPrice = sellingPrice;
+      }
+      return {
+        store_id: String(batch.store),
+        store_name: batch.store_name,
+        quantity: batch.quantity,
+        purchase_price: purchasePrice,
+        selling_price: sellingPrice,
+      };
+    });
+  }
+
+  const quantity = normalizeNumber(item.quantity ?? item.total_count ?? totalQuantity);
+  const purchasePrice = normalizeNumber(item.purchase_price) ?? minPurchasePrice;
+  const sellingPrice = normalizeNumber(item.selling_price ?? item.price) ?? minSellingPrice;
 
   return {
     id: String(item.id ?? item.product_id ?? ''),
     product_id: item.product_id ? String(item.product_id) : undefined,
     name: item.name ?? item.name_uz ?? item.name_uz_cyrl ?? '',
     description: item.description ?? item.description_uz ?? item.description_uz_cyrl ?? '',
-    category_id: categoryInfo.id ?? (item.category_id !== undefined ? String(item.category_id) : undefined),
-    category: categoryInfo.name ?? (typeof item.category === 'string' ? item.category : '') ?? '',
+    category: typeof item.category === 'number' ? item.category : (categoryInfo.id ? Number(categoryInfo.id) : 0),
+    category_name: categoryInfo.name ?? (typeof item.category === 'string' ? item.category : '') ?? '',
     supplier_id: String(item.supplier_id ?? item.supplier?.id ?? ''),
     supplier_name: item.supplier_name ?? item.supplier?.name ?? item.supplier?.name_uz ?? item.supplier?.name_uz_cyrl,
     store_id: item.store_id !== undefined ? String(item.store_id) : (item.store?.id !== undefined ? String(item.store.id) : undefined),
@@ -84,19 +127,25 @@ const normalizeProduct = (raw: unknown): Product => {
     sku: item.sku ?? '',
     barcode: item.barcode ?? item.sku,
     barcode_img: resolveImageUrl(item.barcode_img),
+    shtrix_code: item.shtrix_code ?? null,
     image,
     images,
-    total_count: normalizeNumber(item.total_count),
+    total_count: quantity,
     is_active: item.is_active,
     quantity,
     purchase_price: purchasePrice,
     selling_price: sellingPrice,
-    total_quantity: normalizeNumber(item.total_quantity),
-    min_purchase_price: normalizeNumber(item.min_purchase_price),
-    max_purchase_price: normalizeNumber(item.max_purchase_price),
-    min_selling_price: normalizeNumber(item.min_selling_price),
-    max_selling_price: normalizeNumber(item.max_selling_price),
-    inventory_by_store: item.inventory_by_store,
+    total_quantity: totalQuantity || undefined,
+    min_purchase_price: minPurchasePrice,
+    max_purchase_price: maxPurchasePrice,
+    min_selling_price: minSellingPrice,
+    max_selling_price: maxSellingPrice,
+    inventory_by_store: inventoryByStore,
+    batches: batches?.map(b => ({
+      ...b,
+      product: Number(b.product),
+      store: Number(b.store),
+    })),
     created_at: item.created_at ?? '',
     updated_at: item.updated_at ?? item.created_at ?? '',
   };
@@ -108,7 +157,13 @@ const hasFile = (value: unknown): value is File =>
 const toFileList = (images?: ProductFormData['images']): File[] => {
   if (!images) return [];
   if (Array.isArray(images)) {
-    return images.filter(hasFile);
+    const files: File[] = [];
+    for (const item of images) {
+      if (hasFile(item)) {
+        files.push(item);
+      }
+    }
+    return files;
   }
   return [];
 };
@@ -118,7 +173,9 @@ const mapProductPayload = (data: Partial<ProductFormData>): Record<string, unkno
   const imageFiles = toFileList(data.images);
   const useFormData = Boolean(imageFile || imageFiles.length);
 
-  const categoryId = typeof data.category_id === 'string' && data.category_id.trim() !== '' ? data.category_id.trim() : undefined;
+  const categoryId = typeof data.category === 'string' && data.category.trim() !== '' 
+    ? data.category.trim() 
+    : (typeof data.category === 'number' ? String(data.category) : undefined);
 
   if (useFormData) {
     const payload = new FormData();
@@ -135,11 +192,9 @@ const mapProductPayload = (data: Partial<ProductFormData>): Record<string, unkno
         : latinToCyrillic(data.description);
       payload.append('description_uz_cyrl', cyr);
     }
-    const quantity = normalizeNumber(data.total_count);
-    if (typeof quantity === 'number') payload.append('quantity', quantity.toString());
-    const price = normalizeNumber(data.selling_price ?? data.purchase_price);
-    if (typeof price === 'number') payload.append('price', price.toString());
-
+    if (data.is_active !== undefined) {
+      payload.append('is_active', String(data.is_active));
+    }
     const image = imageFile ?? imageFiles[0];
     if (image) payload.append('image', image);
     return payload;
@@ -157,10 +212,9 @@ const mapProductPayload = (data: Partial<ProductFormData>): Record<string, unkno
       ? data.description_uz_cyrl
       : latinToCyrillic(data.description);
   }
-  const quantity = normalizeNumber(data.total_count);
-  if (typeof quantity === 'number') payload.quantity = quantity;
-  const price = normalizeNumber(data.selling_price ?? data.purchase_price);
-  if (typeof price === 'number') payload.price = price;
+  if (data.is_active !== undefined) {
+    payload.is_active = data.is_active;
+  }
   return payload;
 };
 
