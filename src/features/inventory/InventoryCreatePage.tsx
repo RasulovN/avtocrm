@@ -11,8 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { inventoryService } from '../../services/inventoryService';
 import { storeService } from '../../services/storeService';
 import { supplierService } from '../../services/supplierService';
-import { productService } from '../../services/productService';
-import type { Store, Supplier, Product } from '../../types';
+import { useProducts } from '../../context/ProductContext';
+import type { Store, Supplier } from '../../types';
 import { formatCurrency } from '../../utils';
 
 interface InventoryFormItem {
@@ -28,11 +28,14 @@ export function InventoryCreatePage() {
   const navigate = useNavigate();
   const [stores, setStores] = useState<Store[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
   const [saving, setSaving] = useState(false);
+  const { products: allProducts, loading: productsLoading } = useProducts();
   const safeStores = useMemo(() => (Array.isArray(stores) ? stores : []), [stores]);
   const safeSuppliers = useMemo(() => (Array.isArray(suppliers) ? suppliers : []), [suppliers]);
-  const safeProducts = useMemo(() => (Array.isArray(products) ? products : []), [products]);
+  const safeProducts = useMemo(() => {
+    if (productsLoading) return [];
+    return allProducts;
+  }, [allProducts, productsLoading]);
 
   const [supplierId, setSupplierId] = useState('');
   const [storeId, setStoreId] = useState('');
@@ -43,14 +46,12 @@ export function InventoryCreatePage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [storesRes, suppliersRes, productsRes] = await Promise.all([
+      const [storesRes, suppliersRes] = await Promise.all([
         storeService.getAll(),
         supplierService.getAll(),
-        productService.getAll({ limit: 100 }),
       ]);
       setStores(Array.isArray(storesRes.data) ? storesRes.data : []);
       setSuppliers(Array.isArray(suppliersRes.data) ? suppliersRes.data : []);
-      setProducts(Array.isArray(productsRes.data) ? productsRes.data : []);
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
@@ -61,10 +62,6 @@ export function InventoryCreatePage() {
       ]);
       setSuppliers([
         { id: '1', name: 'AutoParts Co', debt: 0, created_at: '' },
-      ]);
-      setProducts([
-        { id: '1', name: 'Oil Filter', purchase_price: 15000, selling_price: 25000, category: 'Filters', supplier_id: '1', store_id: '1', sku: 'SKU-001', description: '', quantity: 0, created_at: '', updated_at: '' },
-        { id: '2', name: 'Brake Pads', purchase_price: 45000, selling_price: 75000, category: 'Brakes', supplier_id: '1', store_id: '1', sku: 'SKU-002', description: '', quantity: 0, created_at: '', updated_at: '' },
       ]);
     }
   }, []);

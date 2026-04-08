@@ -6,9 +6,9 @@ import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
 import { storeService } from '../../services/storeService';
-import { productService } from '../../services/productService';
 import { useAuthStore } from '../../app/store';
 import { useCategories } from '../../context/CategoryContext';
+import { useProducts } from '../../context/ProductContext';
 import type { Store, Product } from '../../types';
 import { formatCurrency } from '../../utils';
 
@@ -28,10 +28,10 @@ export function SalesPage() {
   const userStoreId = user?.store_id || '';
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const [stores, setStores] = useState<Store[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
   const [saving, setSaving] = useState(false);
   const [barcode, setBarcode] = useState('');
   const { categories } = useCategories();
+  const { products: allProducts, loading: productsLoading } = useProducts();
 
   const [storeId, setStoreId] = useState(userStoreId);
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -49,35 +49,17 @@ export function SalesPage() {
   const scannerVideoRef = useRef<HTMLVideoElement>(null);
   const scannerReaderRef = useRef<BrowserMultiFormatReader | null>(null);
   const safeStores = useMemo(() => (Array.isArray(stores) ? stores : []), [stores]);
-  const safeProducts = useMemo(() => (Array.isArray(products) ? products : []), [products]);
-
-  // Computed values
-  const totalPrice = items.reduce((sum, item) => sum + item.total, 0);
-  const totalWithDiscount = totalPrice - Math.min(discount, totalPrice);
-  const totalPaid = cashAmount + cardAmount;
-  const change = totalPaid > totalWithDiscount ? totalPaid - totalWithDiscount : 0;
-  const debt = totalWithDiscount > totalPaid ? totalWithDiscount - totalPaid : 0;
-
-  // Filter products by store and category
-  const filteredProducts = safeProducts.filter((p) => {
-    const effectiveStoreId = isAdmin ? storeId : userStoreId;
-    const matchStore = !effectiveStoreId || p.store_id === effectiveStoreId;
-    const matchCategory = !categoryFilter
-      || p.category_id === categoryFilter
-      || p.category === categoryFilter;
-    return matchStore && matchCategory;
-  });
+  const safeProducts = useMemo(() => {
+    if (productsLoading) return [];
+    const filtered = isAdmin ? allProducts : allProducts.filter((p) => p.store_id === userStoreId);
+    return filtered;
+  }, [allProducts, isAdmin, userStoreId, productsLoading]);
 
   const loadData = async () => {
     try {
-      const [storesRes, productsRes] = await Promise.all([
-        storeService.getAll(),
-        productService.getAll({ limit: 100 }),
-      ]);
+      const storesRes = await storeService.getAll();
       const loadedStores = Array.isArray(storesRes.data) ? storesRes.data : [];
-      const loadedProducts = Array.isArray(productsRes.data) ? productsRes.data : [];
       setStores(isAdmin ? loadedStores : loadedStores.filter((store) => store.id === userStoreId));
-      setProducts(isAdmin ? loadedProducts : loadedProducts.filter((product) => product.store_id === userStoreId));
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
@@ -85,12 +67,7 @@ export function SalesPage() {
       const fallbackStores = [
         { id: '1', name: 'Main Store', is_warehouse: false, created_at: '' },
       ];
-      const fallbackProducts = [
-        { id: '1', name: 'Oil Filter', purchase_price: 15000, selling_price: 25000, category: 'Filters', supplier_id: '1', store_id: '1', sku: 'SKU-001', barcode: '123456789', description: '', quantity: 100, created_at: '', updated_at: '' },
-        { id: '2', name: 'Brake Pads', purchase_price: 45000, selling_price: 75000, category: 'Brakes', supplier_id: '1', store_id: '1', sku: 'SKU-002', barcode: '987654321', description: '', quantity: 50, created_at: '', updated_at: '' },
-      ];
       setStores(isAdmin ? fallbackStores : fallbackStores.filter((store) => store.id === userStoreId));
-      setProducts(isAdmin ? fallbackProducts : fallbackProducts.filter((product) => product.store_id === userStoreId));
     }
   };
 

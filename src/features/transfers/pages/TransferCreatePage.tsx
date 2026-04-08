@@ -11,8 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/Table';
 import { transferService } from '../../../services/transferService';
 import { storeService } from '../../../services/storeService';
-import { productService } from '../../../services/productService';
-import type { Store, Product } from '../../../types';
+import { useProducts } from '../../../context/ProductContext';
+import type { Store } from '../../../types';
 
 interface TransferFormItem {
   product_id: string;
@@ -24,10 +24,13 @@ export function TransferCreatePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [stores, setStores] = useState<Store[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
   const [saving, setSaving] = useState(false);
+  const { products: allProducts, loading: productsLoading } = useProducts();
   const safeStores = useMemo(() => (Array.isArray(stores) ? stores : []), [stores]);
-  const safeProducts = useMemo(() => (Array.isArray(products) ? products : []), [products]);
+  const safeProducts = useMemo(() => {
+    if (productsLoading) return [];
+    return allProducts;
+  }, [allProducts, productsLoading]);
 
   const [fromStoreId, setFromStoreId] = useState('');
   const [toStoreId, setToStoreId] = useState('');
@@ -37,12 +40,8 @@ export function TransferCreatePage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [storesRes, productsRes] = await Promise.all([
-        storeService.getAll(),
-        productService.getAll({ limit: 100 }),
-      ]);
+      const storesRes = await storeService.getAll();
       setStores(Array.isArray(storesRes.data) ? storesRes.data : []);
-      setProducts(Array.isArray(productsRes.data) ? productsRes.data : []);
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
@@ -50,9 +49,6 @@ export function TransferCreatePage() {
       setStores([
         { id: '1', name: 'Main Store', is_warehouse: false, created_at: '' },
         { id: '2', name: 'Warehouse', is_warehouse: true, created_at: '' },
-      ]);
-      setProducts([
-        { id: '1', name: 'Oil Filter', purchase_price: 15000, selling_price: 25000, category: 'Filters', supplier_id: '1', store_id: '1', sku: 'SKU-001', description: '', quantity: 100, created_at: '', updated_at: '' },
       ]);
     }
   }, []);

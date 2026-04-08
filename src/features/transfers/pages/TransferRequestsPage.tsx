@@ -9,8 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../../../c
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/Select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/Table';
 import { storeService } from '../../../services/storeService';
-import { productService } from '../../../services/productService';
-import type { Store, Product } from '../../../types';
+import { useProducts } from '../../../context/ProductContext';
+import type { Store } from '../../../types';
 import type { ReactElement } from 'react';
 
 // Transfer request item type
@@ -35,10 +35,13 @@ interface TransferRequest {
 export function TransferRequestsPage(): ReactElement {
   const { t } = useTranslation();
   const [stores, setStores] = useState<Store[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
   const [saving, setSaving] = useState(false);
+  const { products: allProducts, loading: productsLoading } = useProducts();
   const safeStores = useMemo(() => (Array.isArray(stores) ? stores : []), [stores]);
-  const safeProducts = useMemo(() => (Array.isArray(products) ? products : []), [products]);
+  const safeProducts = useMemo(() => {
+    if (productsLoading) return [];
+    return allProducts;
+  }, [allProducts, productsLoading]);
 
   // Existing requests
   const [requests, setRequests] = useState<TransferRequest[]>([]);
@@ -53,14 +56,9 @@ export function TransferRequestsPage(): ReactElement {
 
   const loadData = useCallback(async () => {
     try {
-      const [storesRes, productsRes] = await Promise.all([
-        storeService.getAll(),
-        productService.getAll({ limit: 100 }),
-      ]);
+      const storesRes = await storeService.getAll();
       setStores(Array.isArray(storesRes.data) ? storesRes.data : []);
-      setProducts(Array.isArray(productsRes.data) ? productsRes.data : []);
 
-      // Mock existing requests
       setRequests([
         {
           id: '1',
@@ -82,24 +80,6 @@ export function TransferRequestsPage(): ReactElement {
       setStores([
         { id: '1', name: 'Main Store', is_warehouse: false, created_at: '' },
         { id: '2', name: 'Warehouse', is_warehouse: true, created_at: '' },
-      ]);
-      setProducts([
-        { id: '1', name: 'Oil Filter', purchase_price: 15000, selling_price: 25000, category: 'Filters', supplier_id: '1', store_id: '1', sku: 'SKU-001', description: '', quantity: 100, created_at: '', updated_at: '' },
-        { id: '2', name: 'Brake Pads', purchase_price: 45000, selling_price: 75000, category: 'Brakes', supplier_id: '1', store_id: '1', sku: 'SKU-002', description: '', quantity: 50, created_at: '', updated_at: '' },
-      ]);
-      setRequests([
-        {
-          id: '1',
-          from_store_id: '1',
-          from_store_name: 'Main Store',
-          to_store_id: '2',
-          to_store_name: 'Warehouse',
-          items: [
-            { product_id: '1', product_name: 'Oil Filter', quantity: 20 },
-          ],
-          status: 'pending',
-          created_at: new Date().toISOString(),
-        },
       ]);
     }
   }, []);

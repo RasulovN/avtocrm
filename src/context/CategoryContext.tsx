@@ -1,5 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { categoryService } from '../services/categoryService';
 import type { Category } from '../types';
 
@@ -14,10 +13,10 @@ interface CategoryContextValue {
 const CategoryContext = createContext<CategoryContextValue | undefined>(undefined);
 
 export function CategoryProvider({ children }: { children: React.ReactNode }) {
-  const { i18n } = useTranslation();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const fetchedRef = useRef(false);
 
   const refreshCategories = useCallback(async () => {
     try {
@@ -40,8 +39,10 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (fetchedRef.current) return;
+    fetchedRef.current = true;
     void refreshCategories();
-  }, [refreshCategories, i18n.language]);
+  }, [refreshCategories]);
 
   const value = useMemo(() => ({
     categories,

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback, type MouseEvent } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef, type MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Plus, Edit, Trash2, Barcode, Search, Printer } from 'lucide-react';
@@ -39,6 +39,7 @@ export function ProductListPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const fetchedRef = useRef(false);
 
   const loadProducts = useCallback(async () => {
     try {
@@ -119,6 +120,8 @@ export function ProductListPage() {
   }, [filters, page, isAdmin, userStoreId]);
 
   useEffect(() => {
+    if (fetchedRef.current) return;
+    fetchedRef.current = true;
     loadProducts();
   }, [loadProducts]);
 

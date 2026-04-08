@@ -388,7 +388,7 @@ export function UserListPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('common.cancel')}</Button>
             <Button onClick={handleSave} disabled={saving}>{saving ? t('common.loading') : t('common.save')}</Button>
-          </DialogFooter>
+          </DialogFooter> 
         </DialogContent>
       </Dialog>
 
