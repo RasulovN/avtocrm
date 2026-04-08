@@ -15,10 +15,7 @@ import {
   SelectValue,
 } from '../../components/ui/Select';
 import { productService } from '../../services/productService';
-import { storeService } from '../../services/storeService';
-import { supplierService } from '../../services/supplierService';
-import type { ProductFormData, Store, Supplier } from '../../types';
-import { generateSKU, generateBarcode } from '../../utils';
+import type { ProductFormData } from '../../types';
 import { latinToCyrillic } from '../../utils/transliteration';
 import { useCategories } from '../../context/CategoryContext';
 
@@ -29,81 +26,53 @@ export function ProductFormPage() {
   const isEditing = Boolean(id);
 
   const [saving, setSaving] = useState(false);
-  const [stores, setStores] = useState<Store[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const { categories, refreshCategories } = useCategories();
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [existingImages, setExistingImages] = useState<string[]>([]);
   
   const [formData, setFormData] = useState<ProductFormData>({
     name: '',
     name_uz_cyrl: '',
     description: '',
     description_uz_cyrl: '',
-    purchase_price: 0,
-    selling_price: 0,
-    total_count: 0,
-    category_id: '',
-    supplier_id: '',
-    store_id: '',
-    image: null,
+    category: '',
     images: [],
+    is_active: true,
   });
 
   const loadData = useCallback(async () => {
-    try {
-      const [storesRes, suppliersRes] = await Promise.all([
-        storeService.getAll(),
-        supplierService.getAll(),
-      ]);
-      setStores(Array.isArray(storesRes.data) ? storesRes.data : []);
-      setSuppliers(Array.isArray(suppliersRes.data) ? suppliersRes.data : []);
-
-      if (id) {
+    if (id) {
+      try {
         const product = await productService.getById(id);
         setFormData({
           name: product.name,
-          name_uz_cyrl: latinToCyrillic(product.name ?? ''),
+          name_uz_cyrl: product.name_uz_cyrl || latinToCyrillic(product.name ?? ''),
           description: product.description,
-          description_uz_cyrl: latinToCyrillic(product.description ?? ''),
-          purchase_price: product.purchase_price,
-          selling_price: product.selling_price,
-          total_count: product.total_count ?? product.quantity ?? 0,
-          category_id: product.category_id ?? '',
-          supplier_id: product.supplier_id,
-          store_id: product.store_id,
-          image: product.image || '',
-          images: Array.isArray(product.images)
-            ? product.images
-            : product.images
-              ? [product.images]
-              : product.image
-                ? [product.image]
-                : [],
+          description_uz_cyrl: product.description_uz_cyrl || latinToCyrillic(product.description ?? ''),
+          category: product.category ? String(product.category) : '',
+          images: [],
+          is_active: product.is_active ?? true,
         });
-        const previews = Array.isArray(product.images)
-          ? product.images.filter(Boolean) as string[]
-          : product.images
-            ? [product.images as string]
-            : product.image
-              ? [product.image]
-              : [];
-        setImagePreviews(previews);
+
+        const previews: string[] = [];
+        if (Array.isArray(product.images)) {
+          product.images.forEach((img) => {
+            if (typeof img === 'string' && img) {
+              previews.push(img);
+            }
+          });
+        } else if (product.images) {
+          previews.push(String(product.images));
+        } else if (product.image) {
+          previews.push(product.image);
+        }
+        setExistingImages(previews);
+        setImagePreviews([]);
         setImageFiles([]);
+      } catch (error) {
+        console.error('Failed to load product:', error);
       }
-    } catch (error) {
-      const axiosErr = error as { response?: { status?: number } };
-      if (axiosErr.response?.status === 401) return;
-      console.error('Failed to load data:', error);
-      // Mock data for demo
-      setStores([
-        { id: '1', name: 'Main Store', is_warehouse: false, created_at: '' },
-        { id: '2', name: 'Warehouse', is_warehouse: true, created_at: '' },
-      ]);
-      setSuppliers([
-        { id: '1', name: 'AutoParts Co', debt: 0, created_at: '' },
-        { id: '2', name: 'Global Parts', debt: 0, created_at: '' },
-      ]);
     }
   }, [id]);
 
@@ -129,18 +98,18 @@ export function ProductFormPage() {
     e.preventDefault();
     try {
       setSaving(true);
-      const sku = generateSKU();
-      const barcode = generateBarcode();
+      
+      const allImages = [...existingImages, ...imageFiles];
+      
       const payload: ProductFormData = {
         ...formData,
-        image: imageFiles[0] ?? (formData.image ?? null),
-        images: imageFiles.length ? imageFiles : formData.images,
+        images: allImages,
       };
       
       if (isEditing && id) {
         await productService.update(id, payload);
       } else {
-        await productService.create({ ...payload, sku, barcode });
+        await productService.create(payload);
       }
       navigate('/products');
     } catch (error) {
@@ -150,7 +119,7 @@ export function ProductFormPage() {
     }
   };
 
-  const handleChange = (field: keyof ProductFormData, value: string | number | string[]) => {
+  const handleChange = (field: keyof ProductFormData, value: string | string[] | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
   const handleNameChange = (value: string) => {
@@ -180,6 +149,21 @@ export function ProductFormPage() {
     setImagePreviews(previews);
   };
 
+  const handleRemoveExistingImage = (index: number) => {
+    setExistingImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleRemoveNewImage = (index: number) => {
+    const preview = imagePreviews[index];
+    if (preview.startsWith('blob:')) {
+      URL.revokeObjectURL(preview);
+    }
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const allImages = [...existingImages, ...imagePreviews];
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -204,6 +188,24 @@ export function ProductFormPage() {
               <CardTitle>{t('products.productName')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="category">{t('products.category')}</Label>
+                <Select
+                  value={formData.category || ''}
+                  onValueChange={(value) => handleChange('category', value)}
+                >
+                  <SelectTrigger id="category">
+                    <SelectValue placeholder={t('products.category')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="name">{t('products.productName')}</Label>
                 <Input
@@ -237,26 +239,16 @@ export function ProductFormPage() {
                   onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('description_uz_cyrl', e.target.value)}
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('products.image') || 'Images'}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="category">{t('products.category')}</Label>
-                <Select
-                  value={formData.category_id || ''}
-                  onValueChange={(value) => handleChange('category_id', value)}
-                >
-                  <SelectTrigger id="category">
-                    <SelectValue placeholder={t('products.category')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="image">{t('products.image') || 'Image'}</Label>
+                <Label htmlFor="image">{t('products.image') || 'Add Images'}</Label>
                 <Input
                   id="image"
                   type="file"
@@ -264,93 +256,43 @@ export function ProductFormPage() {
                   multiple
                   onChange={handleImageChange}
                 />
-                {imagePreviews.length ? (
-                  <div className="mt-2 grid grid-cols-3 gap-2">
-                    {imagePreviews.map((src, idx) => (
+              </div>
+              {allImages.length > 0 && (
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  {existingImages.map((src, idx) => (
+                    <div key={`existing-${idx}`} className="relative">
                       <img
-                        key={`${src}-${idx}`}
                         src={src}
                         alt={formData.name || `Product image ${idx + 1}`}
                         className="h-24 w-24 rounded-md object-cover border"
                       />
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('products.sellingPrice')}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="purchase_price">{t('products.purchasePrice')}</Label>
-                <Input
-                  id="purchase_price"
-                  type="number"
-                  value={formData.purchase_price}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('purchase_price', Number(e.target.value))}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="selling_price">{t('products.sellingPrice')}</Label>
-                <Input
-                  id="selling_price"
-                  type="number"
-                  value={formData.selling_price}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('selling_price', Number(e.target.value))}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="total_count">{t('products.quantity')}</Label>
-                <Input
-                  id="total_count"
-                  type="number"
-                  value={formData.total_count ?? 0}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('total_count', Number(e.target.value))}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="supplier_id">{t('nav.suppliers')}</Label>
-                <Select
-                  value={formData.supplier_id || ''}
-                  onValueChange={(value) => handleChange('supplier_id', value)}
-                >
-                  <SelectTrigger id="supplier_id">
-                    <SelectValue placeholder={t('nav.suppliers')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {suppliers.map((supplier) => (
-                      <SelectItem key={supplier.id} value={supplier.id}>
-                        {supplier.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="store_id">{t('nav.stores')}</Label>
-                <Select
-                  value={formData.store_id || ''}
-                  onValueChange={(value) => handleChange('store_id', value)}
-                >
-                  <SelectTrigger id="store_id">
-                    <SelectValue placeholder={t('nav.stores')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {stores.map((store) => (
-                      <SelectItem key={store.id} value={store.id}>
-                        {store.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveExistingImage(idx)}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  {imagePreviews.map((src, idx) => (
+                    <div key={`new-${idx}`} className="relative">
+                      <img
+                        src={src}
+                        alt={formData.name || `New image ${idx + 1}`}
+                        className="h-24 w-24 rounded-md object-cover border"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveNewImage(idx)}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
