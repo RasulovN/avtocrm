@@ -1,11 +1,14 @@
 import { useState, useEffect, useMemo, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
+import QrScanner from 'react-qr-barcode-scanner';
 import { ScanBarcode, Trash2, DollarSign, Search, X } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/Dialog';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
 import { storeService } from '../../services/storeService';
+import { productService } from '../../services/productService';
 import { useAuthStore } from '../../app/store';
 import { useCategories } from '../../context/CategoryContext';
 import { useProducts } from '../../context/ProductContext';
@@ -115,12 +118,9 @@ export function SalesPage() {
     }
   }, [isAdmin, userStoreId]);
 
-  const handleBarcodeScan = (e: KeyboardEvent<HTMLInputElement>) => {
+  const handleBarcodeScan = async (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && barcode) {
-      const product = safeProducts.find(p => p.barcode === barcode || p.sku === barcode);
-      if (product) {
-        addProduct(product);
-      }
+      await findProductByBarcode(barcode);
       setBarcode('');
     }
   };
@@ -129,46 +129,25 @@ export function SalesPage() {
     setShowScanner(true);
   };
 
-  useEffect(() => {
-    if (!showScanner) return;
-
-    const reader = new BrowserMultiFormatReader();
-    scannerReaderRef.current = reader;
-
-    let isActive = true;
-
-    const startScanner = async () => {
-      const videoEl = scannerVideoRef.current;
-      if (!videoEl || !isActive) return;
-
-      try {
-        reader.decodeFromVideoDevice(
-          undefined,
-          videoEl,
-          (result) => {
-            if (result && isActive) {
-              const text = result.getText();
-              const product = safeProducts.find(p => p.barcode === text || p.sku === text);
-              if (product) {
-                addProduct(product);
-              }
-              setBarcode('');
-              setShowScanner(false);
-            }
-          }
-        );
-      } catch (error) {
-        console.error('Scanner error:', error);
+  const findProductByBarcode = async (barcode: string) => {
+    try {
+      const product = await productService.getByBarcode(barcode);
+      if (product) {
+        addProduct(product);
       }
-    };
+    } catch (error) {
+      console.error('Product not found:', error);
+    }
+  };
 
-    startScanner();
-
-    return () => {
-      isActive = false;
-      scannerReaderRef.current = null;
-    };
-  }, [showScanner, safeProducts]);
+  const handleBarcodeScanQr = (result: unknown) => {
+    const data = result as string | undefined;
+    if (data) {
+      findProductByBarcode(data);
+      setBarcode('');
+      setShowScanner(false);
+    }
+  };
 
   const updateQuantity = (index: number, quantity: number) => {
     if (!Number.isFinite(quantity) || quantity < 1) return;
@@ -645,6 +624,19 @@ export function SalesPage() {
           </div>
         </div>
       )}
+
+      {/* Scanner Dialog */}
+      <Dialog open={showScanner} onOpenChange={setShowScanner}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Barcode Scanner</DialogTitle>
+          </DialogHeader>
+          <QrScanner
+            onUpdate={(result) => handleBarcodeScanQr(result)}
+            onError={(error) => console.error('Scanner error:', error)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -34,6 +34,7 @@
     "react-dom": "^19.2.4",
     "react-hot-toast": "^2.6.0",
     "react-i18next": "^17.0.2",
+    "react-qr-barcode-scanner": "^2.1.25",
     "react-router-dom": "^7.13.2",
     "tailwind-merge": "^3.5.0",
     "zustand": "^5.0.12"
