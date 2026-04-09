@@ -55,6 +55,19 @@ export function SalesPage() {
     return filtered;
   }, [allProducts, isAdmin, userStoreId, productsLoading]);
 
+  const subtotal = useMemo(() => items.reduce((sum, item) => sum + item.total, 0), [items]);
+  const totalWithDiscount = subtotal - discount;
+  const totalPaid = useMemo(() => cashAmount + cardAmount, [cashAmount, cardAmount]);
+  const change = useMemo(() => Math.max(0, totalPaid - totalWithDiscount), [totalPaid, totalWithDiscount]);
+  const debt = useMemo(() => Math.max(0, totalWithDiscount - totalPaid), [totalPaid, totalWithDiscount]);
+  const filteredProducts = useMemo(() => {
+    let result = safeProducts;
+    if (categoryFilter) {
+      result = result.filter(p => String(p.category) === categoryFilter);
+    }
+    return result;
+  }, [safeProducts, categoryFilter]);
+
   const loadData = async () => {
     try {
       const storesRes = await storeService.getAll();
@@ -398,7 +411,7 @@ export function SalesPage() {
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground dark:text-gray-400">Summa:</span>
-                  <span className="font-medium dark:text-gray-200">{formatCurrency(totalPrice)}</span>
+                  <span className="font-medium dark:text-gray-200">{formatCurrency(subtotal)}</span>
                 </div>
                 {discount > 0 && (
                   <div className="flex justify-between text-xs">
@@ -500,7 +513,7 @@ export function SalesPage() {
                 <div className="rounded-lg p-2.5 bg-muted/50 dark:bg-gray-900 space-y-1.5">
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground dark:text-gray-400">Jami:</span>
-                    <span className="font-bold dark:text-white">{formatCurrency(totalPrice)}</span>
+                    <span className="font-bold dark:text-white">{formatCurrency(subtotal)}</span>
                   </div>
                   {discount > 0 && (
                     <div className="flex justify-between text-xs">
@@ -576,7 +589,7 @@ export function SalesPage() {
               <div className="border-t dark:border-gray-600 pt-2 space-y-1 text-sm">
                 <div className="flex justify-between dark:text-gray-300">
                   <span>Jami:</span>
-                  <span>{formatCurrency(totalPrice)}</span>
+                  <span>{formatCurrency(subtotal)}</span>
                 </div>
                 {discount > 0 && (
                   <div className="flex justify-between dark:text-gray-300">
