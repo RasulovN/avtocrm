@@ -1,5 +1,5 @@
 import { apiClient } from './api';
-import type { Inventory, InventoryFormData, PaginatedResponse, ApiResponse } from '../types';
+import type { Inventory, InventoryFormData, PaginatedResponse, ApiResponse, ContractEntry } from '../types';
 
 export const inventoryService = {
   getAll: async (params?: { page?: number; limit?: number }): Promise<PaginatedResponse<Inventory>> => {
@@ -7,7 +7,12 @@ export const inventoryService = {
     if (params?.page) searchParams.append('page', params.page.toString());
     if (params?.limit) searchParams.append('limit', params.limit.toString());
 
-    const response = await apiClient.get<PaginatedResponse<Inventory>>(`/inventory?${searchParams.toString()}`);
+    const response = await apiClient.get<PaginatedResponse<Inventory>>(`/contract/entry/list/?${searchParams.toString()}`);
+    return response.data;
+  },
+
+  getEntries: async (): Promise<ContractEntry[]> => {
+    const response = await apiClient.get<ContractEntry[]>('/contract/entry/list/');
     return response.data;
   },
 
@@ -17,7 +22,7 @@ export const inventoryService = {
   },
 
   create: async (data: InventoryFormData): Promise<Inventory> => {  
-    const response = await apiClient.post<ApiResponse<Inventory>>('/inventory', data);
+    const response = await apiClient.post<ApiResponse<Inventory>>('/contract/entry/create/', data);
     return response.data.data;
   },
 

@@ -20,6 +20,7 @@ interface InventoryFormItem {
   product_name: string;
   quantity: number;
   purchase_price: number;
+  selling_price: number;
   total: number;
 }
 
@@ -41,7 +42,7 @@ export function InventoryCreatePage() {
   const [storeId, setStoreId] = useState('');
   const [paid, setPaid] = useState(0);
   const [items, setItems] = useState<InventoryFormItem[]>([
-    { product_id: '', product_name: '', quantity: 1, purchase_price: 0, total: 0 }
+    { product_id: '', product_name: '', quantity: 1, purchase_price: 0, selling_price: 0, total: 0 }
   ]);
 
   const loadData = useCallback(async () => {
@@ -76,11 +77,13 @@ export function InventoryCreatePage() {
       const product = safeProducts.find(p => p.id === value);
       if (product) {
         const purchasePrice = product.purchase_price ?? 0;
+        const sellingPrice = product.selling_price ?? 0;
         newItems[index] = {
           ...newItems[index],
           product_id: value as string,
           product_name: product.name,
           purchase_price: purchasePrice,
+          selling_price: sellingPrice,
           total: purchasePrice * newItems[index].quantity,
         };
       }
@@ -96,12 +99,17 @@ export function InventoryCreatePage() {
         purchase_price: value as number,
         total: (value as number) * newItems[index].quantity,
       };
+    } else if (field === 'selling_price') {
+      newItems[index] = {
+        ...newItems[index],
+        selling_price: value as number,
+      };
     }
     setItems(newItems);
   };
 
   const addItem = () => {
-    setItems([...items, { product_id: '', product_name: '', quantity: 1, purchase_price: 0, total: 0 }]);
+    setItems([...items, { product_id: '', product_name: '', quantity: 1, purchase_price: 0, selling_price: 0, total: 0 }]);
   };
 
   const removeItem = (index: number) => {
@@ -116,13 +124,13 @@ export function InventoryCreatePage() {
     try {
       setSaving(true);
       await inventoryService.create({
-        supplier_id: supplierId,
-        store_id: storeId,
+        supplier: supplierId,
+        store: storeId,
         items: items.map(item => ({
-          product_id: item.product_id,
+          product: item.product_id,
           quantity: item.quantity,
-          purchase_price: item.purchase_price,
-          total: item.total,
+          purchase_price: item.purchase_price.toString(),
+          selling_price: item.selling_price.toString(),
         })),
         paid,
       });
@@ -224,7 +232,7 @@ export function InventoryCreatePage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <div className="space-y-2">
                       <Label className="text-xs">{t('inventory.quantity')}</Label>
                       <Input
@@ -240,6 +248,14 @@ export function InventoryCreatePage() {
                         type="number"
                         value={item.purchase_price}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => handleItemChange(index, 'purchase_price', Number(e.target.value))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs">{t('products.sellingPrice')}</Label>
+                      <Input
+                        type="number"
+                        value={item.selling_price}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleItemChange(index, 'selling_price', Number(e.target.value))}
                       />
                     </div>
                   </div>

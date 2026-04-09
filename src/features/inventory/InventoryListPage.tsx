@@ -8,26 +8,102 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Ca
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/Table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../components/ui/Dialog';
 import { inventoryService } from '../../services/inventoryService';
+import { productService } from '../../services/productService';
 import { formatCurrency, formatDate } from '../../utils';
-import type { Inventory } from '../../types';
+import type { ContractEntry, InventoryItem } from '../../types';
 import { BarcodePrintAll } from '../../components/ui/BarcodePrint';
+
+interface DisplayInventory {
+  id: string;
+  supplier_id: string;
+  supplier_name: string;
+  store_id: string;
+  store_name: string;
+  total: number;
+  paid: number;
+  debt: number;
+  status: string;
+  created_at: string;
+  items: InventoryItem[];
+  full_name: string;
+}
 
 export function InventoryListPage() {
   const { t } = useTranslation();
   const params = useParams();
   const lang = params.lang || 'uz';
-  const [inventory, setInventory] = useState<Inventory[]>([]);
+  const [inventory, setInventory] = useState<DisplayInventory[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedInventory, setSelectedInventory] = useState<Inventory | null>(null);
+  const [selectedInventory, setSelectedInventory] = useState<DisplayInventory | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showBarcodeDialog, setShowBarcodeDialog] = useState(false);
-  const [barcodeItems, setBarcodeItems] = useState<Inventory['items']>([]);
+  const [barcodeItems, setBarcodeItems] = useState<InventoryItem[]>([]);
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await inventoryService.getAll();
-      setInventory(res.data || []);
+      const entries = await inventoryService.getEntries();
+      
+      const productCache = new Map<string, { name: string; sku: string; barcode: string; shtrix_code: string }>();
+      
+      const fetchProductDetails = async (productId: number) => {
+        const key = String(productId);
+        if (productCache.has(key)) return productCache.get(key)!;
+        try {
+          const product = await productService.getById(key);
+          const shtrixCode = product.shtrix_code || product.barcode || '';
+          const data = { 
+            name: product.name || key, 
+            sku: product.sku || '',
+            barcode: product.barcode || '',
+            shtrix_code: shtrixCode
+          };
+          productCache.set(key, data);
+          return data;
+        } catch {
+          const data = { name: key, sku: '', barcode: '', shtrix_code: '' };
+          productCache.set(key, data);
+          return data;
+        }
+      };
+      
+      const mapped: DisplayInventory[] = await Promise.all(
+        entries.map(async (entry) => {
+          const items: InventoryItem[] = await Promise.all(
+            entry.items.map(async (item) => {
+              const prod = await fetchProductDetails(item.product);
+              return {
+                id: `${entry.id}-${item.product}`,
+                product_id: String(item.product),
+                product_name: prod.name,
+                product_sku: prod.sku,
+                product_barcode: prod.barcode,
+                shtrix_code: prod.shtrix_code,
+                quantity: item.quantity,
+                purchase_price: parseFloat(item.purchase_price),
+                selling_price: item.selling_price ? parseFloat(item.selling_price) : undefined,
+                total: item.quantity * parseFloat(item.purchase_price)
+              };
+            })
+          );
+          const total = items.reduce((sum, i) => sum + i.total, 0);
+          return {
+            id: String(entry.id),
+            supplier_id: String(entry.supplier),
+            supplier_name: String(entry.supplier),
+            store_id: String(entry.store),
+            store_name: String(entry.store),
+            total,
+            paid: 0,
+            debt: total,
+            status: 'completed',
+            created_at: new Date().toISOString(),
+            items,
+            full_name: entry.full_name
+          };
+        })
+      );
+      setInventory(mapped);
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;

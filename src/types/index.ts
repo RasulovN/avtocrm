@@ -215,6 +215,7 @@ export interface InventoryItem {
   product_name?: string;
   product_sku?: string;
   product_barcode?: string;
+  shtrix_code?: string;
   quantity: number;
   purchase_price: number;
   selling_price?: number;
@@ -236,10 +237,31 @@ export interface Inventory {
 }
 
 export interface InventoryFormData {
-  supplier_id: string;
-  store_id: string;
-  items: Omit<InventoryItem, 'id' | 'product_name' | 'product_sku'>[];
+  supplier: string;
+  store: string;
+  items: {
+    product: string;
+    quantity: number;
+    purchase_price: string;
+    selling_price: string;
+  }[];
   paid: number;
+}
+
+export interface ContractEntryItem {
+  product: number;
+  quantity: number;
+  purchase_price: string;
+  selling_price: string;
+}
+
+export interface ContractEntry {
+  id: number;
+  supplier: number;
+  store: number;
+  created_by: number;
+  full_name: string;
+  items: ContractEntryItem[];
 }
 
 // Transfer Types
