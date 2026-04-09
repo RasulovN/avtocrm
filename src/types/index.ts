@@ -276,19 +276,30 @@ export interface TransferItem {
 
 export interface Transfer {
   id: string;
-  from_store_id: string;
+  from_store_id?: string;
   from_store_name?: string;
-  to_store_id: string;
+  to_store_id?: string;
   to_store_name?: string;
-  items: TransferItem[];
-  status: 'pending' | 'accepted' | 'rejected';
+  items?: TransferItem[];
+  status: 'pending' | 'accepted' | 'approved' | 'rejected';
   created_at: string;
+  from_store?: string;
+  to_store?: string;
+  product?: string;
+  product_name?: string;
+  quantity?: number | string;
+  purchase_price?: string;
+  selling_price?: string;
+  created_by?: string;
+  approved_by?: string;
+  approved_at?: string | null;
 }
 
 export interface TransferFormData {
-  from_store_id: string;
-  to_store_id: string;
-  items: Omit<TransferItem, 'id' | 'product_name' | 'product_sku'>[];
+  from_store: string;
+  to_store: string;
+  product: string;
+  quantity: number;
 }
 
 // Sales Types

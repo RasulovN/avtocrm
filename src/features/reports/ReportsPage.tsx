@@ -659,9 +659,13 @@ export function ReportsPage() {
         'Transfers',
         transfersInRange.map((transfer) => ({
           date: transfer.created_at,
-          from_store: transfer.from_store_name || transfer.from_store_id,
-          to_store: transfer.to_store_name || transfer.to_store_id,
-          items_count: transfer.items.reduce((sum, item) => sum + item.quantity, 0),
+          from_store: transfer.from_store_name || transfer.from_store_id || transfer.from_store,
+          to_store: transfer.to_store_name || transfer.to_store_id || transfer.to_store,
+          items_count: Array.isArray(transfer.items)
+            ? transfer.items.reduce((sum, item) => sum + item.quantity, 0)
+            : typeof transfer.quantity === 'number'
+              ? transfer.quantity
+              : Number(transfer.quantity ?? 0) || 0,
           status: transfer.status,
         }))
       );
