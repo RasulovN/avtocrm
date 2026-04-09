@@ -168,10 +168,13 @@ const toFileList = (images?: ProductFormData['images']): File[] => {
   return [];
 };
 
-const mapProductPayload = (data: Partial<ProductFormData>): Record<string, unknown> | FormData => {
-  const imageFile = hasFile(data.image) ? data.image : undefined;
+const mapProductPayload = (
+  data: Partial<ProductFormData>,
+  options?: { mode?: 'create' | 'update' }
+): Record<string, unknown> | FormData => {
+  const mode = options?.mode ?? 'create';
   const imageFiles = toFileList(data.images);
-  const useFormData = Boolean(imageFile || imageFiles.length);
+  const useFormData = mode === 'create' && imageFiles.length > 0;
 
   const categoryId = typeof data.category === 'string' && data.category.trim() !== '' 
     ? data.category.trim() 
@@ -195,22 +198,31 @@ const mapProductPayload = (data: Partial<ProductFormData>): Record<string, unkno
     if (data.is_active !== undefined) {
       payload.append('is_active', String(data.is_active));
     }
-    const image = imageFile ?? imageFiles[0];
-    if (image) payload.append('image', image);
+    imageFiles.forEach((file) => {
+      payload.append('images', file);
+    });
     return payload;
   }
 
   const payload: Record<string, unknown> = {};
   if (categoryId) payload.category = categoryId;
   if (typeof data.name === 'string') {
-    payload.name_uz = data.name;
-    payload.name_uz_cyrl = typeof data.name_uz_cyrl === 'string' ? data.name_uz_cyrl : latinToCyrillic(data.name);
+    if (mode === 'update') {
+      payload.name = data.name;
+    } else {
+      payload.name_uz = data.name;
+      payload.name_uz_cyrl = typeof data.name_uz_cyrl === 'string' ? data.name_uz_cyrl : latinToCyrillic(data.name);
+    }
   }
   if (typeof data.description === 'string') {
-    payload.description_uz = data.description;
-    payload.description_uz_cyrl = typeof data.description_uz_cyrl === 'string'
-      ? data.description_uz_cyrl
-      : latinToCyrillic(data.description);
+    if (mode === 'update') {
+      payload.description = data.description;
+    } else {
+      payload.description_uz = data.description;
+      payload.description_uz_cyrl = typeof data.description_uz_cyrl === 'string'
+        ? data.description_uz_cyrl
+        : latinToCyrillic(data.description);
+    }
   }
   if (data.is_active !== undefined) {
     payload.is_active = data.is_active;
@@ -298,13 +310,13 @@ export const productService = {
   },
 
   create: async (data: ProductFormData): Promise<Product> => {
-    const response = await apiClient.post<ApiResponse<Product>>('/products/create/', mapProductPayload(data));
+    const response = await apiClient.post<ApiResponse<Product>>('/products/create/', mapProductPayload(data, { mode: 'create' }));
     const payload = response.data?.data ?? response.data;
     return normalizeProduct(payload);
   },
 
   update: async (id: string, data: Partial<ProductFormData>): Promise<Product> => {
-    const response = await apiClient.put<ApiResponse<Product>>(`/products/${id}/`, mapProductPayload(data));
+    const response = await apiClient.put<ApiResponse<Product>>(`/products/${id}/`, mapProductPayload(data, { mode: 'update' }));
     const payload = response.data?.data ?? response.data;
     return normalizeProduct(payload);
   },

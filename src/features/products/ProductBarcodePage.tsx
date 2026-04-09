@@ -1,70 +1,33 @@
-import { useEffect, useRef, useState, useCallback, type ChangeEvent } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Printer, ArrowLeft } from 'lucide-react';
-import JsBarcode from 'jsbarcode';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
-import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
 import { productService } from '../../services/productService';
 import type { Product } from '../../types';
 import { formatCurrency } from '../../utils';
+import { URL } from '../../services/api';
+// import { BarcodePrint } from '../../components/ui/BarcodePrint';
 
 export function ProductBarcodePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
-  const barcodeRef = useRef<SVGSVGElement>(null);
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
-  const [barcodeValue, setBarcodeValue] = useState('');
-
-  useEffect(() => {
-    if (barcodeRef.current && barcodeValue) {
-      try {
-        JsBarcode(barcodeRef.current, barcodeValue, {
-          format: 'CODE128',
-          width: 2,
-          height: 80,
-          displayValue: true,
-          fontSize: 14,
-          margin: 10,
-        });
-      } catch (error) {
-        console.error('Failed to generate barcode:', error);
-      }
-    }
-  }, [barcodeValue]);
 
   const loadProduct = useCallback(async () => {
     if (!id) return;
     try {
       const data = await productService.getById(id);
       setProduct(data);
-      setBarcodeValue(data.barcode || data.sku);
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
       console.error('Failed to load product:', error);
-      // Mock data
-      setProduct({
-        id: '1',
-        name: 'Oil Filter',
-        description: 'Premium oil filter',
-        purchase_price: 15000,
-        selling_price: 25000,
-        category: 'Filters',
-        supplier_id: '1',
-        store_id: '1',
-        sku: 'SKU-001',
-        barcode: '1234567890123',
-        quantity: 100,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
-      setBarcodeValue('1234567890123');
     } finally {
       setLoading(false);
     }
@@ -74,22 +37,26 @@ export function ProductBarcodePage() {
     void loadProduct();
   }, [loadProduct]);
 
-  const handlePrint = () => {
-    const printContent = document.getElementById('barcode-print-area');
+  const handlePrint = (batchKey: string) => {
+    const printContent = document.getElementById(batchKey);
     if (!printContent) return;
-    
+
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
-    
+
     printWindow.document.write(`
       <html>
         <head>
           <title>Print Barcode</title>
           <style>
             body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
-            .product-name { font-size: 14px; margin-bottom: 5px; }
-            .product-price { font-size: 18px; font-weight: bold; margin-bottom: 10px; }
+            .barcode-card { border: 1px solid #ddd; border-radius: 8px; padding: 12px; min-width: 220px; text-align: center; }
+            .store-name { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+            .product-name { font-size: 12px; margin-bottom: 4px; }
+            .product-price { font-size: 14px; font-weight: bold; margin-bottom: 6px; }
+            .barcode-value { font-family: monospace; font-size: 12px; margin-top: 6px; }
             svg { max-width: 100%; height: auto; }
+            img { max-width: 180px; height: auto; margin-top: 8px; }
           </style>
         </head>
         <body>
@@ -109,6 +76,22 @@ export function ProductBarcodePage() {
     );
   }
 
+  const batches = product?.batches ?? [];
+  const fallbackBarcode = product?.barcode || product?.sku || '';
+  const displayBatches = batches.length
+    ? batches
+    : (fallbackBarcode ? [{
+        id: 0,
+        product: Number(product?.id || 0),
+        store: Number(product?.store_id || 0),
+        store_name: product?.store_name || t('products.store'),
+        quantity: product?.quantity ?? 0,
+        purchase_price: String(product?.purchase_price ?? 0),
+        selling_price: String(product?.selling_price ?? 0),
+        barcode: fallbackBarcode,
+        shtrix_code: product?.shtrix_code ?? null,
+      }] : []);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -126,57 +109,79 @@ export function ProductBarcodePage() {
         }
       />
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Product Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-muted-foreground">Name</Label>
-                <p className="font-medium">{product?.name}</p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">SKU</Label>
-                <p className="font-mono">{product?.sku}</p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Category</Label>
-                <p>{product?.category}</p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Selling Price</Label>
-                <p className="font-medium">{formatCurrency(product?.selling_price || 0)}</p>
-              </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Product Information</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-4">
+            <div>
+              <Label className="text-muted-foreground">Name</Label>
+              <p className="font-medium">{product?.name}</p>
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <Label className="text-muted-foreground">SKU</Label>
+              <p className="font-mono">{product?.sku}</p>
+            </div>
+            <div>
+              <Label className="text-muted-foreground">Category</Label>
+              <p>{product?.category_name ?? product?.category}</p>
+            </div>
+            <div>
+              <Label className="text-muted-foreground">Selling Price</Label>
+              <p className="font-medium">{formatCurrency(product?.selling_price || 0)}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('products.barcode')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>{t('products.barcode')}</Label>
-              <Input
-                value={barcodeValue}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setBarcodeValue(e.target.value)}
-              />
+      <Card className='border-none'>
+        <CardHeader className='p-0 py-5'>
+          <CardTitle>{t('products.barcode')}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 p-0">
+          {displayBatches.length === 0 ? (
+            <div className="text-sm text-muted-foreground">{t('common.noData')}</div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {displayBatches.map((batch) => {
+                const key = `barcode-card-${batch.store}-${batch.id}`;
+                return (
+                  <div key={key} className="space-y-3 rounded-lg border p-4">
+                    <div id={key} className="barcode-card text-center">
+                      <div className="store-name font-medium">{batch.store_name}</div>
+                      <div className="product-name text-xs text-muted-foreground">{product?.name}</div>
+                      <div className="product-price text-sm font-semibold">{formatCurrency(Number(batch.selling_price || product?.selling_price || 0))}</div>
+                      {/* {batch.barcode ? (
+                        <div className="mt-2 flex justify-center">
+                          <BarcodePrint value={batch.barcode} showName={false} />
+                        </div>
+                      ) : (
+                        <div className="text-xs text-muted-foreground">Barcode yo'q</div>
+                      )} */}
+                      <div className="mt-3">
+                        <div className="text-xs font-medium">Shtrix kod</div>
+                        {batch.shtrix_code ? (
+                          <img src={`${URL}/${batch.shtrix_code}`} alt="Shtrix kod" className="mx-auto mt-2 max-h-32 object-contain" />
+                        ) : (
+                          <div className="text-xs text-muted-foreground">Shtrix kod yo'q</div>
+                        )}
+                        {batch.barcode && (
+                          <div className="barcode-value mt-1 text-xs text-muted-foreground">{batch.barcode}</div>
+                        )}
+                      </div>
+                    </div>
+                    <Button onClick={() => handlePrint(key)} className="w-full">
+                      <Printer className="h-4 w-4 mr-2" />
+                      {t('products.printBarcode')}
+                    </Button>
+                  </div>
+                );
+              })}
             </div>
-            <div id="barcode-print-area" className="flex flex-col items-center p-4 border rounded-lg">
-              <p className="product-name font-medium">{product?.name}</p>
-              <p className="product-price">{formatCurrency(product?.selling_price || 0)}</p>
-              <svg ref={barcodeRef}></svg>
-            </div>
-            <Button onClick={handlePrint} className="w-full">
-              <Printer className="h-4 w-4 mr-2" />
-              {t('products.printBarcode')}
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

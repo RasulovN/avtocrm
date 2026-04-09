@@ -6,6 +6,7 @@ import { isDev } from '../config/environment';
 
 const USER_KEY = 'crm_user';
 const BaSE_URL = 'https://autocrm.pythonanywhere.com/api';
+export const URL = 'https://autocrm.pythonanywhere.com/'
 export const API_BASE_URL = BaSE_URL;
 export const API_ORIGIN = BaSE_URL.replace(/\/api\/?$/, '');
 
