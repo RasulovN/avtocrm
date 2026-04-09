@@ -41,9 +41,50 @@ export function BarcodePrint({ value, productName, showName = true }: BarcodePri
 interface BarcodePrintAllProps {
   items: Array<{
     barcode?: string;
+    shtrix_code?: string;
     product_name?: string;
     quantity: number;
   }>;
+}
+
+const isImageUrl = (value: string): boolean => {
+  if (!value) return false;
+  return value.startsWith('/media/') || value.startsWith('http://') || value.startsWith('https://');
+};
+
+function BarcodeDisplay({ value, isImage = false }: { value: string; isImage?: boolean }) {
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  useEffect(() => {
+    if (svgRef.current && value && !isImage) {
+      try {
+        JsBarcode(svgRef.current, value, {
+          format: 'CODE128',
+          width: 1.8,
+          height: 48,
+          displayValue: true,
+          fontSize: 10,
+          margin: 0,
+          textMargin: 4,
+        });
+      } catch (error) {
+        console.error('Failed to generate barcode:', error);
+      }
+    }
+  }, [value, isImage]);
+
+  if (isImage && value) {
+    return (
+      <img 
+        src={value} 
+        alt="Barcode" 
+        className="max-w-[150px] h-auto"
+        style={{ maxWidth: '150px' }}
+      />
+    );
+  }
+
+  return <svg ref={svgRef}></svg>;
 }
 
 export function BarcodePrintAll({ items }: BarcodePrintAllProps) {
@@ -75,13 +116,15 @@ export function BarcodePrintAll({ items }: BarcodePrintAllProps) {
               padding: 10px; 
               border: 1px dashed #ccc;
               text-align: center;
+              page-break-inside: avoid;
             }
             .product-name { 
               font-size: 11px; 
               margin-bottom: 3px; 
             }
-            .barcode-container svg {
+            .barcode-container svg, .barcode-container img {
               max-width: 150px;
+              max-height: 80px;
             }
           </style>
         </head>
@@ -95,11 +138,14 @@ export function BarcodePrintAll({ items }: BarcodePrintAllProps) {
   };
 
   const allBarcodes = items
-    .filter(item => item.barcode)
+    .filter(item => item.shtrix_code || item.barcode)
     .flatMap(item => {
+      const barcodeValue = item.shtrix_code || item.barcode || '';
+      if (!barcodeValue) return [];
       const qty = item.quantity || 1;
       return Array.from({ length: qty }, (_, i) => ({
-        barcode: item.barcode!,
+        barcode: barcodeValue,
+        isImage: isImageUrl(barcodeValue),
         product_name: item.product_name,
         index: i + 1,
       }));
@@ -140,7 +186,7 @@ export function BarcodePrintAll({ items }: BarcodePrintAllProps) {
               <div key={idx} className="barcode-item p-2 bg-white">
                 <div className="product-name text-xs">{item.product_name}</div>
                 <div className="barcode-container">
-                  <BarcodeDisplay value={item.barcode} />
+                  <BarcodeDisplay value={item.barcode} isImage={item.isImage} />
                 </div>
               </div>
             ))}
@@ -149,28 +195,4 @@ export function BarcodePrintAll({ items }: BarcodePrintAllProps) {
       )}
     </div>
   );
-}
-
-function BarcodeDisplay({ value }: { value: string }) {
-  const svgRef = useRef<SVGSVGElement>(null);
-
-  useEffect(() => {
-    if (svgRef.current && value) {
-      try {
-        JsBarcode(svgRef.current, value, {
-          format: 'CODE128',
-          width: 1.8,
-          height: 48,
-          displayValue: true,
-          fontSize: 10,
-          margin: 0,
-          textMargin: 4,
-        });
-      } catch (error) {
-        console.error('Failed to generate barcode:', error);
-      }
-    }
-  }, [value]);
-
-  return <svg ref={svgRef}></svg>;
 }
