@@ -1,31 +1,58 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { Plus, FileText, ArrowRight, Eye, Printer } from 'lucide-react';
+import { Plus, ArrowRight, Eye, Search } from 'lucide-react';
 import { PageHeader } from '../../../components/shared/PageHeader';
+import { DataTable, type Column } from '../../../components/shared/DataTable';
 import { Button } from '../../../components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/Table';
+import { Card, CardContent } from '../../../components/ui/Card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../../components/ui/Dialog';
+import { Input } from '../../../components/ui/Input';
 import { transferService } from '../../../services/transferService';
+import { storeService } from '../../../services/storeService';
 import { formatDate } from '../../../utils';
-import type { Transfer } from '../../../types';
-import { BarcodePrintAll } from '../../../components/ui/BarcodePrint';
+import type { Transfer, Store } from '../../../types';
+import { useProducts } from '../../../context/ProductContext';
 
 export function TransferListPage() {
   const { t } = useTranslation();
   const params = useParams();
   const lang = params.lang || 'uz';
+  const { products } = useProducts();
+  const [stores, setStores] = useState<Store[]>([]);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null);
   const [showDetails, setShowDetails] = useState(false);
-  const [showBarcodeDialog, setShowBarcodeDialog] = useState(false);
-  const [barcodeItems, setBarcodeItems] = useState<Transfer['items']>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  const productNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    products.forEach((product) => {
+      map.set(String(product.id), product.name);
+    });
+    return map;
+  }, [products]);
 
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    loadStores();
+  }, []);
+
+  const loadStores = async () => {
+    try {
+      const storesRes = await storeService.getAll();
+      setStores(Array.isArray(storesRes.data) ? storesRes.data : []);
+    } catch (error) {
+      const axiosErr = error as { response?: { status?: number } };
+      if (axiosErr.response?.status === 401) return;
+      console.error('Failed to load stores:', error);
+      setStores([]);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -36,33 +63,6 @@ export function TransferListPage() {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
       console.error('Failed to load transfers:', error);
-      setTransfers([
-        {
-          id: '1',
-          from_store_id: '1',
-          from_store_name: 'Omborxona',
-          to_store_id: '2',
-          to_store_name: 'Do\'kon 1',
-          status: 'accepted',
-          created_at: new Date().toISOString(),
-          items: [
-            { id: 't1', product_id: 'p1', product_name: 'Oil Filter', product_sku: 'SKU001', product_barcode: '1234567890123', quantity: 5 },
-            { id: 't2', product_id: 'p2', product_name: 'Air Filter', product_sku: 'SKU002', product_barcode: '1234567890124', quantity: 3 },
-          ]
-        },
-        {
-          id: '2',
-          from_store_id: '2',
-          from_store_name: 'Do\'kon 1',
-          to_store_id: '1',
-          to_store_name: 'Omborxona',
-          status: 'pending',
-          created_at: new Date().toISOString(),
-          items: [
-            { id: 't3', product_id: 'p3', product_name: 'Brake Pad', product_sku: 'SKU003', product_barcode: '1234567890125', quantity: 10 },
-          ]
-        }
-      ]);
     } finally {
       setLoading(false);
     }
@@ -73,14 +73,9 @@ export function TransferListPage() {
     setShowDetails(true);
   };
 
-  const handlePrintBarcodes = (item: Transfer) => {
-    setBarcodeItems(item.items || []);
-    setShowBarcodeDialog(true);
-  };
-
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'accepted':
+      case 'approved':
         return 'bg-green-100 text-green-800';
       case 'rejected':
         return 'bg-red-100 text-red-800';
@@ -91,7 +86,7 @@ export function TransferListPage() {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'accepted':
+      case 'approved':
         return t('common.accepted');
       case 'rejected':
         return t('common.rejected');
@@ -100,6 +95,114 @@ export function TransferListPage() {
     }
   };
 
+  const resolveProductName = (item: Transfer) => {
+    if (item.product_name) return item.product_name;
+    if (item.product) return productNameById.get(String(item.product)) ?? item.product;
+    if (item.items?.[0]?.product_name) return item.items[0].product_name;
+    return '-';
+  };
+
+  const formatQuantity = (value: Transfer['quantity']) => {
+    if (value === null || value === undefined) return '-';
+    return typeof value === 'number' ? value.toString() : value;
+  };
+
+  const storeNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    stores.forEach((store) => {
+      map.set(String(store.id), store.name);
+    });
+    return map;
+  }, [stores]);
+
+  const resolveStoreName = (value?: string) => {
+    if (!value) return '-';
+    return storeNameById.get(value) ?? value;
+  };
+
+  const fromStoreLabel = (item: Transfer) => {
+    const raw = item.from_store_name || item.from_store_id || item.from_store;
+    return resolveStoreName(raw ? String(raw) : undefined);
+  };
+  const toStoreLabel = (item: Transfer) => {
+    const raw = item.to_store_name || item.to_store_id || item.to_store;
+    return resolveStoreName(raw ? String(raw) : undefined);
+  };
+
+  const filteredTransfers = useMemo(() => {
+    if (!searchQuery.trim()) return transfers;
+    const query = searchQuery.toLowerCase();
+    return transfers.filter((item) => {
+      const fromLabel = fromStoreLabel(item).toLowerCase();
+      const toLabel = toStoreLabel(item).toLowerCase();
+      const productLabel = resolveProductName(item).toLowerCase();
+      const statusLabel = getStatusLabel(item.status).toLowerCase();
+      return (
+        fromLabel.includes(query) ||
+        toLabel.includes(query) ||
+        productLabel.includes(query) ||
+        statusLabel.includes(query)
+      );
+    });
+  }, [searchQuery, transfers, storeNameById]);
+
+  const columns: Column<Transfer>[] = [
+    {
+      key: 'from_store',
+      header: t('transfers.fromStore'),
+      render: (item) => fromStoreLabel(item),
+      className: 'font-medium',
+    },
+    {
+      key: 'to_store',
+      header: t('transfers.toStore'),
+      render: (item) => toStoreLabel(item),
+    },
+    {
+      key: 'product',
+      header: t('products.title'),
+      render: (item) => resolveProductName(item),
+    },
+    {
+      key: 'quantity',
+      header: t('products.quantity'),
+      render: (item) => formatQuantity(item.quantity),
+    },
+    {
+      key: 'created_at',
+      header: t('common.date'),
+      render: (item) => formatDate(item.created_at),
+    },
+    {
+      key: 'status',
+      header: t('common.status'),
+      render: (item) => (
+        <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadge(item.status)}`}>
+          {getStatusLabel(item.status)}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: t('common.actions'),
+      className: 'text-right',
+      render: (item) => (
+        <div className="flex items-center justify-end gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleShowDetails(item);
+            }}
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -107,7 +210,16 @@ export function TransferListPage() {
         description={t('transfers.listDescription')}
       />
 
-      <div className="flex justify-end">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full flex-1 sm:max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={t('common.search')}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
         <Link to={`/${lang}/transfers/new`} className="w-full sm:w-auto">
           <Button className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
@@ -116,113 +228,71 @@ export function TransferListPage() {
         </Link>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('transfers.history')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {t('common.loading')}
-            </div>
-          ) : transfers.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>{t('transfers.noData')}</p>
-            </div>
-          ) : (
-            <>
-              <div className="space-y-3 md:hidden">
-                {transfers.map((item, index) => (
-                  <div key={item.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-xs text-muted-foreground">#{index + 1}</p>
-                        <p className="font-semibold text-foreground">{item.from_store_name || item.from_store_id}</p>
-                        <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-                          <ArrowRight className="h-4 w-4 shrink-0" />
-                          <span>{item.to_store_name || item.to_store_id}</span>
-                        </div>
-                      </div>
-                      <span className={`shrink-0 rounded-full px-2 py-1 text-xs ${getStatusBadge(item.status)}`}>
-                        {getStatusLabel(item.status)}
-                      </span>
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                      <div className="rounded-lg bg-muted/40 p-3">
-                        <p className="text-xs text-muted-foreground">{t('common.date')}</p>
-                        <p className="mt-1 font-medium">{formatDate(item.created_at)}</p>
-                      </div>
-                      <div className="rounded-lg bg-muted/40 p-3">
-                        <p className="text-xs text-muted-foreground">Products</p>
-                        <p className="mt-1 font-medium">{item.items?.length || 0}</p>
+      <Card className='border-none'>
+        <CardContent className='p-0'>
+          <div className="space-y-3 md:hidden">
+            {loading ? (
+              <div className="rounded-lg border bg-card px-4 py-10 text-center text-sm text-muted-foreground">
+                {t('common.loading')}
+              </div>
+            ) : filteredTransfers.length === 0 ? (
+              <div className="rounded-lg border bg-card px-4 py-10 text-center text-sm text-muted-foreground">
+                {t('transfers.noData')}
+              </div>
+            ) : (
+              filteredTransfers.map((item, index) => (
+                <div key={item.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">#{index + 1}</p>
+                      <p className="font-semibold text-foreground">{fromStoreLabel(item)}</p>
+                      <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                        <ArrowRight className="h-4 w-4 shrink-0" />
+                        <span>{toStoreLabel(item)}</span>
                       </div>
                     </div>
+                    <span className={`shrink-0 rounded-full px-2 py-1 text-xs ${getStatusBadge(item.status)}`}>
+                      {getStatusLabel(item.status)}
+                    </span>
+                  </div>
 
-                    <div className="mt-4 flex gap-2">
-                      <Button variant="outline" className="flex-1" onClick={() => handleShowDetails(item)}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        {t('common.view')}
-                      </Button>
-                      {item.items && item.items.length > 0 && (
-                        <Button variant="outline" className="flex-1" onClick={() => handlePrintBarcodes(item)}>
-                          <Printer className="mr-2 h-4 w-4" />
-                          Print
-                        </Button>
-                      )}
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                    <div className="rounded-lg bg-muted/40 p-3">
+                      <p className="text-xs text-muted-foreground">{t('products.title')}</p>
+                      <p className="mt-1 font-medium">{resolveProductName(item)}</p>
+                    </div>
+                    <div className="rounded-lg bg-muted/40 p-3">
+                      <p className="text-xs text-muted-foreground">{t('products.quantity')}</p>
+                      <p className="mt-1 font-medium">{formatQuantity(item.quantity)}</p>
+                    </div>
+                    <div className="rounded-lg bg-muted/40 p-3 col-span-2">
+                      <p className="text-xs text-muted-foreground">{t('common.date')}</p>
+                      <p className="mt-1 font-medium">{formatDate(item.created_at)}</p>
                     </div>
                   </div>
-                ))}
-              </div>
 
-              <div className="hidden md:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>#</TableHead>
-                      <TableHead>{t('transfers.fromStore')}</TableHead>
-                      <TableHead></TableHead>
-                      <TableHead>{t('transfers.toStore')}</TableHead>
-                      <TableHead>{t('common.date')}</TableHead>
-                      <TableHead>{t('common.status')}</TableHead>
-                      <TableHead>{t('common.actions')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {transfers.map((item, index) => (
-                      <TableRow key={item.id}>
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell>{item.from_store_name || item.from_store_id}</TableCell>
-                        <TableCell>
-                          <ArrowRight className="h-4 w-4" />
-                        </TableCell>
-                        <TableCell>{item.to_store_name || item.to_store_id}</TableCell>
-                        <TableCell>{formatDate(item.created_at)}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadge(item.status)}`}>
-                            {getStatusLabel(item.status)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleShowDetails(item)}>
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            {item.items && item.items.length > 0 && (
-                              <Button variant="ghost" size="sm" onClick={() => handlePrintBarcodes(item)} title="Print Barcodes">
-                                <Printer className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </>
-          )}
+                  <div className="mt-4 flex gap-2">
+                    <Button variant="outline" className="flex-1" onClick={() => handleShowDetails(item)}>
+                      <Eye className="mr-2 h-4 w-4" />
+                      {t('common.view')}
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="hidden md:block">
+            <DataTable
+              data={filteredTransfers}
+              columns={columns}
+              loading={loading}
+              emptyMessage={t('transfers.noData')}
+              loadingMessage={t('common.loading')}
+              onRowClick={(item) => handleShowDetails(item)}
+              minWidth="900px"
+            />
+          </div>
         </CardContent>
       </Card>
 
@@ -230,7 +300,7 @@ export function TransferListPage() {
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
         <DialogContent className="max-w-2xl sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Transfer Details</DialogTitle>
+            <DialogTitle>{t('transfers.detailsTitle')}</DialogTitle>
             <DialogDescription>
               {formatDate(selectedTransfer?.created_at || '')}
             </DialogDescription>
@@ -239,82 +309,45 @@ export function TransferListPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                 <div className="rounded-lg bg-muted/40 p-3">
-                  <span className="text-muted-foreground">From:</span>
-                  <p className="mt-1 font-medium">{selectedTransfer.from_store_name || selectedTransfer.from_store_id}</p>
+                  <span className="text-muted-foreground">{t('transfers.detailsFrom')}:</span>
+                  <p className="mt-1 font-medium">{fromStoreLabel(selectedTransfer)}</p>
                 </div>
                 <div className="rounded-lg bg-muted/40 p-3">
-                  <span className="text-muted-foreground">To:</span>
-                  <p className="mt-1 font-medium">{selectedTransfer.to_store_name || selectedTransfer.to_store_id}</p>
+                  <span className="text-muted-foreground">{t('transfers.detailsTo')}:</span>
+                  <p className="mt-1 font-medium">{toStoreLabel(selectedTransfer)}</p>
                 </div>
                 <div className="rounded-lg bg-muted/40 p-3 sm:col-span-2">
-                  <span className="text-muted-foreground">Status:</span>
+                  <span className="text-muted-foreground">{t('transfers.detailsStatus')}:</span>
                   <p className="mt-1 font-medium">{getStatusLabel(selectedTransfer.status)}</p>
                 </div>
               </div>
-              
-              {selectedTransfer.items && selectedTransfer.items.length > 0 && (
-                <>
-                  <div className="space-y-3 md:hidden">
-                    {selectedTransfer.items.map((item, idx) => (
-                      <div key={idx} className="rounded-lg border border-border p-3">
-                        <p className="font-medium text-foreground">{item.product_name}</p>
-                        <div className="mt-3 grid grid-cols-1 gap-2 text-sm">
-                          <div>
-                            <p className="text-xs text-muted-foreground">SKU</p>
-                            <p className="font-mono text-xs">{item.product_sku || '-'}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Barcode</p>
-                            <p className="font-mono text-xs break-all">{item.product_barcode || '-'}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Qty</p>
-                            <p className="font-medium">{item.quantity}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
 
-                  <div className="hidden rounded border md:block">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Product</TableHead>
-                          <TableHead>SKU</TableHead>
-                          <TableHead>Barcode</TableHead>
-                          <TableHead>Qty</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {selectedTransfer.items.map((item, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell>{item.product_name}</TableCell>
-                            <TableCell className="font-mono text-xs">{item.product_sku || '-'}</TableCell>
-                            <TableCell className="font-mono text-xs">{item.product_barcode || '-'}</TableCell>
-                            <TableCell>{item.quantity}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </>
-              )}
+              <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                <div className="rounded-lg bg-muted/40 p-3">
+                  <span className="text-muted-foreground">{t('transfers.detailsProduct')}:</span>
+                  <p className="mt-1 font-medium">{resolveProductName(selectedTransfer)}</p>
+                </div>
+                <div className="rounded-lg bg-muted/40 p-3">
+                  <span className="text-muted-foreground">{t('transfers.detailsQuantity')}:</span>
+                  <p className="mt-1 font-medium">{formatQuantity(selectedTransfer.quantity)}</p>
+                </div>
+                <div className="rounded-lg bg-muted/40 p-3">
+                  <span className="text-muted-foreground">{t('transfers.detailsPurchasePrice')}:</span>
+                  <p className="mt-1 font-medium">{selectedTransfer.purchase_price ?? '-'}</p>
+                </div>
+                <div className="rounded-lg bg-muted/40 p-3">
+                  <span className="text-muted-foreground">{t('transfers.detailsSellingPrice')}:</span>
+                  <p className="mt-1 font-medium">{selectedTransfer.selling_price ?? '-'}</p>
+                </div>
+                <div className="rounded-lg bg-muted/40 p-3 sm:col-span-2">
+                  <span className="text-muted-foreground">{t('transfers.detailsApprovedAt')}:</span>
+                  <p className="mt-1 font-medium">
+                    {selectedTransfer.approved_at ? formatDate(selectedTransfer.approved_at) : '-'}
+                  </p>
+                </div>
+              </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Barcode Print Dialog */}
-      <Dialog open={showBarcodeDialog} onOpenChange={setShowBarcodeDialog}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>Print Barcodes</DialogTitle>
-            <DialogDescription>
-              Product barcodes for this transfer
-            </DialogDescription>
-          </DialogHeader>
-          <BarcodePrintAll items={barcodeItems} />
         </DialogContent>
       </Dialog>
     </div>
