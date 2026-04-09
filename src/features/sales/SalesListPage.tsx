@@ -29,46 +29,13 @@ export function SalesListPage() {
     try {
       setLoading(true);
       const res = await salesService.getAll();
-      const scopedSales = isAdmin ? (res.data || []) : (res.data || []).filter((sale) => sale.store_id === userStoreId);
+      const scopedSales = isAdmin ? (res.data || []) : (res.data || []).filter((sale) => String(sale.store) === userStoreId);
       setSales(scopedSales);
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
       console.error('Failed to load sales:', error);
-      // Demo data
-      const fallbackSales: Sale[] = [
-        {
-          id: '1',
-          store_id: '1',
-          total_cost: 150000,
-          total_price: 250000,
-          profit: 100000,
-          payment_method: 'cash',
-          created_at: new Date().toISOString(),
-          items: []
-        },
-        {
-          id: '2',
-          store_id: '1',
-          total_cost: 110000,
-          total_price: 180000,
-          profit: 70000,
-          payment_method: 'card',
-          created_at: new Date().toISOString(),
-          items: []
-        },
-        {
-          id: '3',
-          store_id: '2',
-          total_cost: 270000,
-          total_price: 450000,
-          profit: 180000,
-          payment_method: 'cash',
-          created_at: new Date().toISOString(),
-          items: []
-        }
-      ];
-      setSales(isAdmin ? fallbackSales : fallbackSales.filter((sale) => sale.store_id === userStoreId));
+      setSales([]);
     } finally {
       setLoading(false);
     }
@@ -112,24 +79,24 @@ export function SalesListPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-xs text-muted-foreground">#{index + 1}</p>
-                        <p className="font-semibold text-foreground">{t('stores.title')}: {item.store_id}</p>
+                        <p className="font-semibold text-foreground">{t('stores.title')}: {item.store_name || item.store}</p>
                         <p className="mt-1 text-sm text-muted-foreground">{formatDate(item.created_at)}</p>
                       </div>
                       <span className={`shrink-0 rounded-full px-2 py-1 text-xs ${
-                        item.payment_method === 'cash' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                        item.status === 'partial' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
                       }`}>
-                        {item.payment_method === 'cash' ? t('sales.cash') : t('sales.card')}
+                        {item.status === 'partial' ? t('common.pending') : (item.status === 'paid' ? t('sales.paid') : t('common.completed'))}
                       </span>
                     </div>
 
                     <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                       <div className="rounded-lg bg-muted/40 p-3">
                         <p className="text-xs text-muted-foreground">{t('common.total')}</p>
-                        <p className="mt-1 font-semibold">{formatCurrency(item.total_price)}</p>
+                        <p className="mt-1 font-semibold">{formatCurrency(parseFloat(item.total_amount))}</p>
                       </div>
                       <div className="rounded-lg bg-muted/40 p-3">
-                        <p className="text-xs text-muted-foreground">{t('sales.profit')}</p>
-                        <p className="mt-1 font-semibold text-green-600">{formatCurrency(item.profit)}</p>
+                        <p className="text-xs text-muted-foreground">{t('sales.paid')}</p>
+                        <p className="mt-1 font-semibold text-green-600">{formatCurrency(parseFloat(item.paid_amount))}</p>
                       </div>
                     </div>
 
@@ -150,8 +117,8 @@ export function SalesListPage() {
                       <TableHead>#</TableHead>
                       <TableHead>{t('stores.title')}</TableHead>
                       <TableHead>{t('common.total')}</TableHead>
-                      <TableHead>{t('sales.profit')}</TableHead>
-                      <TableHead>{t('sales.paymentMethod')}</TableHead>
+                      <TableHead>{t('sales.paid')}</TableHead>
+                      <TableHead>{t('common.status')}</TableHead>
                       <TableHead>{t('common.date')}</TableHead>
                       <TableHead>{t('common.actions')}</TableHead>
                     </TableRow>
@@ -160,14 +127,14 @@ export function SalesListPage() {
                     {sales.map((item, index) => (
                       <TableRow key={item.id}>
                         <TableCell>{index + 1}</TableCell>
-                        <TableCell>{item.store_id}</TableCell>
-                        <TableCell className="font-medium">{formatCurrency(item.total_price)}</TableCell>
-                        <TableCell className="text-green-600">{formatCurrency(item.profit)}</TableCell>
+                        <TableCell>{item.store_name || item.store}</TableCell>
+                        <TableCell className="font-medium">{formatCurrency(parseFloat(item.total_amount))}</TableCell>
+                        <TableCell className="text-green-600">{formatCurrency(parseFloat(item.paid_amount))}</TableCell>
                         <TableCell>
                           <span className={`px-2 py-1 rounded-full text-xs ${
-                            item.payment_method === 'cash' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                            item.status === 'partial' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
                           }`}>
-                            {item.payment_method === 'cash' ? t('sales.cash') : t('sales.card')}
+{item.status === 'partial' ? t('common.pending') : (item.status === 'paid' ? t('sales.paid') : t('common.completed'))}
                           </span>
                         </TableCell>
                         <TableCell>{formatDate(item.created_at)}</TableCell>

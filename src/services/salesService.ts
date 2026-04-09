@@ -7,8 +7,14 @@ export const salesService = {
     if (params?.page) searchParams.append('page', params.page.toString());
     if (params?.limit) searchParams.append('limit', params.limit.toString());
 
-    const response = await apiClient.get<PaginatedResponse<Sale>>(`/sales?${searchParams.toString()}`);
-    return response.data;
+    const response = await apiClient.get<Sale[]>(`/sales/list/?${searchParams.toString()}`);
+    const data = Array.isArray(response.data) ? response.data : [];
+    return {
+      data,
+      total: data.length,
+      page: params?.page ?? 1,
+      limit: params?.limit ?? data.length,
+    };
   },
 
   getById: async (id: string): Promise<Sale> => {
@@ -16,8 +22,8 @@ export const salesService = {
     return response.data.data;
   },
 
-  create: async (data: SaleFormData): Promise<Sale> => {
-    const response = await apiClient.post<ApiResponse<Sale>>('/sales', data);
+  create: async (data: SaleFormData): Promise<Sale> => {  
+    const response = await apiClient.post<ApiResponse<Sale>>('/sales/create/', data);
     return response.data.data;
   },
 

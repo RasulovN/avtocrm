@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
 import QrScanner from 'react-qr-barcode-scanner';
-import { ScanBarcode, Trash2, DollarSign, Search, X } from 'lucide-react';
+import { ScanBarcode, Trash2, DollarSign, Search, X, UserPlus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/Dialog';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -8,6 +8,8 @@ import { Label } from '../../components/ui/Label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
 import { storeService } from '../../services/storeService';
 import { productService } from '../../services/productService';
+import { salesService } from '../../services/salesService';
+import { customerApiService } from '../../services/customerService';
 import { useAuthStore } from '../../app/store';
 import { useCategories } from '../../context/CategoryContext';
 import { useProducts } from '../../context/ProductContext';
@@ -18,6 +20,7 @@ import { formatCurrency } from '../../utils';
 interface CartItem {
   product_id: string;
   product_name: string;
+  store_id: string;
   quantity: number;
   purchase_price: number;
   selling_price: number;
@@ -45,9 +48,12 @@ export function SalesPage() {
   const [discount, setDiscount] = useState(0);
   const [showReceipt, setShowReceipt] = useState(false);
   const [activePayment, setActivePayment] = useState<'cash' | 'card' | null>(null);
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
   const [showScanner, setShowScanner] = useState(false);
+  const [customers, setCustomers] = useState<{ id: number; full_name: string; phone_number: string }[]>([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+  const [showNewCustomerDialog, setShowNewCustomerDialog] = useState(false);
+  const [newCustomerName, setNewCustomerName] = useState('');
+  const [newCustomerPhone, setNewCustomerPhone] = useState('');
   const safeStores = useMemo(() => (Array.isArray(stores) ? stores : []), [stores]);
   const safeProducts = useMemo(() => {
     if (productsLoading) return [];
@@ -70,9 +76,13 @@ export function SalesPage() {
 
   const loadData = async () => {
     try {
-      const storesRes = await storeService.getAll();
+      const [storesRes, customersRes] = await Promise.all([
+        storeService.getAll(),
+        customerApiService.getAll()
+      ]);
       const loadedStores = Array.isArray(storesRes.data) ? storesRes.data : [];
       setStores(isAdmin ? loadedStores : loadedStores.filter((store) => store.id === userStoreId));
+      setCustomers(customersRes || []);
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
@@ -81,6 +91,7 @@ export function SalesPage() {
         { id: '1', name: 'Main Store', is_warehouse: false, created_at: '' },
       ];
       setStores(isAdmin ? fallbackStores : fallbackStores.filter((store) => store.id === userStoreId));
+      setCustomers([]);
     }
   };
 
@@ -96,6 +107,7 @@ export function SalesPage() {
       return [...prevItems, {
         product_id: product.id,
         product_name: product.name,
+        store_id: product.store_id || userStoreId || '1',
         quantity: 1,
         purchase_price: product.purchase_price ?? 0,
         selling_price: product.selling_price ?? 0,
@@ -178,12 +190,57 @@ export function SalesPage() {
     setActivePayment('card');
   };
 
-  const handleFinishSale = () => {
+  const handleCreateCustomer = async () => {
+    if (!newCustomerName.trim() || !newCustomerPhone.trim()) return;
+    try {
+      const newCustomer = await customerApiService.create({
+        full_name: newCustomerName,
+        phone_number: newCustomerPhone,
+      });
+      setCustomers(prev => [...prev, { id: newCustomer.id, full_name: newCustomer.full_name, phone_number: newCustomer.phone_number }]);
+      setSelectedCustomerId(String(newCustomer.id));
+      setShowNewCustomerDialog(false);
+      setNewCustomerName('');
+      setNewCustomerPhone('');
+    } catch (error) {
+      console.error('Failed to create customer:', error);
+    }
+  };
+
+  const handleFinishSale = async () => {
     if (items.length === 0) return;
-    if (!customerName.trim() || !customerPhone.trim()) return;
-    setShowReceipt(true);
+    if (!selectedCustomerId) return;
+    
+    try {
       setSaving(true);
-      setTimeout(() => setSaving(false), 1000);
+      
+      const payments = [];
+      if (cashAmount > 0) {
+        payments.push({ type: 'cash', amount: String(cashAmount) });
+      }
+      if (cardAmount > 0) {
+        payments.push({ type: 'card', amount: String(cardAmount) });
+      }
+      
+      const selectedStoreId = items.length > 0 ? items[0].store_id : (storeId || userStoreId || '1');
+      
+      await salesService.create({
+        store: parseInt(selectedStoreId),
+        customer: parseInt(selectedCustomerId),
+        items: items.map(item => ({
+          product: parseInt(item.product_id),
+          quantity: item.quantity,
+          price: String(item.selling_price),
+        })),
+        payments,
+      });
+      
+      setShowReceipt(true);
+    } catch (error) {
+      console.error('Failed to create sale:', error);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const resetSale = () => {
@@ -411,26 +468,34 @@ export function SalesPage() {
               <div className="px-3 flex-1 space-y-3">
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground dark:text-gray-400">Mijoz</Label>
-                  <div>
-                    <Input
-                      type="text"
-                      placeholder="F.I.O"
-                      value={customerName}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => setCustomerName(e.target.value)}
-                      className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white"
-                    />
+<div>
+                      <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+                        <SelectTrigger className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white">
+                          <SelectValue placeholder="Mijozni tanlang" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {customers.map(customer => (
+                            <SelectItem key={customer.id} value={String(customer.id)}>
+                              {customer.full_name} - {customer.phone_number}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowNewCustomerDialog(true)}
+                        className="h-9 text-sm dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900"
+                      >
+                        <UserPlus className="h-4 w-4 mr-1" />
+                        Yangi mijoz
+                      </Button>
+</div>
                   </div>
-                  <div>
-                    <Input
-                      type="tel"
-                      placeholder="Telefon"
-                      value={customerPhone}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => setCustomerPhone(e.target.value)}
-                      className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
+                  <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground dark:text-gray-400">Tezkor to'lov</Label>
                   <div className="grid grid-cols-2 gap-1.5">
                     <Button
@@ -514,7 +579,7 @@ export function SalesPage() {
                     </div>
                   )}
                 </div>
-                <Button type="button" className="w-full h-11 text-sm font-semibold dark:bg-green-600 dark:hover:bg-green-700" onClick={handleFinishSale} disabled={saving || items.length === 0 || !customerName.trim() || !customerPhone.trim()}>
+                <Button type="button" className="w-full h-11 text-sm font-semibold dark:bg-green-600 dark:hover:bg-green-700" onClick={handleFinishSale} disabled={saving || items.length === 0 || !selectedCustomerId}>
                   {saving ? 'Yuklanmoqda...' : `Sotuvni yakunlash — ${formatCurrency(totalWithDiscount)}`}
                 </Button>
               </div>
@@ -539,14 +604,21 @@ export function SalesPage() {
                 <p className="text-xs text-muted-foreground dark:text-gray-400">{new Date().toLocaleString()}</p>
               </div>
               <div className="border-b dark:border-gray-600 pb-2 text-sm dark:text-gray-300">
-                <div className="flex justify-between">
-                  <span>Mijoz:</span>
-                  <span>{customerName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Telefon:</span>
-                  <span>{customerPhone}</span>
-                </div>
+                {selectedCustomerId && (() => {
+                  const customer = customers.find(c => String(c.id) === selectedCustomerId);
+                  return customer ? (
+                    <>
+                      <div className="flex justify-between">
+                        <span>Mijoz:</span>
+                        <span>{customer.full_name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Telefon:</span>
+                        <span>{customer.phone_number}</span>
+                      </div>
+                    </>
+                  ) : null;
+                })()}
               </div>
 
               <div className="space-y-2 text-sm">
@@ -632,6 +704,36 @@ export function SalesPage() {
             onUpdate={(result) => handleBarcodeScanQr(result)}
             onError={(error) => console.error('Scanner error:', error)}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* New Customer Dialog */}
+      <Dialog open={showNewCustomerDialog} onOpenChange={setShowNewCustomerDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Yangi mijoz qo'shish</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Ism</Label>
+              <Input
+                value={newCustomerName}
+                onChange={(e) => setNewCustomerName(e.target.value)}
+                placeholder="Mijoz ismi"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Telefon</Label>
+              <Input
+                value={newCustomerPhone}
+                onChange={(e) => setNewCustomerPhone(e.target.value)}
+                placeholder="+998901234567"
+              />
+            </div>
+            <Button onClick={handleCreateCustomer} className="w-full">
+              Saqlash
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

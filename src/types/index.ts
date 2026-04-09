@@ -308,33 +308,46 @@ export interface TransferFormData {
 }
 
 // Sales Types
+export interface SalePayment {
+  type: 'cash' | 'card';
+  amount: number;
+}
+
 export interface SaleItem {
-  id: string;
-  product_id: string;
-  product_name?: string;
-  product_sku?: string;
+  id: number;
+  product: number;
   quantity: number;
-  purchase_price: number;
-  selling_price: number;
-  total: number;
+  unit_price: string;
+  total_price: string;
 }
 
 export interface Sale {
-  id: string;
-  store_id: string;
+  id: number;
+  store: number;
   store_name?: string;
+  seller: number;
+  customer: number;
+  payments: number[];
+  status: 'partial' | 'paid' | 'completed';
+  total_amount: string;
+  paid_amount: string;
   items: SaleItem[];
-  total_cost: number;
-  total_price: number;
-  total?: number;
-  profit: number;
-  payment_method?: 'cash' | 'card';
   created_at: string;
+}
 }
 
 export interface SaleFormData {
-  store_id: string;
-  items: Omit<SaleItem, 'id' | 'product_name' | 'product_sku' | 'total'>[];
+  store: number;
+  customer: string;
+  items: {
+    product: number;
+    quantity: number;
+    price: string;
+  }[];
+  payments: {
+    type: 'cash' | 'card';
+    amount: string;
+  }[];
 }
 
 // Customer Types

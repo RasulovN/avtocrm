@@ -1,6 +1,24 @@
 import type { Customer, CustomerOrder, CustomerOrderItem, PaginatedResponse, Sale, Store } from '../types';
 import { salesService } from './salesService';
 import { storeService } from './storeService';
+import { apiClient } from './api';
+
+export const customerApiService = {
+  getAll: async (): Promise<Customer[]> => {
+    const response = await apiClient.get<Customer[]>('/users/customers/list/');
+    return response.data;
+  },
+
+  getById: async (id: string): Promise<Customer> => {
+    const response = await apiClient.get<Customer>(`/users/customers/${id}/`);
+    return response.data;
+  },
+
+  create: async (data: { full_name: string; phone_number: string }): Promise<Customer> => {
+    const response = await apiClient.post<Customer>('/users/customers/create/', data);
+    return response.data;
+  },
+};
 
 const fallbackStores: Store[] = [
   { id: '1', name: 'Main Store', is_warehouse: false, created_at: new Date().toISOString() },
