@@ -72,13 +72,14 @@ export function InventoryListPage() {
           const items: InventoryItem[] = await Promise.all(
             entry.items.map(async (item) => {
               const prod = await fetchProductDetails(item.product);
+              const shtrixCode = item.shtrix_code || item.barcode || prod.shtrix_code || '';
               return {
-                id: `${entry.id}-${item.product}`,
+                id: String(item.id),
                 product_id: String(item.product),
                 product_name: prod.name,
                 product_sku: prod.sku,
-                product_barcode: prod.barcode,
-                shtrix_code: prod.shtrix_code,
+                product_barcode: item.barcode || prod.barcode,
+                shtrix_code: shtrixCode,
                 quantity: item.quantity,
                 purchase_price: parseFloat(item.purchase_price),
                 selling_price: item.selling_price ? parseFloat(item.selling_price) : undefined,

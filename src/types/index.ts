@@ -249,10 +249,13 @@ export interface InventoryFormData {
 }
 
 export interface ContractEntryItem {
+  id?: number;
   product: number;
   quantity: number;
   purchase_price: string;
   selling_price: string;
+  barcode?: string | null;
+  shtrix_code?: string | null;
 }
 
 export interface ContractEntry {

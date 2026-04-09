@@ -139,17 +139,17 @@ export function BarcodePrintAll({ items }: BarcodePrintAllProps) {
 
   const allBarcodes = items
     .filter(item => item.shtrix_code || item.barcode)
-    .flatMap(item => {
+    .map(item => {
       const barcodeValue = item.shtrix_code || item.barcode || '';
-      if (!barcodeValue) return [];
-      const qty = item.quantity || 1;
-      return Array.from({ length: qty }, (_, i) => ({
+      if (!barcodeValue) return null;
+      return {
         barcode: barcodeValue,
         isImage: isImageUrl(barcodeValue),
         product_name: item.product_name,
-        index: i + 1,
-      }));
-    });
+        quantity: item.quantity,
+      };
+    })
+    .filter(Boolean);
 
   if (allBarcodes.length === 0) return null;
 
@@ -185,6 +185,7 @@ export function BarcodePrintAll({ items }: BarcodePrintAllProps) {
             {allBarcodes.map((item, idx) => (
               <div key={idx} className="barcode-item p-2 bg-white">
                 <div className="product-name text-xs">{item.product_name}</div>
+                <div className="text-xs text-muted-foreground">Miqdor: {item.quantity}</div>
                 <div className="barcode-container">
                   <BarcodeDisplay value={item.barcode} isImage={item.isImage} />
                 </div>
