@@ -247,7 +247,7 @@ export function SalesPage() {
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-12 xl:gap-3 xl:h-[calc(100vh-11rem)]">
           {/* Katalog (chap panel) */}
           <div className="flex flex-col space-y-2 xl:col-span-5">
-            <div className="bg-card border border-gray-900 rounded-lg flex min-h-[320px] flex-col p-3 xl:min-h-0 xl:flex-1">
+            <div className="bg-card border border-gray-900 rounded-lg flex min-h-80 flex-col p-3 xl:min-h-0 xl:flex-1">
               <div className="mb-3">
                 <h4 className="text-base font-semibold flex items-center gap-2 dark:text-white mb-2">
                   Katalog tovarov
@@ -280,7 +280,7 @@ export function SalesPage() {
                     </SelectContent>
                   </Select>}
                   <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                    <SelectTrigger className="h-8 w-full dark:bg-gray-900 dark:border-gray-600 dark:text-white sm:w-[160px]">
+                    <SelectTrigger className="h-8 w-full dark:bg-gray-900 dark:border-gray-600 dark:text-white sm:w-40">
                       <SelectValue placeholder="Kategoriya" />
                     </SelectTrigger>
                     <SelectContent>
@@ -319,7 +319,7 @@ export function SalesPage() {
           </div>
           {/* Chek (o'rta panel) */}
           <div className="flex flex-col space-y-2 xl:col-span-4">
-            <div className="bg-card border border-gray-900 rounded-lg flex min-h-[320px] flex-col xl:flex-1">
+            <div className="bg-card border border-gray-900 rounded-lg flex min-h-80 flex-col xl:flex-1">
               <div className="p-3 pb-2">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <h4 className="text-base font-semibold flex items-center gap-2 dark:text-white">
@@ -428,7 +428,7 @@ export function SalesPage() {
           </div>
           {/* Oplata (o'ng panel) */}
           <div className="flex flex-col space-y-2 xl:col-span-3">
-            <div className="bg-card border border-gray-900 rounded-lg flex min-h-[320px] flex-col xl:flex-1">
+            <div className="bg-card border border-gray-900 rounded-lg flex min-h-80 flex-col xl:flex-1">
               <div className="p-3 pb-2">
                 <h4 className="text-base font-semibold dark:text-white">To'lov</h4>
               </div>
