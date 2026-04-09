@@ -184,7 +184,7 @@ export interface Store {
   address_uz_cyrl?: string;
   phone?: string;
   phone_number?: string;
-  type?: string;
+  type?: 'b' | 's';
   latitude?: string;
   longitude?: string;
   is_active?: boolean;

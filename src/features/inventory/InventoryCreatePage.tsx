@@ -18,9 +18,9 @@ import { formatCurrency } from '../../utils';
 interface InventoryFormItem {
   product_id: string;
   product_name: string;
-  quantity: number;
-  purchase_price: number;
-  selling_price: number;
+  quantity: number | '';
+  purchase_price: number | '';
+  selling_price: number | '';
   total: number;
 }
 
@@ -40,9 +40,9 @@ export function InventoryCreatePage() {
 
   const [supplierId, setSupplierId] = useState('');
   const [storeId, setStoreId] = useState('');
-  const [paid, setPaid] = useState(0);
+  const [paid, setPaid] = useState<number | ''>('');
   const [items, setItems] = useState<InventoryFormItem[]>([
-    { product_id: '', product_name: '', quantity: 1, purchase_price: 0, selling_price: 0, total: 0 }
+    { product_id: '', product_name: '', quantity: '', purchase_price: '', selling_price: '', total: 0 }
   ]);
 
   const loadData = useCallback(async () => {
@@ -76,48 +76,55 @@ export function InventoryCreatePage() {
     if (field === 'product_id') {
       const product = safeProducts.find(p => p.id === value);
       if (product) {
-        const purchasePrice = product.purchase_price ?? 0;
-        const sellingPrice = product.selling_price ?? 0;
+        const purchasePrice = product.purchase_price ?? '';
+        const sellingPrice = product.selling_price ?? '';
         newItems[index] = {
           ...newItems[index],
           product_id: value as string,
           product_name: product.name,
           purchase_price: purchasePrice,
           selling_price: sellingPrice,
-          total: purchasePrice * newItems[index].quantity,
+          total: (purchasePrice || 0) * (newItems[index].quantity || 0),
         };
       }
     } else if (field === 'quantity') {
+      const qty = value === '' ? '' : Number(value);
       newItems[index] = {
         ...newItems[index],
-        quantity: value as number,
-        total: (newItems[index].purchase_price || 0) * (value as number),
+        quantity: qty,
+        total: ((newItems[index].purchase_price || 0) as number) * (qty as number),
       };
     } else if (field === 'purchase_price') {
+      const price = value === '' ? '' : Number(value);
       newItems[index] = {
         ...newItems[index],
-        purchase_price: value as number,
-        total: (value as number) * newItems[index].quantity,
+        purchase_price: price,
+        total: (price as number) * (newItems[index].quantity || 0),
       };
     } else if (field === 'selling_price') {
       newItems[index] = {
         ...newItems[index],
-        selling_price: value as number,
+        selling_price: value === '' ? '' : Number(value),
       };
     }
     setItems(newItems);
   };
 
   const addItem = () => {
-    setItems([...items, { product_id: '', product_name: '', quantity: 1, purchase_price: 0, selling_price: 0, total: 0 }]);
+    setItems([...items, { product_id: '', product_name: '', quantity: '', purchase_price: '', selling_price: '', total: 0 }]);
   };
 
   const removeItem = (index: number) => {
     setItems(items.filter((_, i) => i !== index));
   };
 
-  const total = items.reduce((sum, item) => sum + item.total, 0);
-  const debt = total - paid;
+  const total = items.reduce((sum, item) => {
+    const qty = item.quantity === '' ? 0 : item.quantity;
+    const price = item.purchase_price === '' ? 0 : item.purchase_price;
+    return sum + (qty as number) * (price as number);
+  }, 0);
+  const paidAmount = paid === '' ? 0 : paid;
+  const debt = total - paidAmount;
 
   const handleSubmit = async (e: ChangeEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -128,11 +135,11 @@ export function InventoryCreatePage() {
         store: storeId,
         items: items.map(item => ({
           product: item.product_id,
-          quantity: item.quantity,
-          purchase_price: item.purchase_price.toString(),
-          selling_price: item.selling_price.toString(),
+          quantity: item.quantity === '' ? 0 : item.quantity,
+          purchase_price: (item.purchase_price === '' ? '0' : String(item.purchase_price)),
+          selling_price: (item.selling_price === '' ? '0' : String(item.selling_price)),
         })),
-        paid,
+        paid: paid === '' ? 0 : paid,
       });
       navigate('/inventory');
     } catch (error) {
@@ -181,7 +188,13 @@ export function InventoryCreatePage() {
                   </SelectTrigger>
                   <SelectContent>
                     {safeStores.map(s => (
-                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      <SelectItem 
+                        key={s.id} 
+                        value={s.id}
+                        disabled={s.type === 's'}
+                      >
+                        {s.name} {s.type === 's' ? ' ( doʻkon )' : ''}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -191,7 +204,7 @@ export function InventoryCreatePage() {
                 <Input
                   type="number"
                   value={paid}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => setPaid(Number(e.target.value))}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setPaid(e.target.value === '' ? '' : Number(e.target.value))}
                 />
               </div>
             </CardContent>
@@ -239,7 +252,7 @@ export function InventoryCreatePage() {
                         type="number"
                         min="1"
                         value={item.quantity}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleItemChange(index, 'quantity', Number(e.target.value))}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleItemChange(index, 'quantity', e.target.value)}
                       />
                     </div>
                     <div className="space-y-2">
@@ -247,7 +260,7 @@ export function InventoryCreatePage() {
                       <Input
                         type="number"
                         value={item.purchase_price}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleItemChange(index, 'purchase_price', Number(e.target.value))}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleItemChange(index, 'purchase_price', e.target.value)}
                       />
                     </div>
                     <div className="space-y-2">
@@ -255,7 +268,7 @@ export function InventoryCreatePage() {
                       <Input
                         type="number"
                         value={item.selling_price}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleItemChange(index, 'selling_price', Number(e.target.value))}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleItemChange(index, 'selling_price', e.target.value)}
                       />
                     </div>
                   </div>
