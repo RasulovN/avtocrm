@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { inventoryService } from '../../services/inventoryService';
 import { productService } from '../../services/productService';
 import { formatCurrency, formatDate } from '../../utils';
-import type { ContractEntry, InventoryItem } from '../../types';
+import type {  InventoryItem } from '../../types';
 import { BarcodePrintAll } from '../../components/ui/BarcodePrint';
 
 interface DisplayInventory {
@@ -109,39 +109,7 @@ export function InventoryListPage() {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
       console.error('Failed to load inventory:', error);
-      setInventory([
-        {
-          id: '1',
-          supplier_id: '1',
-          supplier_name: 'Supplier 1',
-          store_id: '1',
-          store_name: 'Store 1',
-          total: 500000,
-          paid: 300000,
-          debt: 200000,
-          status: 'completed',
-          created_at: new Date().toISOString(),
-          items: [
-            { id: '1', product_id: 'p1', product_name: 'Oil Filter', product_sku: 'SKU001', product_barcode: '1234567890123', quantity: 5, purchase_price: 15000, total: 75000 },
-            { id: '2', product_id: 'p2', product_name: 'Air Filter', product_sku: 'SKU002', product_barcode: '1234567890124', quantity: 3, purchase_price: 10000, total: 30000 },
-          ]
-        },
-        {
-          id: '2',
-          supplier_id: '2',
-          supplier_name: 'Supplier 2',
-          store_id: '1',
-          store_name: 'Store 1',
-          total: 1200000,
-          paid: 500000,
-          debt: 700000,
-          status: 'pending',
-          created_at: new Date().toISOString(),
-          items: [
-            { id: '3', product_id: 'p3', product_name: 'Brake Pad', product_sku: 'SKU003', product_barcode: '1234567890125', quantity: 10, purchase_price: 25000, total: 250000 },
-          ]
-        }
-      ]);
+      setInventory([]);
     } finally {
       setLoading(false);
     }
@@ -151,12 +119,12 @@ export function InventoryListPage() {
     loadData();
   }, [loadData]);
 
-  const handleShowDetails = (item: Inventory) => {
+  const handleShowDetails = (item: DisplayInventory) => {
     setSelectedInventory(item);
     setShowDetails(true);
   };
 
-  const handlePrintBarcodes = (item: Inventory) => {
+  const handlePrintBarcodes = (item: DisplayInventory) => {
     setBarcodeItems(item.items || []);
     setShowBarcodeDialog(true);
   };
@@ -231,12 +199,12 @@ export function InventoryListPage() {
                       </div>
 
                       <div className="flex flex-wrap gap-2">
-                        <Button variant="outline" size="sm" className="flex-1 min-w-[120px]" onClick={() => handleShowDetails(item)}>
+                        <Button variant="outline" size="sm" className="flex-1 min-w-30" onClick={() => handleShowDetails(item)}>
                           <Eye className="mr-2 h-4 w-4" />
                           {t('common.actions')}
                         </Button>
                         {item.items && item.items.length > 0 && (
-                          <Button variant="outline" size="sm" className="flex-1 min-w-[120px]" onClick={() => handlePrintBarcodes(item)}>
+                          <Button variant="outline" size="sm" className="flex-1 min-w-30" onClick={() => handlePrintBarcodes(item)}>
                             <Printer className="mr-2 h-4 w-4" />
                             {t('products.printBarcode')}
                           </Button>
