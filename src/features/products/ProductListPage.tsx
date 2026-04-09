@@ -252,6 +252,7 @@ export function ProductListPage() {
     {
       key: 'category',
       header: t('products.category'),
+      render: (item: Product) => item.category_name ?? item.category,
     },
     {
       key: 'quantity',
