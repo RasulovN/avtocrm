@@ -258,7 +258,9 @@ export interface ContractEntryItem {
 export interface ContractEntry {
   id: number;
   supplier: number;
+  supplier_name?: string;
   store: number;
+  store_name?: string;
   created_by: number;
   full_name: string;
   items: ContractEntryItem[];

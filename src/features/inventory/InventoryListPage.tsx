@@ -90,9 +90,9 @@ export function InventoryListPage() {
           return {
             id: String(entry.id),
             supplier_id: String(entry.supplier),
-            supplier_name: String(entry.supplier),
+            supplier_name: entry.supplier_name || String(entry.supplier),
             store_id: String(entry.store),
-            store_name: String(entry.store),
+            store_name: entry.store_name || String(entry.store),
             total,
             paid: 0,
             debt: total,
