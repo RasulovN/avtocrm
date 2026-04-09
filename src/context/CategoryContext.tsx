@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { categoryService } from '../services/categoryService';
 import type { Category } from '../types';
 
@@ -16,7 +17,9 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const fetchedRef = useRef(false);
+  const { i18n } = useTranslation();
+  const prevLangRef = useRef(i18n.language);
+  const initialLoadRef = useRef(true);
 
   const refreshCategories = useCallback(async () => {
     try {
@@ -39,10 +42,18 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
-    void refreshCategories();
-  }, [refreshCategories]);
+    if (initialLoadRef.current) {
+      initialLoadRef.current = false;
+      void refreshCategories();
+      return;
+    }
+    
+    const currentLang = i18n.language;
+    if (prevLangRef.current !== currentLang) {
+      prevLangRef.current = currentLang;
+      void refreshCategories();
+    }
+  }, [i18n.language, refreshCategories]);
 
   const value = useMemo(() => ({
     categories,

@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { productService } from '../services/productService';
 import type { Product } from '../types';
 
@@ -15,7 +16,9 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const fetchedRef = useRef(false);
+  const { i18n } = useTranslation();
+  const prevLangRef = useRef(i18n.language);
+  const initialLoadRef = useRef(true);
 
   const refreshProducts = useCallback(async () => {
     try {
@@ -38,10 +41,18 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
-    void refreshProducts();
-  }, [refreshProducts]);
+    if (initialLoadRef.current) {
+      initialLoadRef.current = false;
+      void refreshProducts();
+      return;
+    }
+    
+    const currentLang = i18n.language;
+    if (prevLangRef.current !== currentLang) {
+      prevLangRef.current = currentLang;
+      void refreshProducts();
+    }
+  }, [i18n.language, refreshProducts]);
 
   const value = useMemo(() => ({
     products,
