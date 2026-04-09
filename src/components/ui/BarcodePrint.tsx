@@ -146,7 +146,6 @@ export function BarcodePrintAll({ items }: BarcodePrintAllProps) {
         barcode: barcodeValue,
         isImage: isImageUrl(barcodeValue),
         product_name: item.product_name,
-        quantity: item.quantity,
       };
     })
     .filter(Boolean);
@@ -185,7 +184,6 @@ export function BarcodePrintAll({ items }: BarcodePrintAllProps) {
             {allBarcodes.map((item, idx) => (
               <div key={idx} className="barcode-item p-2 bg-white">
                 <div className="product-name text-xs">{item.product_name}</div>
-                <div className="text-xs text-muted-foreground">Miqdor: {item.quantity}</div>
                 <div className="barcode-container">
                   <BarcodeDisplay value={item.barcode} isImage={item.isImage} />
                 </div>
