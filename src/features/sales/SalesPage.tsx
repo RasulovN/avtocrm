@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
-import { BrowserMultiFormatReader } from '@zxing/browser';
 import QrScanner from 'react-qr-barcode-scanner';
 import { ScanBarcode, Trash2, DollarSign, Search, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/Dialog';
@@ -49,8 +48,6 @@ export function SalesPage() {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [showScanner, setShowScanner] = useState(false);
-  const scannerVideoRef = useRef<HTMLVideoElement>(null);
-  const scannerReaderRef = useRef<BrowserMultiFormatReader | null>(null);
   const safeStores = useMemo(() => (Array.isArray(stores) ? stores : []), [stores]);
   const safeProducts = useMemo(() => {
     if (productsLoading) return [];
