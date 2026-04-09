@@ -78,7 +78,7 @@ function BarcodeDisplay({ value, isImage = false }: { value: string; isImage?: b
       <img 
         src={value} 
         alt="Barcode" 
-        className="max-w-[150px] h-auto"
+        className="max-w-37.5 h-auto"
         style={{ maxWidth: '150px' }}
       />
     );
@@ -141,14 +141,14 @@ export function BarcodePrintAll({ items }: BarcodePrintAllProps) {
     .filter(item => item.shtrix_code || item.barcode)
     .map(item => {
       const barcodeValue = item.shtrix_code || item.barcode || '';
-      if (!barcodeValue) return null;
+      if (!barcodeValue) return undefined;
       return {
         barcode: barcodeValue,
         isImage: isImageUrl(barcodeValue),
         product_name: item.product_name,
       };
     })
-    .filter(Boolean);
+    .filter((item): item is NonNullable<typeof item> => item !== undefined);
 
   if (allBarcodes.length === 0) return null;
 
