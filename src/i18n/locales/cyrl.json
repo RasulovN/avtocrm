@@ -6,6 +6,8 @@
     "edit": "Таҳрирлаш",
     "delete": "Ўчириш",
     "save": "Сақлаш",
+    "saving": "Сақланмоқда...",
+    "deleting": "Ўчирилмоқда...",
     "cancel": "Бекор қилиш",
     "loading": "Юкланмоқда...",
     "localLoading": "Юкланмоқда...",
@@ -262,7 +264,18 @@
     "productName": "Маҳсулот",
     "quantity": "Сони",
     "unitPrice": "Нарх",
-    "lineTotal": "Жами"
+    "lineTotal": "Жами",
+    "addCustomer": "Мижоз қўшиш",
+    "editCustomer": "Мижозни таҳрирлаш",
+    "createDescription": "Янги мижоз маълумотларини киритинг",
+    "editDescription": "Мижоз маълумотларини янгиланг",
+    "fullNamePlaceholder": "Ф.И.О киритинг",
+    "phonePlaceholder": "+998901234567",
+    "createdAt": "Яратилган сана",
+    "updatedAt": "Янгиланган сана",
+    "customerAdded": "Мижоз муваффақиятли қўшилди",
+    "customerUpdated": "Мижоз муваффақиятли янгиланди",
+    "customerDeleted": "Мижоз муваффақиятли ўчирилди"
   },
   "suppliers": {
     "title": "Та'минотчилар",

@@ -326,17 +326,19 @@ export interface Sale {
   store: number;
   store_name?: string;
   seller: number;
+  seller_name?: string;
   customer: number;
+  customer_name?: string;
   payments: number[];
   status: 'partial' | 'paid' | 'completed';
   total_amount: string;
   paid_amount: string;
+debt?: number | null;
   items: SaleItem[];
   created_at: string;
 }
-}
 
-export interface SaleFormData {
+interface SaleFormData {
   store: number;
   customer: string;
   items: {

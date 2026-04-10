@@ -49,6 +49,9 @@ const SalesListPage = lazy(() =>
   import('./features/sales/SalesListPage').then((module) => ({ default: module.SalesListPage }))
 );
 const SalesPage = lazy(() => import('./features/sales/SalesPage').then((module) => ({ default: module.SalesPage })));
+const SalesDetailPage = lazy(() =>
+  import('./features/sales/SalesDetailPage').then((module) => ({ default: module.SalesDetailPage }))
+);
 const CustomerListPage = lazy(() =>
   import('./features/customers/CustomerListPage').then((module) => ({ default: module.CustomerListPage }))
 );
@@ -255,6 +258,11 @@ function App() {
             withLayout(<SalesListPage />)
           } />
           
+          {/* Sales - Detail */}
+          <Route path={`/:lang/sales/:id`} element={
+            withLayout(<SalesDetailPage />)
+          } />
+
           {/* Sales - Create (POS) */}
           <Route path={`/:lang/sales/new`} element={
             withLayout(<SalesPage />)
