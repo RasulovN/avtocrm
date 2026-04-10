@@ -34,12 +34,16 @@ const normalizeTransfer = (raw: unknown): Transfer => {
   };
 };
 
-const mapTransferPayload = (data: TransferFormData): Record<string, unknown> => ({
-  from_store: data.from_store,
-  to_store: data.to_store,
-  product: data.product,
-  quantity: data.quantity,
-});
+const mapTransferPayload = (data: TransferFormData) => {
+  return {
+    from_store: Number(data.from_store),
+    to_store: Number(data.to_store),
+    items: data.items.map(item => ({
+      product: Number(item.product),
+      quantity: item.quantity,
+    })),
+  };
+};
 
 const extractTransferList = (payload: unknown): Transfer[] => {
   if (Array.isArray(payload)) {
@@ -83,11 +87,15 @@ export const transferService = {
     };
   },
 
-  create: async (data: TransferFormData): Promise<Transfer> => {
-    const response = await apiClient.post<ApiResponse<Transfer>>('/transfer/create/', mapTransferPayload(data));
-    const payload = response.data?.data ?? response.data;
-    return normalizeTransfer(payload);
-  },
+create: async (data: TransferFormData): Promise<Transfer> => {
+  const response = await apiClient.post<ApiResponse<Transfer>>(
+    '/transfer/create/',
+    mapTransferPayload(data)
+  );
+
+  const payload = response.data?.data ?? response.data;
+  return normalizeTransfer(payload);
+},
 
   approve: async (id: string): Promise<Transfer> => {
     const response = await apiClient.post<ApiResponse<Transfer>>(`/transfer/${id}/approve/`);
