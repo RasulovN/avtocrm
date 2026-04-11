@@ -139,7 +139,7 @@ export function InventoryCreatePage() {
           purchase_price: (item.purchase_price === '' ? '0' : String(item.purchase_price)),
           selling_price: (item.selling_price === '' ? '0' : String(item.selling_price)),
         })),
-        paid: paid === '' ? 0 : paid,
+        paid_amount: paid === '' ? 0 : paid,
       });
       navigate('/inventory');
     } catch (error) {
@@ -188,8 +188,8 @@ export function InventoryCreatePage() {
                   </SelectTrigger>
                   <SelectContent>
                     {safeStores.map(s => (
-                      <SelectItem 
-                        key={s.id} 
+                      <SelectItem
+                        key={s.id}
                         value={s.id}
                         disabled={s.type === 's'}
                       >
@@ -229,23 +229,23 @@ export function InventoryCreatePage() {
                       </Button>
                     )}
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs">{t('products.title')}</Label>
-                    <Select
-                      value={item.product_id}
-                      onValueChange={(v: string) => handleItemChange(index, 'product_id', v)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={t('inventory.selectProduct')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {safeProducts.map(p => (
-                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs">{t('products.title')}</Label>
+                      <Select
+                        value={item.product_id}
+                        onValueChange={(v: string) => handleItemChange(index, 'product_id', v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={t('inventory.selectProduct')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {safeProducts.map(p => (
+                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="space-y-2">
                       <Label className="text-xs">{t('inventory.quantity')}</Label>
                       <Input

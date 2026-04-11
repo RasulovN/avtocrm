@@ -46,6 +46,7 @@ export function SalesPage() {
   const [cashAmount, setCashAmount] = useState(0);
   const [cardAmount, setCardAmount] = useState(0);
   const [discount, setDiscount] = useState(0);
+  const [discountType, setDiscountType] = useState<'p' | 'f'>('f');
   const [showReceipt, setShowReceipt] = useState(false);
   const [activePayment, setActivePayment] = useState<'cash' | 'card' | null>(null);
   const [showScanner, setShowScanner] = useState(false);
@@ -62,7 +63,13 @@ export function SalesPage() {
   }, [allProducts, isAdmin, userStoreId, productsLoading]);
 
   const subtotal = useMemo(() => items.reduce((sum, item) => sum + item.total, 0), [items]);
-  const totalWithDiscount = subtotal - discount;
+  const calculatedDiscount = useMemo(() => {
+    if (discountType === 'p') {
+      return subtotal * (discount / 100);
+    }
+    return discount;
+  }, [subtotal, discount, discountType]);
+  const totalWithDiscount = subtotal - calculatedDiscount;
   const totalPaid = useMemo(() => cashAmount + cardAmount, [cashAmount, cardAmount]);
   const change = useMemo(() => Math.max(0, totalPaid - totalWithDiscount), [totalPaid, totalWithDiscount]);
   const debt = useMemo(() => Math.max(0, totalWithDiscount - totalPaid), [totalPaid, totalWithDiscount]);
@@ -214,7 +221,7 @@ export function SalesPage() {
     try {
       setSaving(true);
 
-      const payments = [];
+      const payments: { type: 'cash' | 'card'; amount: string }[] = [];
       if (cashAmount > 0) {
         payments.push({ type: 'cash', amount: String(cashAmount) });
       }
@@ -233,6 +240,8 @@ export function SalesPage() {
           price: String(item.selling_price),
         })),
         payments,
+        discount_type: discountType,
+        discount_value: String(discount),
       });
 
       setShowReceipt(true);
@@ -249,9 +258,10 @@ export function SalesPage() {
     setCashAmount(0);
     setCardAmount(0);
     setDiscount(0);
+    setDiscountType('f');
     setActivePayment(null);
-    setCustomerName('');
-    setCustomerPhone('');
+    setNewCustomerName('');
+    setNewCustomerPhone('');
     barcodeInputRef.current?.focus();
   };
 
@@ -448,8 +458,8 @@ export function SalesPage() {
                 </div>
                 {discount > 0 && (
                   <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground dark:text-gray-400">Chegirma:</span>
-                    <span className="font-medium dark:text-gray-200">-{formatCurrency(discount)}</span>
+                    <span className="text-muted-foreground dark:text-gray-400">Chegirma ({discountType === 'p' ? `${discount}%` : ''}):</span>
+                    <span className="font-medium dark:text-gray-200">-{formatCurrency(calculatedDiscount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between pt-1.5 border-t dark:border-gray-600">
@@ -540,14 +550,25 @@ export function SalesPage() {
                   </div>
                   <div>
                     <Label className="text-xs dark:text-gray-300">Chegirma</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      placeholder="0"
-                      value={discount || ''}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => setDiscount(Number(e.target.value))}
-                      className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white"
-                    />
+                    <div className="flex gap-1">
+                      <Select value={discountType} onValueChange={(val: 'p' | 'f') => setDiscountType(val)}>
+                        <SelectTrigger className="h-9 w-20 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="f">So'm</SelectItem>
+                          <SelectItem value="p">%</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        value={discount || ''}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setDiscount(Number(e.target.value))}
+                        className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white flex-1"
+                      />
+                    </div>
                   </div>
                 </div>
                 <div className="rounded-lg p-2.5 bg-muted/50 dark:bg-gray-900 space-y-1.5">
@@ -557,8 +578,8 @@ export function SalesPage() {
                   </div>
                   {discount > 0 && (
                     <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground dark:text-gray-400">Chegirma:</span>
-                      <span className="font-bold dark:text-white">-{formatCurrency(discount)}</span>
+                      <span className="text-muted-foreground dark:text-gray-400">Chegirma ({discountType === 'p' ? `${discount}%` : ''}):</span>
+                      <span className="font-bold dark:text-white">-{formatCurrency(calculatedDiscount)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-xs">
@@ -640,8 +661,8 @@ export function SalesPage() {
                 </div>
                 {discount > 0 && (
                   <div className="flex justify-between dark:text-gray-300">
-                    <span>Chegirma:</span>
-                    <span>-{formatCurrency(discount)}</span>
+                    <span>Chegirma ({discountType === 'p' ? `${discount}%` : ''}):</span>
+                    <span>-{formatCurrency(calculatedDiscount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between font-bold text-lg dark:text-white">

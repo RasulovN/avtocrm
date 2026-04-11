@@ -1,14 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { Plus, FileText, Eye, Printer } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/Table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../components/ui/Dialog';
 import { inventoryService } from '../../services/inventoryService';
 import { productService } from '../../services/productService';
+import { supplierService } from '../../services/supplierService';
 import { formatCurrency, formatDate } from '../../utils';
 import type {  InventoryItem } from '../../types';
 import { BarcodePrintAll } from '../../components/ui/BarcodePrint';
@@ -37,6 +39,9 @@ export function InventoryListPage() {
   const [selectedInventory, setSelectedInventory] = useState<DisplayInventory | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showBarcodeDialog, setShowBarcodeDialog] = useState(false);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paying, setPaying] = useState(false);
   const [barcodeItems, setBarcodeItems] = useState<InventoryItem[]>([]);
 
   const loadData = useCallback(async () => {
@@ -95,8 +100,8 @@ export function InventoryListPage() {
             store_id: String(entry.store),
             store_name: entry.store_name || String(entry.store),
             total,
-            paid: 0,
-            debt: total,
+            paid: entry.paid_amount ? parseFloat(entry.paid_amount) : 0,
+            debt: entry.debt ?? 0,
             status: 'completed',
             created_at: new Date().toISOString(),
             items,
@@ -127,6 +132,31 @@ export function InventoryListPage() {
   const handlePrintBarcodes = (item: DisplayInventory) => {
     setBarcodeItems(item.items || []);
     setShowBarcodeDialog(true);
+  };
+
+  const handlePayDebt = () => {
+    if (!selectedInventory || !selectedInventory.debt) return;
+    setPaymentAmount(String(selectedInventory.debt));
+    setShowPaymentDialog(true);
+  };
+
+  const handleSubmitPayment = async () => {
+    if (!selectedInventory || !paymentAmount) return;
+    try {
+      setPaying(true);
+      await supplierService.createPayment({
+        supplier: parseInt(selectedInventory.supplier_id),
+        entry: parseInt(selectedInventory.id),
+        amount: paymentAmount,
+      });
+      setShowPaymentDialog(false);
+      setPaymentAmount('');
+      loadData();
+    } catch (error) {
+      console.error('Failed to create payment:', error);
+    } finally {
+      setPaying(false);
+    }
   };
 
   return (
@@ -275,7 +305,7 @@ export function InventoryListPage() {
 
       {/* Details Dialog */}
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl pb-6">
           <DialogHeader>
             <DialogTitle>Inventory Details</DialogTitle>
             <DialogDescription>
@@ -308,6 +338,11 @@ export function InventoryListPage() {
                 <div>
                   <span className="text-muted-foreground">Debt:</span>
                   <span className="ml-2 font-medium text-red-500">{formatCurrency(selectedInventory.debt)}</span>
+                  {selectedInventory.debt > 0 && (
+                    <Button variant="outline" size="sm" className="ml-3" onClick={handlePayDebt}>
+                      To'lash
+                    </Button>
+                  )}
                 </div>
               </div>
               
@@ -398,6 +433,40 @@ export function InventoryListPage() {
             </DialogDescription>
           </DialogHeader>
           <BarcodePrintAll items={barcodeItems} />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContent className='pb-6'>
+          <DialogHeader>
+            <DialogTitle>To'lov</DialogTitle>
+            <DialogDescription>
+              Taminotchiga qarz to'lash
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 rounded-lg bg-muted">
+              <p className="text-sm text-muted-foreground">Qarz summasi</p>
+              <p className="text-xl font-bold text-red-500">{formatCurrency(selectedInventory?.debt || 0)}</p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">To'lov summasi</label>
+              <Input
+                type="number"
+                value={paymentAmount}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setPaymentAmount(e.target.value)}
+                placeholder="Summa kiriting"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setShowPaymentDialog(false)}>
+                Bekor qilish
+              </Button>
+              <Button className="flex-1" onClick={handleSubmitPayment} disabled={paying || !paymentAmount}>
+                {paying ? 'Yuklanmoqda...' : 'To\'lash'}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

@@ -148,4 +148,9 @@ export const supplierService = {
   delete: async (id: string): Promise<void> => {
     await apiClient.delete(`/contract/supplier/${id}/`);
   },
+
+  createPayment: async (data: { supplier: number; entry: number; amount: string; note?: string }) => {
+    const response = await apiClient.post('/contract/supplier-payments/create/', data);
+    return response.data;
+  },
 };

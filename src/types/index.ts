@@ -245,7 +245,7 @@ export interface InventoryFormData {
     purchase_price: string;
     selling_price: string;
   }[];
-  paid: number;
+  paid_amount: number;
 }
 
 export interface ContractEntryItem {
@@ -267,6 +267,8 @@ export interface ContractEntry {
   created_by: number;
   full_name: string;
   items: ContractEntryItem[];
+  paid_amount?: string;
+  debt?: number;
 }
 
 // Transfer Types
@@ -336,14 +338,17 @@ export interface Sale {
   status: 'partial' | 'paid' | 'completed';
   total_amount: string;
   paid_amount: string;
-debt?: number | null;
+  debt?: number | null;
+  discount_type?: string;
+  discount_value?: string;
+  discount_amount?: string;
   items: SaleItem[];
   created_at: string;
 }
 
-interface SaleFormData {
+export interface SaleFormData {
   store: number;
-  customer: string;
+  customer: number;
   items: {
     product: number;
     quantity: number;
@@ -353,6 +358,8 @@ interface SaleFormData {
     type: 'cash' | 'card';
     amount: string;
   }[];
+  discount_type?: 'p' | 'f';
+  discount_value?: string;
 }
 
 // Customer Types

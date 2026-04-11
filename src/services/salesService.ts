@@ -18,8 +18,8 @@ export const salesService = {
   },
 
   getById: async (id: string): Promise<Sale> => {
-    const response = await apiClient.get<ApiResponse<Sale>>(`/sales/${id}`);
-    return response.data.data;
+    const response = await apiClient.get<Sale>(`/sales/${id}`);
+    return response.data;
   },
 
   create: async (data: SaleFormData): Promise<Sale> => {  
