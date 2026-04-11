@@ -210,10 +210,10 @@ export function SalesPage() {
   const handleFinishSale = async () => {
     if (items.length === 0) return;
     if (!selectedCustomerId) return;
-    
+
     try {
       setSaving(true);
-      
+
       const payments = [];
       if (cashAmount > 0) {
         payments.push({ type: 'cash', amount: String(cashAmount) });
@@ -221,9 +221,9 @@ export function SalesPage() {
       if (cardAmount > 0) {
         payments.push({ type: 'card', amount: String(cardAmount) });
       }
-      
+
       const selectedStoreId = items.length > 0 ? items[0].store_id : (storeId || userStoreId || '1');
-      
+
       await salesService.create({
         store: parseInt(selectedStoreId),
         customer: parseInt(selectedCustomerId),
@@ -234,7 +234,7 @@ export function SalesPage() {
         })),
         payments,
       });
-      
+
       setShowReceipt(true);
     } catch (error) {
       console.error('Failed to create sale:', error);
@@ -468,20 +468,19 @@ export function SalesPage() {
               <div className="px-3 flex-1 space-y-3">
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground dark:text-gray-400">Mijoz</Label>
-<div>
-                      <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-                        <SelectTrigger className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white">
-                          <SelectValue placeholder="Mijozni tanlang" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {customers.map(customer => (
-                            <SelectItem key={customer.id} value={String(customer.id)}>
-                              {customer.full_name} - {customer.phone_number}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <div className='flex gap-2'>
+                    <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+                      <SelectTrigger className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white">
+                        <SelectValue placeholder="Mijozni tanlang" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {customers.map(customer => (
+                          <SelectItem key={customer.id} value={String(customer.id)}>
+                            {customer.full_name} - {customer.phone_number}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <div>
                       <Button
                         type="button"
@@ -491,11 +490,11 @@ export function SalesPage() {
                         className="h-9 text-sm dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900"
                       >
                         <UserPlus className="h-4 w-4 mr-1" />
-                        Yangi mijoz
                       </Button>
-</div>
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
+                </div>
+                <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground dark:text-gray-400">Tezkor to'lov</Label>
                   <div className="grid grid-cols-2 gap-1.5">
                     <Button
@@ -709,11 +708,11 @@ export function SalesPage() {
 
       {/* New Customer Dialog */}
       <Dialog open={showNewCustomerDialog} onOpenChange={setShowNewCustomerDialog}>
-        <DialogContent className="max-w-sm">
+        <DialogContent size='md'>
           <DialogHeader>
             <DialogTitle>Yangi mijoz qo'shish</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 pb-6">
             <div className="space-y-2">
               <Label>Ism</Label>
               <Input

@@ -272,39 +272,42 @@ export interface ContractEntry {
 // Transfer Types
 export interface TransferItem {
   id: string;
-  product_id: string;
+  product: number;
   product_name?: string;
   product_sku?: string;
   product_barcode?: string;
   quantity: number;
+  purchase_price?: string;
+  selling_price?: string;
 }
 
 export interface Transfer {
   id: string;
-  from_store_id?: string;
+  from_store: number;
   from_store_name?: string;
-  to_store_id?: string;
+  to_store: number;
   to_store_name?: string;
+  status: string;
+  created_by?: number;
+  approved_by?: number;
+  approved_by_name?: string;
+  approved_at?: string | null;
   items?: TransferItem[];
-  status: 'pending' | 'accepted' | 'approved' | 'rejected';
   created_at: string;
-  from_store?: string;
-  to_store?: string;
-  product?: string;
+  product?: number;
   product_name?: string;
-  quantity?: number | string;
+  quantity?: number;
   purchase_price?: string;
   selling_price?: string;
-  created_by?: string;
-  approved_by?: string;
-  approved_at?: string | null;
 }
 
 export interface TransferFormData {
   from_store: string;
   to_store: string;
-  product: string;
-  quantity: number;
+  items: {
+    product: string;
+    quantity: number;
+  }[];
 }
 
 // Sales Types
@@ -326,17 +329,19 @@ export interface Sale {
   store: number;
   store_name?: string;
   seller: number;
+  seller_name?: string;
   customer: number;
+  customer_name?: string;
   payments: number[];
   status: 'partial' | 'paid' | 'completed';
   total_amount: string;
   paid_amount: string;
+debt?: number | null;
   items: SaleItem[];
   created_at: string;
 }
-}
 
-export interface SaleFormData {
+interface SaleFormData {
   store: number;
   customer: string;
   items: {

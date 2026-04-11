@@ -99,7 +99,7 @@ const REPORT_TYPE_STYLES: Record<Exclude<ReportType, 'all'>, { icon: typeof Circ
 };
 
 const getSafeArray = <T,>(result: PromiseSettledResult<{ data: T[] }>): T[] =>
-  result.status === 'fulfilled' ? result.value.data : [];
+  result.status === 'fulfilled' && result.value?.data ? result.value.data : [];
 
 const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
 

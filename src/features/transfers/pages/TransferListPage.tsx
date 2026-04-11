@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { Plus, ArrowRight, Eye, Search } from 'lucide-react';
+import { Plus, ArrowRight, Eye, Search, Check, X } from 'lucide-react';
 import { PageHeader } from '../../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../../components/shared/DataTable';
 import { Button } from '../../../components/ui/Button';
@@ -73,11 +73,33 @@ export function TransferListPage() {
     setShowDetails(true);
   };
 
+  const handleApprove = async (id: number | string) => {
+    try {
+      await transferService.approve(String(id));
+      setTransfers((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, status: 'a' } : t))
+      );
+    } catch (error) {
+      console.error('Failed to approve transfer:', error);
+    }
+  };
+
+  const handleReject = async (id: number | string) => {
+    try {
+      await transferService.reject(String(id));
+      setTransfers((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, status: 'r' } : t))
+      );
+    } catch (error) {
+      console.error('Failed to reject transfer:', error);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'approved':
+      case 'a':
         return 'bg-green-100 text-green-800';
-      case 'rejected':
+      case 'r':
         return 'bg-red-100 text-red-800';
       default:
         return 'bg-yellow-100 text-yellow-800';
@@ -86,9 +108,9 @@ export function TransferListPage() {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'approved':
+      case 'a':
         return t('common.accepted');
-      case 'rejected':
+      case 'r':
         return t('common.rejected');
       default:
         return t('common.pending');
@@ -96,15 +118,20 @@ export function TransferListPage() {
   };
 
   const resolveProductName = (item: Transfer) => {
+    if (item.items && item.items.length > 0) {
+      const names = item.items.map(i => i.product_name || '-').join(', ');
+      return names;
+    }
     if (item.product_name) return item.product_name;
-    if (item.product) return productNameById.get(String(item.product)) ?? item.product;
-    if (item.items?.[0]?.product_name) return item.items[0].product_name;
+    if (item.product) return productNameById.get(String(item.product)) ?? String(item.product);
     return '-';
   };
 
-  const formatQuantity = (value: Transfer['quantity']) => {
-    if (value === null || value === undefined) return '-';
-    return typeof value === 'number' ? value.toString() : value;
+  const getQuantityDisplay = (item: Transfer) => {
+    if (item.items && item.items.length > 0) {
+      return item.items.reduce((sum, i) => sum + i.quantity, 0);
+    }
+    return item.quantity ?? '-';
   };
 
   const storeNameById = useMemo(() => {
@@ -121,11 +148,11 @@ export function TransferListPage() {
   };
 
   const fromStoreLabel = (item: Transfer) => {
-    const raw = item.from_store_name || item.from_store_id || item.from_store;
+    const raw = item.from_store_name || item.from_store;
     return resolveStoreName(raw ? String(raw) : undefined);
   };
   const toStoreLabel = (item: Transfer) => {
-    const raw = item.to_store_name || item.to_store_id || item.to_store;
+    const raw = item.to_store_name || item.to_store;
     return resolveStoreName(raw ? String(raw) : undefined);
   };
 
@@ -159,14 +186,9 @@ export function TransferListPage() {
       render: (item) => toStoreLabel(item),
     },
     {
-      key: 'product',
-      header: t('products.title'),
-      render: (item) => resolveProductName(item),
-    },
-    {
       key: 'quantity',
       header: t('products.quantity'),
-      render: (item) => formatQuantity(item.quantity),
+      render: (item) => getQuantityDisplay(item),
     },
     {
       key: 'created_at',
@@ -188,6 +210,34 @@ export function TransferListPage() {
       className: 'text-right',
       render: (item) => (
         <div className="flex items-center justify-end gap-1">
+          {item.status === 'p' && (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleApprove(item.id);
+                }}
+                title={t('transfers.accepted')}
+                className="text-green-600 hover:text-green-700 hover:bg-green-100 h-8 w-8"
+              >
+                <Check className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleReject(item.id);
+                }}
+                title={t('transfers.rejected')}
+                className="text-red-600 hover:text-red-700 hover:bg-red-100 h-8 w-8"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -263,7 +313,7 @@ export function TransferListPage() {
                     </div>
                     <div className="rounded-lg bg-muted/40 p-3">
                       <p className="text-xs text-muted-foreground">{t('products.quantity')}</p>
-                      <p className="mt-1 font-medium">{formatQuantity(item.quantity)}</p>
+                      <p className="mt-1 font-medium">{getQuantityDisplay(item)}</p>
                     </div>
                     <div className="rounded-lg bg-muted/40 p-3 col-span-2">
                       <p className="text-xs text-muted-foreground">{t('common.date')}</p>
@@ -272,6 +322,32 @@ export function TransferListPage() {
                   </div>
 
                   <div className="mt-4 flex gap-2">
+                    {item.status === 'pending' && (
+                      <>
+                        <Button
+                          variant="outline"
+                          className="flex-1 text-green-600 border-green-600 hover:bg-green-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleApprove(item.id);
+                          }}
+                        >
+                          <Check className="mr-2 h-4 w-4" />
+                          {t('transfers.accepted')}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="flex-1 text-red-600 border-red-600 hover:bg-red-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleReject(item.id);
+                          }}
+                        >
+                          <X className="mr-2 h-4 w-4" />
+                          {t('transfers.rejected')}
+                        </Button>
+                      </>
+                    )}
                     <Button variant="outline" className="flex-1" onClick={() => handleShowDetails(item)}>
                       <Eye className="mr-2 h-4 w-4" />
                       {t('common.view')}
@@ -298,7 +374,7 @@ export function TransferListPage() {
 
       {/* Details Dialog */}
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
-        <DialogContent className="max-w-2xl sm:max-w-2xl">
+        <DialogContent className="max-w-2xl sm:max-w-2xl pb-6">
           <DialogHeader>
             <DialogTitle>{t('transfers.detailsTitle')}</DialogTitle>
             <DialogDescription>
@@ -316,36 +392,64 @@ export function TransferListPage() {
                   <span className="text-muted-foreground">{t('transfers.detailsTo')}:</span>
                   <p className="mt-1 font-medium">{toStoreLabel(selectedTransfer)}</p>
                 </div>
-                <div className="rounded-lg bg-muted/40 p-3 sm:col-span-2">
-                  <span className="text-muted-foreground">{t('transfers.detailsStatus')}:</span>
+                <div className="rounded-lg bg-muted/40 p-3">
+                  <span className="text-muted-foreground">{t('common.status')}:</span>
                   <p className="mt-1 font-medium">{getStatusLabel(selectedTransfer.status)}</p>
                 </div>
+                {selectedTransfer.approved_by_name && (
+                  <div className="rounded-lg bg-muted/40 p-3">
+                    <span className="text-muted-foreground">{t('transfers.approvedBy')}:</span>
+                    <p className="mt-1 font-medium">{selectedTransfer.approved_by_name}</p>
+                  </div>
+                )}
+                {selectedTransfer.approved_at && (
+                  <div className="rounded-lg bg-muted/40 p-3">
+                    <span className="text-muted-foreground">{t('transfers.approvedAt')}:</span>
+                    <p className="mt-1 font-medium">{formatDate(selectedTransfer.approved_at)}</p>
+                  </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-                <div className="rounded-lg bg-muted/40 p-3">
-                  <span className="text-muted-foreground">{t('transfers.detailsProduct')}:</span>
-                  <p className="mt-1 font-medium">{resolveProductName(selectedTransfer)}</p>
+              {selectedTransfer.items && selectedTransfer.items.length > 0 ? (
+                <div className="rounded-lg border border-border">
+                  <div className="bg-muted/40 px-3 py-2 text-sm font-medium">{t('products.title')}</div>
+                  <div className="divide-y divide-border">
+                    {selectedTransfer.items.map((item, index) => (
+                      <div key={item.id || index} className="flex items-center justify-between px-3 py-2 text-sm">
+                        <div>
+                          <p className="font-medium">{item.product_name || '-'}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {t('products.quantity')}: {item.quantity}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground">{t('products.purchasePrice')}: {item.purchase_price ?? '-'}</p>
+                          <p className="text-xs text-muted-foreground">{t('products.sellingPrice')}: {item.selling_price ?? '-'}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="rounded-lg bg-muted/40 p-3">
-                  <span className="text-muted-foreground">{t('transfers.detailsQuantity')}:</span>
-                  <p className="mt-1 font-medium">{formatQuantity(selectedTransfer.quantity)}</p>
+              ) : (
+                <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                  <div className="rounded-lg bg-muted/40 p-3">
+                    <span className="text-muted-foreground">{t('products.title')}:</span>
+                    <p className="mt-1 font-medium">{resolveProductName(selectedTransfer)}</p>
+                  </div>
+                  <div className="rounded-lg bg-muted/40 p-3">
+                    <span className="text-muted-foreground">{t('products.quantity')}:</span>
+                    <p className="mt-1 font-medium">{getQuantityDisplay(selectedTransfer)}</p>
+                  </div>
+                  <div className="rounded-lg bg-muted/40 p-3">
+                    <span className="text-muted-foreground">{t('products.purchasePrice')}:</span>
+                    <p className="mt-1 font-medium">{selectedTransfer.purchase_price ?? '-'}</p>
+                  </div>
+                  <div className="rounded-lg bg-muted/40 p-3">
+                    <span className="text-muted-foreground">{t('products.sellingPrice')}:</span>
+                    <p className="mt-1 font-medium">{selectedTransfer.selling_price ?? '-'}</p>
+                  </div>
                 </div>
-                <div className="rounded-lg bg-muted/40 p-3">
-                  <span className="text-muted-foreground">{t('transfers.detailsPurchasePrice')}:</span>
-                  <p className="mt-1 font-medium">{selectedTransfer.purchase_price ?? '-'}</p>
-                </div>
-                <div className="rounded-lg bg-muted/40 p-3">
-                  <span className="text-muted-foreground">{t('transfers.detailsSellingPrice')}:</span>
-                  <p className="mt-1 font-medium">{selectedTransfer.selling_price ?? '-'}</p>
-                </div>
-                <div className="rounded-lg bg-muted/40 p-3 sm:col-span-2">
-                  <span className="text-muted-foreground">{t('transfers.detailsApprovedAt')}:</span>
-                  <p className="mt-1 font-medium">
-                    {selectedTransfer.approved_at ? formatDate(selectedTransfer.approved_at) : '-'}
-                  </p>
-                </div>
-              </div>
+              )}
             </div>
           )}
         </DialogContent>

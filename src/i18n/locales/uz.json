@@ -6,6 +6,8 @@
     "edit": "Tahrirlash",
     "delete": "O'chirish",
     "save": "Saqlash",
+    "saving": "Saqlanmoqda...",
+    "deleting": "O'chirilmoqda...",
     "cancel": "Bekor qilish",
     "loading": "Yuklanmoqda...",
     "localLoading": "Yuklanmoqda...",
@@ -262,7 +264,18 @@
     "productName": "Mahsulot",
     "quantity": "Soni",
     "unitPrice": "Narx",
-    "lineTotal": "Jami"
+    "lineTotal": "Jami",
+    "addCustomer": "Mijoz qo'shish",
+    "editCustomer": "Mijozni tahrirlash",
+    "createDescription": "Yangi mijoz ma'lumotlarini kiriting",
+    "editDescription": "Mijoz ma'lumotlarini yangilang",
+    "fullNamePlaceholder": "F.I.O kiriting",
+    "phonePlaceholder": "+998901234567",
+    "createdAt": "Yaratilgan sana",
+    "updatedAt": "Yangilangan sana",
+    "customerAdded": "Mijoz muvaffaqiyatli qo'shildi",
+    "customerUpdated": "Mijoz muvaffaqiyatli yangilandi",
+    "customerDeleted": "Mijoz muvaffaqiyatli o'chirildi"
   },
   "suppliers": {
     "title": "Ta'minotchilar",

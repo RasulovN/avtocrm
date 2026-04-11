@@ -80,6 +80,7 @@ export function SalesListPage() {
                       <div>
                         <p className="text-xs text-muted-foreground">#{index + 1}</p>
                         <p className="font-semibold text-foreground">{t('stores.title')}: {item.store_name || item.store}</p>
+                        <p className="text-sm text-muted-foreground">{t('customers.title')}: {item.customer_name || item.customer}</p>
                         <p className="mt-1 text-sm text-muted-foreground">{formatDate(item.created_at)}</p>
                       </div>
                       <span className={`shrink-0 rounded-full px-2 py-1 text-xs ${
@@ -101,10 +102,12 @@ export function SalesListPage() {
                     </div>
 
                     <div className="mt-4">
-                      <Button variant="outline" className="w-full">
-                        <Eye className="mr-2 h-4 w-4" />
-                        {t('common.view')}
-                      </Button>
+                      <Link to={`/${lang}/sales/${item.id}`} className="w-full">
+                        <Button variant="outline" className="w-full">
+                          <Eye className="mr-2 h-4 w-4" />
+                          {t('common.view')}
+                        </Button>
+                      </Link>
                     </div>
                   </div>
                 ))}
@@ -116,6 +119,7 @@ export function SalesListPage() {
                     <TableRow>
                       <TableHead>#</TableHead>
                       <TableHead>{t('stores.title')}</TableHead>
+                      <TableHead>{t('customers.title')}</TableHead>
                       <TableHead>{t('common.total')}</TableHead>
                       <TableHead>{t('sales.paid')}</TableHead>
                       <TableHead>{t('common.status')}</TableHead>
@@ -128,6 +132,7 @@ export function SalesListPage() {
                       <TableRow key={item.id}>
                         <TableCell>{index + 1}</TableCell>
                         <TableCell>{item.store_name || item.store}</TableCell>
+                        <TableCell>{item.customer_name || item.customer}</TableCell>
                         <TableCell className="font-medium">{formatCurrency(parseFloat(item.total_amount))}</TableCell>
                         <TableCell className="text-green-600">{formatCurrency(parseFloat(item.paid_amount))}</TableCell>
                         <TableCell>
@@ -139,9 +144,11 @@ export function SalesListPage() {
                         </TableCell>
                         <TableCell>{formatDate(item.created_at)}</TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                          <Link to={`/${lang}/sales/${item.id}`}>
+                            <Button variant="ghost" size="sm">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </Link>
                         </TableCell>
                       </TableRow>
                     ))}
