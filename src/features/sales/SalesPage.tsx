@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
 import QrScanner from 'react-qr-barcode-scanner';
 import { ScanBarcode, Trash2, DollarSign, Search, X, UserPlus } from 'lucide-react';
+import { BarcodeFormat, type Result } from '@zxing/library';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/Dialog';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -42,6 +43,8 @@ const normalizeBarcodeValue = (value: string) => {
   return normalized;
 };
 
+const isNumericLookup = (value: string) => /^\d+$/.test(value.trim());
+
 export function SalesPage() {
   const { user } = useAuthStore();
   const isAdmin = Boolean(user?.is_superuser);
@@ -50,6 +53,8 @@ export function SalesPage() {
   const [stores, setStores] = useState<Store[]>([]);
   const [saving, setSaving] = useState(false);
   const [barcode, setBarcode] = useState('');
+  const [searchResults, setSearchResults] = useState<Product[] | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
   const { categories } = useCategories();
   const { products: allProducts, loading: productsLoading } = useProducts();
 
@@ -65,6 +70,7 @@ export function SalesPage() {
   const [showReceipt, setShowReceipt] = useState(false);
   const [activePayment, setActivePayment] = useState<'cash' | 'card' | null>(null);
   const [showScanner, setShowScanner] = useState(false);
+  const [stopScannerStream, setStopScannerStream] = useState(false);
   const [customers, setCustomers] = useState<{ id: number; full_name: string; phone_number: string }[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [showNewCustomerDialog, setShowNewCustomerDialog] = useState(false);
@@ -95,6 +101,7 @@ export function SalesPage() {
     }
     return result;
   }, [safeProducts, categoryFilter]);
+  const displayedProducts = searchResults ?? filteredProducts;
 
   const loadData = async () => {
     try {
@@ -149,15 +156,52 @@ export function SalesPage() {
     }
   }, [isAdmin, userStoreId]);
 
+  useEffect(() => {
+    const query = barcode.trim();
+
+    if (!query) {
+      setSearchResults(null);
+      setSearchLoading(false);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(async () => {
+      setSearchLoading(true);
+
+      try {
+        if (isNumericLookup(query)) {
+          const product = await productService.getByBarcode(query);
+          setSearchResults(product ? [product] : []);
+        } else {
+          const products = await productService.search(query);
+          setSearchResults(products);
+        }
+      } catch (error) {
+        console.error('Product search failed:', error);
+        setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [barcode]);
+
   const handleBarcodeScan = async (e: KeyboardEvent<HTMLInputElement>) => {
     const normalizedBarcode = normalizeBarcodeValue(barcode);
     if (e.key === 'Enter' && normalizedBarcode) {
-      await findProductByBarcode(normalizedBarcode);
+      if (isNumericLookup(normalizedBarcode)) {
+        await findProductByBarcode(normalizedBarcode);
+      } else if (searchResults && searchResults.length > 0) {
+        addProduct(searchResults[0]);
+      }
       setBarcode('');
+      setSearchResults(null);
     }
   };
 
   const handleOpenScanner = () => {
+    setStopScannerStream(false);
     setShowScanner(true);
   };
 
@@ -165,25 +209,55 @@ export function SalesPage() {
     const normalizedBarcode = normalizeBarcodeValue(barcode);
     if (!normalizedBarcode) return;
 
+    const localProduct = safeProducts.find((product) =>
+      [product.shtrix_code, product.barcode, product.sku]
+        .filter((value): value is string => typeof value === 'string' && value.trim() !== '')
+        .some((value) => value.trim() === normalizedBarcode)
+    );
+
+    if (localProduct) {
+      addProduct(localProduct);
+      setSearchResults(null);
+      return;
+    }
+
     try {
       const product = await productService.getByBarcode(normalizedBarcode);
       if (product) {
         addProduct(product);
+        setSearchResults([product]);
+      } else {
+        setSearchResults([]);
       }
     } catch (error) {
       console.error('Product not found:', error);
+      setSearchResults([]);
     }
   };
 
-  const handleBarcodeScanQr = (_error: unknown, result?: { getText: () => string }) => {
-    const data = result?.getText?.();
+  const handleBarcodeScanQr = (error: unknown, result?: Result) => {
+    if (error) return;
+
+    const data = typeof result?.getText === 'function' ? result.getText() : '';
     const normalizedBarcode = data ? normalizeBarcodeValue(data) : '';
 
     if (normalizedBarcode) {
       void findProductByBarcode(normalizedBarcode);
       setBarcode('');
-      setShowScanner(false);
+      setStopScannerStream(true);
+      setTimeout(() => setShowScanner(false), 0);
     }
+  };
+
+  const handleScannerDialogChange = (open: boolean) => {
+    if (open) {
+      setStopScannerStream(false);
+      setShowScanner(true);
+      return;
+    }
+
+    setStopScannerStream(true);
+    setTimeout(() => setShowScanner(false), 0);
   };
 
   const updateQuantity = (index: number, quantity: number) => {
@@ -356,16 +430,31 @@ export function SalesPage() {
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto space-y-1.5">
-                {filteredProducts.map((product) => (
+                {searchLoading ? (
+                  <div className="py-8 text-center text-sm text-muted-foreground dark:text-gray-400">
+                    Qidirilmoqda...
+                  </div>
+                ) : displayedProducts.length === 0 ? (
+                  <div className="py-8 text-center text-sm text-muted-foreground dark:text-gray-400">
+                    Mahsulot topilmadi
+                  </div>
+                ) : (
+                  displayedProducts.map((product) => (
                   <button
                     key={product.id}
                     className="w-full text-left rounded-lg p-2.5 border border-gray-900 hover:bg-accent dark:hover:bg-gray-900 transition-colors"
-                    onClick={() => addProduct(product)}
+                    onClick={() => {
+                      addProduct(product);
+                      setBarcode('');
+                      setSearchResults(null);
+                    }}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="font-medium dark:text-white">{product.name}</div>
-                        <div className="text-xs text-muted-foreground dark:text-gray-400">{product.sku}</div>
+                        <div className="text-xs text-muted-foreground dark:text-gray-400">
+                          {product.sku || product.shtrix_code || product.barcode}
+                        </div>
                       </div>
                       <div className="text-right ml-3">
                         <div className="font-bold dark:text-white">{formatCurrency(product.selling_price ?? 0)}</div>
@@ -377,7 +466,8 @@ export function SalesPage() {
                       </div>
                     </div>
                   </button>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -736,15 +826,43 @@ export function SalesPage() {
       )}
 
       {/* Scanner Dialog */}
-      <Dialog open={showScanner} onOpenChange={setShowScanner}>
+      <Dialog open={showScanner} onOpenChange={handleScannerDialogChange}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Barcode Scanner</DialogTitle>
           </DialogHeader>
-          <QrScanner
-            onUpdate={handleBarcodeScanQr}
-            onError={(error) => console.error('Scanner error:', error)}
-          />
+          <div className="space-y-3">
+            <div className="overflow-hidden rounded-xl border bg-black">
+              <QrScanner
+                width="100%"
+                height={280}
+                delay={200}
+                facingMode="environment"
+                stopStream={stopScannerStream}
+                videoConstraints={{
+                  facingMode: { ideal: 'environment' },
+                  width: { ideal: 1280 },
+                  height: { ideal: 720 },
+                }}
+                formats={[
+                  BarcodeFormat.CODE_128,
+                  BarcodeFormat.CODE_39,
+                  BarcodeFormat.EAN_13,
+                  BarcodeFormat.EAN_8,
+                  BarcodeFormat.UPC_A,
+                  BarcodeFormat.UPC_E,
+                  BarcodeFormat.ITF,
+                  BarcodeFormat.QR_CODE,
+                  BarcodeFormat.DATA_MATRIX,
+                ]}
+                onUpdate={handleBarcodeScanQr}
+                onError={(error) => console.error('Scanner error:', error)}
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Kamerani shtrixkodga yaqinroq tuting. Kod topilganda mahsulot avtomatik qo'shiladi.
+            </p>
+          </div>
         </DialogContent>
       </Dialog>
 

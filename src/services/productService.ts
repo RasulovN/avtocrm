@@ -331,4 +331,9 @@ export const productService = {
     if (!payload) return null;
     return normalizeProduct(payload);
   },
+
+  search: async (query: string): Promise<Product[]> => {
+    const response = await apiClient.get(`/products/search/${encodeURIComponent(query)}/`);
+    return parsePaginatedProducts(response.data).data;
+  },
 };
