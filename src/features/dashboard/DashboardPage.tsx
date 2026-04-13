@@ -3,71 +3,38 @@ import { useTranslation } from 'react-i18next';
 import { Package, DollarSign, CreditCard, Truck, Store, TrendingUp, TrendingDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { PageHeader } from '../../components/shared/PageHeader';
-import { dashboardService } from '../../services/salesService';
 import { useAuthStore } from '../../app/store';
 import type { DashboardStats } from '../../types';
 import { formatCurrency } from '../../utils';
 import { logger } from '../../utils/logger';
+import { reportService } from '../../services/reportService';
 
-const fallbackDashboardStats: DashboardStats = {
-  total_products: 1250,
-  total_sales: 89000000,
-  total_debt: 12500000,
-  supplier_debt: 8500000,
-  store_stats: [
-    { store_id: '1', store_name: 'Main Store', product_count: 800, sales_count: 450 },
-    { store_id: '2', store_name: 'Warehouse', product_count: 450, sales_count: 0 },
-  ],
-};
+const store_stats = [
+  { store_id: '1', store_name: 'Main Store', product_count: 800, sales_count: 450 },
+  { store_id: '2', store_name: 'Warehouse', product_count: 450, sales_count: 0 },
+]
 
 export function DashboardPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const isAdmin = Boolean(user?.is_superuser);
-  const userStoreId = user?.store_id;
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const data = await reportService.getReport();
+        setStats(data);
+      } catch (error) {
+        logger.error('Failed to load dashboard stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadStats();
   }, []);
-
-  const loadStats = async () => {
-    try {
-      setLoading(true);
-      const data = await dashboardService.getStats();
-      if (!data) {
-        logger.warn('Dashboard stats endpoint returned 404, fallback data applied', {
-          source: 'DashboardPage.loadStats',
-          endpoint: '/dashboard/stats',
-        });
-        setStats(fallbackDashboardStats);
-        return;
-      }
-
-      if (isAdmin || !userStoreId) {
-        setStats(data);
-      } else {
-        const scopedStore = data.store_stats.find((store) => store.store_id === userStoreId);
-        setStats({
-          ...data,
-          total_products: scopedStore?.product_count ?? 0,
-          total_sales: 0,
-          total_debt: 0,
-          supplier_debt: 0,
-          store_stats: scopedStore ? [scopedStore] : [],
-        });
-      }
-    } catch (error) {
-      logger.warn('Dashboard stats fallback applied', {
-        reason: error instanceof Error ? error.message : 'unknown',
-        source: 'DashboardPage.loadStats',
-      });
-      setStats(fallbackDashboardStats);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -78,7 +45,7 @@ export function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-br from-primary/5 to-transparent" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{t('dashboard.totalProducts')}</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
@@ -88,7 +55,7 @@ export function DashboardPage() {
               <div className="h-8 bg-muted animate-pulse rounded" />
             ) : (
               <>
-                <div className="text-2xl font-bold">{stats?.total_products.toLocaleString()}</div>
+                <div className="text-2xl font-bold">{stats?.total_products_in_stock}</div>
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <TrendingUp className="h-3 w-3 text-green-500" />
                   +12% from last month
@@ -99,7 +66,7 @@ export function DashboardPage() {
         </Card>
 
         <Card className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-br from-green-500/5 to-transparent" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{t('dashboard.totalRevenue')}</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -109,7 +76,7 @@ export function DashboardPage() {
               <div className="h-8 bg-muted animate-pulse rounded" />
             ) : (
               <>
-                <div className="text-2xl font-bold">{formatCurrency(stats?.total_sales || 0)}</div>
+                <div className="text-2xl font-bold">{formatCurrency(stats?.monthly_revenue)}</div>
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <TrendingUp className="h-3 w-3 text-green-500" />
                   +8% from last month
@@ -120,7 +87,7 @@ export function DashboardPage() {
         </Card>
 
         <Card className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-br from-red-500/5 to-transparent" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{t('dashboard.totalDebt')}</CardTitle>
             <CreditCard className="h-4 w-4 text-muted-foreground" />
@@ -130,7 +97,7 @@ export function DashboardPage() {
               <div className="h-8 bg-muted animate-pulse rounded" />
             ) : (
               <>
-                <div className="text-2xl font-bold">{formatCurrency(stats?.total_debt || 0)}</div>
+                <div className="text-2xl font-bold">{formatCurrency(stats?.total_customer_debt)}</div>
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <TrendingDown className="h-3 w-3 text-red-500" />
                   -5% from last month
@@ -141,7 +108,7 @@ export function DashboardPage() {
         </Card>
 
         <Card className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-br from-orange-500/5 to-transparent" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{t('dashboard.supplierDebt')}</CardTitle>
             <Truck className="h-4 w-4 text-muted-foreground" />
@@ -151,7 +118,7 @@ export function DashboardPage() {
               <div className="h-8 bg-muted animate-pulse rounded" />
             ) : (
               <>
-                <div className="text-2xl font-bold">{formatCurrency(stats?.supplier_debt || 0)}</div>
+                <div className="text-2xl font-bold">{formatCurrency(stats?.total_supplier_debt)}</div>
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <TrendingDown className="h-3 w-3 text-green-500" />
                   -3% from last month
@@ -176,7 +143,7 @@ export function DashboardPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {stats?.store_stats.map((store) => (
+                {store_stats.map((store) => (
                   <div
                     key={store.store_id}
                     className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/50 transition-colors"

@@ -402,16 +402,11 @@ export interface Customer {
 
 // Dashboard Stats Types
 export interface DashboardStats {
-  total_products: number;
-  total_sales: number;
-  total_debt: number;
-  supplier_debt: number;
-  store_stats: {
-    store_id: string;
-    store_name: string;
-    product_count: number;
-    sales_count: number;
-  }[];
+  total_products_in_stock: number;
+  monthly_revenue: string;
+  total_customer_debt: string;
+  total_supplier_debt: string;
+  report_date: string;
 }
 
 // API Response Types
