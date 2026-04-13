@@ -80,9 +80,8 @@ export function SalesListPage() {
       key: 'status',
       header: t('common.status'),
       render: (item) => (
-        <span className={`px-2 py-1 rounded-full text-xs ${
-          item.status === 'partial' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
-        }`}>
+        <span className={`px-2 py-1 rounded-full text-xs ${item.status === 'partial' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+          }`}>
           {item.status === 'partial' ? t('common.pending') : (item.status === 'paid' ? t('sales.paid') : t('common.completed'))}
         </span>
       ),
@@ -110,12 +109,11 @@ export function SalesListPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={t('sales.title')}
-        description={t('sales.listDescription')}
-      />
-
-      <div className="flex justify-end">
+      <div className="flex justify-between items-start">
+        <PageHeader
+          title={t('sales.title')}
+          description={t('sales.listDescription')}
+        />
         <Link to={`/${lang}/sales/new`} className="w-full sm:w-auto">
           <Button className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
@@ -149,9 +147,8 @@ export function SalesListPage() {
                     <p className="text-sm text-muted-foreground">{t('customers.title')}: {item.customer_name || item.customer}</p>
                     <p className="mt-1 text-sm text-muted-foreground">{formatDate(item.created_at)}</p>
                   </div>
-                  <span className={`shrink-0 rounded-full px-2 py-1 text-xs ${
-                    item.status === 'partial' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
-                  }`}>
+                  <span className={`shrink-0 rounded-full px-2 py-1 text-xs ${item.status === 'partial' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+                    }`}>
                     {item.status === 'partial' ? t('common.pending') : (item.status === 'paid' ? t('sales.paid') : t('common.completed'))}
                   </span>
                 </div>

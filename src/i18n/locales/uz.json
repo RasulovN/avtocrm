@@ -275,7 +275,12 @@
     "updatedAt": "Yangilangan sana",
     "customerAdded": "Mijoz muvaffaqiyatli qo'shildi",
     "customerUpdated": "Mijoz muvaffaqiyatli yangilandi",
-    "customerDeleted": "Mijoz muvaffaqiyatli o'chirildi"
+    "customerDeleted": "Mijoz muvaffaqiyatli o'chirildi",
+    "payDebt": "Qarz to'lash",
+    "debtPaymentTitle": "Qarz to'lovi",
+    "debtPaymentDescription": "Mijoz qarzini to'lash",
+    "paymentAmount": "To'lov summasi",
+    "payNow": "To'lash"
   },
   "suppliers": {
     "title": "Ta'minotchilar",

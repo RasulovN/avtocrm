@@ -6,6 +6,8 @@ interface CustomerFromApi {
   phone_number: string;
   created_at: string;
   updated_at: string;
+  debt?: number;
+  total_debt?: number;
 }
 
 interface CustomerFormData {
@@ -36,5 +38,10 @@ export const customerApiService = {
 
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/users/customers/${id}/`);
+  },
+
+  createDebtPayment: async (data: { customer: number; amount: string; type: 'cash' | 'card' }) => {
+    const response = await apiClient.post('/debts/create/', data);
+    return response.data;
   },
 };
