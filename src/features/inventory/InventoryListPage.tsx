@@ -13,7 +13,7 @@ import { inventoryService } from '../../services/inventoryService';
 import { productService } from '../../services/productService';
 import { supplierService } from '../../services/supplierService';
 import { formatCurrency, formatDate } from '../../utils';
-import type {  InventoryItem } from '../../types';
+import type { InventoryItem } from '../../types';
 import { BarcodePrintAll } from '../../components/ui/BarcodePrint';
 
 interface DisplayInventory {
@@ -51,17 +51,17 @@ export function InventoryListPage() {
     try {
       setLoading(true);
       const entries = await inventoryService.getEntries();
-      
+
       const productCache = new Map<string, { name: string; sku: string; barcode: string; shtrix_code: string }>();
-      
+
       const fetchProductDetails = async (productId: number) => {
         const key = String(productId);
         if (productCache.has(key)) return productCache.get(key)!;
         try {
           const product = await productService.getById(key);
           const shtrixCode = product.shtrix_code || product.barcode || '';
-          const data = { 
-            name: product.name || key, 
+          const data = {
+            name: product.name || key,
             sku: product.sku || '',
             barcode: product.barcode || '',
             shtrix_code: shtrixCode
@@ -74,7 +74,7 @@ export function InventoryListPage() {
           return data;
         }
       };
-      
+
       const mapped: DisplayInventory[] = await Promise.all(
         entries.map(async (entry) => {
           const items: InventoryItem[] = await Promise.all(
@@ -212,12 +212,11 @@ export function InventoryListPage() {
       key: 'status',
       header: t('common.status'),
       render: (item) => (
-        <span className={`px-2 py-1 rounded-full text-xs ${
-          item.status === 'completed' ? 'bg-green-100 text-green-800' :
-          item.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
-        }`}>
+        <span className={`px-2 py-1 rounded-full text-xs ${item.status === 'completed' ? 'bg-green-100 text-green-800' :
+            item.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+          }`}>
           {item.status === 'completed' ? t('common.completed') :
-           item.status === 'pending' ? t('common.pending') : t('common.cancelled')}
+            item.status === 'pending' ? t('common.pending') : t('common.cancelled')}
         </span>
       ),
     },
@@ -242,12 +241,11 @@ export function InventoryListPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={t('inventory.title')}
-        description={t('inventory.listDescription')}
-      />
-
-      <div className="flex justify-end">
+      <div className="flex justify-between items-start">
+        <PageHeader
+          title={t('inventory.title')}
+          description={t('inventory.listDescription')}
+        />
         <Link to={`/${lang}/inventory/new`}>
           <Button className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
@@ -280,12 +278,11 @@ export function InventoryListPage() {
                       <p className="text-base font-semibold">{item.supplier_name || item.supplier_id}</p>
                       <p className="mt-1 text-sm text-muted-foreground">{item.store_name || item.store_id}</p>
                     </div>
-                    <span className={`rounded-full px-2 py-1 text-xs ${
-                      item.status === 'completed' ? 'bg-green-100 text-green-800' :
-                      item.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
-                    }`}>
+                    <span className={`rounded-full px-2 py-1 text-xs ${item.status === 'completed' ? 'bg-green-100 text-green-800' :
+                        item.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                      }`}>
                       {item.status === 'completed' ? t('common.completed') :
-                       item.status === 'pending' ? t('common.pending') : t('common.cancelled')}
+                        item.status === 'pending' ? t('common.pending') : t('common.cancelled')}
                     </span>
                   </div>
 
@@ -380,7 +377,7 @@ export function InventoryListPage() {
                   )}
                 </div>
               </div>
-              
+
               {selectedInventory.items && selectedInventory.items.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

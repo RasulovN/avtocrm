@@ -15,9 +15,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../components/ui/Dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
 import { DataTable, type Column } from '../../components/shared/DataTable';
 import { customerApiService } from '../../services/customerService';
-import { formatDate } from '../../utils';
+import { formatCurrency, formatDate } from '../../utils';
 
 interface CustomerFromApi {
   id: number;
@@ -25,6 +26,8 @@ interface CustomerFromApi {
   phone_number: string;
   created_at: string;
   updated_at: string;
+  debt?: number;
+  total_debt?: number;
 }
 
 type DialogMode = 'closed' | 'create' | 'edit' | 'view';
@@ -46,6 +49,10 @@ export function CustomerListPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerFromApi | null>(null);
   const [formData, setFormData] = useState({ full_name: '', phone_number: '' });
   const [submitting, setSubmitting] = useState(false);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentType, setPaymentType] = useState<'cash' | 'card'>('cash');
+  const [paying, setPaying] = useState(false);
 
   useEffect(() => {
     void loadData();
@@ -171,6 +178,44 @@ export function CustomerListPage() {
     setFormData({ full_name: '', phone_number: '' });
   };
 
+  const resolveCustomerDebt = (customer: CustomerFromApi | null) => {
+    if (!customer) return 0;
+    if (typeof customer.total_debt === 'number') return customer.total_debt;
+    if (typeof customer.debt === 'number') return customer.debt;
+    return 0;
+  };
+
+  const openPaymentDialog = () => {
+    const debt = resolveCustomerDebt(selectedCustomer);
+    if (!selectedCustomer || debt <= 0) return;
+    setPaymentAmount(String(debt));
+    setPaymentType('cash');
+    setShowPaymentDialog(true);
+  };
+
+  const handleSubmitDebtPayment = async () => {
+    if (!selectedCustomer || !paymentAmount) return;
+    try {
+      setPaying(true);
+      const parsedAmount = Number(paymentAmount);
+      const normalizedAmount = Number.isFinite(parsedAmount)
+        ? String(-Math.abs(parsedAmount))
+        : paymentAmount;
+      await customerApiService.createDebtPayment({
+        customer: selectedCustomer.id,
+        amount: normalizedAmount,
+        type: paymentType,
+      });
+      setShowPaymentDialog(false);
+      setPaymentAmount('');
+      await loadData();
+    } catch (error) {
+      console.error('Error creating debt payment:', error);
+    } finally {
+      setPaying(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!formData.full_name.trim() || !formData.phone_number.trim()) return;
 
@@ -209,6 +254,7 @@ export function CustomerListPage() {
   };
 
   const isDialogOpen = dialogMode !== 'closed';
+  const selectedCustomerDebt = resolveCustomerDebt(selectedCustomer);
 
   return (
     <div className="space-y-6">
@@ -356,10 +402,26 @@ export function CustomerListPage() {
                 <DialogTitle>{selectedCustomer.full_name}</DialogTitle>
                 <DialogDescription>{t('customers.detailsDescription')}</DialogDescription>
               </DialogHeader>
-              <DialogBody className="space-y-6">
+              <DialogBody className="space-y-6 px-0">
+                <div className="rounded-lg border border-border/60 bg-card/60 p-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">{t('customers.totalDebt')}</p>
+                      <p className={`mt-1 text-2xl font-semibold ${selectedCustomerDebt > 0 ? 'text-red-500' : ''}`}>
+                        {formatCurrency(selectedCustomerDebt)}
+                      </p>
+                    </div>
+                    {selectedCustomerDebt > 0 && (
+                      <Button className="sm:min-w-40" onClick={openPaymentDialog}>
+                        {t('customers.payDebt')}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
                 <div className="grid gap-4 md:grid-cols-2">
                   <Card className="border-dashed">
-                    <CardContent className="flex items-center gap-3 pt-6">
+                    <CardContent className="flex items-center gap-3 p-3">
                       <div>
                         <p className="text-xs text-muted-foreground">{t('customers.customerId')}</p>
                         <p className="font-semibold">{selectedCustomer.id}</p>
@@ -367,7 +429,7 @@ export function CustomerListPage() {
                     </CardContent>
                   </Card>
                   <Card className="border-dashed">
-                    <CardContent className="flex items-center gap-3 pt-6">
+                    <CardContent className="flex items-center gap-3 p-3">
                       <Phone className="h-5 w-5 text-primary" />
                       <div>
                         <p className="text-xs text-muted-foreground">{t('customers.phone')}</p>
@@ -379,7 +441,7 @@ export function CustomerListPage() {
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <Card className="border-dashed">
-                    <CardContent className="flex items-center gap-3 pt-6">
+                    <CardContent className="flex items-center gap-3 p-3">
                       <div>
                         <p className="text-xs text-muted-foreground">{t('customers.createdAt')}</p>
                         <p className="font-semibold">{formatDate(selectedCustomer.created_at)}</p>
@@ -387,7 +449,7 @@ export function CustomerListPage() {
                     </CardContent>
                   </Card>
                   <Card className="border-dashed">
-                    <CardContent className="flex items-center gap-3 pt-6">
+                    <CardContent className="flex items-center gap-3 p-3">
                       <div>
                         <p className="text-xs text-muted-foreground">{t('customers.updatedAt')}</p>
                         <p className="font-semibold">{formatDate(selectedCustomer.updated_at)}</p>
@@ -395,11 +457,53 @@ export function CustomerListPage() {
                     </CardContent>
                   </Card>
                 </div>
-
-
               </DialogBody>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContent className='pb-6'>
+          <DialogHeader>
+            <DialogTitle>{t('customers.debtPaymentTitle')}</DialogTitle>
+            <DialogDescription>{t('customers.debtPaymentDescription')}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 rounded-lg bg-muted">
+              <p className="text-sm text-muted-foreground">{t('customers.totalDebt')}</p>
+              <p className="text-xl font-bold text-red-500">{formatCurrency(selectedCustomerDebt)}</p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t('customers.paymentAmount')}</label>
+              <Input
+                type="number"
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                placeholder={t('customers.paymentAmount')}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t('sales.paymentMethod')}</label>
+              <Select value={paymentType} onValueChange={(value) => setPaymentType(value as 'cash' | 'card')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">{t('sales.cash')}</SelectItem>
+                  <SelectItem value="card">{t('sales.card')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setShowPaymentDialog(false)}>
+                {t('common.cancel')}
+              </Button>
+              <Button className="flex-1" onClick={handleSubmitDebtPayment} disabled={paying || !paymentAmount}>
+                {paying ? t('common.saving') : t('customers.payNow')}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

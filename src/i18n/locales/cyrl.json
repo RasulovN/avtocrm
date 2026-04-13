@@ -176,7 +176,6 @@
     "accepted": "Қабул қилинган",
     "rejected": "Рад етилган",
     "view": "Кўриш",
-    "rejected": "Рад етилган",
     "transferCreated": "Ўтказма муваффақиятли яратилди",
     "transferAccepted": "Ўтказма қабул қилинди",
     "transferRejected": "Ўтказма рад етилди",
@@ -275,7 +274,12 @@
     "updatedAt": "Янгиланган сана",
     "customerAdded": "Мижоз муваффақиятли қўшилди",
     "customerUpdated": "Мижоз муваффақиятли янгиланди",
-    "customerDeleted": "Мижоз муваффақиятли ўчирилди"
+    "customerDeleted": "Мижоз муваффақиятли ўчирилди",
+    "payDebt": "Қарз тўлаш",
+    "debtPaymentTitle": "Қарз тўлови",
+    "debtPaymentDescription": "Мижоз қарзини тўлаш",
+    "paymentAmount": "Тўлов суммаси",
+    "payNow": "Тўлаш"
   },
   "suppliers": {
     "title": "Та'минотчилар",
@@ -427,4 +431,3 @@
     "processing": "Қайта ишланмоқда"
   }
 }
-
