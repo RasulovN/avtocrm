@@ -29,7 +29,7 @@ class MockNotificationSocketService {
   private notifications: AppNotification[] = [];
   private subscribers = new Set<Subscriber>();
   private timer: number | null = null;
-  private activeUserId: number | null = null;
+  private activeUserId: string | null = null;
   private seq = 1;
 
   connect(user: User) {

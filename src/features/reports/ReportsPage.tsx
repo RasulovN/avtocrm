@@ -741,7 +741,7 @@ export function ReportsPage() {
     <div className="space-y-6">
       <PageHeader title={t('nav.reports')} description={t('reports.description')} />
 
-      <Card className="overflow-hidden border-primary/10 bg-gradient-to-br from-primary/5 via-background to-background">
+      <Card className="overflow-hidden border-primary/10 bg-linear-to-br from-primary/5 via-background to-background">
         <CardContent className="p-4 sm:p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-2">
@@ -771,7 +771,7 @@ export function ReportsPage() {
 
             <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:w-auto">
               <Select value={selectedType} onValueChange={(value) => setSelectedType(value as ReportType)}>
-                <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectTrigger className="w-full sm:w-45">
                   <SelectValue placeholder={t('reports.allTypes')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -783,7 +783,7 @@ export function ReportsPage() {
                 </SelectContent>
               </Select>
               <Select value={selectedPeriod} onValueChange={(value) => setSelectedPeriod(value as PeriodType)}>
-                <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectTrigger className="w-full sm:w-45">
                   <SelectValue placeholder={t('reports.periods.month')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -812,7 +812,7 @@ export function ReportsPage() {
           const isPositive = stat.change >= 0;
           return (
             <Card key={stat.key} className="relative overflow-hidden">
-              <div className={`absolute inset-0 bg-gradient-to-br ${stat.tone} to-transparent`} />
+              <div className={`absolute inset-0 bg-linear-to-br ${stat.tone} to-transparent`} />
               <CardContent className="relative p-6">
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -942,7 +942,7 @@ export function ReportsPage() {
                   </div>
                   <div className="h-2.5 rounded-full bg-muted">
                     <div
-                      className="h-2.5 rounded-full bg-gradient-to-r from-sky-500 to-emerald-500"
+                      className="h-2.5 rounded-full bg-linear-to-r from-sky-500 to-emerald-500"
                       style={{ width: `${Math.max((store.revenue / storeMax) * 100, 8)}%` }}
                     />
                   </div>
@@ -976,7 +976,7 @@ export function ReportsPage() {
                   </div>
                   <div className="h-2.5 rounded-full bg-muted">
                     <div
-                      className="h-2.5 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-400"
+                      className="h-2.5 rounded-full bg-linear-to-r from-violet-500 to-fuchsia-400"
                       style={{ width: `${Math.max((item.quantity / stockMax) * 100, 10)}%` }}
                     />
                   </div>

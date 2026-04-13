@@ -242,7 +242,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     <div className="flex min-h-screen">
       <a
         href="#main-content"
-        className="sr-only fixed left-4 top-4 z-[100] rounded-md bg-background px-4 py-2 text-sm font-medium text-foreground shadow focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-primary"
+        className="sr-only fixed left-4 top-4 z-100 rounded-md bg-background px-4 py-2 text-sm font-medium text-foreground shadow focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-primary"
       >
         Skip to main content
       </a>
