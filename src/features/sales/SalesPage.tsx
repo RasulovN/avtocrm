@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, type ChangeEvent, type KeyboardEv
 import QrScanner from 'react-qr-barcode-scanner';
 import { ScanBarcode, Trash2, DollarSign, Search, X, UserPlus } from 'lucide-react';
 import { BarcodeFormat, type Result } from '@zxing/library';
+import toast from 'react-hot-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/Dialog';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -71,6 +72,9 @@ export function SalesPage() {
   const [activePayment, setActivePayment] = useState<'cash' | 'card' | null>(null);
   const [showScanner, setShowScanner] = useState(false);
   const [stopScannerStream, setStopScannerStream] = useState(false);
+  const [scannerStatus, setScannerStatus] = useState<'idle' | 'scanning' | 'searching' | 'success' | 'not_found' | 'error'>('idle');
+  const [scannerMessage, setScannerMessage] = useState("Kamerani shtrixkodga to'g'ri qaratib turing.");
+  const [lastScannedCode, setLastScannedCode] = useState('');
   const [customers, setCustomers] = useState<{ id: number; full_name: string; phone_number: string }[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [showNewCustomerDialog, setShowNewCustomerDialog] = useState(false);
@@ -82,6 +86,32 @@ export function SalesPage() {
     const filtered = isAdmin ? allProducts : allProducts.filter((p) => p.store_id === userStoreId);
     return filtered;
   }, [allProducts, isAdmin, userStoreId, productsLoading]);
+
+  const hydrateProductFromCatalog = (product: Product): Product => {
+    const matchedProduct = safeProducts.find((item) =>
+      String(item.id) === String(product.id) ||
+      (product.shtrix_code && item.shtrix_code === product.shtrix_code) ||
+      (product.barcode && item.barcode === product.barcode) ||
+      (product.sku && item.sku === product.sku)
+    );
+
+    if (!matchedProduct) return product;
+
+    return {
+      ...matchedProduct,
+      ...product,
+      name: product.name || matchedProduct.name,
+      sku: product.sku || matchedProduct.sku,
+      barcode: product.barcode || matchedProduct.barcode,
+      shtrix_code: product.shtrix_code || matchedProduct.shtrix_code,
+      purchase_price: product.purchase_price ?? matchedProduct.purchase_price,
+      selling_price: product.selling_price ?? matchedProduct.selling_price,
+      quantity: product.quantity ?? matchedProduct.quantity,
+      total_count: product.total_count ?? matchedProduct.total_count,
+      store_id: product.store_id || matchedProduct.store_id,
+      store_name: product.store_name || matchedProduct.store_name,
+    };
+  };
 
   const subtotal = useMemo(() => items.reduce((sum, item) => sum + item.total, 0), [items]);
   const calculatedDiscount = useMemo(() => {
@@ -157,6 +187,24 @@ export function SalesPage() {
   }, [isAdmin, userStoreId]);
 
   useEffect(() => {
+    if (!showScanner) return;
+
+    setScannerStatus('scanning');
+    setScannerMessage("Kamerani shtrixkodga to'g'ri qaratib turing.");
+
+    const unreadTimeout = window.setTimeout(() => {
+      setScannerStatus((current) => (current === 'scanning' ? 'error' : current));
+      setScannerMessage((current) =>
+        current === "Kamerani shtrixkodga to'g'ri qaratib turing."
+          ? "Shtrix kodni o'qib bo'lmadi. Kamerani yaqinroq tutib, qayta urinib ko'ring."
+          : current
+      );
+    }, 5000);
+
+    return () => window.clearTimeout(unreadTimeout);
+  }, [showScanner]);
+
+  useEffect(() => {
     const query = barcode.trim();
 
     if (!query) {
@@ -171,10 +219,10 @@ export function SalesPage() {
       try {
         if (isNumericLookup(query)) {
           const product = await productService.getByBarcode(query);
-          setSearchResults(product ? [product] : []);
+          setSearchResults(product ? [hydrateProductFromCatalog(product)] : []);
         } else {
           const products = await productService.search(query);
-          setSearchResults(products);
+          setSearchResults(products.map(hydrateProductFromCatalog));
         }
       } catch (error) {
         console.error('Product search failed:', error);
@@ -207,7 +255,7 @@ export function SalesPage() {
 
   const findProductByBarcode = async (barcode: string) => {
     const normalizedBarcode = normalizeBarcodeValue(barcode);
-    if (!normalizedBarcode) return;
+    if (!normalizedBarcode) return null;
 
     const localProduct = safeProducts.find((product) =>
       [product.shtrix_code, product.barcode, product.sku]
@@ -216,16 +264,19 @@ export function SalesPage() {
     );
 
     if (localProduct) {
-      addProduct(localProduct);
+      const hydratedProduct = hydrateProductFromCatalog(localProduct);
+      addProduct(hydratedProduct);
       setSearchResults(null);
-      return;
+      return hydratedProduct;
     }
 
     try {
       const product = await productService.getByBarcode(normalizedBarcode);
       if (product) {
-        addProduct(product);
-        setSearchResults([product]);
+        const hydratedProduct = hydrateProductFromCatalog(product);
+        addProduct(hydratedProduct);
+        setSearchResults([hydratedProduct]);
+        return hydratedProduct;
       } else {
         setSearchResults([]);
       }
@@ -233,6 +284,8 @@ export function SalesPage() {
       console.error('Product not found:', error);
       setSearchResults([]);
     }
+
+    return null;
   };
 
   const handleBarcodeScanQr = (error: unknown, result?: Result) => {
@@ -241,22 +294,44 @@ export function SalesPage() {
     const data = typeof result?.getText === 'function' ? result.getText() : '';
     const normalizedBarcode = data ? normalizeBarcodeValue(data) : '';
 
-    if (normalizedBarcode) {
-      void findProductByBarcode(normalizedBarcode);
-      setBarcode('');
-      setStopScannerStream(true);
-      setTimeout(() => setShowScanner(false), 0);
-    }
+    if (!normalizedBarcode || normalizedBarcode === lastScannedCode) return;
+
+    setLastScannedCode(normalizedBarcode);
+    setScannerStatus('searching');
+    setScannerMessage(`Kod o'qildi: ${normalizedBarcode}. Mahsulot qidirilmoqda...`);
+
+    void (async () => {
+      const product = await findProductByBarcode(normalizedBarcode);
+
+      if (product) {
+        setBarcode('');
+        setScannerStatus('success');
+        setScannerMessage(`Topildi: ${product.name || normalizedBarcode}`);
+        toast.success(`Mahsulot topildi: ${product.name || normalizedBarcode}`);
+        setStopScannerStream(true);
+        setTimeout(() => setShowScanner(false), 500);
+        return;
+      }
+
+      setScannerStatus('not_found');
+      setScannerMessage(`Shtrix kod topildi, lekin baza ichidan mahsulot topilmadi: ${normalizedBarcode}`);
+      toast.error(`Mahsulot topilmadi: ${normalizedBarcode}`);
+      setLastScannedCode('');
+    })();
   };
 
   const handleScannerDialogChange = (open: boolean) => {
     if (open) {
       setStopScannerStream(false);
+      setLastScannedCode('');
+      setScannerStatus('scanning');
+      setScannerMessage("Kamerani shtrixkodga to'g'ri qaratib turing.");
       setShowScanner(true);
       return;
     }
 
     setStopScannerStream(true);
+    setLastScannedCode('');
     setTimeout(() => setShowScanner(false), 0);
   };
 
@@ -451,7 +526,7 @@ export function SalesPage() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <div className="font-medium dark:text-white">{product.name}</div>
+                        <div className="font-medium dark:text-white">{product.name || product.sku || product.shtrix_code || product.barcode || "Noma'lum mahsulot"}</div>
                         <div className="text-xs text-muted-foreground dark:text-gray-400">
                           {product.sku || product.shtrix_code || product.barcode}
                         </div>
@@ -856,12 +931,24 @@ export function SalesPage() {
                   BarcodeFormat.DATA_MATRIX,
                 ]}
                 onUpdate={handleBarcodeScanQr}
-                onError={(error) => console.error('Scanner error:', error)}
+                onError={(error) => {
+                  console.error('Scanner error:', error);
+                  setScannerStatus('error');
+                  setScannerMessage("Kameraga ulanishda muammo bo'ldi yoki kodni o'qib bo'lmadi.");
+                }}
               />
             </div>
-            <p className="text-sm text-muted-foreground">
-              Kamerani shtrixkodga yaqinroq tuting. Kod topilganda mahsulot avtomatik qo'shiladi.
-            </p>
+            <div
+              className={`rounded-lg border px-3 py-2 text-sm ${
+                scannerStatus === 'success'
+                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700'
+                  : scannerStatus === 'not_found' || scannerStatus === 'error'
+                    ? 'border-red-500/30 bg-red-500/10 text-red-700'
+                    : 'border-primary/20 bg-primary/5 text-muted-foreground'
+              }`}
+            >
+              {scannerMessage}
+            </div>
           </div>
         </DialogContent>
       </Dialog>

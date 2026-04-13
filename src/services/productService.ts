@@ -49,8 +49,12 @@ const normalizeImages = (images?: string[] | string, image?: string) => {
 const normalizeProduct = (raw: unknown): Product => {
   const item = (raw ?? {}) as Partial<Product> & {
     id?: string | number;
+    product?: string;
+    product_name?: string;
+    title?: string;
     name_uz?: string;
     name_uz_cyrl?: string;
+    barcode_value?: string;
     description_uz?: string;
     description_uz_cyrl?: string;
     category?: unknown;
@@ -114,9 +118,9 @@ const normalizeProduct = (raw: unknown): Product => {
   const sellingPrice = normalizeNumber(item.selling_price ?? item.price) ?? minSellingPrice;
 
   return {
-    id: String(item.id ?? item.product_id ?? ''),
+    id: String(item.id ?? item.product_id ?? item.barcode ?? item.barcode_value ?? item.shtrix_code ?? item.sku ?? item.product ?? item.product_name ?? ''),
     product_id: item.product_id ? String(item.product_id) : undefined,
-    name: item.name ?? item.name_uz ?? item.name_uz_cyrl ?? '',
+    name: item.name ?? item.product ?? item.product_name ?? item.title ?? item.name_uz ?? item.name_uz_cyrl ?? '',
     description: item.description ?? item.description_uz ?? item.description_uz_cyrl ?? '',
     category: typeof item.category === 'number' ? item.category : (categoryInfo.id ? Number(categoryInfo.id) : 0),
     category_name: categoryInfo.name ?? (typeof item.category === 'string' ? item.category : '') ?? '',
@@ -125,7 +129,7 @@ const normalizeProduct = (raw: unknown): Product => {
     store_id: item.store_id !== undefined ? String(item.store_id) : (item.store?.id !== undefined ? String(item.store.id) : undefined),
     store_name: item.store_name ?? item.store?.name ?? item.store?.name_uz ?? item.store?.name_uz_cyrl,
     sku: item.sku ?? '',
-    barcode: item.barcode ?? item.sku,
+    barcode: item.barcode ?? item.barcode_value ?? item.sku,
     barcode_img: resolveImageUrl(item.barcode_img),
     shtrix_code: item.shtrix_code ?? null,
     image,
@@ -326,10 +330,22 @@ export const productService = {
   },
 
   getByBarcode: async (barcode: string): Promise<Product | null> => {
-    const response = await apiClient.get<ApiResponse<Product>>(`/products/barcode/${encodeURIComponent(barcode)}/`);
-    const payload = response.data?.data ?? response.data;
-    if (!payload) return null;
-    return normalizeProduct(payload);
+    try {
+      const response = await apiClient.get<ApiResponse<Product>>(`/products/barcode/${encodeURIComponent(barcode)}/`);
+      const payload = response.data?.data ?? response.data;
+      if (!payload) return null;
+      return normalizeProduct({
+        ...(typeof payload === 'object' && payload !== null ? payload : {}),
+        id: (typeof payload === 'object' && payload !== null && 'id' in payload) ? (payload as { id?: string | number }).id : barcode,
+        barcode_value: barcode,
+      });
+    } catch (error) {
+      const axiosError = error as { response?: { status?: number } };
+      if (axiosError.response?.status === 404) {
+        return null;
+      }
+      throw error;
+    }
   },
 
   search: async (query: string): Promise<Product[]> => {
