@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { Plus, FileText, Eye, Printer } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
+import { DataTable, type Column } from '../../components/shared/DataTable';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
+import { Card, CardContent } from '../../components/ui/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/Table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../components/ui/Dialog';
 import { inventoryService } from '../../services/inventoryService';
@@ -29,6 +30,8 @@ interface DisplayInventory {
   items: InventoryItem[];
   full_name: string;
 }
+
+type DisplayInventoryRow = DisplayInventory & { rowNumber: number };
 
 export function InventoryListPage() {
   const { t } = useTranslation();
@@ -159,6 +162,84 @@ export function InventoryListPage() {
     }
   };
 
+  const inventoryRows: DisplayInventoryRow[] = inventory.map((item, index) => ({
+    ...item,
+    rowNumber: index + 1,
+  }));
+
+  const columns: Column<DisplayInventoryRow>[] = [
+    {
+      key: 'rowNumber',
+      header: '#',
+      render: (item) => item.rowNumber,
+    },
+    {
+      key: 'supplier_name',
+      header: t('suppliers.title'),
+      render: (item) => item.supplier_name || item.supplier_id,
+    },
+    {
+      key: 'store_name',
+      header: t('stores.title'),
+      render: (item) => item.store_name || item.store_id,
+    },
+    {
+      key: 'total',
+      header: t('common.total'),
+      className: 'font-medium',
+      render: (item) => formatCurrency(item.total),
+    },
+    {
+      key: 'paid',
+      header: t('inventory.paidAmount'),
+      render: (item) => formatCurrency(item.paid),
+    },
+    {
+      key: 'debt',
+      header: t('suppliers.debt'),
+      render: (item) => (
+        <span className={item.debt > 0 ? 'text-red-500' : ''}>
+          {formatCurrency(item.debt)}
+        </span>
+      ),
+    },
+    {
+      key: 'created_at',
+      header: t('common.date'),
+      render: (item) => formatDate(item.created_at),
+    },
+    {
+      key: 'status',
+      header: t('common.status'),
+      render: (item) => (
+        <span className={`px-2 py-1 rounded-full text-xs ${
+          item.status === 'completed' ? 'bg-green-100 text-green-800' :
+          item.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+        }`}>
+          {item.status === 'completed' ? t('common.completed') :
+           item.status === 'pending' ? t('common.pending') : t('common.cancelled')}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: t('common.actions'),
+      className: 'text-right',
+      render: (item) => (
+        <div className="flex justify-end gap-1">
+          <Button variant="ghost" size="sm" onClick={() => handleShowDetails(item)}>
+            <Eye className="h-4 w-4" />
+          </Button>
+          {item.items && item.items.length > 0 && (
+            <Button variant="ghost" size="sm" onClick={() => handlePrintBarcodes(item)} title="Print Barcodes">
+              <Printer className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -175,133 +256,87 @@ export function InventoryListPage() {
         </Link>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('inventory.history')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {t('common.loading')}
-            </div>
-          ) : inventory.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>{t('inventory.noData')}</p>
-            </div>
-          ) : (
-            <>
-              <div className="space-y-3 md:hidden">
-                {inventory.map((item) => (
-                  <Card key={item.id} className="overflow-hidden">
-                    <CardContent className="space-y-4 p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-base font-semibold">{item.supplier_name || item.supplier_id}</p>
-                          <p className="mt-1 text-sm text-muted-foreground">{item.store_name || item.store_id}</p>
-                        </div>
-                        <span className={`rounded-full px-2 py-1 text-xs ${
-                          item.status === 'completed' ? 'bg-green-100 text-green-800' :
-                          item.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {item.status === 'completed' ? t('common.completed') :
-                           item.status === 'pending' ? t('common.pending') : t('common.cancelled')}
-                        </span>
-                      </div>
+      <div>
+        <h2 className="text-base font-semibold">{t('inventory.history')}</h2>
+      </div>
 
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div className="rounded-lg bg-muted/30 p-3">
-                          <p className="text-xs text-muted-foreground">{t('common.total')}</p>
-                          <p className="mt-1 font-semibold">{formatCurrency(item.total)}</p>
-                        </div>
-                        <div className="rounded-lg bg-muted/30 p-3">
-                          <p className="text-xs text-muted-foreground">{t('inventory.paidAmount')}</p>
-                          <p className="mt-1 font-semibold">{formatCurrency(item.paid)}</p>
-                        </div>
-                        <div className="rounded-lg bg-muted/30 p-3">
-                          <p className="text-xs text-muted-foreground">{t('suppliers.debt')}</p>
-                          <p className={`mt-1 font-semibold ${item.debt > 0 ? 'text-red-500' : ''}`}>{formatCurrency(item.debt)}</p>
-                        </div>
-                        <div className="rounded-lg bg-muted/30 p-3">
-                          <p className="text-xs text-muted-foreground">{t('common.date')}</p>
-                          <p className="mt-1 font-semibold">{formatDate(item.created_at)}</p>
-                        </div>
-                      </div>
+      {loading ? (
+        <div className="text-center py-8 text-muted-foreground">
+          {t('common.loading')}
+        </div>
+      ) : inventory.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground">
+          <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>{t('inventory.noData')}</p>
+        </div>
+      ) : (
+        <>
+          <div className="space-y-3 md:hidden">
+            {inventory.map((item) => (
+              <Card key={item.id} className="overflow-hidden">
+                <CardContent className="space-y-4 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-base font-semibold">{item.supplier_name || item.supplier_id}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">{item.store_name || item.store_id}</p>
+                    </div>
+                    <span className={`rounded-full px-2 py-1 text-xs ${
+                      item.status === 'completed' ? 'bg-green-100 text-green-800' :
+                      item.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {item.status === 'completed' ? t('common.completed') :
+                       item.status === 'pending' ? t('common.pending') : t('common.cancelled')}
+                    </span>
+                  </div>
 
-                      <div className="flex flex-wrap gap-2">
-                        <Button variant="outline" size="sm" className="flex-1 min-w-30" onClick={() => handleShowDetails(item)}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          {t('common.actions')}
-                        </Button>
-                        {item.items && item.items.length > 0 && (
-                          <Button variant="outline" size="sm" className="flex-1 min-w-30" onClick={() => handlePrintBarcodes(item)}>
-                            <Printer className="mr-2 h-4 w-4" />
-                            {t('products.printBarcode')}
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="rounded-lg bg-muted/30 p-3">
+                      <p className="text-xs text-muted-foreground">{t('common.total')}</p>
+                      <p className="mt-1 font-semibold">{formatCurrency(item.total)}</p>
+                    </div>
+                    <div className="rounded-lg bg-muted/30 p-3">
+                      <p className="text-xs text-muted-foreground">{t('inventory.paidAmount')}</p>
+                      <p className="mt-1 font-semibold">{formatCurrency(item.paid)}</p>
+                    </div>
+                    <div className="rounded-lg bg-muted/30 p-3">
+                      <p className="text-xs text-muted-foreground">{t('suppliers.debt')}</p>
+                      <p className={`mt-1 font-semibold ${item.debt > 0 ? 'text-red-500' : ''}`}>{formatCurrency(item.debt)}</p>
+                    </div>
+                    <div className="rounded-lg bg-muted/30 p-3">
+                      <p className="text-xs text-muted-foreground">{t('common.date')}</p>
+                      <p className="mt-1 font-semibold">{formatDate(item.created_at)}</p>
+                    </div>
+                  </div>
 
-              <div className="hidden md:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>#</TableHead>
-                      <TableHead>{t('suppliers.title')}</TableHead>
-                      <TableHead>{t('stores.title')}</TableHead>
-                      <TableHead>{t('common.total')}</TableHead>
-                      <TableHead>{t('inventory.paidAmount')}</TableHead>
-                      <TableHead>{t('suppliers.debt')}</TableHead>
-                      <TableHead>{t('common.date')}</TableHead>
-                      <TableHead>{t('common.status')}</TableHead>
-                      <TableHead>{t('common.actions')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {inventory.map((item, index) => (
-                      <TableRow key={item.id}>
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell>{item.supplier_name || item.supplier_id}</TableCell>
-                        <TableCell>{item.store_name || item.store_id}</TableCell>
-                        <TableCell className="font-medium">{formatCurrency(item.total)}</TableCell>
-                        <TableCell>{formatCurrency(item.paid)}</TableCell>
-                        <TableCell className={item.debt > 0 ? 'text-red-500' : ''}>
-                          {formatCurrency(item.debt)}
-                        </TableCell>
-                        <TableCell>{formatDate(item.created_at)}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            item.status === 'completed' ? 'bg-green-100 text-green-800' : 
-                            item.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
-                          }`}>
-                            {item.status === 'completed' ? t('common.completed') : 
-                             item.status === 'pending' ? t('common.pending') : t('common.cancelled')}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleShowDetails(item)}>
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            {item.items && item.items.length > 0 && (
-                              <Button variant="ghost" size="sm" onClick={() => handlePrintBarcodes(item)} title="Print Barcodes">
-                                <Printer className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" className="flex-1 min-w-30" onClick={() => handleShowDetails(item)}>
+                      <Eye className="mr-2 h-4 w-4" />
+                      {t('common.actions')}
+                    </Button>
+                    {item.items && item.items.length > 0 && (
+                      <Button variant="outline" size="sm" className="flex-1 min-w-30" onClick={() => handlePrintBarcodes(item)}>
+                        <Printer className="mr-2 h-4 w-4" />
+                        {t('products.printBarcode')}
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <div className="hidden md:block">
+            <DataTable
+              data={inventoryRows}
+              columns={columns}
+              loading={loading}
+              emptyMessage={t('inventory.noData')}
+              loadingMessage={t('common.loading')}
+              minWidth="980px"
+            />
+          </div>
+        </>
+      )}
 
       {/* Details Dialog */}
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
