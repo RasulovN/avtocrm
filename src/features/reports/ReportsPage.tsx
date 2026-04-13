@@ -157,6 +157,31 @@ const formatCompactNumber = (value: number) =>
     maximumFractionDigits: 1,
   }).format(value);
 
+const toNumber = (value: string | number | null | undefined) => {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+};
+
+const getSaleRevenue = (sale: Sale) => toNumber(sale.total_amount);
+
+const getSaleProfit = (sale: Sale, productsById: Map<string, Product>) =>
+  sale.items.reduce((sum, item) => {
+    const product = productsById.get(String(item.product));
+    const unitCost = toNumber(product?.min_purchase_price ?? product?.purchase_price);
+    const lineRevenue = toNumber(item.total_price);
+    return sum + (lineRevenue - unitCost * item.quantity);
+  }, 0);
+
+const getSalePaymentLabel = (sale: Sale) => {
+  if (sale.payments.length > 1) return 'mixed';
+  if (sale.payments.length === 1) return 'paid';
+  return sale.status;
+};
+
 const groupLabel = (date: Date, period: PeriodType) => {
   if (period === 'week') {
     return new Intl.DateTimeFormat('uz-UZ', { weekday: 'short' }).format(date);
@@ -176,13 +201,11 @@ const buildTrend = (sales: Sale[], inventory: Inventory[], period: PeriodType, n
       const day = addDays(start, index);
       const revenue = sales
         .filter((sale) => isWithinRange(sale.created_at, day, addDays(day, 1)))
-        .reduce((sum, sale) => sum + (sale.total_price || sale.total || 0), 0);
+        .reduce((sum, sale) => sum + getSaleRevenue(sale), 0);
       const purchase = inventory
         .filter((item) => isWithinRange(item.created_at, day, addDays(day, 1)))
         .reduce((sum, item) => sum + item.total, 0);
-      const profit = sales
-        .filter((sale) => isWithinRange(sale.created_at, day, addDays(day, 1)))
-        .reduce((sum, sale) => sum + sale.profit, 0);
+      const profit = revenue - purchase;
 
       return { label: groupLabel(day, period), revenue, purchase, profit };
     });
@@ -195,13 +218,11 @@ const buildTrend = (sales: Sale[], inventory: Inventory[], period: PeriodType, n
       const bucketEnd = index === 4 ? now : addDays(bucketStart, 6);
       const revenue = sales
         .filter((sale) => isWithinRange(sale.created_at, bucketStart, bucketEnd))
-        .reduce((sum, sale) => sum + (sale.total_price || sale.total || 0), 0);
+        .reduce((sum, sale) => sum + getSaleRevenue(sale), 0);
       const purchase = inventory
         .filter((item) => isWithinRange(item.created_at, bucketStart, bucketEnd))
         .reduce((sum, item) => sum + item.total, 0);
-      const profit = sales
-        .filter((sale) => isWithinRange(sale.created_at, bucketStart, bucketEnd))
-        .reduce((sum, sale) => sum + sale.profit, 0);
+      const profit = revenue - purchase;
 
       return { label: groupLabel(bucketStart, period), revenue, purchase, profit };
     });
@@ -215,13 +236,11 @@ const buildTrend = (sales: Sale[], inventory: Inventory[], period: PeriodType, n
     const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0, 23, 59, 59, 999);
     const revenue = sales
       .filter((sale) => isWithinRange(sale.created_at, monthStart, monthEnd))
-      .reduce((sum, sale) => sum + (sale.total_price || sale.total || 0), 0);
+      .reduce((sum, sale) => sum + getSaleRevenue(sale), 0);
     const purchase = inventory
       .filter((item) => isWithinRange(item.created_at, monthStart, monthEnd))
       .reduce((sum, item) => sum + item.total, 0);
-    const profit = sales
-      .filter((sale) => isWithinRange(sale.created_at, monthStart, monthEnd))
-      .reduce((sum, sale) => sum + sale.profit, 0);
+    const profit = revenue - purchase;
 
     return { label: groupLabel(monthStart, period), revenue, purchase, profit };
   });
@@ -243,7 +262,7 @@ const buildLinePath = (values: number[], width: number, height: number) => {
 const toExportValue = (value: string | number) => value;
 
 const createWorksheet = (
-  workbook: { addWorksheet: (name: string) => { columns?: Array<{ header: string; key: string; width: number }>; addRows: (rows: ExportRow[]) => void; addRow: (row: string[]) => void; getRow: (index: number) => { font?: { bold: boolean } } } },
+  workbook: { addWorksheet: (name: string) => any },
   name: string,
   rows: ExportRow[]
 ) => {
@@ -256,9 +275,9 @@ const createWorksheet = (
 
   const headers = Object.keys(rows[0]);
   worksheet.columns = headers.map((header) => ({
-    header,
-    key: header,
-    width: Math.min(Math.max(header.length + 2, 14), 28),
+      header,
+      key: header,
+      width: Math.min(Math.max(header.length + 2, 14), 28),
   }));
 
   worksheet.addRows(
@@ -384,6 +403,7 @@ export function ReportsPage() {
     const now = new Date();
     const periodStart = getRangeStart(selectedPeriod, now);
     const previousRange = getPreviousRange(selectedPeriod, now);
+    const productsById = new Map(data.products.map((product) => [String(product.id), product]));
 
     const salesInRange = data.sales.filter((sale) => isWithinRange(sale.created_at, periodStart, now));
     const inventoryInRange = data.inventory.filter((item) => isWithinRange(item.created_at, periodStart, now));
@@ -392,15 +412,15 @@ export function ReportsPage() {
     const previousSales = data.sales.filter((sale) => isWithinRange(sale.created_at, previousRange.start, previousRange.end));
     const previousInventory = data.inventory.filter((item) => isWithinRange(item.created_at, previousRange.start, previousRange.end));
 
-    const revenue = salesInRange.reduce((sum, sale) => sum + (sale.total_price || sale.total || 0), 0);
+    const revenue = salesInRange.reduce((sum, sale) => sum + getSaleRevenue(sale), 0);
     const purchase = inventoryInRange.reduce((sum, item) => sum + item.total, 0);
-    const profit = salesInRange.reduce((sum, sale) => sum + sale.profit, 0);
+    const profit = salesInRange.reduce((sum, sale) => sum + getSaleProfit(sale, productsById), 0);
     const debt = inventoryInRange.reduce((sum, item) => sum + item.debt, 0);
     const supplierDebt = data.suppliers.reduce((sum, supplier) => sum + supplier.debt, 0);
 
-    const previousRevenue = previousSales.reduce((sum, sale) => sum + (sale.total_price || sale.total || 0), 0);
+    const previousRevenue = previousSales.reduce((sum, sale) => sum + getSaleRevenue(sale), 0);
     const previousPurchase = previousInventory.reduce((sum, item) => sum + item.total, 0);
-    const previousProfit = previousSales.reduce((sum, sale) => sum + sale.profit, 0);
+    const previousProfit = previousSales.reduce((sum, sale) => sum + getSaleProfit(sale, productsById), 0);
     const previousDebt = previousInventory.reduce((sum, item) => sum + item.debt, 0);
 
     const totalUnitsSold = salesInRange.reduce(
@@ -421,16 +441,16 @@ export function ReportsPage() {
 
     const storePerformance = data.stores
       .map((store) => {
-        const relatedSales = salesInRange.filter((sale) => sale.store_id === store.id);
+        const relatedSales = salesInRange.filter((sale) => String(sale.store) === String(store.id));
         const relatedTransfers = transfersInRange.filter(
-          (transfer) => transfer.from_store_id === store.id || transfer.to_store_id === store.id
+          (transfer) => String(transfer.from_store) === String(store.id) || String(transfer.to_store) === String(store.id)
         );
 
         return {
           id: store.id,
           name: store.name,
-          revenue: relatedSales.reduce((sum, sale) => sum + (sale.total_price || sale.total || 0), 0),
-          profit: relatedSales.reduce((sum, sale) => sum + sale.profit, 0),
+          revenue: relatedSales.reduce((sum, sale) => sum + getSaleRevenue(sale), 0),
+          profit: relatedSales.reduce((sum, sale) => sum + getSaleProfit(sale, productsById), 0),
           salesCount: relatedSales.length,
           transferCount: relatedTransfers.length,
         };
@@ -441,14 +461,15 @@ export function ReportsPage() {
     const topProducts = new Map<string, { name: string; quantity: number; revenue: number }>();
     salesInRange.forEach((sale) => {
       sale.items.forEach((item) => {
-        const key = item.product_id || item.product_name || item.id;
+        const key = String(item.product);
+        const product = productsById.get(key);
         const entry = topProducts.get(key) || {
-          name: item.product_name || t('common.noData'),
+          name: product?.name || `#${key}`,
           quantity: 0,
           revenue: 0,
         };
         entry.quantity += item.quantity;
-        entry.revenue += item.total;
+        entry.revenue += toNumber(item.total_price);
         topProducts.set(key, entry);
       });
     });
@@ -459,7 +480,7 @@ export function ReportsPage() {
 
     const categoryInventory = new Map<string, number>();
     data.products.forEach((product) => {
-      const category = product.category || t('reports.uncategorized');
+      const category = product.category_name || String(product.category || t('reports.uncategorized'));
       const quantity = product.total_quantity ?? product.quantity ?? product.total_count ?? 0;
       categoryInventory.set(category, (categoryInventory.get(category) || 0) + quantity);
     });
@@ -626,12 +647,13 @@ export function ReportsPage() {
         'Sales',
         salesInRange.map((sale) => ({
           date: sale.created_at,
-          store: sale.store_name || sale.store_id,
-          total_price: sale.total_price || sale.total || 0,
-          total_cost: sale.total_cost,
-          profit: sale.profit,
+          store: sale.store_name || sale.store,
+          total_amount: getSaleRevenue(sale),
+          paid_amount: toNumber(sale.paid_amount),
+          debt: toNumber(sale.debt),
+          profit: getSaleProfit(sale, new Map(data.products.map((product) => [String(product.id), product]))),
           items_count: sale.items.reduce((sum, item) => sum + item.quantity, 0),
-          payment_method: sale.payment_method || '',
+          payment_status: getSalePaymentLabel(sale),
         }))
       );
     }
@@ -659,8 +681,8 @@ export function ReportsPage() {
         'Transfers',
         transfersInRange.map((transfer) => ({
           date: transfer.created_at,
-          from_store: transfer.from_store_name || transfer.from_store_id || transfer.from_store,
-          to_store: transfer.to_store_name || transfer.to_store_id || transfer.to_store,
+          from_store: transfer.from_store_name || transfer.from_store,
+          to_store: transfer.to_store_name || transfer.to_store,
           items_count: Array.isArray(transfer.items)
             ? transfer.items.reduce((sum, item) => sum + item.quantity, 0)
             : typeof transfer.quantity === 'number'

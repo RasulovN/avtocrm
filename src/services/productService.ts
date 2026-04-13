@@ -326,7 +326,7 @@ export const productService = {
   },
 
   getByBarcode: async (barcode: string): Promise<Product | null> => {
-    const response = await apiClient.get<ApiResponse<Product>>(`/products/barcode/${barcode}/`);
+    const response = await apiClient.get<ApiResponse<Product>>(`/products/barcode/${encodeURIComponent(barcode)}/`);
     const payload = response.data?.data ?? response.data;
     if (!payload) return null;
     return normalizeProduct(payload);

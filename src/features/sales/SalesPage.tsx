@@ -27,6 +27,21 @@ interface CartItem {
   total: number;
 }
 
+const normalizeBarcodeValue = (value: string) => {
+  const normalized = value.trim();
+  if (!normalized) return '';
+
+  // Ignore scanner/decode error strings that can occasionally surface via callbacks.
+  if (
+    normalized.includes('NotFoundException') ||
+    normalized.includes('MultiFormat Readers were able to detect the code')
+  ) {
+    return '';
+  }
+
+  return normalized;
+};
+
 export function SalesPage() {
   const { user } = useAuthStore();
   const isAdmin = Boolean(user?.is_superuser);
@@ -135,8 +150,9 @@ export function SalesPage() {
   }, [isAdmin, userStoreId]);
 
   const handleBarcodeScan = async (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && barcode) {
-      await findProductByBarcode(barcode);
+    const normalizedBarcode = normalizeBarcodeValue(barcode);
+    if (e.key === 'Enter' && normalizedBarcode) {
+      await findProductByBarcode(normalizedBarcode);
       setBarcode('');
     }
   };
@@ -146,8 +162,11 @@ export function SalesPage() {
   };
 
   const findProductByBarcode = async (barcode: string) => {
+    const normalizedBarcode = normalizeBarcodeValue(barcode);
+    if (!normalizedBarcode) return;
+
     try {
-      const product = await productService.getByBarcode(barcode);
+      const product = await productService.getByBarcode(normalizedBarcode);
       if (product) {
         addProduct(product);
       }
@@ -156,10 +175,12 @@ export function SalesPage() {
     }
   };
 
-  const handleBarcodeScanQr = (result: unknown) => {
-    const data = result as string | undefined;
-    if (data) {
-      findProductByBarcode(data);
+  const handleBarcodeScanQr = (_error: unknown, result?: { getText: () => string }) => {
+    const data = result?.getText?.();
+    const normalizedBarcode = data ? normalizeBarcodeValue(data) : '';
+
+    if (normalizedBarcode) {
+      void findProductByBarcode(normalizedBarcode);
       setBarcode('');
       setShowScanner(false);
     }
@@ -721,7 +742,7 @@ export function SalesPage() {
             <DialogTitle>Barcode Scanner</DialogTitle>
           </DialogHeader>
           <QrScanner
-            onUpdate={(result) => handleBarcodeScanQr(result)}
+            onUpdate={handleBarcodeScanQr}
             onError={(error) => console.error('Scanner error:', error)}
           />
         </DialogContent>
