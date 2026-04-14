@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pencil, Phone, Plus, Search, Trash2 } from 'lucide-react';
-import { useAuthStore } from '../../app/store';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
@@ -39,8 +38,6 @@ type CustomerRow = Omit<CustomerFromApi, 'id'> & {
 
 export function CustomerListPage() {
   const { t } = useTranslation();
-  const { user } = useAuthStore();
-  const scopedStoreId = user?.store_id || '';
 
   const [customers, setCustomers] = useState<CustomerFromApi[]>([]);
   const [search, setSearch] = useState('');
