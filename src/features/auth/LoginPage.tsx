@@ -22,11 +22,7 @@ export function LoginPage() {
     
     try {
       await login(phone_number, password);
-      
-      // Wait for store to update, then navigate
-      setTimeout(() => {
-        navigate(`/${i18n.language || 'uz'}/dashboard`, { replace: true });
-      }, 300);
+      navigate(`/${i18n.language || 'uz'}/dashboard`, { replace: true });
     } catch (err) {
       console.error('Login error:', err);
     }

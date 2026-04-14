@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useAuthStore } from '../app/store';
 import { categoryService } from '../services/categoryService';
 import type { Category } from '../types';
 
@@ -18,6 +19,7 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { i18n } = useTranslation();
+  const hasSession = useAuthStore((state) => Boolean(state.user || state.token));
   const prevLangRef = useRef(i18n.language);
   const initialLoadRef = useRef(true);
 
@@ -42,6 +44,15 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!hasSession) {
+      initialLoadRef.current = true;
+      prevLangRef.current = i18n.language;
+      setCategories([]);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     if (initialLoadRef.current) {
       initialLoadRef.current = false;
       void refreshCategories();
@@ -53,7 +64,7 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
       prevLangRef.current = currentLang;
       void refreshCategories();
     }
-  }, [i18n.language, refreshCategories]);
+  }, [hasSession, i18n.language, refreshCategories]);
 
   const value = useMemo(() => ({
     categories,
