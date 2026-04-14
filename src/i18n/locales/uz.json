@@ -325,6 +325,10 @@
     "role": "Rol",
     "logs": "Loglar",
     "noLogs": "Loglar yo'q",
+    "latitude": "Kenglik",
+    "longitude": "Uzunlik",
+    "storeInfo": "Do'kon ma'lumotlari",
+    "storeInfoDescription": "Sizning do'kon haqida ma'lumotlar",
     "admin": "Admin",
     "list": "Do'konlar ro'yxati",
     "storeInfoDescription": "Foydalanuvchiga biriktirilgan do'kon ma'lumotlari"
