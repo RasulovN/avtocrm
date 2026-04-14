@@ -1,12 +1,22 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, User, ShoppingCart, CreditCard, Calendar, Tag, DollarSign } from 'lucide-react';
+import { ArrowLeft, User, ShoppingCart, CreditCard, Calendar, Tag, DollarSign, Wallet } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
 import { salesService } from '../../services/salesService';
+import { customerApiService } from '../../services/customerService';
 import { formatCurrency, formatDate } from '../../utils';
 import type { Sale } from '../../types';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/Dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/Select';
 
 export function SalesDetailPage() {
   const { t } = useTranslation();
@@ -15,6 +25,16 @@ export function SalesDetailPage() {
   const saleId = params.id;
   const [sale, setSale] = useState<Sale | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentType, setPaymentType] = useState<'cash' | 'card'>('cash');
+  const [paying, setPaying] = useState(false);
+  const [debtPayments, setDebtPayments] = useState<Array<{
+    id: number;
+    amount: string;
+    type: 'cash' | 'card';
+    created_at: string;
+  }>>([]);
 
   useEffect(() => {
     const loadSale = async () => {
@@ -27,6 +47,17 @@ export function SalesDetailPage() {
         setLoading(true);
         const res = await salesService.getById(saleId);
         setSale(res);
+        
+        const debtId = Number(saleId);
+        if (!isNaN(debtId)) {
+          try {
+            const payments = await customerApiService.getDebtPayments(debtId);
+            setDebtPayments(Array.isArray(payments) ? payments : []);
+          } catch (e) {
+            console.error('Failed to load debt payments:', e);
+            setDebtPayments([]);
+          }
+        }
       } catch (error) {
         console.error('Failed to load sale details:', error);
         setSale(null);
@@ -37,6 +68,42 @@ export function SalesDetailPage() {
 
     loadSale();
   }, [saleId]);
+
+  const openPaymentDialog = () => {
+    if (!sale || !sale.debt) return;
+    setPaymentAmount(String(sale.debt));
+    setPaymentType('cash');
+    setShowPaymentDialog(true);
+  };
+
+  const handleDebtPayment = async () => {
+    if (!sale || !paymentAmount || !saleId) return;
+    try {
+      setPaying(true);
+      const parsedAmount = Number(paymentAmount);
+      const normalizedAmount = Number.isFinite(parsedAmount)
+        ? String((parsedAmount))
+        : paymentAmount;
+      await customerApiService.createDebtPaymentForSale({
+        sale: Number(saleId),
+        amount: normalizedAmount,
+        type: paymentType,
+      });
+      setShowPaymentDialog(false);
+
+      setPaymentAmount('');
+      
+      const res = await salesService.getById(saleId);
+      setSale(res);
+      
+      const payments = await customerApiService.getDebtPayments(Number(saleId));
+      setDebtPayments(Array.isArray(payments) ? payments : []);
+    } catch (error) {
+      console.error('Failed to create debt payment:', error);
+    } finally {
+      setPaying(false);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     const styles = {
@@ -164,7 +231,38 @@ export function SalesDetailPage() {
                 <div className="mt-1">{getStatusBadge(sale.status)}</div>
               </div>
             </div>
+            {sale.debt && sale.debt > 0 && (
+              <Button className="w-full mt-4" onClick={openPaymentDialog}>
+                <Wallet className="mr-2 h-4 w-4" />
+                Qarzni to'lash
+              </Button>
+            )}
           </div>
+
+          {debtPayments.length > 0 && (
+            <div className="bg-card dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+              <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
+                <CreditCard className="h-5 w-5" />
+                Qarz to'lovlari tarixi
+              </h3>
+              <div className="space-y-3">
+                {debtPayments.map((payment) => (
+                  <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                        <CreditCard className="h-5 w-5 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium">{payment.type === 'cash' ? 'Naqd' : 'Karta'}</p>
+                        <p className="text-xs text-muted-foreground">{formatDate(payment.created_at)}</p>
+                      </div>
+                    </div>
+                    <p className="font-semibold text-green-600">{formatCurrency(parseFloat(payment.amount))}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="space-y-6">
@@ -246,6 +344,50 @@ export function SalesDetailPage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContent className='pb-6'>
+          <DialogHeader>
+            <DialogTitle>Qarzni to'lash</DialogTitle>
+            <DialogDescription>Quyida qarzni to'lash uchun ma'lumotlarni kiriting</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 rounded-lg bg-muted">
+              <p className="text-sm text-muted-foreground">Jami qarz</p>
+              <p className="text-xl font-bold text-amber-500">{formatCurrency(sale?.debt || 0)}</p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">To'lov summasi</label>
+              <Input
+                type="number"
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                placeholder="Summani kiriting"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">To'lov turi</label>
+              <Select value={paymentType} onValueChange={(value) => setPaymentType(value as 'cash' | 'card')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">Naqd</SelectItem>
+                  <SelectItem value="card">Karta</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setShowPaymentDialog(false)}>
+                Bekor qilish
+              </Button>
+              <Button className="flex-1" onClick={handleDebtPayment} disabled={paying || !paymentAmount}>
+                {paying ? 'To\'lanmoqda...' : 'To\'lash'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

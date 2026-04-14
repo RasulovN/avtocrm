@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Search, ChevronLeft, ChevronRight, Package, Loader2, Building2, Eye } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
@@ -20,7 +20,6 @@ import {
   TableRow,
 } from '../ui/Table';
 
-// Column interface with optional properties for styling
 export type ColumnKey<T> = keyof T | (string & {});
 
 export interface Column<T> {
@@ -32,21 +31,18 @@ export interface Column<T> {
   width?: string;
 }
 
-// Extended column interface with more options
 export interface EnhancedColumn<T> extends Column<T> {
   truncate?: boolean;
   nowrap?: boolean;
   breakWords?: boolean;
 }
 
-// Store inventory display interface
 export interface StoreInventory {
   store_id: string;
   store_name: string;
   quantity: number;
 }
 
-// Props interface
 interface DataTableProps<T extends { id: string }> {
   data: T[];
   columns: EnhancedColumn<T>[];
@@ -67,7 +63,6 @@ interface DataTableProps<T extends { id: string }> {
   minWidth?: string;
   emptyMessage?: string;
   loadingMessage?: string;
-  // New prop for displaying inventory by store (nested format)
   inventoryByStore?: (item: T) => StoreInventory[];
   itemNameKey?: keyof T;
   selectableRows?: boolean;
@@ -98,6 +93,7 @@ export function DataTable<T extends { id: string }>({
   onToggleRowSelection,
   onToggleAllRows,
 }: DataTableProps<T>) {
+  const [isMobile, setIsMobile] = useState(false);
   const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const safeColumns = useMemo(() => (Array.isArray(columns) ? columns : []), [columns]);
   const [search, setSearch] = useState('');
@@ -106,14 +102,20 @@ export function DataTable<T extends { id: string }>({
   const [selectedItemName, setSelectedItemName] = useState('');
   const allSelected = selectableRows && safeData.length > 0 && safeData.every((item) => selectedRowIds.includes(item.id));
 
-  // Calculate totals
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const stats = useMemo(() => {
     if (!showFooter || safeData.length === 0) return null;
 
-    // Total quantity
     let totalQuantity = 0;
     if (inventoryByStore) {
-      // Calculate total from inventoryByStore
       safeData.forEach((item) => {
         const inventories = inventoryByStore(item);
         if (inventories) {
@@ -129,18 +131,15 @@ export function DataTable<T extends { id: string }>({
       }, 0);
     }
 
-    // Store-wise quantities
     const storeQuantities: Record<string, number> = {};
     const storeProductCounts: Record<string, number> = {};
     if (showStoreStats) {
       if (inventoryByStore) {
-        // Calculate from inventoryByStore
         safeData.forEach((item) => {
           const inventories = inventoryByStore(item);
           if (inventories) {
             inventories.forEach((inv) => {
               storeQuantities[inv.store_name] = (storeQuantities[inv.store_name] || 0) + inv.quantity;
-              // Only count product once per store if it has quantity > 0
               if (inv.quantity > 0) {
                 storeProductCounts[inv.store_name] = (storeProductCounts[inv.store_name] || 0) + 1;
               }
@@ -173,7 +172,6 @@ export function DataTable<T extends { id: string }>({
 
   const totalPages = pagination ? Math.ceil(pagination.total / pagination.limit) : 0;
 
-  // Get column className based on options
   const getColumnClass = (column: EnhancedColumn<T>): string => {
     const classes = [column.className || ''];
     
@@ -184,13 +182,10 @@ export function DataTable<T extends { id: string }>({
     return classes.filter(Boolean).join(' ');
   };
 
-  // Render store inventory with eye icon - opens modal on click
   const renderStoreInventory = (item: T) => {
     if (!inventoryByStore) return null;
     
     const inventories = inventoryByStore(item);
-    
-    // Always show total quantity with eye icon when inventoryByStore is provided
     const total = inventories?.reduce((sum, inv) => sum + inv.quantity, 0) || 0;
 
     const handleClick = (e: React.MouseEvent) => {
@@ -207,7 +202,7 @@ export function DataTable<T extends { id: string }>({
         <Eye className="h-4 w-4 text-muted-foreground group-hover:opacity-100 transition-opacity" />
       </div>
     );
-  };
+  }
 
   return (
     <div className="space-y-4">
@@ -225,109 +220,157 @@ export function DataTable<T extends { id: string }>({
         </div>
       )}
 
-      {/* Table Container */}
       <div className="w-full overflow-x-auto rounded-lg border bg-card">
-        <div className="min-w-[640px] sm:min-w-[720px]" style={{ minWidth }}>
-          <Table>
-            {/* Sticky Header */}
-            <TableHeader className="sticky top-0 bg-muted/50 backdrop-blur-sm z-10">
-              <TableRow className="hover:bg-transparent">
-                {selectableRows && (
-                  <TableHead className="w-12">
-                    <input
-                      type="checkbox"
-                      aria-label="Select all rows"
-                      checked={allSelected}
-                      onChange={() => onToggleAllRows?.(safeData.map((item) => item.id))}
-                      className="h-4 w-4 rounded border-border"
-                    />
-                  </TableHead>
-                )}
-                {safeColumns.map((column) => (
-                  <TableHead
-                    key={column.key}
-                    className={cn(
-                      getColumnClass(column),
-                      column.width && `w-[${column.width}]`
-                    )}
-                    style={column.width ? { width: column.width } : undefined}
-                  >
-                    {column.header}
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-
-            {/* Table Body */}
-            <TableBody>
-              {/* Loading State */}
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={(safeColumns.length || 1) + (selectableRows ? 1 : 0)} className="h-32 text-center">
-                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                      <Loader2 className="h-6 w-6 animate-spin" />
-                      <span className="text-sm">{loadingMessage}</span>
+        {isMobile ? (
+          <div className="divide-y divide-border">
+            {loading ? (
+              <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
+                <Loader2 className="h-6 w-6 animate-spin" />
+                <span className="text-sm">{loadingMessage}</span>
+              </div>
+            ) : safeData.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
+                <Package className="h-8 w-8 opacity-50" />
+                <span className="text-sm">{emptyMessage}</span>
+              </div>
+            ) : (
+              safeData.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => onRowClick?.(item)}
+                  className={cn(
+                    'cursor-pointer p-4 transition-colors hover:bg-muted/50',
+                    onRowClick && 'cursor-pointer'
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{String(item['name' as keyof T] ?? '')}</p>
+                      <p className="text-sm text-muted-foreground font-mono">{String(item['sku' as keyof T] ?? '')}</p>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ) : safeData.length === 0 ? (
-                /* Empty State */
-                <TableRow>
-                  <TableCell colSpan={(safeColumns.length || 1) + (selectableRows ? 1 : 0)} className="h-32 text-center">
-                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                      <Package className="h-8 w-8 opacity-50" />
-                      <span className="text-sm">{emptyMessage}</span>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                /* Data Rows */
-                safeData.map((item, index) => (
-                  <TableRow
-                    key={item.id}
-                    onClick={() => onRowClick?.(item)}
-                    className={cn(
-                      onRowClick && 'cursor-pointer',
-                      'transition-colors hover:bg-muted/50'
-                    )}
-                  >
                     {selectableRows && (
-                      <TableCell className="w-12">
-                        <input
-                          type="checkbox"
-                          aria-label="Select row"
-                          checked={selectedRowIds.includes(item.id)}
-                          onChange={() => onToggleRowSelection?.(item.id)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="h-4 w-4 rounded border-border"
-                        />
-                      </TableCell>
+                      <input
+                        type="checkbox"
+                        aria-label="Select row"
+                        checked={selectedRowIds.includes(item.id)}
+                        onChange={() => onToggleRowSelection?.(item.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="h-4 w-4 rounded border-border mt-1"
+                      />
                     )}
-                    {safeColumns.map((column) => (
-                      <TableCell
-                        key={column.key}
-                        className={cn(
-                          getColumnClass(column),
-                          index === 0 && 'font-medium'
-                        )}
-                      >
-                        {inventoryByStore && column.key === 'quantity' ? (
-                          renderStoreInventory(item)
-                        ) : column.render
-                          ? column.render(item)
-                          : (column.key in item ? String(item[column.key as keyof T] ?? '') : '')}
-                      </TableCell>
-                    ))}
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">{String(item['category_name' as keyof T] ?? item['category' as keyof T] ?? '')}</span>
+                    {inventoryByStore ? (
+                      renderStoreInventory(item)
+                    ) : (
+                      <span className="font-semibold">{Number(item[quantityKey as keyof T] ?? 0).toLocaleString()}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-end gap-3 mt-2 text-sm text-muted-foreground">
+                    <span>{Number(item['purchase_price' as keyof T] ?? 0).toLocaleString()} / {Number(item['selling_price' as keyof T] ?? 0).toLocaleString()}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        ) : (
+          <div className="min-w-[640px] sm:min-w-[720px]" style={{ minWidth }}>
+            <Table>
+              <TableHeader className="sticky top-0 bg-muted/50 backdrop-blur-sm z-10">
+                <TableRow className="hover:bg-transparent">
+                  {selectableRows && (
+                    <TableHead className="w-12">
+                      <input
+                        type="checkbox"
+                        aria-label="Select all rows"
+                        checked={allSelected}
+                        onChange={() => onToggleAllRows?.(safeData.map((item) => item.id))}
+                        className="h-4 w-4 rounded border-border"
+                      />
+                    </TableHead>
+                  )}
+                  {safeColumns.map((column) => (
+                    <TableHead
+                      key={String(column.key)}
+                      className={cn(
+                        getColumnClass(column),
+                        column.width && `w-[${column.width}]`
+                      )}
+                      style={column.width ? { width: column.width } : undefined}
+                    >
+                      {column.header}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={(safeColumns.length || 1) + (selectableRows ? 1 : 0)} className="h-32 text-center">
+                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                        <span className="text-sm">{loadingMessage}</span>
+                      </div>
+                    </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                ) : safeData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={(safeColumns.length || 1) + (selectableRows ? 1 : 0)} className="h-32 text-center">
+                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                        <Package className="h-8 w-8 opacity-50" />
+                        <span className="text-sm">{emptyMessage}</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  safeData.map((item, index) => (
+                    <TableRow
+                      key={item.id}
+                      onClick={() => onRowClick?.(item)}
+                      className={cn(
+                        onRowClick && 'cursor-pointer',
+                        'transition-colors hover:bg-muted/50'
+                      )}
+                    >
+                      {selectableRows && (
+                        <TableCell className="w-12">
+                          <input
+                            type="checkbox"
+                            aria-label="Select row"
+                            checked={selectedRowIds.includes(item.id)}
+                            onChange={() => onToggleRowSelection?.(item.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="h-4 w-4 rounded border-border"
+                          />
+                        </TableCell>
+                      )}
+                      {safeColumns.map((column) => (
+                        <TableCell
+                          key={String(column.key)}
+                          className={cn(
+                            getColumnClass(column),
+                            index === 0 && 'font-medium'
+                          )}
+                        >
+                          {inventoryByStore && column.key === 'quantity' ? (
+                            renderStoreInventory(item)
+                          ) : column.render
+                            ? column.render(item)
+                            : (column.key in item ? String(item[column.key as keyof T] ?? '') : '')}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </div>
 
-      {/* Footer with Stats */}
-      {showFooter && stats && (
+      {showFooter && stats && !isMobile && (
         <div className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-3 sm:flex-row sm:flex-wrap sm:gap-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Total:</span>
@@ -350,7 +393,6 @@ export function DataTable<T extends { id: string }>({
         </div>
       )}
 
-      {/* Pagination */}
       {pagination && totalPages > 1 && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-sm text-muted-foreground">
@@ -381,7 +423,6 @@ export function DataTable<T extends { id: string }>({
         </div>
       )}
 
-      {/* Store Inventory Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent size="sm">
           <DialogHeader>

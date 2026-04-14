@@ -133,7 +133,7 @@ export function UserListPage() {
 
   const handleSave = async () => {
     try {
-      if (!formData.full_name || !formData.phone_number || !formData.email || !formData.role || !formData.store_id) {
+      if (!formData.full_name || !formData.phone_number || !formData.email) {
         console.error('Missing required fields');
         return;
       }
@@ -141,11 +141,7 @@ export function UserListPage() {
         console.error('Password and confirm password are required');
         return;
       }
-      if (formData.password && !formData.confirm_password) {
-        console.error('Confirm password is required');
-        return;
-      }
-      if (formData.password && formData.confirm_password && formData.password !== formData.confirm_password) {
+      if (!editingUser && formData.password && formData.confirm_password && formData.password !== formData.confirm_password) {
         console.error('Passwords do not match');
         return;
       }
@@ -156,13 +152,17 @@ export function UserListPage() {
           console.error('Missing user id for update');
           return;
         }
-        const updateData = { ...formData };
-        if (!updateData.password) {
-          delete updateData.password;
-          delete updateData.confirm_password;
-        }
+        const updateData = {
+          full_name: formData.full_name,
+          email: formData.email,
+          phone_number: formData.phone_number,
+        };
         await userService.update(String(id), updateData);
       } else {
+        if (!formData.store_id) {
+          console.error('Store is required');
+          return;
+        }
         await userService.create(formData);
       }
       setDialogOpen(false);
@@ -352,38 +352,42 @@ export function UserListPage() {
                 required
               />
             </div>
-            <div className="space-y-2">
-              <Label>{t('users.store')}</Label>
-              <select
-                className="w-full px-3 py-2 border rounded-md bg-background"
-                value={formData.store_id || ''}
-                onChange={(e: ChangeEvent<HTMLSelectElement>) => setFormData({ ...formData, store_id: e.target.value })}
-                required
-              >
-                <option value="">{t('common.select')}</option>
-                {safeStores.map((store) => (
-                  <option key={store.id} value={store.id}>{store.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label>{t('users.password')} {editingUser && `(${t('users.optional')})`}</Label>
-              <Input
-                type="password"
-                value={formData.password}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, password: e.target.value })}
-                required={!editingUser}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('users.confirmPassword')} {editingUser && `(${t('users.optional')})`}</Label>
-              <Input
-                type="password"
-                value={formData.confirm_password}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, confirm_password: e.target.value })}
-                required={!editingUser}
-              />
-            </div>
+            {!editingUser && (
+              <>
+                <div className="space-y-2">
+                  <Label>{t('users.store')}</Label>
+                  <select
+                    className="w-full px-3 py-2 border rounded-md bg-background"
+                    value={formData.store_id || ''}
+                    onChange={(e: ChangeEvent<HTMLSelectElement>) => setFormData({ ...formData, store_id: e.target.value })}
+                    required
+                  >
+                    <option value="">{t('common.select')}</option>
+                    {safeStores.map((store) => (
+                      <option key={store.id} value={store.id}>{store.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('users.password')}</Label>
+                  <Input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, password: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('users.confirmPassword')}</Label>
+                  <Input
+                    type="password"
+                    value={formData.confirm_password}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, confirm_password: e.target.value })}
+                    required
+                  />
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('common.cancel')}</Button>

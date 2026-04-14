@@ -69,7 +69,7 @@ export const userService = {
     return response.data.data;
   },
 
-  update: async (id: string, data: Partial<UserFormData>): Promise<User> => {
+  update: async (id: string, data: { full_name: string; email: string; phone_number: string }): Promise<User> => {
     const response = await apiClient.put<ApiResponse<User>>(`/users/${id}/`, data);
     return response.data.data;
   },

@@ -44,4 +44,14 @@ export const customerApiService = {
     const response = await apiClient.post('/debts/create/', data);
     return response.data;
   },
+
+  createDebtPaymentForSale: async (data: { sale: number; amount: string; type: 'cash' | 'card' }) => {
+    const response = await apiClient.post('/debts/create/', data);
+    return response.data;
+  },
+
+  getDebtPayments: async (saleId: number) => {
+    const response = await apiClient.get(`/debts/${saleId}/`);
+    return response.data;
+  },
 };
