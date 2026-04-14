@@ -1,5 +1,6 @@
 import { apiClient } from './api';
 import type { Inventory, InventoryFormData, PaginatedResponse, ApiResponse, ContractEntry } from '../types';
+import type { SupplierPayment } from '../features/inventory/InventoryListPage';
 
 export const inventoryService = {
   getAll: async (params?: { page?: number; limit?: number }): Promise<PaginatedResponse<Inventory>> => {
@@ -34,4 +35,8 @@ export const inventoryService = {
   delete: async (id: string): Promise<void> => {
     await apiClient.delete(`/inventory/${id}`);
   },
+  getSupplierPayment: async (id: string) => {
+    const response = await apiClient.get<SupplierPayment[]>(`/contract/supplier-payments/${id}/`);
+    return response.data;
+  }
 };

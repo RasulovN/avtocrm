@@ -15,6 +15,14 @@ import { supplierService } from '../../services/supplierService';
 import { formatCurrency, formatDate } from '../../utils';
 import type { InventoryItem } from '../../types';
 import { BarcodePrintAll } from '../../components/ui/BarcodePrint';
+export interface SupplierPayment {
+  id: number;
+  supplier: number;
+  entry: number;
+  amount: string;
+  type: string;
+  note: string;
+}
 
 interface DisplayInventory {
   id: string;
@@ -46,6 +54,8 @@ export function InventoryListPage() {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paying, setPaying] = useState(false);
   const [barcodeItems, setBarcodeItems] = useState<InventoryItem[]>([]);
+  const [paymentHistory, setPaymentHistory] = useState<SupplierPayment[]>([]);
+  const [loadingPayments, setLoadingPayments] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -127,9 +137,18 @@ export function InventoryListPage() {
     loadData();
   }, [loadData]);
 
-  const handleShowDetails = (item: DisplayInventory) => {
+  const handleShowDetails = async (item: DisplayInventory) => {
     setSelectedInventory(item);
     setShowDetails(true);
+    setLoadingPayments(true);
+    try {
+      const res = await inventoryService.getSupplierPayment(item.id);
+      setPaymentHistory(Array.isArray(res) ? res : []);
+    } catch {
+      setPaymentHistory([]);
+    } finally {
+      setLoadingPayments(false);
+    }
   };
 
   const handlePrintBarcodes = (item: DisplayInventory) => {
@@ -450,6 +469,37 @@ export function InventoryListPage() {
                   </div>
                 </div>
               )}
+
+              {/* Payment History */}
+              <div className="mt-6">
+                <h4 className="text-sm font-semibold mb-2">To'lov tarixi</h4>
+                {loadingPayments ? (
+                  <div className="text-muted-foreground text-sm">Yuklanmoqda...</div>
+                ) : paymentHistory.length === 0 ? (
+                  <div className="text-muted-foreground text-sm">To'lovlar topilmadi</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>ID</TableHead>
+                          <TableHead>Miqdor</TableHead>
+                          <TableHead>Izoh</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {paymentHistory.map((p) => (
+                          <TableRow key={p.id}>
+                            <TableCell>{p.id}</TableCell>
+                            <TableCell>{formatCurrency(Number(p.amount))}</TableCell>
+                            <TableCell>{p.note}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </DialogContent>
