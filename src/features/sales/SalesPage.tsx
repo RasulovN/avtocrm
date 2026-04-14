@@ -27,6 +27,20 @@ interface CartItem {
   purchase_price: number;
   selling_price: number;
   total: number;
+  batch_id?: number;
+}
+
+// Product batch interface matching API response
+interface ProductBatch {
+  id: number;
+  product: number;
+  store: number;
+  store_name: string;
+  quantity: number;
+  purchase_price: string;
+  selling_price: string;
+  barcode: string;
+  shtrix_code: string | null;
 }
 
 const normalizeBarcodeValue = (value: string) => {
@@ -87,6 +101,44 @@ export function SalesPage() {
     return filtered;
   }, [allProducts, isAdmin, userStoreId, productsLoading]);
 
+  // Extract products from batches for display (new API format)
+  const catalogProducts = useMemo(() => {
+    const result: Product[] = [];
+    const seenIds = new Set<string>();
+    
+    for (const product of safeProducts) {
+      if (seenIds.has(product.id)) continue;
+      
+      if (product.batches && product.batches.length > 0) {
+        for (const batch of product.batches) {
+          if (batch.quantity > 0) {
+            result.push({
+              ...product,
+              id: String(batch.id),
+              product_id: product.id,
+              store_id: String(batch.store),
+              store_name: batch.store_name,
+              quantity: batch.quantity,
+              purchase_price: parseFloat(batch.purchase_price),
+              selling_price: parseFloat(batch.selling_price),
+              barcode: batch.barcode,
+              shtrix_code: batch.shtrix_code,
+            });
+            seenIds.add(String(batch.id));
+          }
+        }
+      } else if (product.quantity && product.quantity > 0) {
+        result.push({
+          ...product,
+          store_id: product.store_id || userStoreId || '1',
+        });
+        seenIds.add(product.id);
+      }
+    }
+    
+    return result;
+  }, [safeProducts, userStoreId]);
+
   const hydrateProductFromCatalog = (product: Product): Product => {
     const matchedProduct = safeProducts.find((item) =>
       String(item.id) === String(product.id) ||
@@ -125,12 +177,12 @@ export function SalesPage() {
   const change = useMemo(() => Math.max(0, totalPaid - totalWithDiscount), [totalPaid, totalWithDiscount]);
   const debt = useMemo(() => Math.max(0, totalWithDiscount - totalPaid), [totalPaid, totalWithDiscount]);
   const filteredProducts = useMemo(() => {
-    let result = safeProducts;
+    let result = catalogProducts;
     if (categoryFilter) {
       result = result.filter(p => String(p.category) === categoryFilter);
     }
     return result;
-  }, [safeProducts, categoryFilter]);
+  }, [catalogProducts, categoryFilter]);
   const displayedProducts = searchResults ?? filteredProducts;
 
   const loadData = async () => {
@@ -528,7 +580,7 @@ export function SalesPage() {
                       <div className="flex-1">
                         <div className="font-medium dark:text-white">{product.name || product.sku || product.shtrix_code || product.barcode || "Noma'lum mahsulot"}</div>
                         <div className="text-xs text-muted-foreground dark:text-gray-400">
-                          {product.sku || product.shtrix_code || product.barcode}
+                          {product.barcode}
                         </div>
                       </div>
                       <div className="text-right ml-3">
