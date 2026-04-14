@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useAuthStore } from '../app/store';
 import { productService } from '../services/productService';
 import type { Product } from '../types';
 
@@ -17,6 +18,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { i18n } = useTranslation();
+  const hasSession = useAuthStore((state) => Boolean(state.user || state.token));
   const prevLangRef = useRef(i18n.language);
   const initialLoadRef = useRef(true);
 
@@ -41,6 +43,15 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!hasSession) {
+      initialLoadRef.current = true;
+      prevLangRef.current = i18n.language;
+      setProducts([]);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     if (initialLoadRef.current) {
       initialLoadRef.current = false;
       void refreshProducts();
@@ -52,7 +63,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
       prevLangRef.current = currentLang;
       void refreshProducts();
     }
-  }, [i18n.language, refreshProducts]);
+  }, [hasSession, i18n.language, refreshProducts]);
 
   const value = useMemo(() => ({
     products,

@@ -27,6 +27,8 @@ const removeAuth = async () => {
   localStorage.removeItem('crm_auth_time');
 };
 
+const hasStoredAuth = () => Boolean(authService.getCurrentUser());
+
 // Create axios instance
 const api: AxiosInstance = axios.create({
   baseURL: BaSE_URL,
@@ -105,6 +107,9 @@ api.interceptors.response.use(
     }
     
     if (status === 401) {
+      if (!hasStoredAuth()) {
+        return Promise.reject(error);
+      }
       void removeAuth();
       return Promise.reject(error);
     } else {

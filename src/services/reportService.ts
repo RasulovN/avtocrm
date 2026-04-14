@@ -1,4 +1,4 @@
-import api from "./api";
+import { apiClient } from './api';
 
 export interface ReportData {
   total_products_in_stock: number;
@@ -9,8 +9,16 @@ export interface ReportData {
 }
 
 export const reportService = {
-  async getReport(): Promise<ReportData> {
-    const response = await api.get('/reports/');
-    return response.data;
+  async getReport(): Promise<ReportData | null> {
+    try {
+      const response = await apiClient.get<ReportData>('/reports/');
+      return response.data ?? null;
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { status?: number } };
+      if (axiosError.response?.status === 404) {
+        return null;
+      }
+      throw error;
+    }
   },
 };
