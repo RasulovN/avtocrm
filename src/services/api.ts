@@ -4,7 +4,6 @@ import { handleError } from '../utils/errorHandler';
 import { authService } from './authService';
 import { isDev } from '../config/environment';
 
-const USER_KEY = 'crm_user';
 const BaSE_URL = 'https://autocrm.pythonanywhere.com/api';
 export const URL = 'https://autocrm.pythonanywhere.com/'
 export const API_BASE_URL = BaSE_URL;
@@ -22,14 +21,26 @@ const removeAuth = async () => {
     console.warn('Logout API call failed:', error);
   }
   
-  // Clear localStorage - triggers route guard re-evaluation
   localStorage.removeItem('crm_user');
   localStorage.removeItem('crm_auth_time');
 };
 
 const hasStoredAuth = () => Boolean(authService.getCurrentUser());
 
-// Create axios instance
+// Custom logger function that is silent in production
+const logger = {
+  log: (...args: unknown[]) => {
+    if (isDev) console.log(...args);
+  },
+  warn: (...args: unknown[]) => {
+    if (isDev) console.warn(...args);
+  },
+  error: (...args: unknown[]) => {
+    if (isDev) console.error(...args);
+  },
+};
+
+// Create axios instance with custom logger
 const api: AxiosInstance = axios.create({
   baseURL: BaSE_URL,
 
@@ -38,6 +49,7 @@ const api: AxiosInstance = axios.create({
   },
   timeout: 30000,
   withCredentials: true,
+  logger,
 });
 
 const normalizeLanguage = (lang: string | null | undefined): 'uz' | 'cyrl' => {
