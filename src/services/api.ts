@@ -27,20 +27,7 @@ const removeAuth = async () => {
 
 const hasStoredAuth = () => Boolean(authService.getCurrentUser());
 
-// Custom logger function that is silent in production
-const logger = {
-  log: (...args: unknown[]) => {
-    if (isDev) console.log(...args);
-  },
-  warn: (...args: unknown[]) => {
-    if (isDev) console.warn(...args);
-  },
-  error: (...args: unknown[]) => {
-    if (isDev) console.error(...args);
-  },
-};
-
-// Create axios instance with custom logger
+// Create axios instance
 const api: AxiosInstance = axios.create({
   baseURL: BaSE_URL,
 
@@ -49,7 +36,6 @@ const api: AxiosInstance = axios.create({
   },
   timeout: 30000,
   withCredentials: true,
-  logger,
 });
 
 const normalizeLanguage = (lang: string | null | undefined): 'uz' | 'cyrl' => {
