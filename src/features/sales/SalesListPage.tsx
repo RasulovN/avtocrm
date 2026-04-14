@@ -16,7 +16,7 @@ export function SalesListPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const isAdmin = Boolean(user?.is_superuser);
-  const userStoreId = user?.store_id;
+  const userStoreIds = user?.stores?.map(s => String(s.id)) || [];
   const params = useParams();
   const lang = params.lang || 'uz';
   const [sales, setSales] = useState<Sale[]>([]);
@@ -30,7 +30,13 @@ export function SalesListPage() {
     try {
       setLoading(true);
       const res = await salesService.getAll();
-      const scopedSales = isAdmin ? (res.data || []) : (res.data || []).filter((sale) => String(sale.store) === userStoreId);
+      const allSales = res.data || [];
+      
+      let scopedSales = allSales;
+      if (!isAdmin && userStoreIds.length > 0) {
+        scopedSales = allSales.filter((sale) => userStoreIds.includes(String(sale.store)));
+      }
+      
       setSales(scopedSales);
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };

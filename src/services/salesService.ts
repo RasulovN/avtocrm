@@ -7,11 +7,19 @@ export const salesService = {
     if (params?.page) searchParams.append('page', params.page.toString());
     if (params?.limit) searchParams.append('limit', params.limit.toString());
 
-    const response = await apiClient.get<Sale[]>(`/sales/list/?${searchParams.toString()}`);
-    const data = Array.isArray(response.data) ? response.data : [];
+    const response = await apiClient.get<{ results: Sale[]; count?: number }>(`/sales/list/?${searchParams.toString()}`);
+    const payload = response.data;
+    
+    let data: Sale[] = [];
+    if (Array.isArray(payload)) {
+      data = payload;
+    } else if (payload && typeof payload === 'object' && 'results' in payload) {
+      data = (payload as any).results || [];
+    }
+    
     return {
       data,
-      total: data.length,
+      total: (payload as any)?.count ?? data.length,
       page: params?.page ?? 1,
       limit: params?.limit ?? data.length,
     };

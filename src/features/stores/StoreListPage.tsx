@@ -18,8 +18,9 @@ export function StoreListPage() {
   const lang = i18n.language || 'uz';
   const { user } = useAuthStore();
   const isAdmin = Boolean(user?.is_superuser);
-  const userStoreId = user?.store_id;
+  const userStores = user?.stores || [];
   const [stores, setStores] = useState<Store[]>([]);
+  const [currentStore, setCurrentStore] = useState<Store | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -68,19 +69,36 @@ export function StoreListPage() {
   const loadStores = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await storeService.getAll({ page, limit });
-      const scopedStores = isAdmin ? response.data : response.data.filter((item) => item.id === userStoreId);
-      setStores(scopedStores);
-      setTotal(scopedStores.length);
+
+      if (isAdmin) {
+        const response = await storeService.getAll({ page, limit });
+        setStores(response.data);
+        setTotal(response.data.length);
+      } else if (userStores.length > 0) {
+        const storeData = userStores[0];
+        const store: Store = {
+          id: String(storeData.id),
+          name: storeData.name,
+          name_uz: storeData.name,
+          phone_number: storeData.phone_number || '',
+          address: storeData.address || '',
+          address_uz: storeData.address || '',
+          type: storeData.type,
+          is_active: storeData.is_active,
+        };
+        setCurrentStore(store);
+        setStores([store]);
+        setTotal(1);
+      }
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
       console.error('Failed to load stores:', error);
-      setTotal(2);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, [page, limit]);
+  }, [page, limit, isAdmin, userStores]);
 
   useEffect(() => {
     void loadStores();
@@ -366,6 +384,55 @@ export function StoreListPage() {
             loading={loading}
             pagination={{ page, limit, total, onPageChange: setPage }}
           />
+        </div>
+      )}
+
+      {!isAdmin && currentStore && (
+        <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+          <div className="flex items-start justify-between gap-3 mb-6">
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">{getLocalizedName(currentStore)}</h3>
+              <p className="text-sm text-muted-foreground">{getLocalizedAddress(currentStore) || '-'}</p>
+            </div>
+            <span className={`shrink-0 rounded-full px-2 py-1 text-xs ${
+              currentStore.type === 'b' ? 'bg-blue-100 text-blue-800' :
+              currentStore.is_warehouse ? 'bg-purple-100 text-purple-800' :
+              'bg-green-100 text-green-800'
+            }`}>
+              {currentStore.type === 'b' ? t('stores.base') : currentStore.is_warehouse ? t('stores.warehouse') : t('stores.store')}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="rounded-lg bg-muted/40 p-3">
+              <p className="text-xs text-muted-foreground">{t('stores.phone')}</p>
+              <p className="mt-1 font-medium">{currentStore.phone_number || currentStore.phone || '-'}</p>
+            </div>
+            <div className="rounded-lg bg-muted/40 p-3">
+              <p className="text-xs text-muted-foreground">ID</p>
+              <p className="mt-1 font-medium">#{currentStore.id}</p>
+            </div>
+            <div className="rounded-lg bg-muted/40 p-3">
+              <p className="text-xs text-muted-foreground">{t('stores.latitude')}</p>
+              <p className="mt-1 font-medium">{currentStore.latitude || '-'}</p>
+            </div>
+            <div className="rounded-lg bg-muted/40 p-3">
+              <p className="text-xs text-muted-foreground">{t('stores.longitude')}</p>
+              <p className="mt-1 font-medium">{currentStore.longitude || '-'}</p>
+            </div>
+          </div>
+
+          {currentStore.is_active === false && (
+            <div className="mt-4 p-3 rounded-lg bg-red-50 border border-red-200">
+              <p className="text-sm text-red-600">Do'kon faol emas</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!isAdmin && !currentStore && !loading && (
+        <div className="rounded-xl border border-dashed p-8 text-center">
+          <p className="text-muted-foreground">Do'kon ma'lumotlari topilmadi</p>
         </div>
       )}
 

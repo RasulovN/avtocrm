@@ -14,7 +14,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../components/ui/Select';
+} from '../../components/ui';
 import { productService } from '../../services/productService';
 import { useAuthStore } from '../../app/store';
 import { useCategories } from '../../context/CategoryContext';
@@ -417,7 +417,7 @@ export function ProductListPage() {
         loading={deleting}
       />
 
-      <div className="absolute -left-[99999px] top-0 opacity-0 pointer-events-none">
+      <div className="absolute -left-24999.75 top-0 opacity-0 pointer-events-none">
         <div id="selected-products-barcode-print-area" className="barcode-sheet">
           {selectedProducts.map((product) => (
             <div key={product.id} className="barcode-label">

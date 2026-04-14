@@ -138,6 +138,8 @@ function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isAuthLoading = useAuthStore((state) => state.isLoading);
+  const user = useAuthStore((state) => state.user);
+  const isSuperUser = Boolean(user?.is_superuser);
 
   useEffect(() => {
     checkAuth();
@@ -283,9 +285,9 @@ function App() {
             withLayout(<StoreListPage />)
           } />
           
-          {/* Users */}
+          {/* Users - only for superuser */}
           <Route path={`/:lang/stores/users`} element={
-            withLayout(<UserListPage />)
+            isSuperUser ? withLayout(<UserListPage />) : <Navigate to={`/${currentLang}/stores`} replace />
           } />
           
           {/* Reports */}

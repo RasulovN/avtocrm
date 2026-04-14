@@ -9,6 +9,15 @@ export interface UserLog {
   created_at: string;
 }
 
+export interface UserStore {
+  id: number;
+  name: string;
+  phone_number?: string;
+  address?: string;
+  type?: string;
+  is_active?: boolean;
+}
+
 export interface User {
   id: string;
   user_id?: string;
@@ -19,6 +28,7 @@ export interface User {
   email?: string;
   store_id?: string;
   store_name?: string;
+  stores?: UserStore[];
   is_active?: boolean;
   created_at?: string;
   updated_at?: string;

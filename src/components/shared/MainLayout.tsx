@@ -78,7 +78,7 @@ const subNavs: Record<string, SubNavItem[]> = {
     { titleKey: 'sales.newSale', href: '/sales/new', icon: Plus },
   ],
   '/stores': [
-    { titleKey: 'stores.list', href: '/stores', icon: List }, 
+    { titleKey: 'stores.list', href: '/stores', icon: List },
     { titleKey: 'stores.manageUsers', href: '/stores/users', icon: Users },
   ],
 };
@@ -154,11 +154,23 @@ export function MainLayout({ children }: MainLayoutProps) {
   // Get current path without language prefix
   const currentPath = location.pathname;
   
+  // Filter subNavs based on user role
+  const filteredSubNavs = Object.entries(subNavs).reduce((acc, [key, items]) => {
+    if (key === '/stores') {
+      if (isSuperUser) {
+        acc[key] = items;
+      }
+    } else {
+      acc[key] = items;
+    }
+    return acc;
+  }, {} as Record<string, SubNavItem[]>);
+  
   // Check if current path is part of a sub-nav module
-  const activeSubNavKey = Object.keys(subNavs).find(key => 
+  const activeSubNavKey = Object.keys(filteredSubNavs).find(key => 
     currentPath.includes(key) && currentPath.startsWith(`/${lang}${key}`)
   );
-  const activeSubNav = activeSubNavKey ? subNavs[activeSubNavKey] : null;
+  const activeSubNav = activeSubNavKey ? filteredSubNavs[activeSubNavKey] : null;
   
   // Check if we're on a sub-nav page (but not the main page of that module)
   const isOnSubNavPage = activeSubNavKey && !currentPath.endsWith(`/${lang}${activeSubNavKey}`) && !currentPath.endsWith(`/${lang}${activeSubNavKey}/`);
