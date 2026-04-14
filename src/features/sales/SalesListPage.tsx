@@ -77,6 +77,16 @@ export function SalesListPage() {
       render: (item) => formatCurrency(parseFloat(item.paid_amount)),
     },
     {
+      key: 'debt',
+      header: t('suppliers.debt') || 'Qarz',
+      className: 'text-red-600',
+      render: (item) => (
+        <span className={(item.debt ?? 0) > 0 ? 'text-red-500 font-semibold' : ''}>
+          {formatCurrency(item.debt ?? 0)}
+        </span>
+      ),
+    },
+    {
       key: 'status',
       header: t('common.status'),
       render: (item) => (
@@ -161,6 +171,10 @@ export function SalesListPage() {
                   <div className="rounded-lg bg-muted/40 p-3">
                     <p className="text-xs text-muted-foreground">{t('sales.paid')}</p>
                     <p className="mt-1 font-semibold text-green-600">{formatCurrency(parseFloat(item.paid_amount))}</p>
+                  </div>
+                  <div className="rounded-lg bg-muted/40 p-3 col-span-2">
+                    <p className="text-xs text-muted-foreground">{t('suppliers.debt') || 'Qarz'}</p>
+                    <p className={`mt-1 font-semibold ${(item.debt ?? 0) > 0 ? 'text-red-500' : ''}`}>{formatCurrency(item.debt ?? 0)}</p>
                   </div>
                 </div>
 

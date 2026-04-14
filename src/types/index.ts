@@ -327,7 +327,7 @@ export interface SaleItem {
 }
 
 export interface Sale {
-  id: number;
+  id: string;
   store: number;
   store_name?: string;
   seller: number;
