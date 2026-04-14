@@ -472,7 +472,7 @@ export function InventoryListPage() {
 
               {/* Payment History */}
               <div className="mt-6">
-                <h4 className="text-sm font-semibold mb-2">To'lov tarixi</h4>
+                <h4 className="text-sm font-semibold mb-2">Kirim tarixi</h4>
                 {loadingPayments ? (
                   <div className="text-muted-foreground text-sm">Yuklanmoqda...</div>
                 ) : paymentHistory.length === 0 ? (
