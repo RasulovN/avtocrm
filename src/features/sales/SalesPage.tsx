@@ -142,8 +142,9 @@ export function SalesPage() {
       const existingIndex = prevItems.findIndex((item) => String(item.product_id) === productId);
       if (existingIndex >= 0) {
         const newItems = [...prevItems];
-        newItems[existingIndex].quantity += 1;
-        newItems[existingIndex].total = newItems[existingIndex].selling_price * newItems[existingIndex].quantity;
+        const existingItem = newItems[existingIndex];
+        existingItem.quantity += 1;
+        existingItem.total = existingItem.selling_price * existingItem.quantity;
         return newItems;
       }
       return [
@@ -433,7 +434,6 @@ export function SalesPage() {
 
   const handleFinishSale = async () => {
     if (items.length === 0) return;
-    if (!selectedCustomerId) return;
 
     try {
       setSaving(true);
@@ -447,10 +447,8 @@ export function SalesPage() {
       }
 
       const selectedStoreId = items.length > 0 ? items[0].store_id : storeId || userStoreId || '1';
-
-      await salesService.create({
+      const saleData: any = {
         store: parseInt(selectedStoreId),
-        customer: parseInt(selectedCustomerId),
         items: items.map((item) => ({
           product: parseInt(item.product_id),
           quantity: item.quantity,
@@ -459,7 +457,13 @@ export function SalesPage() {
         payments,
         discount_type: discountType,
         discount_value: String(discount),
-      });
+      };
+
+      if (selectedCustomerId) {
+        saleData.customer = parseInt(selectedCustomerId);
+      }
+
+      await salesService.create(saleData);
 
       setShowReceipt(true);
     } catch (error) {
@@ -526,8 +530,7 @@ export function SalesPage() {
             <div className="bg-card border border-gray-900 rounded-lg flex min-h-80 flex-col p-3 xl:min-h-0 xl:flex-1">
               <div className="mb-3">
                 <h4 className="text-base font-semibold flex items-center gap-2 dark:text-white mb-2">
-                  Katalog tovarov
-                </h4>
+                  32dxqф  ёй1ё                  </h4>
                 <div className="flex flex-col justify-between gap-2 sm:flex-row">
                   <div className="relative w-full">
                     <Search className="absolute left-2.5 top-3 h-4 w-4 text-muted-foreground dark:text-gray-400 z-10" />
@@ -899,7 +902,7 @@ export function SalesPage() {
                   type="button"
                   className="w-full h-11 text-sm font-semibold dark:bg-green-600 dark:hover:bg-green-700"
                   onClick={handleFinishSale}
-                  disabled={saving || items.length === 0 || !selectedCustomerId}
+                  disabled={saving || items.length === 0}
                 >
                   {saving ? 'Yuklanmoqda...' : `Sotuvni yakunlash — ${formatCurrency(totalWithDiscount)}`}
                 </Button>

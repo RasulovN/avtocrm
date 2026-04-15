@@ -47,7 +47,9 @@ export function LoginPage() {
               <Label htmlFor="phone_number">{t('stores.phone') || t('auth.phoneNumber')}</Label>
               <Input
                 id="phone_number"
+                name="phone_number"
                 type="tel"
+                autoComplete="tel"
                 placeholder={t('stores.phone') || t('auth.phoneNumber') || '+998901234567'}
                 value={phone_number}
                 onChange={(e) => setPhoneNumber(e.target.value)}
@@ -60,7 +62,9 @@ export function LoginPage() {
               <div className="relative">
                 <Input
                   id="password"
+                  name="password"
                   type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
                   placeholder={t('auth.password')}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
