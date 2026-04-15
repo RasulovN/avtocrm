@@ -2,8 +2,8 @@ import { apiClient, API_ORIGIN } from './api';
 import { latinToCyrillic } from '../utils/transliteration';
 import type { Product, ProductFormData, ProductFilters, PaginatedResponse, ApiResponse, ProductStoreInventory } from '../types';
 
-const resolveImageUrl = (image?: string) => {
-  if (!image) return '';
+const resolveImageUrl = (image?: string | unknown) => {
+  if (typeof image !== 'string' || !image) return '';
   if (image.startsWith('http://') || image.startsWith('https://')) return image;
   if (image.startsWith('/')) return `${API_ORIGIN}${image}`;
   return image;
@@ -33,9 +33,10 @@ const resolveCategory = (raw: unknown): { id?: string; name?: string } => {
   return {};
 };
 
-const normalizeImages = (images?: string[] | string, image?: string) => {
+const normalizeImages = (images?: unknown[] | string | unknown, image?: unknown) => {
   if (Array.isArray(images)) {
-    return images.map((item) => resolveImageUrl(item)).filter(Boolean);
+    const resolved = images.map((item) => resolveImageUrl(typeof item === 'string' ? item : undefined)).filter(Boolean);
+    return resolved.length > 0 ? resolved : undefined;
   }
   if (typeof images === 'string' && images.trim() !== '') {
     return resolveImageUrl(images);

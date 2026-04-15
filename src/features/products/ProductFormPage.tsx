@@ -13,7 +13,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../components/ui';
+} from '../../components/ui/Select';
 import { productService } from '../../services/productService';
 import type { ProductFormData } from '../../types';
 import { latinToCyrillic } from '../../utils/transliteration';
