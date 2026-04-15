@@ -84,15 +84,17 @@ export function ProductBarcodePage() {
             }
             .barcode-value { 
               font-family: 'Consolas', monospace; 
-              font-size: 5px; 
+              font-size: 8px; 
               font-weight: bold;
               margin-top: 1px;
               letter-spacing: 1px;
             }
             svg { 
-              width: 26mm; 
+              width: auto;
+              max-width: 26mm; 
               height: 12mm; 
               display: block;
+              margin: 0 auto;
             }
             @media print {
               body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -333,7 +335,7 @@ export function ProductBarcodePage() {
                             showName={false} 
                             thermalPrinter={false}
                           />
-                          <div className="barcode-value mt-1 text-xs font-mono font-medium text-gray-700 dark:text-gray-300">{barcodeValue}</div>
+                          <div className="barcode-value mt-1 text-sm font-mono font-medium text-gray-700 dark:text-gray-300">{barcodeValue}</div>
                         </>
                       ) : (
                         <div className="text-xs text-muted-foreground">Barcode yo'q</div>
