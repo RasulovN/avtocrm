@@ -9,8 +9,7 @@ import { Label } from '../../components/ui/Label';
 import { productService } from '../../services/productService';
 import type { Product } from '../../types';
 import { formatCurrency } from '../../utils';
-import { URL } from '../../services/api';
-// import { BarcodePrint } from '../../components/ui/BarcodePrint';
+import { BarcodePrint } from '../../components/ui/BarcodePrint';
 
 export function ProductBarcodePage() {
   const { t } = useTranslation();
@@ -41,6 +40,9 @@ export function ProductBarcodePage() {
     const printContent = document.getElementById(batchKey);
     if (!printContent) return;
 
+    const batch = displayBatches.find(b => `barcode-card-${b.store}-${b.id}` === batchKey);
+    const barcodeValue = batch?.barcode || batch?.shtrix_code || '';
+    
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
@@ -48,24 +50,170 @@ export function ProductBarcodePage() {
       <html>
         <head>
           <title>Print Barcode</title>
+          <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
           <style>
-            body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
-            .barcode-card { border: 1px solid #ddd; border-radius: 8px; padding: 12px; min-width: 220px; text-align: center; }
-            .store-name { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
-            .product-name { font-size: 12px; margin-bottom: 4px; }
-            .product-price { font-size: 14px; font-weight: bold; margin-bottom: 6px; }
-            .barcode-value { font-family: monospace; font-size: 12px; margin-top: 6px; }
-            svg { max-width: 100%; height: auto; }
-            img { max-width: 180px; height: auto; margin-top: 8px; }
+            @page {
+              size: 58mm auto;
+              margin: 0;
+            }
+            body { 
+              font-family: 'Consolas', 'Courier New', monospace; 
+              margin: 0; 
+              padding: 2mm;
+              text-align: center;
+              font-size: 9px;
+            }
+            .barcode-card { 
+              border: none; 
+              padding: 0;
+              margin: 0;
+              text-align: center;
+              width: 54mm;
+              box-sizing: border-box;
+            }
+            .barcode-section { 
+              margin-top: 2px; 
+            }
+            .barcode-value { 
+              font-family: 'Consolas', monospace; 
+              font-size: 8px; 
+              font-weight: bold;
+              margin-top: 2px;
+              letter-spacing: 2px;
+            }
+            svg { 
+              max-width: 50mm; 
+              height: auto; 
+              display: block;
+              margin: 0 auto;
+            }
+            @media print {
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
           </style>
         </head>
         <body>
-          ${printContent.innerHTML}
+          <div class="barcode-card">
+            <div class="barcode-section">
+              ${barcodeValue ? `
+                <svg id="barcode-svg"></svg>
+                <div class="barcode-value">${barcodeValue}</div>
+              ` : ''}
+            </div>
+          </div>
+          <script>
+            window.onload = function() {
+              ${barcodeValue ? `
+                try {
+                  JsBarcode('#barcode-svg', '${barcodeValue}', {
+                    format: 'CODE128',
+                    width: 1.2,
+                    height: 35,
+                    displayValue: false,
+                    margin: 0,
+                  });
+                } catch(e) {
+                  console.error('Barcode error:', e);
+                }
+              ` : ''}
+              setTimeout(function() { window.print(); }, 300);
+            };
+          </script>
         </body>
       </html>
     `);
     printWindow.document.close();
-    printWindow.print();
+  };
+
+  const handlePrintAll = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const barcodeCards = displayBatches.map((batch, index) => {
+      const barcodeValue = batch.barcode || batch.shtrix_code || '';
+      return `
+        <div class="barcode-card">
+          <div class="barcode-section">
+            ${barcodeValue ? `
+              <svg id="barcode-svg-${index}"></svg>
+              <div class="barcode-value">${barcodeValue}</div>
+            ` : ''}
+          </div>
+        </div>
+        ${index < displayBatches.length - 1 ? '<div style="page-break-after: always;"></div>' : ''}
+      `;
+    }).join('');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Print All Barcodes</title>
+          <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+          <style>
+            @page {
+              size: 58mm auto;
+              margin: 0;
+            }
+            body {
+              font-family: 'Consolas', 'Courier New', monospace;
+              margin: 0;
+              padding: 2mm;
+              text-align: center;
+              font-size: 9px;
+            }
+            .barcode-card {
+              border: none;
+              padding: 0;
+              margin: 0;
+              text-align: center;
+              width: 54mm;
+              box-sizing: border-box;
+            }
+            .barcode-section { 
+              margin-top: 2px; 
+            }
+            .barcode-value { 
+              font-family: 'Consolas', monospace; 
+              font-size: 8px; 
+              font-weight: bold;
+              margin-top: 2px;
+              letter-spacing: 2px;
+            }
+            svg { 
+              max-width: 50mm; 
+              height: auto; 
+              display: block;
+              margin: 0 auto;
+            }
+          </style>
+        </head>
+        <body>
+          ${barcodeCards}
+          <script>
+            window.onload = function() {
+              ${displayBatches.map((batch, index) => {
+                const barcodeValue = batch.barcode || batch.shtrix_code || '';
+                return barcodeValue ? `
+                  try {
+                    JsBarcode('#barcode-svg-${index}', '${barcodeValue}', {
+                      format: 'CODE128',
+                      width: 1.2,
+                      height: 35,
+                      displayValue: false,
+                      margin: 0,
+                    });
+                  } catch (error) {
+                    console.error('Failed to generate barcode ${index}:', error);
+                  }
+                ` : '';
+              }).join('')}
+              setTimeout(function() { window.print(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   if (loading) {
@@ -77,9 +225,12 @@ export function ProductBarcodePage() {
   }
 
   const batches = product?.batches ?? [];
-  const fallbackBarcode = product?.barcode || product?.sku || '';
+  const fallbackBarcode = product?.barcode || product?.shtrix_code || product?.sku || '';
   const displayBatches = batches.length
-    ? batches
+    ? batches.map(batch => ({
+        ...batch,
+        barcode: batch.barcode || batch.shtrix_code || fallbackBarcode,
+      }))
     : (fallbackBarcode ? [{
         id: 0,
         product: Number(product?.id || 0),
@@ -102,10 +253,18 @@ export function ProductBarcodePage() {
           { label: t('products.barcode') },
         ]}
         actions={
-          <Button variant="outline" onClick={() => navigate('/products')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            {t('common.back')}
-          </Button>
+          <div className="flex gap-2">
+            {displayBatches.length > 1 && (
+              <Button variant="outline" onClick={handlePrintAll}>
+                <Printer className="h-4 w-4 mr-2" />
+                {t('products.printAllBarcodes')}
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => navigate('/products')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              {t('common.back')}
+            </Button>
+          </div>
         }
       />
 
@@ -146,30 +305,22 @@ export function ProductBarcodePage() {
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {displayBatches.map((batch) => {
                 const key = `barcode-card-${batch.store}-${batch.id}`;
+                const barcodeValue = batch.barcode || batch.shtrix_code || '';
                 return (
                   <div key={key} className="space-y-3 rounded-lg border p-4">
                     <div id={key} className="barcode-card text-center">
-                      <div className="store-name font-medium">{batch.store_name}</div>
-                      <div className="product-name text-xs text-muted-foreground">{product?.name}</div>
-                      <div className="product-price text-sm font-semibold">{formatCurrency(Number(batch.selling_price || product?.selling_price || 0))}</div>
-                      {/* {batch.barcode ? (
-                        <div className="mt-2 flex justify-center">
-                          <BarcodePrint value={batch.barcode} showName={false} />
-                        </div>
+                      {barcodeValue ? (
+                        <>
+                          <BarcodePrint 
+                            value={barcodeValue} 
+                            showName={false} 
+                            thermalPrinter={true}
+                          />
+                          <div className="barcode-value mt-1 text-xs font-mono font-medium text-gray-700 dark:text-gray-300">{barcodeValue}</div>
+                        </>
                       ) : (
                         <div className="text-xs text-muted-foreground">Barcode yo'q</div>
-                      )} */}
-                      <div className="mt-3">
-                        <div className="text-xs font-medium">Shtrix kod</div>
-                        {batch.shtrix_code ? (
-                          <img src={`${URL}/${batch.shtrix_code}`} alt="Shtrix kod" className="mx-auto mt-2 max-h-32 object-contain" />
-                        ) : (
-                          <div className="text-xs text-muted-foreground">Shtrix kod yo'q</div>
-                        )}
-                        {batch.barcode && (
-                          <div className="barcode-value mt-1 text-xs text-muted-foreground">{batch.barcode}</div>
-                        )}
-                      </div>
+                      )}
                     </div>
                     <Button onClick={() => handlePrint(key)} className="w-full">
                       <Printer className="h-4 w-4 mr-2" />

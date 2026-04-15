@@ -116,6 +116,7 @@
     "images": "Расмлар",
     "generateBarcode": "Барcоде генерация қилиш",
     "printBarcode": "Барcоде чоп етиш",
+    "printAllBarcodes": "Барча барcоделарни чоп етиш",
     "noProducts": "Маҳсулотлар йўқ",
     "searchPlaceholder": "Маҳсулотларни қидириш...",
     "filterByCategory": "Категория бўйича филтр",
