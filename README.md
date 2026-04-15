@@ -86,7 +86,8 @@ npm run test:coverage
 
 Loyiha API bilan `src/services/api.ts` orqali ishlaydi.
 
-- Base API URL: `https://autocrm.pythonanywhere.com/api`
+<!-- - Base API URL: `https://autocrm.pythonanywhere.com/api` -->
+- Base API URL: `https://api.avtoyon.uz/api`
 - `withCredentials: true` yoqilgan
 - Login endpoint server tomonda httpOnly cookie yozadi
 - Frontend esa UI uchun `crm_user` va `crm_auth_time` ni `localStorage` ga saqlaydi

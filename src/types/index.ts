@@ -358,7 +358,7 @@ export interface Sale {
 
 export interface SaleFormData {
   store: number;
-  customer: number;
+  customer?: number;
   items: {
     product: number;
     quantity: number;

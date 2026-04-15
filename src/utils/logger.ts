@@ -1,5 +1,14 @@
 import { environment } from '../config/environment';
 
+// Suppress console logging in production
+if (environment !== 'development') {
+  console.log = () => {};
+  console.info = () => {};
+  console.debug = () => {};
+  console.warn = () => {};
+  console.error = () => {};
+}
+
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 
 interface LogEntry {

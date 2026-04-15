@@ -14,7 +14,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../components/ui';
+} from '../../components/ui/Select';
 import { productService } from '../../services/productService';
 import { useAuthStore } from '../../app/store';
 import { useCategories } from '../../context/CategoryContext';

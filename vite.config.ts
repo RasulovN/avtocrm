@@ -21,6 +21,15 @@ export default defineConfig({
       ),
     },
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://api.avtoyon.uz',
+        changeOrigin: true,
+        secure: true,
+      },
+    },
+  },
   test: {
     globals: true,
     environment: 'happy-dom',

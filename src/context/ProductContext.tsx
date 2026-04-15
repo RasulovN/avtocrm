@@ -25,16 +25,20 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
   const refreshProducts = useCallback(async () => {
     try {
       setLoading(true);
+      console.log('[ProductContext] Starting to fetch products...');
       const response = await productService.getAll({ limit: 500 });
+      console.log('[ProductContext] API Response:', response);
       const data = Array.isArray(response.data) ? response.data : [];
+      console.log('[ProductContext] Extracted data length:', data.length, 'Data:', data);
       setProducts(data);
       setError(null);
     } catch (err) {
       const axiosErr = err as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) {
+        console.log('[ProductContext] Got 401 error, ignoring');
         return;
       }
-      console.error('Failed to load products:', err);
+      console.error('[ProductContext] Failed to load products:', err);
       setError(err instanceof Error ? err.message : 'Failed to load products');
       setProducts([]);
     } finally {
@@ -43,7 +47,14 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    console.log('[ProductContext] useEffect triggered', {
+      hasSession,
+      initialLoadRef: initialLoadRef.current,
+      language: i18n.language,
+    });
+
     if (!hasSession) {
+      console.log('[ProductContext] No session, resetting');
       initialLoadRef.current = true;
       prevLangRef.current = i18n.language;
       setProducts([]);
@@ -53,6 +64,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (initialLoadRef.current) {
+      console.log('[ProductContext] Initial load, fetching products');
       initialLoadRef.current = false;
       void refreshProducts();
       return;
@@ -60,6 +72,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
     
     const currentLang = i18n.language;
     if (prevLangRef.current !== currentLang) {
+      console.log('[ProductContext] Language changed, fetching products');
       prevLangRef.current = currentLang;
       void refreshProducts();
     }
@@ -84,5 +97,10 @@ export function useProducts() {
   if (!context) {
     throw new Error('useProducts must be used within ProductProvider');
   }
+  console.log('[useProducts] Hook called, returning:', {
+    productsCount: context.products.length,
+    loading: context.loading,
+    hasError: !!context.error,
+  });
   return context;
 }

@@ -4,11 +4,10 @@ import { handleError } from '../utils/errorHandler';
 import { authService } from './authService';
 import { isDev } from '../config/environment';
 
-const USER_KEY = 'crm_user';
-const BaSE_URL = 'https://autocrm.pythonanywhere.com/api';
-export const URL = 'https://autocrm.pythonanywhere.com/'
+const BaSE_URL = isDev ? '/api' : 'https://api.avtoyon.uz/api';
+export const URL = isDev ? '/' : 'https://api.avtoyon.uz/';
 export const API_BASE_URL = BaSE_URL;
-export const API_ORIGIN = BaSE_URL.replace(/\/api\/?$/, '');
+export const API_ORIGIN = isDev ? '' : BaSE_URL.replace(/\/api\/?$/, '');
 
 export interface ApiRequestConfig extends AxiosRequestConfig {
   expectedErrorStatuses?: number[];
@@ -22,7 +21,6 @@ const removeAuth = async () => {
     console.warn('Logout API call failed:', error);
   }
   
-  // Clear localStorage - triggers route guard re-evaluation
   localStorage.removeItem('crm_user');
   localStorage.removeItem('crm_auth_time');
 };

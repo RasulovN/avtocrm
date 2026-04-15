@@ -1,13 +1,12 @@
-import { useState, useEffect, useMemo, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
-import QrScanner from 'react-qr-barcode-scanner';
-import { ScanBarcode, Trash2, DollarSign, Search, X, UserPlus } from 'lucide-react';
-import { BarcodeFormat, type Result } from '@zxing/library';
+import { useState, useEffect, useMemo, useCallback, type ChangeEvent, type KeyboardEvent } from 'react';
 import toast from 'react-hot-toast';
+import { ScanBarcode, Trash2, DollarSign, Search, X, UserPlus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/Dialog';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
+import { ScannerModal } from '../../components/ScannerModal';
 import { storeService } from '../../services/storeService';
 import { productService } from '../../services/productService';
 import { salesService } from '../../services/salesService';
@@ -15,10 +14,10 @@ import { customerApiService } from '../../services/customerService';
 import { useAuthStore } from '../../app/store';
 import { useCategories } from '../../context/CategoryContext';
 import { useProducts } from '../../context/ProductContext';
+import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import type { Store, Product } from '../../types';
 import { formatCurrency } from '../../utils';
 
-// Cart item interface for POS
 interface CartItem {
   product_id: string;
   product_name: string;
@@ -27,47 +26,51 @@ interface CartItem {
   purchase_price: number;
   selling_price: number;
   total: number;
-  batch_id?: number;
 }
 
-// Product batch interface matching API response
-interface ProductBatch {
-  id: number;
-  product: number;
-  store: number;
-  store_name: string;
-  quantity: number;
-  purchase_price: string;
-  selling_price: string;
-  barcode: string;
-  shtrix_code: string | null;
-}
+const playSuccessSound = () => {
+  try {
+    const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    oscillator.frequency.value = 800;
+    oscillator.type = 'sine';
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.15);
+  } catch {
+    console.warn('Audio not supported');
 
-const normalizeBarcodeValue = (value: string) => {
-  const normalized = value.trim();
-  if (!normalized) return '';
-
-  // Ignore scanner/decode error strings that can occasionally surface via callbacks.
-  if (
-    normalized.includes('NotFoundException') ||
-    normalized.includes('MultiFormat Readers were able to detect the code')
-  ) {
-    return '';
   }
-
-  return normalized;
 };
 
-const isNumericLookup = (value: string) => /^\d+$/.test(value.trim());
+const playErrorSound = () => {
+  try {
+    const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    oscillator.frequency.value = 300;
+    oscillator.type = 'square';
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.3);
+  } catch {
+    console.warn('Audio not supported');
+  }
+};
 
 export function SalesPage() {
   const { user } = useAuthStore();
   const isAdmin = Boolean(user?.is_superuser);
   const userStoreId = user?.store_id || '';
-  const barcodeInputRef = useRef<HTMLInputElement>(null);
   const [stores, setStores] = useState<Store[]>([]);
   const [saving, setSaving] = useState(false);
-  const [barcode, setBarcode] = useState('');
   const [searchResults, setSearchResults] = useState<Product[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const { categories } = useCategories();
@@ -77,7 +80,6 @@ export function SalesPage() {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [items, setItems] = useState<CartItem[]>([]);
 
-  // Payment states
   const [cashAmount, setCashAmount] = useState(0);
   const [cardAmount, setCardAmount] = useState(0);
   const [discount, setDiscount] = useState(0);
@@ -85,15 +87,12 @@ export function SalesPage() {
   const [showReceipt, setShowReceipt] = useState(false);
   const [activePayment, setActivePayment] = useState<'cash' | 'card' | null>(null);
   const [showScanner, setShowScanner] = useState(false);
-  const [stopScannerStream, setStopScannerStream] = useState(false);
-  const [scannerStatus, setScannerStatus] = useState<'idle' | 'scanning' | 'searching' | 'success' | 'not_found' | 'error'>('idle');
-  const [scannerMessage, setScannerMessage] = useState("Kamerani shtrixkodga to'g'ri qaratib turing.");
-  const [lastScannedCode, setLastScannedCode] = useState('');
   const [customers, setCustomers] = useState<{ id: number; full_name: string; phone_number: string }[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [showNewCustomerDialog, setShowNewCustomerDialog] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState('');
   const [newCustomerPhone, setNewCustomerPhone] = useState('');
+
   const safeStores = useMemo(() => (Array.isArray(stores) ? stores : []), [stores]);
   const safeProducts = useMemo(() => {
     if (productsLoading) return [];
@@ -101,57 +100,24 @@ export function SalesPage() {
     return filtered;
   }, [allProducts, isAdmin, userStoreId, productsLoading]);
 
-  // Extract products from batches for display (new API format)
-  const catalogProducts = useMemo(() => {
-    const result: Product[] = [];
-    const seenIds = new Set<string>();
-    
-    for (const product of safeProducts) {
-      if (seenIds.has(product.id)) continue;
-      
-      if (product.batches && product.batches.length > 0) {
-        for (const batch of product.batches) {
-          if (batch.quantity > 0) {
-            result.push({
-              ...product,
-              id: String(batch.id),
-              product_id: product.id,
-              store_id: String(batch.store),
-              store_name: batch.store_name,
-              quantity: batch.quantity,
-              purchase_price: parseFloat(batch.purchase_price),
-              selling_price: parseFloat(batch.selling_price),
-              barcode: batch.barcode,
-              shtrix_code: batch.shtrix_code,
-            });
-            seenIds.add(String(batch.id));
-          }
-        }
-      } else if (product.quantity && product.quantity > 0) {
-        result.push({
-          ...product,
-          store_id: product.store_id || userStoreId || '1',
-        });
-        seenIds.add(product.id);
-      }
-    }
-    
-    return result;
-  }, [safeProducts, userStoreId]);
+  const hydrateProductFromCatalog = useCallback((product: Product): Product => {
+    // Ensure product has an id
+    const productId = product.id || (product as any).product_id;
+    const normalizedProduct = { ...product, id: productId };
 
-  const hydrateProductFromCatalog = (product: Product): Product => {
     const matchedProduct = safeProducts.find((item) =>
-      String(item.id) === String(product.id) ||
+      String(item.id) === String(productId) ||
       (product.shtrix_code && item.shtrix_code === product.shtrix_code) ||
       (product.barcode && item.barcode === product.barcode) ||
       (product.sku && item.sku === product.sku)
     );
 
-    if (!matchedProduct) return product;
+    if (!matchedProduct) return normalizedProduct;
 
     return {
       ...matchedProduct,
-      ...product,
+      ...normalizedProduct,
+      id: matchedProduct.id || productId,
       name: product.name || matchedProduct.name,
       sku: product.sku || matchedProduct.sku,
       barcode: product.barcode || matchedProduct.barcode,
@@ -163,7 +129,99 @@ export function SalesPage() {
       store_id: product.store_id || matchedProduct.store_id,
       store_name: product.store_name || matchedProduct.store_name,
     };
-  };
+  }, [safeProducts]);
+
+  const addProduct = useCallback((product: Product) => {
+    const productId = String(product.id || product.product_id || '');
+    if (!productId) {
+      toast.error('Mahsulot ID topilmadi');
+      return;
+    }
+
+    setItems((prevItems) => {
+      const existingIndex = prevItems.findIndex((item) => String(item.product_id) === productId);
+      if (existingIndex >= 0) {
+        const newItems = [...prevItems];
+        const existingItem = newItems[existingIndex];
+        existingItem.quantity += 1;
+        existingItem.total = existingItem.selling_price * existingItem.quantity;
+        return newItems;
+      }
+      return [
+        ...prevItems,
+        {
+          product_id: productId,
+          product_name: product.name || product.sku || 'Noma\'lum',
+          store_id: product.store_id || userStoreId || '1',
+          quantity: 1,
+          purchase_price: product.purchase_price ?? 0,
+          selling_price: product.selling_price ?? 0,
+          total: product.selling_price ?? 0,
+        },
+      ];
+    });
+  }, [userStoreId]);
+
+  const findProductByBarcode = useCallback(async (barcode: string, isFromScan: boolean = true): Promise<Product | null> => {
+    const normalizedBarcode = barcode.trim();
+    if (!normalizedBarcode) return null;
+
+    const localProduct = safeProducts.find((product) =>
+      [product.shtrix_code, product.barcode, product.sku]
+        .filter((value): value is string => typeof value === 'string' && value.trim() !== '')
+        .some((value) => value.trim() === normalizedBarcode)
+    );
+
+    if (localProduct) {
+      const hydratedProduct = hydrateProductFromCatalog(localProduct);
+      if (!isFromScan) setSearchResults(null);
+      return hydratedProduct;
+    }
+
+    try {
+      const product = await productService.getByBarcode(normalizedBarcode);
+      if (product) {
+        const hydratedProduct = hydrateProductFromCatalog(product);
+        // Only show search results if this is manual search, not from barcode scan
+        if (!isFromScan) {
+          setSearchResults([hydratedProduct]);
+        }
+        return hydratedProduct;
+      } else {
+        if (!isFromScan) setSearchResults([]);
+      }
+    } catch (error) {
+      if (!isFromScan) setSearchResults([]);
+    }
+
+    return null;
+  }, [safeProducts, hydrateProductFromCatalog]);
+
+  const handleScan = useCallback(async (barcode: string) => {
+    const product = await findProductByBarcode(barcode);
+    
+    if (product) {
+      addProduct(product);
+      playSuccessSound();
+    } else {
+      playErrorSound();
+      toast.error(`Mahsulot topilmadi: ${barcode}`);
+    }
+  }, [findProductByBarcode, addProduct]);
+
+  const {
+    inputRef,
+    value: barcodeValue,
+    onChange: barcodeOnChange,
+    onKeyDown: barcodeOnKeyDown,
+    focus: focusBarcodeInput,
+    status: scanStatus,
+    message: scanMessage,
+  } = useBarcodeScanner({
+    onScan: handleScan,
+    minLength: 4,
+    scannerMaxGap: 250,
+  });
 
   const subtotal = useMemo(() => items.reduce((sum, item) => sum + item.total, 0), [items]);
   const calculatedDiscount = useMemo(() => {
@@ -177,19 +235,19 @@ export function SalesPage() {
   const change = useMemo(() => Math.max(0, totalPaid - totalWithDiscount), [totalPaid, totalWithDiscount]);
   const debt = useMemo(() => Math.max(0, totalWithDiscount - totalPaid), [totalPaid, totalWithDiscount]);
   const filteredProducts = useMemo(() => {
-    let result = catalogProducts;
+    let result = safeProducts;
     if (categoryFilter) {
-      result = result.filter(p => String(p.category) === categoryFilter);
+      result = result.filter((p) => String(p.category) === categoryFilter);
     }
     return result;
-  }, [catalogProducts, categoryFilter]);
+  }, [safeProducts, categoryFilter]);
   const displayedProducts = searchResults ?? filteredProducts;
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const [storesRes, customersRes] = await Promise.all([
         storeService.getAll(),
-        customerApiService.getAll()
+        customerApiService.getAll(),
       ]);
       const loadedStores = Array.isArray(storesRes.data) ? storesRes.data : [];
       setStores(isAdmin ? loadedStores : loadedStores.filter((store) => store.id === userStoreId));
@@ -204,33 +262,28 @@ export function SalesPage() {
       setStores(isAdmin ? fallbackStores : fallbackStores.filter((store) => store.id === userStoreId));
       setCustomers([]);
     }
-  };
-
-  const addProduct = (product: Product) => {
-    setItems(prevItems => {
-      const existingIndex = prevItems.findIndex(item => item.product_id === product.id);
-      if (existingIndex >= 0) {
-        const newItems = [...prevItems];
-        newItems[existingIndex].quantity += 1;
-        newItems[existingIndex].total = newItems[existingIndex].selling_price * newItems[existingIndex].quantity;
-        return newItems;
-      }
-      return [...prevItems, {
-        product_id: product.id,
-        product_name: product.name,
-        store_id: product.store_id || userStoreId || '1',
-        quantity: 1,
-        purchase_price: product.purchase_price ?? 0,
-        selling_price: product.selling_price ?? 0,
-        total: product.selling_price ?? 0,
-      }];
-    });
-  };
+  }, [isAdmin, userStoreId]);
 
   useEffect(() => {
     loadData();
-    barcodeInputRef.current?.focus();
-  }, []);
+    setTimeout(() => focusBarcodeInput(), 100);
+  }, [loadData, focusBarcodeInput]);
+
+  useEffect(() => {
+  }, [scanStatus, scanMessage]);
+
+  useEffect(() => {
+    if (scanStatus === 'searching' || scanStatus === 'success' || scanStatus === 'not_found') {
+      focusBarcodeInput();
+    }
+  }, [scanStatus, focusBarcodeInput]);
+
+  useEffect(() => {
+    // When scanner modal closes, ensure search results are cleared
+    if (!showScanner) {
+      setSearchResults(null);
+    }
+  }, [showScanner]);
 
   useEffect(() => {
     if (!isAdmin && userStoreId) {
@@ -239,25 +292,7 @@ export function SalesPage() {
   }, [isAdmin, userStoreId]);
 
   useEffect(() => {
-    if (!showScanner) return;
-
-    setScannerStatus('scanning');
-    setScannerMessage("Kamerani shtrixkodga to'g'ri qaratib turing.");
-
-    const unreadTimeout = window.setTimeout(() => {
-      setScannerStatus((current) => (current === 'scanning' ? 'error' : current));
-      setScannerMessage((current) =>
-        current === "Kamerani shtrixkodga to'g'ri qaratib turing."
-          ? "Shtrix kodni o'qib bo'lmadi. Kamerani yaqinroq tutib, qayta urinib ko'ring."
-          : current
-      );
-    }, 5000);
-
-    return () => window.clearTimeout(unreadTimeout);
-  }, [showScanner]);
-
-  useEffect(() => {
-    const query = barcode.trim();
+    const query = barcodeValue.trim();
 
     if (!query) {
       setSearchResults(null);
@@ -269,13 +304,13 @@ export function SalesPage() {
       setSearchLoading(true);
 
       try {
-        if (isNumericLookup(query)) {
+        if (/^\d+$/.test(query)) {
           const product = await productService.getByBarcode(query);
           setSearchResults(product ? [hydrateProductFromCatalog(product)] : []);
         } else {
           const products = await productService.search(query);
           setSearchResults(products.map(hydrateProductFromCatalog));
-        }
+        } 
       } catch (error) {
         console.error('Product search failed:', error);
         setSearchResults([]);
@@ -285,106 +320,65 @@ export function SalesPage() {
     }, 300);
 
     return () => window.clearTimeout(timeoutId);
-  }, [barcode]);
+  }, [barcodeValue, hydrateProductFromCatalog]);
 
-  const handleBarcodeScan = async (e: KeyboardEvent<HTMLInputElement>) => {
-    const normalizedBarcode = normalizeBarcodeValue(barcode);
-    if (e.key === 'Enter' && normalizedBarcode) {
-      if (isNumericLookup(normalizedBarcode)) {
-        await findProductByBarcode(normalizedBarcode);
-      } else if (searchResults && searchResults.length > 0) {
-        addProduct(searchResults[0]);
+  useEffect(() => {
+    focusBarcodeInput();
+  }, [focusBarcodeInput]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: Event) => {
+      const keyEvent = e as unknown as KeyboardEvent;
+      if (keyEvent.ctrlKey && keyEvent.key === 's') {
+        keyEvent.preventDefault();
+        setShowScanner(true);
       }
-      setBarcode('');
-      setSearchResults(null);
+      
+      if (keyEvent.key === 'Escape') {
+        setShowScanner(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [showScanner]);
+
+  const handleBarcodeManual = (e: KeyboardEvent<HTMLInputElement>) => {
+    barcodeOnKeyDown(e);
+    
+    if (e.key === 'Enter' && barcodeValue.trim()) {
+      const isNumeric = /^\d+$/.test(barcodeValue.trim());
+      if (isNumeric && searchResults && searchResults.length > 0) {
+        addProduct(searchResults[0]);
+        barcodeOnChange({ target: { value: '' } } as ChangeEvent<HTMLInputElement>);
+        setSearchResults(null);
+      }
     }
   };
 
   const handleOpenScanner = () => {
-    setStopScannerStream(false);
+    // Clear search results when opening scanner
+    setSearchResults(null);
+    barcodeOnChange({ target: { value: '' } } as ChangeEvent<HTMLInputElement>);
     setShowScanner(true);
   };
 
-  const findProductByBarcode = async (barcode: string) => {
-    const normalizedBarcode = normalizeBarcodeValue(barcode);
-    if (!normalizedBarcode) return null;
-
-    const localProduct = safeProducts.find((product) =>
-      [product.shtrix_code, product.barcode, product.sku]
-        .filter((value): value is string => typeof value === 'string' && value.trim() !== '')
-        .some((value) => value.trim() === normalizedBarcode)
-    );
-
-    if (localProduct) {
-      const hydratedProduct = hydrateProductFromCatalog(localProduct);
-      addProduct(hydratedProduct);
+  const handleScannerScan = async (barcode: string) => {
+    // Camera scanner adds directly to cart (same as device scanner)
+    const product = await findProductByBarcode(barcode, true);
+    
+    if (product) {
+      addProduct(product);
+      playSuccessSound();
+      toast.success(`Mahsulot topildi: ${product.name || barcode}`);
+      // Clear any search results and input
+      barcodeOnChange({ target: { value: '' } } as ChangeEvent<HTMLInputElement>);
       setSearchResults(null);
-      return hydratedProduct;
+      setShowScanner(false);
+    } else {
+      playErrorSound();
+      toast.error(`Mahsulot topilmadi: ${barcode}`);
     }
-
-    try {
-      const product = await productService.getByBarcode(normalizedBarcode);
-      if (product) {
-        const hydratedProduct = hydrateProductFromCatalog(product);
-        addProduct(hydratedProduct);
-        setSearchResults([hydratedProduct]);
-        return hydratedProduct;
-      } else {
-        setSearchResults([]);
-      }
-    } catch (error) {
-      console.error('Product not found:', error);
-      setSearchResults([]);
-    }
-
-    return null;
-  };
-
-  const handleBarcodeScanQr = (error: unknown, result?: Result) => {
-    if (error) return;
-
-    const data = typeof result?.getText === 'function' ? result.getText() : '';
-    const normalizedBarcode = data ? normalizeBarcodeValue(data) : '';
-
-    if (!normalizedBarcode || normalizedBarcode === lastScannedCode) return;
-
-    setLastScannedCode(normalizedBarcode);
-    setScannerStatus('searching');
-    setScannerMessage(`Kod o'qildi: ${normalizedBarcode}. Mahsulot qidirilmoqda...`);
-
-    void (async () => {
-      const product = await findProductByBarcode(normalizedBarcode);
-
-      if (product) {
-        setBarcode('');
-        setScannerStatus('success');
-        setScannerMessage(`Topildi: ${product.name || normalizedBarcode}`);
-        toast.success(`Mahsulot topildi: ${product.name || normalizedBarcode}`);
-        setStopScannerStream(true);
-        setTimeout(() => setShowScanner(false), 500);
-        return;
-      }
-
-      setScannerStatus('not_found');
-      setScannerMessage(`Shtrix kod topildi, lekin baza ichidan mahsulot topilmadi: ${normalizedBarcode}`);
-      toast.error(`Mahsulot topilmadi: ${normalizedBarcode}`);
-      setLastScannedCode('');
-    })();
-  };
-
-  const handleScannerDialogChange = (open: boolean) => {
-    if (open) {
-      setStopScannerStream(false);
-      setLastScannedCode('');
-      setScannerStatus('scanning');
-      setScannerMessage("Kamerani shtrixkodga to'g'ri qaratib turing.");
-      setShowScanner(true);
-      return;
-    }
-
-    setStopScannerStream(true);
-    setLastScannedCode('');
-    setTimeout(() => setShowScanner(false), 0);
   };
 
   const updateQuantity = (index: number, quantity: number) => {
@@ -402,7 +396,6 @@ export function SalesPage() {
     newItems[index].total = price * newItems[index].quantity;
     setItems(newItems);
   };
-
 
   const removeItem = (index: number) => {
     setItems(items.filter((_, i) => i !== index));
@@ -426,7 +419,10 @@ export function SalesPage() {
         full_name: newCustomerName,
         phone_number: newCustomerPhone,
       });
-      setCustomers(prev => [...prev, { id: newCustomer.id, full_name: newCustomer.full_name, phone_number: newCustomer.phone_number }]);
+      setCustomers((prev) => [
+        ...prev,
+        { id: newCustomer.id, full_name: newCustomer.full_name, phone_number: newCustomer.phone_number },
+      ]);
       setSelectedCustomerId(String(newCustomer.id));
       setShowNewCustomerDialog(false);
       setNewCustomerName('');
@@ -438,7 +434,6 @@ export function SalesPage() {
 
   const handleFinishSale = async () => {
     if (items.length === 0) return;
-    if (!selectedCustomerId) return;
 
     try {
       setSaving(true);
@@ -451,12 +446,10 @@ export function SalesPage() {
         payments.push({ type: 'card', amount: String(cardAmount) });
       }
 
-      const selectedStoreId = items.length > 0 ? items[0].store_id : (storeId || userStoreId || '1');
-
-      await salesService.create({
+      const selectedStoreId = items.length > 0 ? items[0].store_id : storeId || userStoreId || '1';
+      const saleData: any = {
         store: parseInt(selectedStoreId),
-        customer: parseInt(selectedCustomerId),
-        items: items.map(item => ({
+        items: items.map((item) => ({
           product: parseInt(item.product_id),
           quantity: item.quantity,
           price: String(item.selling_price),
@@ -464,7 +457,13 @@ export function SalesPage() {
         payments,
         discount_type: discountType,
         discount_value: String(discount),
-      });
+      };
+
+      if (selectedCustomerId) {
+        saleData.customer = parseInt(selectedCustomerId);
+      }
+
+      await salesService.create(saleData);
 
       setShowReceipt(true);
     } catch (error) {
@@ -484,7 +483,7 @@ export function SalesPage() {
     setActivePayment(null);
     setNewCustomerName('');
     setNewCustomerPhone('');
-    barcodeInputRef.current?.focus();
+    focusBarcodeInput();
   };
 
   const printReceipt = () => {
@@ -492,6 +491,22 @@ export function SalesPage() {
   };
 
   const receiptTotal = totalWithDiscount;
+
+  const handleProductClick = (product: Product) => {
+    try {
+      // Ensure product is properly hydrated and has ID
+      const hydratedProduct = hydrateProductFromCatalog(product);
+      if (!hydratedProduct.id && !(hydratedProduct as any).product_id) {
+        toast.error('Mahsulot ID topilmadi. Iltimos, scan qilib yoki katalogdan tanlab ko\'ring.');
+        return;
+      }
+      addProduct(hydratedProduct);
+      barcodeOnChange({ target: { value: '' } } as ChangeEvent<HTMLInputElement>);
+      setSearchResults(null);
+    } catch (error) {
+      toast.error('Mahsulot qo\'shishda xatolik yuz berdi');
+    }
+  };
 
   return (
     <div>
@@ -502,6 +517,7 @@ export function SalesPage() {
           .receipt-print { position: absolute; left: 0; top: 0; width: 100%; }
         }
       `}</style>
+      {/* /* Main Sales Interface */ }
       <div className="space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -510,47 +526,70 @@ export function SalesPage() {
           </div>
         </div>
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-12 xl:gap-3 xl:h-[calc(100vh-11rem)]">
-          {/* Katalog (chap panel) */}
           <div className="flex flex-col space-y-2 xl:col-span-5">
             <div className="bg-card border border-gray-900 rounded-lg flex min-h-80 flex-col p-3 xl:min-h-0 xl:flex-1">
               <div className="mb-3">
                 <h4 className="text-base font-semibold flex items-center gap-2 dark:text-white mb-2">
-                  Katalog tovarov
-                </h4>
-                <div className='flex flex-col justify-between gap-2 sm:flex-row'>
+                  32dxqф  ёй1ё                  </h4>
+                <div className="flex flex-col justify-between gap-2 sm:flex-row">
                   <div className="relative w-full">
-                    <Search className="absolute left-2.5 top-3 h-4 w-4 text-muted-foreground dark:text-gray-400" />
+                    <Search className="absolute left-2.5 top-3 h-4 w-4 text-muted-foreground dark:text-gray-400 z-10" />
                     <Input
-                      ref={barcodeInputRef}
+                      ref={inputRef}
                       placeholder="Poisk: nomi, artikul, shtrixkod"
-                      value={barcode}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => setBarcode(e.target.value)}
-                      onKeyDown={handleBarcodeScan}
+                      value={barcodeValue}
+                      onChange={barcodeOnChange}
+                      onKeyDown={handleBarcodeManual}
                       className="pl-9 dark:bg-gray-900 dark:border-gray-600 dark:text-white"
                     />
                   </div>
-                  <Button className='w-full px-3 dark:bg-gray-900 dark:border-gray-600 dark:text-white hover:bg-gray-700 sm:w-auto' onClick={handleOpenScanner}>
+                  <Button
+                    className="w-full px-3 dark:bg-gray-900 dark:border-gray-600 dark:text-white hover:bg-gray-700 sm:w-auto"
+                    onClick={handleOpenScanner}
+                    title="Ctrl+S"
+                  >
                     <ScanBarcode className="w-5 text-muted-foreground dark:text-gray-400" />
                   </Button>
                 </div>
+                {scanMessage && (
+                  <div
+                    className={`mt-2 rounded-lg border px-3 py-2 text-sm ${
+                      scanStatus === 'success'
+                        ? 'border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400'
+                        : scanStatus === 'not_found' || scanStatus === 'error'
+                        ? 'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400'
+                        : scanStatus === 'searching'
+                        ? 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400'
+                        : 'border-primary/20 bg-primary/5 text-muted-foreground'
+                    }`}
+                  >
+                    {scanMessage}
+                  </div>
+                )}
                 <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-                  {isAdmin && <Select value={storeId} onValueChange={setStoreId}>
-                    <SelectTrigger className="h-8 w-full dark:bg-gray-900 dark:border-gray-600 dark:text-white sm:w-40">
-                      <SelectValue placeholder="Do'kon" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {safeStores.map((s) => (
-                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>}
+                  {isAdmin && (
+                    <Select value={storeId} onValueChange={setStoreId}>
+                      <SelectTrigger className="h-8 w-full dark:bg-gray-900 dark:border-gray-600 dark:text-white sm:w-40">
+                        <SelectValue placeholder="Do'kon" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {safeStores.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                   <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                     <SelectTrigger className="h-8 w-full dark:bg-gray-900 dark:border-gray-600 dark:text-white sm:w-40">
                       <SelectValue placeholder="Kategoriya" />
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -567,38 +606,35 @@ export function SalesPage() {
                   </div>
                 ) : (
                   displayedProducts.map((product) => (
-                  <button
-                    key={product.id}
-                    className="w-full text-left rounded-lg p-2.5 border border-gray-900 hover:bg-accent dark:hover:bg-gray-900 transition-colors"
-                    onClick={() => {
-                      addProduct(product);
-                      setBarcode('');
-                      setSearchResults(null);
-                    }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="font-medium dark:text-white">{product.name || product.sku || product.shtrix_code || product.barcode || "Noma'lum mahsulot"}</div>
-                        <div className="text-xs text-muted-foreground dark:text-gray-400">
-                          {product.barcode}
+                    <button
+                      key={product.id}
+                      className="w-full text-left rounded-lg p-2.5 border border-gray-900 hover:bg-accent dark:hover:bg-gray-900 transition-colors"
+                      onClick={() => handleProductClick(product)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="font-medium dark:text-white">
+                            {product.name || product.sku || product.shtrix_code || product.barcode || "Noma'lum mahsulot"}
+                          </div>
+                          <div className="text-xs text-muted-foreground dark:text-gray-400">
+                            {product.sku || product.shtrix_code || product.barcode}
+                          </div>
+                        </div>
+                        <div className="text-right ml-3">
+                          <div className="font-bold dark:text-white">{formatCurrency(product.selling_price ?? 0)}</div>
+                          <div className="flex items-center justify-end">
+                            <span className="inline-flex items-center rounded bg-primary/10 dark:bg-gray-600 px-1.5 py-0.5 text-xs font-medium dark:text-gray-200">
+                              {product.quantity}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right ml-3">
-                        <div className="font-bold dark:text-white">{formatCurrency(product.selling_price ?? 0)}</div>
-                        <div className="flex items-center justify-end">
-                          <span className="inline-flex items-center rounded bg-primary/10 dark:bg-gray-600 px-1.5 py-0.5 text-xs font-medium dark:text-gray-200">
-                            {product.quantity}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </button>
+                    </button>
                   ))
                 )}
               </div>
             </div>
           </div>
-          {/* Chek (o'rta panel) */}
           <div className="flex flex-col space-y-2 xl:col-span-4">
             <div className="bg-card border border-gray-900 rounded-lg flex min-h-80 flex-col xl:flex-1">
               <div className="p-3 pb-2">
@@ -609,7 +645,12 @@ export function SalesPage() {
                       {items.length}
                     </span>
                   </h4>
-                  <Button type="button" variant="ghost" className="h-7 self-start px-2 text-sm text-red-500 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-900/20 sm:self-auto" onClick={() => setItems([])}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-7 self-start px-2 text-sm text-red-500 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-900/20 sm:self-auto"
+                    onClick={() => setItems([])}
+                  >
                     <Trash2 className="h-3.5 w-3.5 mr-1" /> Tozalash
                   </Button>
                 </div>
@@ -622,13 +663,24 @@ export function SalesPage() {
                   </div>
                 ) : (
                   items.map((item, index) => (
-                    <div key={item.product_id} className="rounded-lg p-2.5 bg-muted/50 dark:bg-gray-900 hover:shadow-sm transition-shadow">
+                    <div
+                      key={item.product_id}
+                      className="rounded-lg p-2.5 bg-muted/50 dark:bg-gray-900 hover:shadow-sm transition-shadow"
+                    >
                       <div className="flex items-start justify-between mb-1.5">
                         <div className="flex-1">
                           <div className="font-medium dark:text-white text-sm">{item.product_name}</div>
-                          <div className="text-xs text-muted-foreground dark:text-gray-400">{safeProducts.find((p) => p.id === item.product_id)?.sku}</div>
+                          <div className="text-xs text-muted-foreground dark:text-gray-400">
+                            {safeProducts.find((p) => p.id === item.product_id)?.sku}
+                          </div>
                         </div>
-                        <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => removeItem(index)}>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-5 w-5"
+                          onClick={() => removeItem(index)}
+                        >
                           <Trash2 className="h-3.5 w-3.5 text-red-500" />
                         </Button>
                       </div>
@@ -696,18 +748,21 @@ export function SalesPage() {
                 </div>
                 {discount > 0 && (
                   <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground dark:text-gray-400">Chegirma ({discountType === 'p' ? `${discount}%` : ''}):</span>
+                    <span className="text-muted-foreground dark:text-gray-400">
+                      Chegirma ({discountType === 'p' ? `${discount}%` : ''}):
+                    </span>
                     <span className="font-medium dark:text-gray-200">-{formatCurrency(calculatedDiscount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between pt-1.5 border-t dark:border-gray-600">
                   <span className="font-semibold dark:text-white">JAMI:</span>
-                  <span className="text-xl font-bold text-green-600 dark:text-green-400">{formatCurrency(totalWithDiscount)}</span>
+                  <span className="text-xl font-bold text-green-600 dark:text-green-400">
+                    {formatCurrency(totalWithDiscount)}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
-          {/* Oplata (o'ng panel) */}
           <div className="flex flex-col space-y-2 xl:col-span-3">
             <div className="bg-card border border-gray-900 rounded-lg flex min-h-80 flex-col xl:flex-1">
               <div className="p-3 pb-2">
@@ -716,13 +771,13 @@ export function SalesPage() {
               <div className="px-3 flex-1 space-y-3">
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground dark:text-gray-400">Mijoz</Label>
-                  <div className='flex gap-2'>
+                  <div className="flex gap-2">
                     <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
                       <SelectTrigger className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white">
                         <SelectValue placeholder="Mijozni tanlang" />
                       </SelectTrigger>
                       <SelectContent>
-                        {customers.map(customer => (
+                        {customers.map((customer) => (
                           <SelectItem key={customer.id} value={String(customer.id)}>
                             {customer.full_name} - {customer.phone_number}
                           </SelectItem>
@@ -748,7 +803,9 @@ export function SalesPage() {
                     <Button
                       type="button"
                       variant={activePayment === 'cash' ? 'default' : 'outline'}
-                      className={`h-10 text-xs ${activePayment === 'cash' ? '' : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'}`}
+                      className={`h-10 text-xs ${
+                        activePayment === 'cash' ? '' : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'
+                      }`}
                       onClick={handleQuickCash}
                     >
                       Naqd
@@ -756,7 +813,9 @@ export function SalesPage() {
                     <Button
                       type="button"
                       variant={activePayment === 'card' ? 'default' : 'outline'}
-                      className={`h-10 text-xs ${activePayment === 'card' ? '' : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'}`}
+                      className={`h-10 text-xs ${
+                        activePayment === 'card' ? '' : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'
+                      }`}
                       onClick={handleQuickCard}
                     >
                       Karta
@@ -816,7 +875,9 @@ export function SalesPage() {
                   </div>
                   {discount > 0 && (
                     <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground dark:text-gray-400">Chegirma ({discountType === 'p' ? `${discount}%` : ''}):</span>
+                      <span className="text-muted-foreground dark:text-gray-400">
+                        Chegirma ({discountType === 'p' ? `${discount}%` : ''}):
+                      </span>
                       <span className="font-bold dark:text-white">-{formatCurrency(calculatedDiscount)}</span>
                     </div>
                   )}
@@ -837,7 +898,12 @@ export function SalesPage() {
                     </div>
                   )}
                 </div>
-                <Button type="button" className="w-full h-11 text-sm font-semibold dark:bg-green-600 dark:hover:bg-green-700" onClick={handleFinishSale} disabled={saving || items.length === 0 || !selectedCustomerId}>
+                <Button
+                  type="button"
+                  className="w-full h-11 text-sm font-semibold dark:bg-green-600 dark:hover:bg-green-700"
+                  onClick={handleFinishSale}
+                  disabled={saving || items.length === 0}
+                >
                   {saving ? 'Yuklanmoqda...' : `Sotuvni yakunlash — ${formatCurrency(totalWithDiscount)}`}
                 </Button>
               </div>
@@ -846,6 +912,7 @@ export function SalesPage() {
         </div>
       </div>
 
+{/* Receipt Modal */}
       {showReceipt && (
         <div className="receipt-modal fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="receipt-content receipt-print bg-white dark:bg-gray-800 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -862,21 +929,22 @@ export function SalesPage() {
                 <p className="text-xs text-muted-foreground dark:text-gray-400">{new Date().toLocaleString()}</p>
               </div>
               <div className="border-b dark:border-gray-600 pb-2 text-sm dark:text-gray-300">
-                {selectedCustomerId && (() => {
-                  const customer = customers.find(c => String(c.id) === selectedCustomerId);
-                  return customer ? (
-                    <>
-                      <div className="flex justify-between">
-                        <span>Mijoz:</span>
-                        <span>{customer.full_name}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Telefon:</span>
-                        <span>{customer.phone_number}</span>
-                      </div>
-                    </>
-                  ) : null;
-                })()}
+                {selectedCustomerId &&
+                  (() => {
+                    const customer = customers.find((c) => String(c.id) === selectedCustomerId);
+                    return customer ? (
+                      <>
+                        <div className="flex justify-between">
+                          <span>Mijoz:</span>
+                          <span>{customer.full_name}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Telefon:</span>
+                          <span>{customer.phone_number}</span>
+                        </div>
+                      </>
+                    ) : null;
+                  })()}
               </div>
 
               <div className="space-y-2 text-sm">
@@ -952,73 +1020,17 @@ export function SalesPage() {
         </div>
       )}
 
-      {/* Scanner Dialog */}
-      <Dialog open={showScanner} onOpenChange={handleScannerDialogChange}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Barcode Scanner</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="overflow-hidden rounded-xl border bg-black">
-              <QrScanner
-                width="100%"
-                height={280}
-                delay={200}
-                facingMode="environment"
-                stopStream={stopScannerStream}
-                videoConstraints={{
-                  facingMode: { ideal: 'environment' },
-                  width: { ideal: 1280 },
-                  height: { ideal: 720 },
-                }}
-                formats={[
-                  BarcodeFormat.CODE_128,
-                  BarcodeFormat.CODE_39,
-                  BarcodeFormat.EAN_13,
-                  BarcodeFormat.EAN_8,
-                  BarcodeFormat.UPC_A,
-                  BarcodeFormat.UPC_E,
-                  BarcodeFormat.ITF,
-                  BarcodeFormat.QR_CODE,
-                  BarcodeFormat.DATA_MATRIX,
-                ]}
-                onUpdate={handleBarcodeScanQr}
-                onError={(error) => {
-                  console.error('Scanner error:', error);
-                  setScannerStatus('error');
-                  setScannerMessage("Kameraga ulanishda muammo bo'ldi yoki kodni o'qib bo'lmadi.");
-                }}
-              />
-            </div>
-            <div
-              className={`rounded-lg border px-3 py-2 text-sm ${
-                scannerStatus === 'success'
-                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700'
-                  : scannerStatus === 'not_found' || scannerStatus === 'error'
-                    ? 'border-red-500/30 bg-red-500/10 text-red-700'
-                    : 'border-primary/20 bg-primary/5 text-muted-foreground'
-              }`}
-            >
-              {scannerMessage}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ScannerModal open={showScanner} onOpenChange={setShowScanner} onScan={handleScannerScan} />
 
-      {/* New Customer Dialog */}
       <Dialog open={showNewCustomerDialog} onOpenChange={setShowNewCustomerDialog}>
-        <DialogContent size='md'>
+        <DialogContent size="md">
           <DialogHeader>
             <DialogTitle>Yangi mijoz qo'shish</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pb-6">
             <div className="space-y-2">
               <Label>Ism</Label>
-              <Input
-                value={newCustomerName}
-                onChange={(e) => setNewCustomerName(e.target.value)}
-                placeholder="Mijoz ismi"
-              />
+              <Input value={newCustomerName} onChange={(e) => setNewCustomerName(e.target.value)} placeholder="Mijoz ismi" />
             </div>
             <div className="space-y-2">
               <Label>Telefon</Label>
@@ -1037,5 +1049,3 @@ export function SalesPage() {
     </div>
   );
 }
-
-

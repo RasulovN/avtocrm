@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { inventoryService } from '../../services/inventoryService';
 import { storeService } from '../../services/storeService';
 import { supplierService } from '../../services/supplierService';
+import { useAuthStore } from '../../app/store';
 import { useProducts } from '../../context/ProductContext';
 import type { Store, Supplier } from '../../types';
 import { formatCurrency } from '../../utils';
@@ -27,6 +28,9 @@ interface InventoryFormItem {
 export function InventoryCreatePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const isAdmin = Boolean(user?.is_superuser);
+  const userStoreId = user?.store_id || '';
   const [stores, setStores] = useState<Store[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [saving, setSaving] = useState(false);
@@ -35,8 +39,17 @@ export function InventoryCreatePage() {
   const safeSuppliers = useMemo(() => (Array.isArray(suppliers) ? suppliers : []), [suppliers]);
   const safeProducts = useMemo(() => {
     if (productsLoading) return [];
-    return allProducts;
-  }, [allProducts, productsLoading]);
+    // Apply store filtering like SalesPage does
+    const filtered = isAdmin ? allProducts : allProducts.filter((p) => p.store_id === userStoreId);
+    console.log('[InventoryCreatePage] Filtered products:', {
+      allProductsCount: allProducts.length,
+      filteredCount: filtered.length,
+      isAdmin,
+      userStoreId,
+      productsLoading,
+    });
+    return filtered;
+  }, [allProducts, productsLoading, isAdmin, userStoreId]);
 
   const [supplierId, setSupplierId] = useState('');
   const [storeId, setStoreId] = useState('');
@@ -240,6 +253,16 @@ export function InventoryCreatePage() {
                           <SelectValue placeholder={t('inventory.selectProduct')} />
                         </SelectTrigger>
                         <SelectContent>
+                          {safeProducts.length === 0 && !productsLoading && (
+                            <div className="p-2 text-xs text-muted-foreground">
+                              {t('common.noData')}
+                            </div>
+                          )}
+                          {productsLoading && (
+                            <div className="p-2 text-xs text-muted-foreground">
+                              {t('common.loading')}...
+                            </div>
+                          )}
                           {safeProducts.map(p => (
                             <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                           ))}

@@ -6,6 +6,15 @@ import App from './App.tsx'
 import { CategoryProvider } from './context/CategoryContext.tsx'
 import { ProductProvider } from './context/ProductContext.tsx'
 
+// Suppress console logging in production before any other code runs
+if (import.meta.env.MODE !== 'development') {
+  console.log = () => {};
+  console.info = () => {};
+  console.debug = () => {};
+  console.warn = () => {};
+  console.error = () => {};
+}
+
 // Initialize theme
 const initTheme = () => {
   const theme = localStorage.getItem('theme') as 'light' | 'dark' || 'light';
