@@ -53,7 +53,7 @@ export function ProductBarcodePage() {
           <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
           <style>
             @page {
-              size: 2in 1in;
+              size: 28mm 16mm;
               margin: 0;
             }
             body { 
@@ -61,9 +61,9 @@ export function ProductBarcodePage() {
               margin: 0; 
               padding: 0;
               text-align: center;
-              font-size: 9px;
-              width: 2in;
-              height: 1in;
+              font-size: 6px;
+              width: 28mm;
+              height: 16mm;
               box-sizing: border-box;
             }
             .barcode-card { 
@@ -71,8 +71,8 @@ export function ProductBarcodePage() {
               padding: 0;
               margin: 0;
               text-align: center;
-              width: 2in;
-              height: 1in;
+              width: 28mm;
+              height: 16mm;
               box-sizing: border-box;
               display: flex;
               flex-direction: column;
@@ -84,14 +84,14 @@ export function ProductBarcodePage() {
             }
             .barcode-value { 
               font-family: 'Consolas', monospace; 
-              font-size: 8px; 
+              font-size: 5px; 
               font-weight: bold;
-              margin-top: 2px;
-              letter-spacing: 2px;
+              margin-top: 1px;
+              letter-spacing: 1px;
             }
             svg { 
-              width: 1.8in; 
-              height: 0.7in; 
+              width: 26mm; 
+              height: 12mm; 
               display: block;
             }
             @media print {
@@ -114,10 +114,11 @@ export function ProductBarcodePage() {
                 try {
                   JsBarcode('#barcode-svg', '${barcodeValue}', {
                     format: 'CODE128',
-                    width: 4,
-                    height: 70,
+                    width: 1.5,
+                    height: 90,
                     displayValue: false,
                     margin: 0,
+                    textMargin: 0,
                   });
                 } catch(e) {
                   console.error('Barcode error:', e);
@@ -158,7 +159,7 @@ export function ProductBarcodePage() {
           <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
           <style>
             @page {
-              size: 2in 1in;
+              size: 28mm 16mm;
               margin: 0;
             }
             body {
@@ -166,9 +167,9 @@ export function ProductBarcodePage() {
               margin: 0;
               padding: 0;
               text-align: center;
-              font-size: 9px;
-              width: 2in;
-              height: 1in;
+              font-size: 6px;
+              width: 28mm;
+              height: 16mm;
               box-sizing: border-box;
             }
             .barcode-card {
@@ -176,8 +177,8 @@ export function ProductBarcodePage() {
               padding: 0;
               margin: 0;
               text-align: center;
-              width: 2in;
-              height: 1in;
+              width: 28mm;
+              height: 16mm;
               box-sizing: border-box;
               display: flex;
               flex-direction: column;
@@ -190,14 +191,14 @@ export function ProductBarcodePage() {
             }
             .barcode-value { 
               font-family: 'Consolas', monospace; 
-              font-size: 8px; 
+              font-size: 5px; 
               font-weight: bold;
-              margin-top: 2px;
-              letter-spacing: 2px;
+              margin-top: 1px;
+              letter-spacing: 1px;
             }
             svg { 
-              width: 1.8in; 
-              height: 0.7in; 
+              width: 26mm; 
+              height: 12mm; 
               display: block;
             }
           </style>
@@ -212,10 +213,11 @@ export function ProductBarcodePage() {
                   try {
                     JsBarcode('#barcode-svg-${index}', '${barcodeValue}', {
                       format: 'CODE128',
-                      width: 4,
-                      height: 70,
+                      width: 1.5,
+                      height: 90,
                       displayValue: false,
                       margin: 0,
+                      textMargin: 0,
                     });
                   } catch (error) {
                     console.error('Failed to generate barcode ${index}:', error);
@@ -329,7 +331,7 @@ export function ProductBarcodePage() {
                           <BarcodePrint 
                             value={barcodeValue} 
                             showName={false} 
-                            thermalPrinter={true}
+                            thermalPrinter={false}
                           />
                           <div className="barcode-value mt-1 text-xs font-mono font-medium text-gray-700 dark:text-gray-300">{barcodeValue}</div>
                         </>

@@ -49,6 +49,27 @@ export function formatDateShort(date: string | Date): string {
   }).format(d);
 }
 
+/**
+ * Convert millimeters to pixels for a given DPI
+ * Formula: (mm / 25.4) * DPI
+ * @param mm - millimeters
+ * @param dpi - dots per inch (default 203 for label printers)
+ * @returns pixels
+ */
+export function mmToPx(mm: number, dpi: number = 203): number {
+  return (mm / 25.4) * dpi;
+}
+
+/**
+ * Convert pixels to millimeters for a given DPI
+ * @param px - pixels
+ * @param dpi - dots per inch (default 203)
+ * @returns millimeters
+ */
+export function pxToMm(px: number, dpi: number = 203): number {
+  return (px * 25.4) / dpi;
+}
+
 export function formatTime(date: string | Date | undefined | null): string {
   if (!date) return '-';
   const d = new Date(date);
