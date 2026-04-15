@@ -278,6 +278,13 @@ export function SalesPage() {
   }, [scanStatus, focusBarcodeInput]);
 
   useEffect(() => {
+    // When scanner modal closes, ensure search results are cleared
+    if (!showScanner) {
+      setSearchResults(null);
+    }
+  }, [showScanner]);
+
+  useEffect(() => {
     if (!isAdmin && userStoreId) {
       setStoreId(userStoreId);
     }
@@ -349,17 +356,23 @@ export function SalesPage() {
   };
 
   const handleOpenScanner = () => {
+    // Clear search results when opening scanner
+    setSearchResults(null);
+    barcodeOnChange({ target: { value: '' } } as ChangeEvent<HTMLInputElement>);
     setShowScanner(true);
   };
 
   const handleScannerScan = async (barcode: string) => {
-    // Camera scanner also adds directly to cart (same as device scanner)
+    // Camera scanner adds directly to cart (same as device scanner)
     const product = await findProductByBarcode(barcode, true);
     
     if (product) {
       addProduct(product);
       playSuccessSound();
       toast.success(`Mahsulot topildi: ${product.name || barcode}`);
+      // Clear any search results and input
+      barcodeOnChange({ target: { value: '' } } as ChangeEvent<HTMLInputElement>);
+      setSearchResults(null);
       setShowScanner(false);
     } else {
       playErrorSound();
@@ -500,6 +513,7 @@ export function SalesPage() {
           .receipt-print { position: absolute; left: 0; top: 0; width: 100%; }
         }
       `}</style>
+      {/* /* Main Sales Interface */ }
       <div className="space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -895,6 +909,7 @@ export function SalesPage() {
         </div>
       </div>
 
+{/* Receipt Modal */}
       {showReceipt && (
         <div className="receipt-modal fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="receipt-content receipt-print bg-white dark:bg-gray-800 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
