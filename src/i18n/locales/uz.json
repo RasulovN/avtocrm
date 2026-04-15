@@ -118,6 +118,7 @@
     "images": "Rasmlar",
     "generateBarcode": "Barcode generatsiya qilish",
     "printBarcode": "Barcode chop etish",
+    "printAllBarcodes": "Barcha barcodelarni chop etish",
     "noProducts": "Mahsulotlar yo'q",
     "searchPlaceholder": "Mahsulotlarni qidirish...",
     "filterByCategory": "Kategoriya bo'yicha filtr",

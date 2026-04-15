@@ -10,7 +10,7 @@ import { productService } from '../../services/productService';
 import type { Product } from '../../types';
 import { formatCurrency } from '../../utils';
 import { URL } from '../../services/api';
-// import { BarcodePrint } from '../../components/ui/BarcodePrint';
+import { BarcodePrint } from '../../components/ui/BarcodePrint';
 
 export function ProductBarcodePage() {
   const { t } = useTranslation();
@@ -49,14 +49,62 @@ export function ProductBarcodePage() {
         <head>
           <title>Print Barcode</title>
           <style>
-            body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
-            .barcode-card { border: 1px solid #ddd; border-radius: 8px; padding: 12px; min-width: 220px; text-align: center; }
-            .store-name { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
-            .product-name { font-size: 12px; margin-bottom: 4px; }
-            .product-price { font-size: 14px; font-weight: bold; margin-bottom: 6px; }
-            .barcode-value { font-family: monospace; font-size: 12px; margin-top: 6px; }
-            svg { max-width: 100%; height: auto; }
-            img { max-width: 180px; height: auto; margin-top: 8px; }
+            @page {
+              size: 58mm auto; /* Xprinter 360B thermal paper width */
+              margin: 2mm;
+            }
+            body { 
+              font-family: 'Courier New', monospace; 
+              margin: 0; 
+              padding: 2mm;
+              text-align: center;
+              font-size: 10px;
+              line-height: 1.2;
+            }
+            .barcode-card { 
+              border: none; 
+              padding: 2mm;
+              margin: 0;
+              text-align: center;
+              width: 54mm; /* Content width for 58mm paper */
+              box-sizing: border-box;
+            }
+            .store-name { 
+              font-size: 11px; 
+              font-weight: 600; 
+              margin-bottom: 3px; 
+            }
+            .product-name { 
+              font-size: 9px; 
+              margin-bottom: 2px; 
+              word-wrap: break-word;
+            }
+            .product-price { 
+              font-size: 12px; 
+              font-weight: bold; 
+              margin-bottom: 4px; 
+            }
+            .barcode-value { 
+              font-family: 'Courier New', monospace; 
+              font-size: 8px; 
+              margin-top: 2px; 
+              word-break: break-all;
+            }
+            svg { 
+              max-width: 100%; 
+              height: auto; 
+              margin: 2px 0;
+            }
+            img { 
+              max-width: 48mm; 
+              height: auto; 
+              margin: 2px 0;
+            }
+            /* Hide elements not needed for thermal printing */
+            @media print {
+              body { -webkit-print-color-adjust: exact; }
+              .no-print { display: none; }
+            }
           </style>
         </head>
         <body>
@@ -66,6 +114,108 @@ export function ProductBarcodePage() {
     `);
     printWindow.document.close();
     printWindow.print();
+  };
+
+  const handlePrintAll = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const barcodeCards = displayBatches.map((batch, index) => {
+      const key = `barcode-card-${batch.store}-${batch.id}`;
+      return `
+        <div class="barcode-card">
+          <div class="store-name">${batch.store_name}</div>
+          <div class="product-name">${product?.name || ''}</div>
+          <div class="product-price">${formatCurrency(Number(batch.selling_price || product?.selling_price || 0))}</div>
+          <div class="mt-2">
+            <svg id="barcode-svg-${index}"></svg>
+          </div>
+          <div class="barcode-value">${batch.barcode || ''}</div>
+        </div>
+        ${index < displayBatches.length - 1 ? '<div style="page-break-after: always;"></div>' : ''}
+      `;
+    }).join('');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Print All Barcodes</title>
+          <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+          <style>
+            @page {
+              size: 58mm auto;
+              margin: 2mm;
+            }
+            body {
+              font-family: 'Courier New', monospace;
+              margin: 0;
+              padding: 2mm;
+              text-align: center;
+              font-size: 10px;
+              line-height: 1.2;
+            }
+            .barcode-card {
+              border: none;
+              padding: 2mm;
+              margin: 0;
+              text-align: center;
+              width: 54mm;
+              box-sizing: border-box;
+            }
+            .store-name {
+              font-size: 11px;
+              font-weight: 600;
+              margin-bottom: 3px;
+            }
+            .product-name {
+              font-size: 9px;
+              margin-bottom: 2px;
+              word-wrap: break-word;
+            }
+            .product-price {
+              font-size: 12px;
+              font-weight: bold;
+              margin-bottom: 4px;
+            }
+            .barcode-value {
+              font-family: 'Courier New', monospace;
+              font-size: 8px;
+              margin-top: 2px;
+              word-break: break-all;
+            }
+            svg {
+              max-width: 100%;
+              height: auto;
+              margin: 2px 0;
+            }
+          </style>
+        </head>
+        <body>
+          ${barcodeCards}
+          <script>
+            window.onload = function() {
+              ${displayBatches.map((batch, index) => `
+                try {
+                  JsBarcode('#barcode-svg-${index}', '${batch.barcode}', {
+                    format: 'CODE128',
+                    width: 1.5,
+                    height: 45,
+                    displayValue: true,
+                    fontSize: 10,
+                    margin: 2,
+                    textMargin: 2,
+                  });
+                } catch (error) {
+                  console.error('Failed to generate barcode ${index}:', error);
+                }
+              `).join('')}
+              setTimeout(function() { window.print(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   if (loading) {
@@ -79,7 +229,10 @@ export function ProductBarcodePage() {
   const batches = product?.batches ?? [];
   const fallbackBarcode = product?.barcode || product?.sku || '';
   const displayBatches = batches.length
-    ? batches
+    ? batches.map(batch => ({
+        ...batch,
+        barcode: batch.barcode || batch.shtrix_code || fallbackBarcode,
+      }))
     : (fallbackBarcode ? [{
         id: 0,
         product: Number(product?.id || 0),
@@ -102,10 +255,18 @@ export function ProductBarcodePage() {
           { label: t('products.barcode') },
         ]}
         actions={
-          <Button variant="outline" onClick={() => navigate('/products')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            {t('common.back')}
-          </Button>
+          <div className="flex gap-2">
+            {displayBatches.length > 1 && (
+              <Button variant="outline" onClick={handlePrintAll}>
+                <Printer className="h-4 w-4 mr-2" />
+                {t('products.printAllBarcodes')}
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => navigate('/products')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              {t('common.back')}
+            </Button>
+          </div>
         }
       />
 
@@ -152,19 +313,20 @@ export function ProductBarcodePage() {
                       <div className="store-name font-medium">{batch.store_name}</div>
                       <div className="product-name text-xs text-muted-foreground">{product?.name}</div>
                       <div className="product-price text-sm font-semibold">{formatCurrency(Number(batch.selling_price || product?.selling_price || 0))}</div>
-                      {/* {batch.barcode ? (
-                        <div className="mt-2 flex justify-center">
-                          <BarcodePrint value={batch.barcode} showName={false} />
-                        </div>
-                      ) : (
-                        <div className="text-xs text-muted-foreground">Barcode yo'q</div>
-                      )} */}
                       <div className="mt-3">
                         <div className="text-xs font-medium">Shtrix kod</div>
-                        {batch.shtrix_code ? (
+                        {batch.barcode ? (
+                          <div className="mt-2 flex justify-center">
+                            <BarcodePrint 
+                              value={batch.barcode} 
+                              showName={false} 
+                              thermalPrinter={true}
+                            />
+                          </div>
+                        ) : batch.shtrix_code ? (
                           <img src={`${URL}/${batch.shtrix_code}`} alt="Shtrix kod" className="mx-auto mt-2 max-h-32 object-contain" />
                         ) : (
-                          <div className="text-xs text-muted-foreground">Shtrix kod yo'q</div>
+                          <div className="text-xs text-muted-foreground">Barcode yo'q</div>
                         )}
                         {batch.barcode && (
                           <div className="barcode-value mt-1 text-xs text-muted-foreground">{batch.barcode}</div>

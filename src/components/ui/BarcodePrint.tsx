@@ -5,15 +5,24 @@ interface BarcodePrintProps {
   value: string;
   productName?: string;
   showName?: boolean;
+  thermalPrinter?: boolean;
 }
 
-export function BarcodePrint({ value, productName, showName = true }: BarcodePrintProps) {
+export function BarcodePrint({ value, productName, showName = true, thermalPrinter = false }: BarcodePrintProps) {
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
     if (svgRef.current && value) {
       try {
-        JsBarcode(svgRef.current, value, {
+        const options = thermalPrinter ? {
+          format: 'CODE128',
+          width: 1.5, // Optimized for thermal printers
+          height: 45, // Suitable height for thermal paper
+          displayValue: true,
+          fontSize: 10, // Smaller font for thermal paper
+          margin: 2, // Minimal margins
+          textMargin: 2,
+        } : {
           format: 'CODE128',
           width: 1.8,
           height: 52,
@@ -21,12 +30,14 @@ export function BarcodePrint({ value, productName, showName = true }: BarcodePri
           fontSize: 11,
           margin: 0,
           textMargin: 4,
-        });
+        };
+
+        JsBarcode(svgRef.current, value, options);
       } catch (error) {
         console.error('Failed to generate barcode:', error);
       }
     }
-  }, [value]);
+  }, [value, thermalPrinter]);
 
   return (
     <div className="flex flex-col items-center">
@@ -52,13 +63,21 @@ const isImageUrl = (value: string): boolean => {
   return value.startsWith('/media/') || value.startsWith('http://') || value.startsWith('https://');
 };
 
-function BarcodeDisplay({ value, isImage = false }: { value: string; isImage?: boolean }) {
+function BarcodeDisplay({ value, isImage = false, thermalPrinter = false }: { value: string; isImage?: boolean; thermalPrinter?: boolean }) {
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
     if (svgRef.current && value && !isImage) {
       try {
-        JsBarcode(svgRef.current, value, {
+        const options = thermalPrinter ? {
+          format: 'CODE128',
+          width: 1.5,
+          height: 42,
+          displayValue: true,
+          fontSize: 9,
+          margin: 2,
+          textMargin: 2,
+        } : {
           format: 'CODE128',
           width: 1.8,
           height: 48,
@@ -66,12 +85,14 @@ function BarcodeDisplay({ value, isImage = false }: { value: string; isImage?: b
           fontSize: 10,
           margin: 0,
           textMargin: 4,
-        });
+        };
+
+        JsBarcode(svgRef.current, value, options);
       } catch (error) {
         console.error('Failed to generate barcode:', error);
       }
     }
-  }, [value, isImage]);
+  }, [value, isImage, thermalPrinter]);
 
   if (isImage && value) {
     return (
