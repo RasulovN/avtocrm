@@ -53,26 +53,34 @@ export function ProductBarcodePage() {
           <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
           <style>
             @page {
-              size: 58mm auto;
+              size: 2in 1in;
               margin: 0;
             }
             body { 
               font-family: 'Consolas', 'Courier New', monospace; 
               margin: 0; 
-              padding: 2mm;
+              padding: 0;
               text-align: center;
               font-size: 9px;
+              width: 2in;
+              height: 1in;
+              box-sizing: border-box;
             }
             .barcode-card { 
               border: none; 
               padding: 0;
               margin: 0;
               text-align: center;
-              width: 54mm;
+              width: 2in;
+              height: 1in;
               box-sizing: border-box;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              align-items: center;
             }
             .barcode-section { 
-              margin-top: 2px; 
+              margin: 0; 
             }
             .barcode-value { 
               font-family: 'Consolas', monospace; 
@@ -82,10 +90,9 @@ export function ProductBarcodePage() {
               letter-spacing: 2px;
             }
             svg { 
-              max-width: 50mm; 
-              height: auto; 
+              width: 1.8in; 
+              height: 0.7in; 
               display: block;
-              margin: 0 auto;
             }
             @media print {
               body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -107,8 +114,8 @@ export function ProductBarcodePage() {
                 try {
                   JsBarcode('#barcode-svg', '${barcodeValue}', {
                     format: 'CODE128',
-                    width: 1.2,
-                    height: 35,
+                    width: 4,
+                    height: 70,
                     displayValue: false,
                     margin: 0,
                   });
@@ -151,26 +158,35 @@ export function ProductBarcodePage() {
           <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
           <style>
             @page {
-              size: 58mm auto;
+              size: 2in 1in;
               margin: 0;
             }
             body {
               font-family: 'Consolas', 'Courier New', monospace;
               margin: 0;
-              padding: 2mm;
+              padding: 0;
               text-align: center;
               font-size: 9px;
+              width: 2in;
+              height: 1in;
+              box-sizing: border-box;
             }
             .barcode-card {
               border: none;
               padding: 0;
               margin: 0;
               text-align: center;
-              width: 54mm;
+              width: 2in;
+              height: 1in;
               box-sizing: border-box;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              align-items: center;
+              page-break-after: always;
             }
             .barcode-section { 
-              margin-top: 2px; 
+              margin: 0; 
             }
             .barcode-value { 
               font-family: 'Consolas', monospace; 
@@ -180,10 +196,9 @@ export function ProductBarcodePage() {
               letter-spacing: 2px;
             }
             svg { 
-              max-width: 50mm; 
-              height: auto; 
+              width: 1.8in; 
+              height: 0.7in; 
               display: block;
-              margin: 0 auto;
             }
           </style>
         </head>
@@ -197,8 +212,8 @@ export function ProductBarcodePage() {
                   try {
                     JsBarcode('#barcode-svg-${index}', '${barcodeValue}', {
                       format: 'CODE128',
-                      width: 1.2,
-                      height: 35,
+                      width: 4,
+                      height: 70,
                       displayValue: false,
                       margin: 0,
                     });
