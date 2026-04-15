@@ -5,7 +5,7 @@ import { authService } from './authService';
 import { isDev } from '../config/environment';
 
 const BaSE_URL = isDev ? '/api' : 'https://api.avtoyon.uz/api';
-export const URL = isDev ? '/' : 'https://api.avtoyon.uz/';
+export const URL = isDev ? '/' : 'https://api.avtoyon.uz';
 export const API_BASE_URL = BaSE_URL;
 export const API_ORIGIN = isDev ? '' : BaSE_URL.replace(/\/api\/?$/, '');
 
