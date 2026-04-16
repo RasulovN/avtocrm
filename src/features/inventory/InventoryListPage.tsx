@@ -136,53 +136,48 @@ export function InventoryListPage() {
     setBarcodeItems(item.items || []);
     setShowBarcodeDialog(true);
   };
-
-  const isImageUrl = (value: string): boolean => {
-    if (!value) return false;
-    return value.startsWith('/media/') || value.startsWith('http://') || value.startsWith('https://');
-  };
-
+ 
   const handlePrintInventoryBarcode = (item: DisplayInventory, itemIndex: number) => {
     const invItem = item.items?.[itemIndex];
     if (!invItem) return;
 
     const shtrixCode = invItem.shtrix_code || '';
     const productBarcode = invItem.product_barcode || '';
-    const barcodeValue = shtrixCode || productBarcode;
+    // Always use product_barcode for JsBarcode generation (more reliable)
+    const barcodeValue = productBarcode || shtrixCode.replace(/.*\//, '').replace(/\..*/, '') || shtrixCode;
     
     if (!barcodeValue) return;
 
-    const isImage = isImageUrl(barcodeValue);
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    printWindow.document.write(`
+     printWindow.document.write(`
       <html>
         <head>
           <title>Print Barcode</title>
           <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
           <style>
             @page {
-              size: 70mm 50mm;
+              size: 28mm 16mm;
               margin: 0;
             }
             body { 
               font-family: 'Consolas', 'Courier New', monospace; 
               margin: 0; 
-              padding: 2px;
+              padding: 0;
               text-align: center;
-              font-size: 14px;
-              width: 70mm;
-              height: 50mm;
+              font-size: 6px;
+              width: 28mm;
+              height: 16mm;
               box-sizing: border-box;
             }
             .barcode-card { 
               border: none; 
-              padding: 2px;
+              padding: 0;
               margin: 0;
               text-align: center;
-              width: 70mm;
-              height: 50mm;
+              width: 28mm;
+              height: 16mm;
               box-sizing: border-box;
               display: flex;
               flex-direction: column;
@@ -194,26 +189,17 @@ export function InventoryListPage() {
             }
             .barcode-value { 
               font-family: 'Consolas', monospace; 
-              font-size: 14px; 
+              font-size: 8px; 
               font-weight: bold;
-              margin-top: 3px;
-              letter-spacing: 2px;
+              margin-top: 1px;
+              letter-spacing: 1px;
             }
             svg { 
               width: auto;
-              max-width: 65mm; 
-              height: 35mm; 
+              max-width: 26mm; 
+              height: 12mm; 
               display: block;
               margin: 0 auto;
-            }
-            .product-info {
-              font-size: 12px;
-              margin-bottom: 3px;
-              font-weight: bold;
-            }
-            .barcode-img {
-              max-width: 65mm;
-              max-height: 35mm;
             }
             @media print {
               body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -223,22 +209,20 @@ export function InventoryListPage() {
         <body>
           <div class="barcode-card">
             <div class="barcode-section">
-              <div class="product-info">${invItem.product_name || ''}</div>
-              ${isImage ? `
-                <img class="barcode-img" src="${barcodeValue}" alt="Barcode" />
-              ` : barcodeValue ? `
+              ${barcodeValue ? `
                 <svg id="barcode-svg"></svg>
+                <div class="barcode-value">${barcodeValue}</div>
               ` : ''}
             </div>
           </div>
           <script>
             window.onload = function() {
-              ${!isImage && barcodeValue ? `
+              ${barcodeValue ? `
                 try {
                   JsBarcode('#barcode-svg', '${barcodeValue}', {
                     format: 'CODE128',
-                    width: 3,
-                    height: 240,
+                    width: 1.5,
+                    height: 90,
                     displayValue: false,
                     margin: 0,
                     textMargin: 0,
@@ -266,18 +250,13 @@ export function InventoryListPage() {
     const barcodeCards = items.map((invItem, index) => {
       const shtrixCode = invItem.shtrix_code || '';
       const productBarcode = invItem.product_barcode || '';
-      const barcodeValue = shtrixCode || productBarcode;
+      const barcodeValue = productBarcode || shtrixCode.replace(/.*\//, '').replace(/\..*/, '') || shtrixCode;
       if (!barcodeValue) return '';
 
-      const isImage = isImageUrl(barcodeValue);
-      
       return `
         <div class="barcode-card">
           <div class="barcode-section">
-            <div class="product-info">${invItem.product_name || ''}</div>
-            ${isImage ? `
-              <img class="barcode-img" src="${barcodeValue}" alt="Barcode" />
-            ` : barcodeValue ? `
+            ${barcodeValue ? `
               <svg id="barcode-svg-${index}"></svg>
             ` : ''}
           </div>
@@ -286,33 +265,33 @@ export function InventoryListPage() {
       `;
     }).join('');
 
-    printWindow.document.write(`
+   printWindow.document.write(`
       <html>
         <head>
           <title>Print All Barcodes</title>
           <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
           <style>
             @page {
-              size: 70mm 50mm;
+              size: 80mm 45mm;
               margin: 0;
             }
             body {
               font-family: 'Consolas', 'Courier New', monospace;
               margin: 0;
-              padding: 2px;
+              padding: 0;
               text-align: center;
               font-size: 14px;
-              width: 70mm;
-              height: 50mm;
+              width: 80mm;
+              height: 45mm;
               box-sizing: border-box;
             }
             .barcode-card {
               border: none;
-              padding: 2px;
+              padding: 0;
               margin: 0;
               text-align: center;
-              width: 70mm;
-              height: 50mm;
+              width: 80mm;
+              height: 45mm;
               box-sizing: border-box;
               display: flex;
               flex-direction: column;
@@ -327,21 +306,12 @@ export function InventoryListPage() {
               font-family: 'Consolas', monospace; 
               font-size: 14px; 
               font-weight: bold;
-              margin-top: 3px;
+              margin-top: 1px;
               letter-spacing: 2px;
             }
-            .product-info {
-              font-size: 12px;
-              margin-bottom: 3px;
-              font-weight: bold;
-            }
-            .barcode-img {
-              max-width: 65mm;
-              max-height: 35mm;
-            }
             svg { 
-              width: 65mm; 
-              height: 35mm; 
+              width: 78mm; 
+              height: 48mm; 
               display: block;
             }
           </style>
@@ -353,17 +323,17 @@ export function InventoryListPage() {
               ${items.map((invItem, index) => {
                 const shtrixCode = invItem.shtrix_code || '';
                 const productBarcode = invItem.product_barcode || '';
-                const barcodeValue = shtrixCode || productBarcode;
-                const isImage = isImageUrl(barcodeValue);
-                return !isImage && barcodeValue ? `
+                const barcodeValue = productBarcode || shtrixCode.replace(/.*\//, '').replace(/\..*/, '') || shtrixCode;
+                return barcodeValue ? `
                   try {
                     JsBarcode('#barcode-svg-${index}', '${barcodeValue}', {
                       format: 'CODE128',
-                      width: 3,
-                      height: 240,
-                      displayValue: false,
+                      width: 2,
+                      height: 70,
+                      displayValue: true,
+                      fontSize: 18,
                       margin: 0,
-                      textMargin: 0,
+                      textMargin: 1,
                     });
                   } catch (error) {
                     console.error('Failed to generate barcode ${index}:', error);
