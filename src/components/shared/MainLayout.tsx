@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import toast from 'react-hot-toast';
 import {
   LayoutDashboard,
   Package,
@@ -29,10 +28,12 @@ import {
   Download,
   Users,
 } from 'lucide-react';
+import { NotificationProvider } from '../../context/NotificationProvider';
+import { NotificationToast } from './NotificationToast';
 import { cn } from '../../utils';
 import { useThemeStore, useAuthStore } from '../../app/store';
 import { Button } from '../ui/Button';
-import { notificationService, type AppNotification } from '../../services/notificationService';
+import { useNotifications } from '../../context/NotificationProvider';
 
 interface NavItem {
   titleKey: string;
@@ -88,6 +89,15 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
+  return (
+    <NotificationProvider>
+      <NotificationToast />
+      <MainLayoutContent>{children}</MainLayoutContent>
+    </NotificationProvider>
+  );
+}
+
+function MainLayoutContent({ children }: { children: React.ReactNode }) {
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -97,44 +107,12 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const profileRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
-  const latestPlayedIdRef = useRef<string | null>(null);
   const { theme, toggleTheme } = useThemeStore();
   const { user, logout } = useAuthStore();
   const isSuperUser = Boolean(user?.is_superuser);
-  const unreadCount = notifications.filter((item) => !item.read).length;
-
-  useEffect(() => {
-    if (!user) {
-      navigate('/login');
-    }
-  }, [navigate, user]);
-
-  useEffect(() => {
-    if (!user) return;
-
-    notificationService.connect(user);
-    const unsubscribe = notificationService.subscribe((items) => {
-      setNotifications(items);
-      const newestUnread = items.find((item) => !item.read);
-      if (!newestUnread) return;
-      if (latestPlayedIdRef.current === newestUnread.id) return;
-      if (latestPlayedIdRef.current !== null) {
-        const audio = new Audio('/sounds/notification.mp3');
-        audio.volume = 0.7;
-        void audio.play().catch(() => undefined);
-        toast.success(newestUnread.title, { duration: 4500 });
-      }
-      latestPlayedIdRef.current = newestUnread.id;
-    });
-
-    return () => {
-      unsubscribe();
-      notificationService.disconnect();
-    };
-  }, [user]);
+  const { notifications, unreadCount, markAsRead } = useNotifications();
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -146,7 +124,6 @@ export function MainLayout({ children }: MainLayoutProps) {
         setShowNotifications(false);
       }
     };
-
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
@@ -504,6 +481,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             <div className="lg:hidden w-8" />
 
             <div className="flex items-center gap-2">
+
               <div className="relative" ref={notificationRef}>
                 <Button
                   variant="ghost"
@@ -532,13 +510,12 @@ export function MainLayout({ children }: MainLayoutProps) {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => notificationService.markAllAsRead()}
+                          onClick={() => notifications.forEach(n => markAsRead(n.id))}
                         >
-                          O\'qildi
+                          O'qildi
                         </Button>
                       )}
                     </div>
-
                     <div className="max-h-96 space-y-2 overflow-y-auto">
                       {notifications.length === 0 ? (
                         <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
@@ -549,7 +526,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                           <button
                             key={item.id}
                             type="button"
-                            onClick={() => notificationService.markAsRead(item.id)}
+                            onClick={() => markAsRead(item.id)}
                             className={cn(
                               'w-full rounded-lg border p-3 text-left transition-colors hover:bg-accent/50',
                               !item.read && 'border-primary/30 bg-primary/5'
@@ -561,7 +538,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                             </div>
                             <p className="text-xs text-muted-foreground">{item.message}</p>
                             <p className="mt-2 text-[11px] text-muted-foreground">
-                              {new Date(item.created_at).toLocaleString()}
+                              {new Date(item.createdAt).toLocaleString()}
                             </p>
                           </button>
                         ))

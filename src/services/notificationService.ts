@@ -11,133 +11,207 @@ export interface AppNotification {
 
 type Subscriber = (notifications: AppNotification[]) => void;
 
-const makeNotification = (
-  id: string,
-  title: string,
-  message: string,
-  type: AppNotification['type'] = 'info'
-): AppNotification => ({
-  id,
-  title,
-  message,
-  created_at: new Date().toISOString(),
-  read: false,
-  type,
-});
+const WS_URL = 'wss://api.avtoyon.uz/ws/notifications/';
 
-class MockNotificationSocketService {
+class NotificationSocketService {
+  private ws: WebSocket | null = null;
   private notifications: AppNotification[] = [];
   private subscribers = new Set<Subscriber>();
-  private timer: number | null = null;
-  private activeUserId: string | null = null;
-  private seq = 1;
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 5;
+  private reconnectDelay = 3000;
+  private reconnectTimer: number | null = null;
+  private user: User | null = null;
+  private heartbeatInterval: number | null = null;
+  private isManualDisconnect = false;
+  private isConnecting = false;
 
   connect(user: User) {
-    if (this.activeUserId === user.id && this.timer) {
-      this.emit();
+    this.user = user;
+    this.isManualDisconnect = false;
+    this.notifications = [];
+    this.emit();
+    this.createConnection();
+  }
+
+  private createConnection() {
+    if (!this.user || this.isConnecting || this.isManualDisconnect) return;
+
+    this.isConnecting = true;
+
+    try {
+      // ❗ Cookie avtomatik yuboriladi
+      this.ws = new WebSocket(WS_URL);
+
+      this.ws.onopen = () => {
+        console.log('✅ WS CONNECTED');
+        this.isConnecting = false;
+        this.reconnectAttempts = 0;
+        this.startHeartbeat();
+
+        this.push({
+          id: `ws-connect-${Date.now()}`,
+          title: 'Aloqa yoqildi',
+          message: 'Real vaqtda bildirishnomalar faol.',
+          created_at: new Date().toISOString(),
+          read: false,
+          type: 'success',
+        });
+      };
+
+      this.ws.onmessage = (event) => {
+        console.log('📩 MESSAGE:', event.data);
+
+        try {
+          const data = JSON.parse(event.data);
+
+          if (data.type === 'notification' || data.notification) {
+            const notification: AppNotification = {
+              id: data.id || `notif-${Date.now()}`,
+              title: data.title || 'Bildirishnoma',
+              message: data.message || data.body || '',
+              created_at: data.created_at || new Date().toISOString(),
+              read: false,
+              type: data.level || 'info',
+            };
+
+            this.push(notification);
+          }
+        } catch {
+          this.push({
+            id: `notif-${Date.now()}`,
+            title: 'Yangi xabar',
+            message: event.data,
+            created_at: new Date().toISOString(),
+            read: false,
+            type: 'info',
+          });
+        }
+      };
+
+      this.ws.onclose = (e) => {
+        console.log('❌ WS CLOSED:', e);
+        this.isConnecting = false;
+        this.stopHeartbeat();
+
+        if (this.isManualDisconnect) return;
+
+        this.push({
+          id: `ws-disconnect-${Date.now()}`,
+          title: 'Aloqa uzildi',
+          message: 'Server bilan aloqa uzildi. Qayta ulanish...',
+          created_at: new Date().toISOString(),
+          read: false,
+          type: 'warning',
+        });
+
+        this.attemptReconnect();
+      };
+
+      this.ws.onerror = (e) => {
+        console.log('🚨 WS ERROR:', e);
+        this.isConnecting = false;
+      };
+    } catch (error) {
+      console.log('❌ WS INIT ERROR:', error);
+      this.isConnecting = false;
+    }
+  }
+
+  private attemptReconnect() {
+    if (this.isManualDisconnect || !this.user) return;
+
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      this.push({
+        id: `ws-failed-${Date.now()}`,
+        title: 'Ulana olmadik',
+        message: 'Serverga ulanish amalga oshmadi.',
+        created_at: new Date().toISOString(),
+        read: false,
+        type: 'warning',
+      });
       return;
     }
 
-    this.disconnect();
-    this.activeUserId = user.id;
-    this.notifications = this.seedNotifications(user);
-    this.emit();
+    this.reconnectAttempts++;
 
-    window.setTimeout(() => {
-      if (this.activeUserId !== user.id) return;
-      this.push(
-        makeNotification(
-          `welcome-${user.id}`,
-          user.is_superuser ? 'Admin panel tayyor' : 'Do\'kon paneli tayyor',
-          user.is_superuser
-            ? 'Barcha boshqaruv bo\'limlari kuzatuv uchun faol.'
-            : `${user.store_name || 'Do\'kon'} bo\'yicha bildirishnomalar yoqildi.`,
-          'success'
-        )
-      );
-    }, 4800);
+    this.reconnectTimer = window.setTimeout(() => {
+      this.createConnection();
+    }, this.reconnectDelay * this.reconnectAttempts);
+  }
 
-    this.timer = window.setInterval(() => {
-      if (this.activeUserId !== user.id) return;
-      this.push(this.generateNotification(user));
-    }, 82000);
+  private startHeartbeat() {
+    this.stopHeartbeat();
+
+    this.heartbeatInterval = window.setInterval(() => {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify({ type: 'ping' }));
+      }
+    }, 30000);
+  }
+
+  private stopHeartbeat() {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
   }
 
   disconnect() {
-    if (this.timer) {
-      window.clearInterval(this.timer);
-      this.timer = null;
+    this.isManualDisconnect = true;
+    this.stopHeartbeat();
+
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
     }
+
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+
+    this.user = null;
   }
 
   subscribe(callback: Subscriber) {
     this.subscribers.add(callback);
-    callback(this.notifications);
+    callback([...this.notifications]);
+
     return () => {
       this.subscribers.delete(callback);
     };
   }
 
   markAsRead(id: string) {
-    this.notifications = this.notifications.map((item) =>
-      item.id === id ? { ...item, read: true } : item
+    this.notifications = this.notifications.map((n) =>
+      n.id === id ? { ...n, read: true } : n
     );
     this.emit();
   }
 
   markAllAsRead() {
-    this.notifications = this.notifications.map((item) => ({ ...item, read: true }));
+    this.notifications = this.notifications.map((n) => ({
+      ...n,
+      read: true,
+    }));
     this.emit();
   }
 
   private push(notification: AppNotification) {
-    this.notifications = [notification, ...this.notifications].slice(0, 12);
+    this.notifications = [notification, ...this.notifications].slice(0, 50);
     this.emit();
   }
 
   private emit() {
-    this.subscribers.forEach((subscriber) => subscriber([...this.notifications]));
+    this.subscribers.forEach((cb) => cb([...this.notifications]));
   }
 
-  private seedNotifications(user: User): AppNotification[] {
-    if (user.is_superuser) {
-      return [
-        makeNotification('seed-1', 'Yangi sotuv', 'Chilonzor filialida 3 ta mahsulot sotildi.', 'success'),
-        makeNotification('seed-2', 'Transfer so\'rovi', 'Sergeli omboridan yangi transfer so\'rovi keldi.', 'warning'),
-      ];
+  send(message: object) {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(message));
     }
-
-    return [
-      makeNotification(
-        'seed-3',
-        'Do\'kon holati',
-        `${user.store_name || 'Do\'kon'} bo\'yicha kunlik statistika yangilandi.`,
-        'info'
-      ),
-      makeNotification('seed-4', 'Yangi buyurtma', 'Sotuv bo\'limida yangi mijoz savdosi boshlandi.', 'success'),
-    ];
-  }
-
-  private generateNotification(user: User): AppNotification {
-    const id = `notif-${this.seq++}`;
-    const storeName = user.store_name || 'Do\'kon';
-
-    if (user.is_superuser) {
-      const items = [
-        makeNotification(id, 'Kirim tasdiqlandi', 'Ombordan yangi kirim operatsiyasi yakunlandi.', 'success'),
-        makeNotification(id, 'Past qoldiq', `${storeName} bo\'yicha ayrim mahsulotlar soni kamaydi.`, 'warning'),
-        makeNotification(id, 'Hisobot tayyor', 'Kunlik moliyaviy hisobot avtomatik yig\'ildi.', 'info'),
-      ];
-      return items[this.seq % items.length];
-    }
-
-    const items = [
-      makeNotification(id, 'Yangi sotuv', `${storeName} da yangi savdo cheki yaratildi.`, 'success'),
-      makeNotification(id, 'Transfer yuborildi', `${storeName} uchun yangi o'tkazma harakati bor.`, 'info'),
-      makeNotification(id, 'Qoldiq eslatmasi', 'Ba\'zi mahsulotlar qoldig\'i minimal darajaga tushdi.', 'warning'),
-    ];
-    return items[this.seq % items.length];
   }
 }
 
-export const notificationService = new MockNotificationSocketService();
+export const notificationService = new NotificationSocketService();
