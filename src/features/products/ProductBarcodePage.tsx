@@ -1,11 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Printer, ArrowLeft } from 'lucide-react';
+import { Printer, ArrowLeft, Image as ImageIcon } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
+import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Label } from '../../components/ui/Label';
+import { useAuthStore } from '../../app/store';
 import { productService } from '../../services/productService';
 import type { Product } from '../../types';
 import { formatCurrency } from '../../utils';
@@ -15,8 +17,19 @@ export function ProductBarcodePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
+  const { user } = useAuthStore();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const formatDate = (dateString: string) => {
+    return new Intl.DateTimeFormat('uz-UZ', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(new Date(dateString));
+  };
 
   const loadProduct = useCallback(async () => {
     if (!id) return;
@@ -245,12 +258,26 @@ export function ProductBarcodePage() {
 
   const batches = product?.batches ?? [];
   const fallbackBarcode = product?.barcode || product?.shtrix_code || product?.sku || '';
-  const displayBatches = batches.length
-    ? batches.map(batch => ({
+  const resolvedUserStoreId = user?.store_id
+    ? String(user.store_id)
+    : user?.stores?.[0]?.id !== undefined
+      ? String(user.stores[0].id)
+      : (user as any)?.store?.id !== undefined
+        ? String((user as any).store.id)
+        : undefined;
+  const userStoreId = resolvedUserStoreId;
+  const canViewAllStores = Boolean(user?.is_superuser || user?.role === 'admin');
+  const visibleBatches = canViewAllStores
+    ? batches
+    : batches.filter((batch) => userStoreId ? String(batch.store) === userStoreId : false);
+
+  const allowFallbackBarcode = canViewAllStores || (userStoreId && String(product?.store_id) === userStoreId);
+  const displayBatches = visibleBatches.length
+    ? visibleBatches.map(batch => ({
         ...batch,
         barcode: batch.barcode || batch.shtrix_code || fallbackBarcode,
       }))
-    : (fallbackBarcode ? [{
+    : (allowFallbackBarcode && fallbackBarcode ? [{
         id: 0,
         product: Number(product?.id || 0),
         store: Number(product?.store_id || 0),
@@ -261,6 +288,8 @@ export function ProductBarcodePage() {
         barcode: fallbackBarcode,
         shtrix_code: product?.shtrix_code ?? null,
       }] : []);
+  const noVisibleBatchesForStore = !canViewAllStores && batches.length > 0 && visibleBatches.length === 0;
+  const imageUrls = product?.images && (Array.isArray(product.images) ? product.images : [product.images]).filter(Boolean) || [];
 
   return (
     <div className="space-y-6">
@@ -291,25 +320,63 @@ export function ProductBarcodePage() {
         <CardHeader>
           <CardTitle>Product Information</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-4">
+        <CardContent className="space-y-6">
+          {/* Basic Info */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <div>
-              <Label className="text-muted-foreground">Name</Label>
-              <p className="font-medium">{product?.name}</p>
+              <Label className="text-muted-foreground text-sm">Name</Label>
+              <p className="font-semibold text-lg">{product?.name}</p>
             </div>
             <div>
-              <Label className="text-muted-foreground">SKU</Label>
-              <p className="font-mono">{product?.sku}</p>
+              <Label className="text-muted-foreground text-sm">Category</Label>
+              <p className="font-medium">{product?.category_name ?? product?.category}</p>
             </div>
             <div>
-              <Label className="text-muted-foreground">Category</Label>
-              <p>{product?.category_name ?? product?.category}</p>
+              <Label className="text-muted-foreground text-sm">Status</Label>
+              <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${product?.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'}`}>
+                {product?.is_active ? 'Active' : 'Inactive'}
+              </span>
             </div>
             <div>
-              <Label className="text-muted-foreground">Selling Price</Label>
-              <p className="font-medium">{formatCurrency(product?.selling_price || 0)}</p>
+              <Label className="text-muted-foreground text-sm">Selling Price</Label>
+              <p className="font-semibold text-xl">{formatCurrency(product?.selling_price || 0)}</p>
             </div>
+            {product?.created_at && (
+              <div>
+                <Label className="text-muted-foreground text-sm">Created</Label>
+                <p className="text-sm text-muted-foreground">{formatDate(product.created_at)}</p>
+              </div>
+            )}
           </div>
+
+          {/* Description */}
+          {product?.description && (
+            <div className="space-y-2">
+              <Label className="text-muted-foreground text-sm">Description</Label>
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{product.description}</p>
+            </div>
+          )}
+
+          {/* Images Gallery */}
+          {imageUrls.length > 0 && (
+            <div>
+              <Label className="text-muted-foreground text-sm mb-3 block">
+                <ImageIcon className="h-4 w-4 inline mr-1" />
+                Images ({imageUrls.length})
+              </Label>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {imageUrls.map((img, idx) => (
+                  <div key={idx} className="relative group aspect-square rounded-lg overflow-hidden bg-muted">
+                    <img 
+                      src={img} 
+                      alt={`Product image ${idx + 1}`}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -319,7 +386,11 @@ export function ProductBarcodePage() {
         </CardHeader>
         <CardContent className="space-y-4 p-0">
           {displayBatches.length === 0 ? (
-            <div className="text-sm text-muted-foreground">{t('common.noData')}</div>
+            <div className="text-sm text-muted-foreground">
+              {noVisibleBatchesForStore
+                ? "Sizning do'konga tegishli barcode yoki partiya topilmadi."
+                : t('common.noData')}
+            </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {displayBatches.map((batch) => {
@@ -336,6 +407,14 @@ export function ProductBarcodePage() {
                             thermalPrinter={false}
                           />
                           <div className="barcode-value mt-1 text-sm font-mono font-medium text-gray-700 dark:text-gray-300">{barcodeValue}</div>
+                          <div className="mt-2 text-sm text-muted-foreground space-y-1">
+                            <div><strong>{t('products.store')}:</strong> {batch.store_name}</div>
+                            <div><strong>{t('products.quantity') || 'Quantity'}:</strong> {batch.quantity}</div>
+                            <div className="flex gap-2 text-xs pt-1">
+                              <span className="text-muted-foreground"><strong>Purchase:</strong> {formatCurrency(Number(batch.purchase_price))}</span>
+                              <span><strong>Sell:</strong> {formatCurrency(Number(batch.selling_price))}</span>
+                            </div>
+                          </div>
                         </>
                       ) : (
                         <div className="text-xs text-muted-foreground">Barcode yo'q</div>
