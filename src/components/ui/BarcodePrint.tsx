@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, memo, useMemo } from 'react';
 import JsBarcode from 'jsbarcode';
 
 interface BarcodePrintProps {
@@ -9,36 +9,41 @@ interface BarcodePrintProps {
   displayValue?: boolean;
 }
 
-export function BarcodePrint({ value, productName, showName = true, thermalPrinter = false, displayValue = true }: BarcodePrintProps) {
+const barcodeOptions = {
+  thermal: {
+    format: 'CODE128',
+    width: 1.8,
+    height: 60,
+    displayValue: false,
+    fontSize: 7,
+    margin: 0,
+    textMargin: 0,
+  },
+  normal: {
+    format: 'CODE128',
+    width: 3,
+    height: 80,
+    fontSize: 11,
+    margin: 0,
+    textMargin: 4,
+  },
+};
+
+export const BarcodePrint = memo(function BarcodePrint({ value, productName, showName = true, thermalPrinter = false, displayValue = true }: BarcodePrintProps) {
   const svgRef = useRef<SVGSVGElement>(null);
+  const prevValue = useRef(value);
 
   useEffect(() => {
-    if (svgRef.current && value) {
-      try {
-        const options = thermalPrinter ? {
-          format: 'CODE128',
-          width: 1.8,
-          height: 60,
-          displayValue: false,
-          fontSize: 7,
-          margin: 0,
-          textMargin: 0,
-        } : {
-          format: 'CODE128',
-          width: 3,
-          height: 80,
-          displayValue,
-          fontSize: 11,
-          margin: 0,
-          textMargin: 4,
-        };
+    if (!svgRef.current || !value || value === prevValue.current) return;
+    prevValue.current = value;
 
-        JsBarcode(svgRef.current, value, options);
-      } catch (error) {
-        console.error('Failed to generate barcode:', error);
-      }
+    try {
+      const options = thermalPrinter ? barcodeOptions.thermal : { ...barcodeOptions.normal, displayValue };
+      JsBarcode(svgRef.current, value, options);
+    } catch (error) {
+      console.error('Failed to generate barcode:', error);
     }
-  }, [value, thermalPrinter]);
+  }, [value, thermalPrinter, displayValue]);
 
   return (
     <div className="flex flex-col items-center">
@@ -48,7 +53,7 @@ export function BarcodePrint({ value, productName, showName = true, thermalPrint
       <svg ref={svgRef}></svg>
     </div>
   );
-}
+});
 
 interface BarcodePrintAllProps {
   items: Array<{
@@ -64,34 +69,36 @@ const isImageUrl = (value: string): boolean => {
   return value.startsWith('/media/') || value.startsWith('http://') || value.startsWith('https://');
 };
 
-function BarcodeDisplay({ value, isImage = false, thermalPrinter = false }: { value: string; isImage?: boolean; thermalPrinter?: boolean }) {
+const BarcodeDisplay = memo(function BarcodeDisplay({ value, isImage = false, thermalPrinter = false }: { value: string; isImage?: boolean; thermalPrinter?: boolean }) {
   const svgRef = useRef<SVGSVGElement>(null);
+  const prevValue = useRef(value);
 
   useEffect(() => {
-    if (svgRef.current && value && !isImage) {
-      try {
-        const options = thermalPrinter ? {
-          format: 'CODE128',
-          width: 1.5,
-          height: 42,
-          displayValue: true,
-          fontSize: 9,
-          margin: 2,
-          textMargin: 2,
-        } : {
-          format: 'CODE128',
-          width: 1.8,
-          height: 48,
-          displayValue: true,
-          fontSize: 10,
-          margin: 0,
-          textMargin: 4,
-        };
+    if (!svgRef.current || !value || isImage || value === prevValue.current) return;
+    prevValue.current = value;
 
-        JsBarcode(svgRef.current, value, options);
-      } catch (error) {
-        console.error('Failed to generate barcode:', error);
-      }
+    try {
+      const options = thermalPrinter ? {
+        format: 'CODE128',
+        width: 1.5,
+        height: 42,
+        displayValue: true,
+        fontSize: 9,
+        margin: 2,
+        textMargin: 2,
+      } : {
+        format: 'CODE128',
+        width: 1.8,
+        height: 48,
+        displayValue: true,
+        fontSize: 10,
+        margin: 0,
+        textMargin: 4,
+      };
+
+      JsBarcode(svgRef.current, value, options);
+    } catch (error) {
+      console.error('Failed to generate barcode:', error);
     }
   }, [value, isImage, thermalPrinter]);
 
@@ -102,19 +109,20 @@ function BarcodeDisplay({ value, isImage = false, thermalPrinter = false }: { va
         alt="Barcode" 
         className="max-w-37.5 h-auto"
         style={{ maxWidth: '150px' }}
+        loading="lazy"
       />
     );
   }
 
   return <svg ref={svgRef}></svg>;
-}
+});
 
-export function BarcodePrintAll({ items }: BarcodePrintAllProps) {
+export const BarcodePrintAll = memo(function BarcodePrintAll({ items }: BarcodePrintAllProps) {
   const [printMode, setPrintMode] = useState(false);
+  const printContentRef = useRef<HTMLDivElement>(null);
 
-  const handlePrint = () => {
-    const printContent = document.getElementById('barcode-print-container');
-    if (!printContent) return;
+  const handlePrint = useCallback(() => {
+    if (!printContentRef.current) return;
     
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
@@ -151,15 +159,15 @@ export function BarcodePrintAll({ items }: BarcodePrintAllProps) {
           </style>
         </head>
         <body>
-          ${printContent.innerHTML}
+          ${printContentRef.current.innerHTML}
         </body>
       </html>
     `);
     printWindow.document.close();
     setTimeout(() => printWindow.print(), 500);
-  };
+  }, []);
 
-  const allBarcodes = items
+  const allBarcodes = useMemo(() => items
     .filter(item => item.shtrix_code || item.barcode)
     .map(item => {
       const barcodeValue = item.shtrix_code || item.barcode || '';
@@ -170,7 +178,7 @@ export function BarcodePrintAll({ items }: BarcodePrintAllProps) {
         product_name: item.product_name,
       };
     })
-    .filter((item): item is NonNullable<typeof item> => item !== undefined);
+    .filter((item): item is NonNullable<typeof item> => item !== undefined), [items]);
 
   if (allBarcodes.length === 0) return null;
 
@@ -202,7 +210,7 @@ export function BarcodePrintAll({ items }: BarcodePrintAllProps) {
             </button>
           </div>
           
-          <div id="barcode-print-container" className="flex flex-wrap gap-2 p-4 bg-gray-50 rounded">
+          <div ref={printContentRef} className="flex flex-wrap gap-2 p-4 bg-gray-50 rounded">
             {allBarcodes.map((item, idx) => (
               <div key={idx} className="barcode-item p-2 bg-white">
                 <div className="product-name text-xs">{item.product_name}</div>
@@ -216,4 +224,4 @@ export function BarcodePrintAll({ items }: BarcodePrintAllProps) {
       )}
     </div>
   );
-}
+});

@@ -510,11 +510,22 @@ export function SalesPage() {
 
   return (
     <div>
-      <style>{`
+<style>{`
         @media print {
+          @page { size: 58mm auto; margin: 0; }
           body * { visibility: hidden; }
           .receipt-print, .receipt-print * { visibility: visible; }
-          .receipt-print { position: absolute; left: 0; top: 0; width: 100%; }
+          .receipt-print { 
+            position: absolute; 
+            left: 0; 
+            top: 0; 
+            width: 75mm; 
+            min-height: 100mm;
+            height: 100mm;
+            background: white; 
+            padding: 2mm;
+            overflow: visible;
+          }
         }
       `}</style>
       {/* /* Main Sales Interface */ }
@@ -530,7 +541,7 @@ export function SalesPage() {
             <div className="bg-card border border-gray-900 rounded-lg flex min-h-80 flex-col p-3 xl:min-h-0 xl:flex-1">
               <div className="mb-3">
                 <h4 className="text-base font-semibold flex items-center gap-2 dark:text-white mb-2">
-                  32dxqф  ёй1ё                  </h4>
+                  Mahsulotlar                  </h4>
                 <div className="flex flex-col justify-between gap-2 sm:flex-row">
                   <div className="relative w-full">
                     <Search className="absolute left-2.5 top-3 h-4 w-4 text-muted-foreground dark:text-gray-400 z-10" />
