@@ -265,7 +265,7 @@ export function SalesDetailPage() {
               </div>
               <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20">
                 <p className="text-sm text-muted-foreground mb-1">Qarz</p>
-                <p className="text-xl font-bold text-amber-600">{formatCurrency(sale.debt == null ? 0 : sale.debt)}</p>
+                <p className="text-xl font-bold text-amber-600">{formatCurrency(Number(sale.debt) || 0)}</p>
               </div>
               <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20">
                 <p className="text-sm text-muted-foreground mb-1">Holat</p>
@@ -395,7 +395,7 @@ export function SalesDetailPage() {
           <div className="space-y-4">
             <div className="p-4 rounded-lg bg-muted">
               <p className="text-sm text-muted-foreground">Jami qarz</p>
-              <p className="text-xl font-bold text-amber-500">{formatCurrency(sale?.debt || 0)}</p>
+              <p className="text-xl font-bold text-amber-500">{formatCurrency(Number(sale?.debt) || 0)}</p>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">To'lov summasi</label>
@@ -463,9 +463,9 @@ export function SalesDetailPage() {
                 <span>{formatCurrency(parseFloat(sale.total_amount))}</span>
               </div>
             </div>
-            <div className="text-xs border-t dark:border-gray-600 mt-2 pt-2 dark:text-gray-300">
+<div className="text-xs border-t dark:border-gray-600 mt-2 pt-2 dark:text-gray-300">
               <div className="flex justify-between"><span>Naqd:</span><span>{formatCurrency(parseFloat(sale.paid_amount))}</span></div>
-              {sale.debt && parseFloat(sale.debt) > 0 && <div className="flex justify-between text-red-500"><span>Qarz:</span><span>{formatCurrency(parseFloat(sale.debt))}</span></div>}
+              {sale.debt && Number(sale.debt) > 0 && <div className="flex justify-between text-red-500"><span>Qarz:</span><span>{formatCurrency(Number(sale.debt))}</span></div>}
             </div>
             <div className="text-center text-xs mt-2 dark:text-gray-400">Xaridingiz uchun rahmat!</div>
             <div className="flex gap-2 mt-4 print-hidden">
