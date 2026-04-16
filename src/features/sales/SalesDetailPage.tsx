@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, User, ShoppingCart, CreditCard, Calendar, Tag, DollarSign, Wallet } from 'lucide-react';
+import { ArrowLeft, User, ShoppingCart, CreditCard, Calendar, Tag, DollarSign, Wallet, Printer } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -35,6 +35,7 @@ export function SalesDetailPage() {
     type: 'cash' | 'card';
     created_at: string;
   }>>([]);
+  const [showReceipt, setShowReceipt] = useState(false);
 
   useEffect(() => {
     const loadSale = async () => {
@@ -151,9 +152,49 @@ export function SalesDetailPage() {
     );
   }
 
+  const handlePrint = () => {
+    setShowReceipt(true);
+    setTimeout(() => window.print(), 100);
+  };
+
+  const handleCloseReceipt = () => {
+    setShowReceipt(false);
+  };
+
   return (
     <div className="space-y-6">
-      <PageHeader title={t('sales.saleDetails')} description={t('sales.receiptDescription')} />
+      <style>{`
+        @media print {
+          @page { size: 75mm auto; margin: 0; }
+          body * { visibility: hidden; }
+          .receipt-print, .receipt-content, .receipt-print *, .receipt-content * { visibility: visible; }
+          .receipt-print, .receipt-content { 
+            position: absolute; 
+            left: 0; 
+            top: 0; 
+            width: 75mm; 
+            min-height: 80mm;
+            height: 80mm;
+            background: white; 
+            padding: 2mm;
+            font-size: 9px;
+            line-height: 1.3;
+            overflow: visible;
+          }
+          .print-hidden { display: none !important; }
+        }
+        }
+      `}</style>
+      <PageHeader 
+        title={t('sales.saleDetails')} 
+        description={t('sales.receiptDescription')}
+        actions={
+          <Button variant="outline" onClick={handlePrint}>
+            <Printer className="mr-2 h-4 w-4" />
+            Chop etish
+          </Button>
+        }
+      />
 
       <div className="flex justify-between">
         <Link to={`/${lang}/sales`} className="w-full sm:w-auto">
@@ -180,7 +221,7 @@ export function SalesDetailPage() {
                         {index + 1}
                       </div>
                       <div>
-                        <p className="font-medium">Mahsulot #{item.product}</p>
+                        <p className="font-medium">{item.product_name || `Mahsulot #${item.product}`}</p>
                         <p className="text-sm text-muted-foreground">{item.quantity} x {formatCurrency(parseFloat(item.unit_price))}</p>
                       </div>
                     </div>
@@ -386,8 +427,54 @@ export function SalesDetailPage() {
               </Button>
             </div>
           </div>
-        </DialogContent>
+</DialogContent>
       </Dialog>
+
+      {showReceipt && sale && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={handleCloseReceipt}>
+          <div className="receipt-content receipt-print bg-white dark:bg-gray-800 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto p-4" onClick={e => e.stopPropagation()}>
+            <div className="text-center border-b dark:border-gray-600 pb-3 mb-3">
+              <h4 className="text-xl font-bold dark:text-white">AvtoCRM</h4>
+              <p className="text-sm dark:text-gray-300">Sotuv cheki #{sale.id}</p>
+              <p className="text-xs dark:text-gray-400">{formatDate(sale.created_at)}</p>
+            </div>
+            <div className="text-xs border-b dark:border-gray-600 pb-2 mb-2 dark:text-gray-300">
+              {sale.store_name && <div className="flex justify-between"><span>Do'kon:</span><span>{sale.store_name}</span></div>}
+              {sale.seller_name && <div className="flex justify-between"><span>Sotuvchi:</span><span>{sale.seller_name}</span></div>}
+              {sale.customer_name && <div className="flex justify-between"><span>Mijoz:</span><span>{sale.customer_name}</span></div>}
+            </div>
+            <div className="space-y-1 text-sm dark:text-gray-300">
+              {sale.items?.map((item, idx) => (
+                <div key={idx} className="flex justify-between">
+                  <span>{item.product_name || `#${item.product}`} x{item.quantity}</span>
+                  <span>{formatCurrency(parseFloat(item.total_price))}</span>
+                </div>
+              ))}
+            </div>
+            {sale.discount_amount && parseFloat(sale.discount_amount) > 0 && (
+              <div className="flex justify-between text-red-500 text-xs">
+                <span>Chegirma:</span>
+                <span>-{formatCurrency(parseFloat(sale.discount_amount))}</span>
+              </div>
+            )}
+            <div className="border-t dark:border-gray-600 pt-2 mt-2">
+              <div className="flex justify-between font-bold dark:text-white">
+                <span>JAMI:</span>
+                <span>{formatCurrency(parseFloat(sale.total_amount))}</span>
+              </div>
+            </div>
+            <div className="text-xs border-t dark:border-gray-600 mt-2 pt-2 dark:text-gray-300">
+              <div className="flex justify-between"><span>Naqd:</span><span>{formatCurrency(parseFloat(sale.paid_amount))}</span></div>
+              {sale.debt && parseFloat(sale.debt) > 0 && <div className="flex justify-between text-red-500"><span>Qarz:</span><span>{formatCurrency(parseFloat(sale.debt))}</span></div>}
+            </div>
+            <div className="text-center text-xs mt-2 dark:text-gray-400">Xaridingiz uchun rahmat!</div>
+            <div className="flex gap-2 mt-4 print-hidden">
+              <Button className="flex-1" onClick={(e) => { e.stopPropagation(); window.print(); }}>Chop etish</Button>
+              <Button variant="outline" className="flex-1" onClick={handleCloseReceipt}>Yopish</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

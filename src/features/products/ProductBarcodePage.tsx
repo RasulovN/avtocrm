@@ -2,8 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Printer, ArrowLeft, Image as ImageIcon } from 'lucide-react';
-import { PageHeader } from '../../components/shared/PageHeader';
-import { Badge } from '../../components/ui/Badge';
+import { PageHeader } from '../../components/shared/PageHeader'; 
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Label } from '../../components/ui/Label';
@@ -156,14 +155,9 @@ export function ProductBarcodePage() {
       const barcodeValue = batch.barcode || batch.shtrix_code || '';
       return `
         <div class="barcode-card">
-          <div class="barcode-section">
-            ${barcodeValue ? `
-              <svg id="barcode-svg-${index}"></svg>
-              <div class="barcode-value">${barcodeValue}</div>
-            ` : ''}
-          </div>
+          <svg id="barcode-svg-${index}"></svg>
+          <div class="barcode-value">${barcodeValue}</div>
         </div>
-        ${index < displayBatches.length - 1 ? '<div style="page-break-after: always;"></div>' : ''}
       `;
     }).join('');
 
@@ -174,45 +168,46 @@ export function ProductBarcodePage() {
           <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
           <style>
             @page {
-              size: 28mm 16mm;
-              margin: 0;
+              size: A4;
+              margin: 3mm;
             }
             body {
-              font-family: 'Consolas', 'Courier New', monospace;
+              font-family: 'Consolas', monospace;
               margin: 0;
-              padding: 0;
+              padding: 5px;
               text-align: center;
-              font-size: 6px;
-              width: 28mm;
-              height: 16mm;
-              box-sizing: border-box;
+            }
+            .barcode-container {
+              display: flex;
+              flex-wrap: wrap;
+              justify-content: center;
+              gap: 3mm;
             }
             .barcode-card { 
-              width: 28mm;
-              height: 16mm;
-              display: grid;
+              width: 32mm;
+              height: 18mm;
+              display: flex;
+              flex-direction: column;
               justify-content: center;
               align-items: center;
-            }
-            .barcode-section { 
-              margin: 0; 
+              padding: 1mm;
             }
             .barcode-value { 
               font-family: 'Consolas', monospace; 
-              font-size: 9px; 
-              font-weight: normal;
+              font-size: 6px; 
               margin-top: 1px;
-              letter-spacing: 1px;
             }
             svg { 
-              width: 26mm; 
-              height: 12mm; 
+              width: 28mm; 
+              height: 10mm; 
               display: block;
             }
           </style>
         </head>
         <body>
-          ${barcodeCards}
+          <div class="barcode-container">
+            ${barcodeCards}
+          </div>
           <script>
             window.onload = function() {
               ${displayBatches.map((batch, index) => {
@@ -221,8 +216,8 @@ export function ProductBarcodePage() {
                   try {
                     JsBarcode('#barcode-svg-${index}', '${barcodeValue}', {
                       format: 'CODE128',
-                      width: 1.5,
-                      height: 90,
+                      width: 1,
+                      height: 30,
                       displayValue: false,
                       margin: 0,
                       textMargin: 0,
@@ -363,6 +358,7 @@ export function ProductBarcodePage() {
                     <img 
                       src={img} 
                       alt={`Product image ${idx + 1}`}
+                      loading="lazy"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                     />
                   </div>
