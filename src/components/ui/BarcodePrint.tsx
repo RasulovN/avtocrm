@@ -17,12 +17,12 @@ export function BarcodePrint({ value, productName, showName = true, thermalPrint
       try {
         const options = thermalPrinter ? {
           format: 'CODE128',
-          width: 1.5, // Optimized for thermal printers
-          height: 45, // Suitable height for thermal paper
-          displayValue,
-          fontSize: 10, // Smaller font for thermal paper
-          margin: 2, // Minimal margins
-          textMargin: 2,
+          width: 1.8,
+          height: 60,
+          displayValue: false,
+          fontSize: 7,
+          margin: 0,
+          textMargin: 0,
         } : {
           format: 'CODE128',
           width: 3,
