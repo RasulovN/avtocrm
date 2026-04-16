@@ -6,9 +6,10 @@ interface BarcodePrintProps {
   productName?: string;
   showName?: boolean;
   thermalPrinter?: boolean;
+  displayValue?: boolean;
 }
 
-export function BarcodePrint({ value, productName, showName = true, thermalPrinter = false }: BarcodePrintProps) {
+export function BarcodePrint({ value, productName, showName = true, thermalPrinter = false, displayValue = true }: BarcodePrintProps) {
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
@@ -18,15 +19,15 @@ export function BarcodePrint({ value, productName, showName = true, thermalPrint
           format: 'CODE128',
           width: 1.5, // Optimized for thermal printers
           height: 45, // Suitable height for thermal paper
-          displayValue: true,
+          displayValue,
           fontSize: 10, // Smaller font for thermal paper
           margin: 2, // Minimal margins
           textMargin: 2,
         } : {
           format: 'CODE128',
-          width: 1.8,
-          height: 52,
-          displayValue: true,
+          width: 3,
+          height: 80,
+          displayValue,
           fontSize: 11,
           margin: 0,
           textMargin: 4,
