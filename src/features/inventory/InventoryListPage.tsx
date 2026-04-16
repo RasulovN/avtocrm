@@ -155,6 +155,211 @@ export function InventoryListPage() {
     setBarcodeItems(item.items || []);
     setShowBarcodeDialog(true);
   };
+ 
+  const handlePrintInventoryBarcode = (item: DisplayInventory, itemIndex: number) => {
+    const invItem = item.items?.[itemIndex];
+    if (!invItem) return;
+
+    const shtrixCode = invItem.shtrix_code || '';
+    const productBarcode = invItem.product_barcode || '';
+    // Always use product_barcode for JsBarcode generation (more reliable)
+    const barcodeValue = productBarcode || shtrixCode.replace(/.*\//, '').replace(/\..*/, '') || shtrixCode;
+    
+    if (!barcodeValue) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+     printWindow.document.write(`
+      <html>
+        <head>
+          <title>Print Barcode</title>
+          <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+          <style>
+            @page {
+              size: 28mm 16mm;
+              margin: 0;
+            }
+            body { 
+              font-family: 'Consolas', 'Courier New', monospace; 
+              margin: 0; 
+              padding: 0;
+              text-align: center;
+              font-size: 6px;
+              width: 28mm;
+              height: 16mm;
+              box-sizing: border-box;
+            }
+            .barcode-card { 
+              border: none; 
+              padding: 0;
+              margin: 0;
+              text-align: center;
+              width: 28mm;
+              height: 16mm;
+              box-sizing: border-box;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              align-items: center;
+            }
+            .barcode-section { 
+              margin: 0; 
+            }
+            .barcode-value { 
+              font-family: 'Consolas', monospace; 
+              font-size: 8px; 
+              font-weight: bold;
+              margin-top: 1px;
+              letter-spacing: 1px;
+            }
+            svg { 
+              width: auto;
+              max-width: 26mm; 
+              height: 12mm; 
+              display: block;
+              margin: 0 auto;
+            }
+            @media print {
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="barcode-card">
+            <div class="barcode-section">
+              ${barcodeValue ? `
+                <svg id="barcode-svg"></svg>
+                <div class="barcode-value">${barcodeValue}</div>
+              ` : ''}
+            </div>
+          </div>
+          <script>
+            window.onload = function() {
+              ${barcodeValue ? `
+                try {
+                  JsBarcode('#barcode-svg', '${barcodeValue}', {
+                    format: 'CODE128',
+                    width: 1.5,
+                    height: 90,
+                    displayValue: false,
+                    margin: 0,
+                    textMargin: 0,
+                  });
+                } catch(e) {
+                  console.error('Barcode error:', e);
+                }
+              ` : ''}
+              setTimeout(function() { window.print(); }, 300);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const handlePrintAllInventoryBarcodes = (item: DisplayInventory) => {
+    const items = item.items || [];
+    if (items.length === 0) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const barcodeCards = items.map((invItem, index) => {
+      const shtrixCode = invItem.shtrix_code || '';
+      const productBarcode = invItem.product_barcode || '';
+      const barcodeValue = productBarcode || shtrixCode.replace(/.*\//, '').replace(/\..*/, '') || shtrixCode;
+      if (!barcodeValue) return '';
+
+      return `
+        <div class="barcode-card">
+          <div class="barcode-section">
+            ${barcodeValue ? `
+              <svg id="barcode-svg-${index}"></svg>
+              <div class="barcode-value">${barcodeValue}</div>
+            ` : ''}
+          </div>
+        </div>
+        ${index < items.length - 1 ? '<div style="page-break-after: always;"></div>' : ''}
+      `;
+    }).join('');
+
+   printWindow.document.write(`
+      <html>
+        <head>
+          <title>Print All Barcodes</title>
+          <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+          <style>
+            @page {
+              size: 28mm 16mm;
+              margin: 0;
+            }
+            body {
+              font-family: 'Consolas', 'Courier New', monospace;
+              margin: 0;
+              padding: 0;
+              text-align: center;
+              font-size: 6px;
+              width: 28mm;
+              height: 16mm;
+              box-sizing: border-box;
+            }
+            .barcode-card { 
+              width: 28mm;
+              height: 16mm;
+              display: grid;
+              justify-content: center;
+              align-items: center;
+            }
+            .barcode-section { 
+              margin: 0; 
+            }
+            .barcode-value { 
+              font-family: 'Consolas', monospace; 
+              font-size: 10px; 
+              font-weight: normal;
+              margin-top: 1px;
+              letter-spacing: 1px;
+            }
+            svg { 
+              width: 26mm; 
+              height: 12mm; 
+              display: flex;
+            }
+          </style>
+        </head>
+        <body>
+          ${barcodeCards}
+          <script>
+            window.onload = function() {
+              ${items.map((invItem, index) => {
+                const shtrixCode = invItem.shtrix_code || '';
+                const productBarcode = invItem.product_barcode || '';
+                const barcodeValue = productBarcode || shtrixCode.replace(/.*\//, '').replace(/\..*/, '') || shtrixCode;
+                return barcodeValue ? `
+                  try {
+                    JsBarcode('#barcode-svg-${index}', '${barcodeValue}', {
+                      format: 'CODE128',
+                      width: 1.5,
+                      height: 90,
+                      displayValue: false,
+                      margin: 0,
+                      textMargin: 0,
+                    });
+                  } catch (error) {
+                    console.error('Failed to generate barcode ${index}:', error);
+                  }
+                ` : '';
+              }).join('')}
+              setTimeout(function() { window.print(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
 
   const handlePayDebt = () => {
     if (!selectedInventory || !selectedInventory.debt) return;
@@ -249,7 +454,7 @@ export function InventoryListPage() {
             <Eye className="h-4 w-4" />
           </Button>
           {item.items && item.items.length > 0 && (
-            <Button variant="ghost" size="sm" onClick={() => handlePrintBarcodes(item)} title="Print Barcodes">
+            <Button variant="ghost" size="sm" onClick={() => handlePrintAllInventoryBarcodes(item)} title="Print All Barcodes">
               <Printer className="h-4 w-4" />
             </Button>
           )}
@@ -405,19 +610,31 @@ export function InventoryListPage() {
                       variant="outline"
                       size="sm"
                       className="w-full sm:w-auto"
-                      onClick={() => handlePrintBarcodes(selectedInventory)}
+                      onClick={() => handlePrintAllInventoryBarcodes(selectedInventory)}
                     >
                       <Printer className="mr-2 h-4 w-4" />
-                      {t('products.printBarcode')}
+                      {t('products.printAllBarcodes')}
                     </Button>
                   </div>
                   <div className="space-y-3 md:hidden">
                     {selectedInventory.items.map((item, idx) => (
                       <Card key={idx}>
                         <CardContent className="space-y-3 p-4">
-                          <div>
-                            <p className="font-medium">{item.product_name}</p>
-                            <p className="mt-1 text-xs font-mono text-muted-foreground">{item.product_sku}</p>
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <p className="font-medium">{item.product_name}</p>
+                              <p className="mt-1 text-xs font-mono text-muted-foreground">{item.product_sku}</p>
+                            </div>
+                            {(item.shtrix_code || item.product_barcode) && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handlePrintInventoryBarcode(selectedInventory, idx)}
+                                title="Print Barcode"
+                              >
+                                <Printer className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                           <div className="grid grid-cols-2 gap-3 text-sm">
                             <div className="rounded-lg bg-muted/30 p-3">
@@ -451,6 +668,7 @@ export function InventoryListPage() {
                           <TableHead>Qty</TableHead>
                           <TableHead>Price</TableHead>
                           <TableHead>Total</TableHead>
+                          <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -462,6 +680,18 @@ export function InventoryListPage() {
                             <TableCell>{item.quantity}</TableCell>
                             <TableCell>{formatCurrency(item.purchase_price)}</TableCell>
                             <TableCell className="font-medium">{formatCurrency(item.total)}</TableCell>
+                            <TableCell>
+                              {(item.shtrix_code || item.product_barcode) && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handlePrintInventoryBarcode(selectedInventory, idx)}
+                                  title="Print Barcode"
+                                >
+                                  <Printer className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>

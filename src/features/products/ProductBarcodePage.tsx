@@ -98,7 +98,7 @@ export function ProductBarcodePage() {
             .barcode-value { 
               font-family: 'Consolas', monospace; 
               font-size: 8px; 
-              font-weight: bold;
+              font-weight: normal;
               margin-top: 1px;
               letter-spacing: 1px;
             }
@@ -187,27 +187,20 @@ export function ProductBarcodePage() {
               height: 16mm;
               box-sizing: border-box;
             }
-            .barcode-card {
-              border: none;
-              padding: 0;
-              margin: 0;
-              text-align: center;
+            .barcode-card { 
               width: 28mm;
               height: 16mm;
-              box-sizing: border-box;
-              display: flex;
-              flex-direction: column;
+              display: grid;
               justify-content: center;
               align-items: center;
-              page-break-after: always;
             }
             .barcode-section { 
               margin: 0; 
             }
             .barcode-value { 
               font-family: 'Consolas', monospace; 
-              font-size: 5px; 
-              font-weight: bold;
+              font-size: 9px; 
+              font-weight: normal;
               margin-top: 1px;
               letter-spacing: 1px;
             }
