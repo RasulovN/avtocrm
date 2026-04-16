@@ -258,6 +258,7 @@ export function InventoryListPage() {
           <div class="barcode-section">
             ${barcodeValue ? `
               <svg id="barcode-svg-${index}"></svg>
+              <div class="barcode-value">${barcodeValue}</div>
             ` : ''}
           </div>
         </div>
@@ -272,7 +273,7 @@ export function InventoryListPage() {
           <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
           <style>
             @page {
-              size: 80mm 45mm;
+              size: 28mm 16mm;
               margin: 0;
             }
             body {
@@ -280,39 +281,32 @@ export function InventoryListPage() {
               margin: 0;
               padding: 0;
               text-align: center;
-              font-size: 14px;
-              width: 80mm;
-              height: 45mm;
+              font-size: 6px;
+              width: 28mm;
+              height: 16mm;
               box-sizing: border-box;
             }
-            .barcode-card {
-              border: none;
-              padding: 0;
-              margin: 0;
-              text-align: center;
-              width: 80mm;
-              height: 45mm;
-              box-sizing: border-box;
-              display: flex;
-              flex-direction: column;
+            .barcode-card { 
+              width: 28mm;
+              height: 16mm;
+              display: grid;
               justify-content: center;
               align-items: center;
-              page-break-after: always;
             }
             .barcode-section { 
               margin: 0; 
             }
             .barcode-value { 
               font-family: 'Consolas', monospace; 
-              font-size: 14px; 
-              font-weight: bold;
+              font-size: 10px; 
+              font-weight: normal;
               margin-top: 1px;
-              letter-spacing: 2px;
+              letter-spacing: 1px;
             }
             svg { 
-              width: 78mm; 
-              height: 48mm; 
-              display: block;
+              width: 26mm; 
+              height: 12mm; 
+              display: flex;
             }
           </style>
         </head>
@@ -328,12 +322,11 @@ export function InventoryListPage() {
                   try {
                     JsBarcode('#barcode-svg-${index}', '${barcodeValue}', {
                       format: 'CODE128',
-                      width: 2,
-                      height: 70,
-                      displayValue: true,
-                      fontSize: 18,
+                      width: 1.5,
+                      height: 90,
+                      displayValue: false,
                       margin: 0,
-                      textMargin: 1,
+                      textMargin: 0,
                     });
                   } catch (error) {
                     console.error('Failed to generate barcode ${index}:', error);
