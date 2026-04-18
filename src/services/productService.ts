@@ -48,11 +48,13 @@ const normalizeImages = (images?: unknown[] | string | unknown, image?: unknown)
 };
 
 const normalizeProduct = (raw: unknown): Product => {
-  const item = (raw ?? {}) as Partial<Product> & {
+const item = (raw ?? {}) as Partial<Product> & {
     id?: string | number;
-    product?: string;
+    product?: number;
     product_name?: string;
     title?: string;
+    title_uz?: string;
+    title_uz_cyrl?: string;
     name_uz?: string;
     name_uz_cyrl?: string;
     barcode_value?: string;
@@ -119,9 +121,9 @@ const normalizeProduct = (raw: unknown): Product => {
   const sellingPrice = normalizeNumber(item.selling_price ?? item.price) ?? minSellingPrice;
 
   return {
-    id: String(item.id ?? item.product_id ?? item.barcode ?? item.barcode_value ?? item.shtrix_code ?? item.sku ?? item.product ?? item.product_name ?? ''),
-    product_id: item.product_id ? String(item.product_id) : undefined,
-    name: item.name ?? item.product ?? item.product_name ?? item.title ?? item.name_uz ?? item.name_uz_cyrl ?? '',
+    id: String(item.product ?? item.id ?? item.product_id ?? item.barcode ?? item.barcode_value ?? item.shtrix_code ?? item.sku ?? item.product_name ?? ''),
+    product_id: item.product ? String(item.product) : (item.product_id ? String(item.product_id) : undefined),
+    name: item.name ?? item.product_name ?? item.title ?? item.name_uz ?? item.name_uz_cyrl ?? item.title_uz ?? item.title_uz_cyrl ?? '',
     description: item.description ?? item.description_uz ?? item.description_uz_cyrl ?? '',
     category: typeof item.category === 'number' ? item.category : (categoryInfo.id ? Number(categoryInfo.id) : 0),
     category_name: categoryInfo.name ?? (typeof item.category === 'string' ? item.category : '') ?? '',
@@ -349,8 +351,21 @@ export const productService = {
     }
   },
 
-  search: async (query: string): Promise<Product[]> => {
-    const response = await apiClient.get(`/products/search/${encodeURIComponent(query)}/`);
-    return parsePaginatedProducts(response.data).data;
+search: async (query: string): Promise<Product[]> => {
+    const response = await apiClient.get<unknown>(`/products/search/${encodeURIComponent(query)}/`);
+    const data = response.data;
+    if (Array.isArray(data)) {
+      return data.map(normalizeProduct);
+    }
+    if (data && typeof data === 'object') {
+      const anyData = data as { results?: unknown; data?: unknown };
+      if (Array.isArray(anyData.results)) {
+        return anyData.results.map(normalizeProduct);
+      }
+      if (Array.isArray(anyData.data)) {
+        return anyData.data.map(normalizeProduct);
+      }
+    }
+    return [];
   },
 };

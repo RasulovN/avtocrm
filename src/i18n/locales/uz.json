@@ -233,7 +233,11 @@
     "items": "mahsulot",
     "summary": "Yakun",
     "receipt": "Chek",
-    "receiptDescription": "Tranzaksiya tafsilotlari"
+    "receiptDescription": "Tranzaksiya tafsilotlari",
+    "paid": "To'langan",
+    "change": "Qaytim",
+    "discount": "Chiqim",
+    "discountAmount": "Chiqim miqdori"
   },
   "customers": {
     "title": "Mijozlar",
