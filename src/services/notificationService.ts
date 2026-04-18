@@ -1,4 +1,5 @@
 import type { User } from '../types';
+import { logger } from '../utils/logger';
 
 export interface AppNotification {
   id: string;
@@ -44,7 +45,7 @@ class NotificationSocketService {
       this.ws = new WebSocket(WS_URL);
 
       this.ws.onopen = () => {
-        console.log('✅ WS CONNECTED');
+        logger.info('✅ WS CONNECTED');
         this.isConnecting = false;
         this.reconnectAttempts = 0;
         this.startHeartbeat();
@@ -60,7 +61,6 @@ class NotificationSocketService {
       };
 
       this.ws.onmessage = (event) => {
-        console.log('📩 MESSAGE:', event.data);
 
         try {
           const data = JSON.parse(event.data);
@@ -90,7 +90,7 @@ class NotificationSocketService {
       };
 
       this.ws.onclose = (e) => {
-        console.log('❌ WS CLOSED:', e);
+        logger.info('❌ WS CLOSED:', e);
         this.isConnecting = false;
         this.stopHeartbeat();
 
@@ -109,11 +109,11 @@ class NotificationSocketService {
       };
 
       this.ws.onerror = (e) => {
-        console.log('🚨 WS ERROR:', e);
+        logger.error('🚨 WS ERROR:', e);
         this.isConnecting = false;
       };
     } catch (error) {
-      console.log('❌ WS INIT ERROR:', error);
+      logger.error('❌ WS INIT ERROR:', error);
       this.isConnecting = false;
     }
   }

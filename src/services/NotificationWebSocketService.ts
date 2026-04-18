@@ -132,7 +132,7 @@ export class NotificationWebSocketService {
   }
 
   private log(...args: any[]) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (import.meta.env?.DEV) {
       // eslint-disable-next-line no-console
       console.log('[NotificationWS]', ...args);
     }
