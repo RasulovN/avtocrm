@@ -16,7 +16,7 @@ import {
 } from '../../components/ui/Dialog';
 import { DataTable, type Column } from '../../components/shared/DataTable';
 import { customerApiService } from '../../services/customerService';
-import { formatDate } from '../../utils';
+import { formatDate, formatCurrency } from '../../utils';
 
 interface CustomerFromApi {
   id: number;
@@ -70,6 +70,12 @@ export function CustomerListPage() {
       customer.phone_number.toString().includes(normalizedQuery)
     );
   }, [customers, search]);
+
+  const stats = useMemo(() => {
+    const totalCustomers = customers.length;
+    const totalDebt = customers.reduce((sum, c) => sum + (Number(c.debt) || Number(c.total_debt) || 0), 0);
+    return { totalCustomers, totalDebt };
+  }, [customers]);
 
   const tableData = useMemo<CustomerRow[]>(
     () =>
@@ -230,6 +236,17 @@ export function CustomerListPage() {
             <Plus className="mr-2 h-4 w-4" />
             {t('customers.addCustomer')}
           </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="rounded-lg border bg-card p-4 shadow-sm">
+          <p className="text-sm text-muted-foreground">Jami mijozlar</p>
+          <p className="text-2xl font-bold">{stats.totalCustomers}</p>
+        </div>
+        <div className="rounded-lg border bg-card p-4 shadow-sm">
+          <p className="text-sm text-muted-foreground">Jami qarzdorlik</p>
+          <p className="text-2xl font-bold text-red-500">{formatCurrency(stats.totalDebt)}</p>
         </div>
       </div>
 

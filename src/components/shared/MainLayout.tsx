@@ -51,7 +51,7 @@ interface SubNavItem {
 const navItems: NavItem[] = [
   { titleKey: 'nav.dashboard', href: '/dashboard', icon: LayoutDashboard, access: 'all' },
   { titleKey: 'nav.products', href: '/products', icon: Package, access: 'all' },
-  { titleKey: 'nav.categories', href: '/categories', icon: Tags, access: 'all' },
+  // { titleKey: 'nav.categories', href: '/categories', icon: Tags, access: 'all' },
   { titleKey: 'nav.inventory', href: '/inventory', icon: ArrowDownToLine, access: 'superuser' },
   { titleKey: 'nav.transfers', href: '/transfers', icon: ArrowRightLeft, access: 'all' },
   { titleKey: 'nav.sales', href: '/sales', icon: DollarSign, access: 'all' },
@@ -77,6 +77,11 @@ const subNavs: Record<string, SubNavItem[]> = {
   '/sales': [
     { titleKey: 'sales.list', href: '/sales', icon: List },
     { titleKey: 'sales.newSale', href: '/sales/new', icon: Plus },
+  ],
+  '/products': [
+    { titleKey: 'products.list', href: '/products', icon: List },
+    { titleKey: 'categories.title', href: '/categories', icon: Tags },
+    { titleKey: 'products.addProduct', href: '/products/new', icon: Plus },
   ],
   '/stores': [
     { titleKey: 'stores.list', href: '/stores', icon: List },

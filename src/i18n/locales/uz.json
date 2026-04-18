@@ -96,6 +96,7 @@
   },
   "products": {
     "title": "Mahsulotlar",
+    "list": "Ro'yxat",
     "addProduct": "Mahsulot qo'shish",
     "editProduct": "Mahsulotni tahrirlash",
     "productName": "Mahsulot nomi",
@@ -131,6 +132,7 @@
   },
   "categories": {
     "title": "Kategoriyalar",
+    "list": "Ro'yxat",
     "addCategory": "Kategoriya qo'shish",
     "editCategory": "Kategoriyani tahrirlash",
     "categoryName": "Kategoriya nomi",

@@ -111,10 +111,7 @@ function DocumentMetaSync() {
     } else if (path.includes('/customers')) {
       title = 'Mijozlar - AvtoCRM';
       description = "AvtoCRM mijozlar bo'limi. Mijozlar ro'yxati, buyurtmalari, to'lovlari va qarz tarixini ko'ring.";
-    } else if (path.includes('/categories')) {
-      title = 'Kategoriyalar - AvtoCRM';
-      description = "AvtoCRM kategoriyalar bo'limi. Mahsulot kategoriyalarini tartibli boshqarish uchun mo'ljallangan sahifa.";
-    } else if (path.includes('/stores')) {
+    }   else if (path.includes('/stores')) {
       title = "Do'konlar - AvtoCRM";
       description = "AvtoCRM do'konlar bo'limi. Filiallar, do'kon ma'lumotlari va foydalanuvchilarni boshqaring.";
     } else if (path === '/login') {
