@@ -463,7 +463,7 @@ export function SalesDetailPage() {
                 <span>{formatCurrency(parseFloat(sale.total_amount))}</span>
               </div>
             </div>
-<div className="text-xs border-t dark:border-gray-600 mt-2 pt-2 dark:text-gray-300">
+        <div className="text-xs border-t dark:border-gray-600 mt-2 pt-2 dark:text-gray-300">
               <div className="flex justify-between"><span>Naqd:</span><span>{formatCurrency(parseFloat(sale.paid_amount))}</span></div>
               {sale.debt && Number(sale.debt) > 0 && <div className="flex justify-between text-red-500"><span>Qarz:</span><span>{formatCurrency(Number(sale.debt))}</span></div>}
             </div>
