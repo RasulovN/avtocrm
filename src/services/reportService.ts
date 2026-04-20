@@ -14,6 +14,7 @@ export interface ReportsQueryParams {
   filter?: ReportsFilter;
   from?: string;
   to?: string;
+  store_id?: string | number;
   storeId?: string | number;
 }
 
@@ -69,6 +70,13 @@ export interface DetailedReportsResponse {
     customerDebts: CustomerDebt[];
     supplierDebts: SupplierDebt[];
   };
+}
+
+export interface DashboardTopProduct {
+  id: string;
+  name: string;
+  sold: number;
+  revenue: number;
 }
 
 const toNumber = (value: unknown): number => {
@@ -163,23 +171,118 @@ const normalizeDetailedReportsResponse = (payload: unknown): DetailedReportsResp
   };
 };
 
+const normalizeDashboardReportData = (payload: unknown): ReportData => {
+  const source = (payload ?? {}) as Record<string, unknown>;
+  
+  const dashboard = (source.dashboard ?? source.reports ?? source) as Record<string, unknown>;
+  const reports = (dashboard.reports ?? dashboard ?? source) as Record<string, unknown>;
+  
+  return {
+    total_products_in_stock: toNumber(reports.total_products_in_stock ?? reports.totalProducts ?? reports.total_products),
+    monthly_revenue: String(reports.monthly_revenue ?? reports.totalRevenue ?? reports.total_revenue ?? reports.turnover ?? '0'),
+    total_customer_debt: String(reports.total_customer_debt ?? reports.totalDebt ?? reports.customer_debt ?? '0'),
+    total_supplier_debt: String(reports.supplier_debt ?? reports.supplierDebt ?? '0'),
+    report_date: String(source.report_date ?? source.date ?? ''),
+  };
+};
+
+const buildReportQueryParams = (params?: ReportsQueryParams): Record<string, string | number> => {
+  if (!params) return {};
+  const query: Record<string, string | number> = {};
+  if (params.filter) query.filter = params.filter;
+  if (params.from) query.from = params.from;
+  if (params.to) query.to = params.to;
+
+  const resolvedStoreId = params.store_id ?? params.storeId;
+  if (resolvedStoreId !== undefined && resolvedStoreId !== null && String(resolvedStoreId).trim() !== '') {
+    query.store_id = resolvedStoreId;
+  }
+  return query;
+};
+
+const normalizeDashboardTopProducts = (payload: unknown): DashboardTopProduct[] => {
+  const source = (payload ?? {}) as Record<string, unknown>;
+  
+  const topProductsWrapper = source.topProducts ?? source.top_products ?? source.results;
+  const rawList = Array.isArray(topProductsWrapper) 
+    ? topProductsWrapper 
+    : Array.isArray(payload) 
+      ? payload 
+      : [];
+
+  return rawList
+    .map((item, index) => {
+      const row = (item ?? {}) as Record<string, unknown>;
+      const id = row.id ?? row.product_id ?? row.productId ?? index + 1;
+      const name = row.name ?? row.product_name ?? row.productName ?? `#${id}`;
+      return {
+        id: String(id),
+        name: String(name),
+        sold: toNumber(row.sold ?? row.total_sold ?? row.totalSold ?? row.quantity),
+        revenue: toNumber(row.revenue ?? row.total_revenue ?? row.totalRevenue),
+      };
+    })
+    .sort((a, b) => b.sold - a.sold);
+};
+
 export const reportService = {
   async getReport(): Promise<ReportData | null> {
+    return this.getDashboardReport();
+  },
+
+  async getDashboardReport(params?: ReportsQueryParams): Promise<ReportData | null> {
     try {
-      const response = await apiClient.get<ReportData>('/reports/');
-      return response.data ?? null;
+      const response = await apiClient.get<unknown>('/reports/dashboard/', {
+        params: buildReportQueryParams(params),
+        expectedErrorStatuses: [404],
+      });
+      return normalizeDashboardReportData(response.data);
     } catch (error: unknown) {
       const axiosError = error as { response?: { status?: number } };
       if (axiosError.response?.status === 404) {
-        return null;
+        try {
+          const fallback = await apiClient.get<unknown>('/reports/', {
+            params: buildReportQueryParams(params),
+            expectedErrorStatuses: [404],
+          });
+          return normalizeDashboardReportData(fallback.data);
+        } catch (fallbackError: unknown) {
+          const fallbackAxiosError = fallbackError as { response?: { status?: number } };
+          if (fallbackAxiosError.response?.status === 404) {
+            return null;
+          }
+          throw fallbackError;
+        }
       }
       throw error;
     }
   },
 
+  async getTopProducts(params?: ReportsQueryParams): Promise<DashboardTopProduct[]> {
+    const query = buildReportQueryParams(params);
+    try {
+      const response = await apiClient.get<unknown>('/reports/top-products/', {
+        params: query,
+        expectedErrorStatuses: [404],
+      });
+      return normalizeDashboardTopProducts(response.data);
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { status?: number } };
+      if (axiosError.response?.status !== 404) {
+        throw error;
+      }
+
+      const fallback = await apiClient.get<unknown>('/top-products/', {
+        params: query,
+      });
+      return normalizeDashboardTopProducts(fallback.data);
+    }
+  },
+
   async getDetailedReport(params: ReportsQueryParams): Promise<DetailedReportsResponse> {
+    const requestParams = buildReportQueryParams(params);
     const response = await apiClient.get<unknown>('/reports/', {
-      params,
+      params: requestParams,
     });
     return normalizeDetailedReportsResponse(response.data);
   },
