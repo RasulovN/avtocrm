@@ -31,10 +31,16 @@ const CategoryListPage = lazy(() =>
   import('./features/categories/CategoryListPage').then((module) => ({ default: module.CategoryListPage }))
 );
 const InventoryListPage = lazy(() =>
-  import('./features/inventory/InventoryListPage').then((module) => ({ default: module.InventoryListPage }))
+  import('./features/StockEntry/InventoryListPage').then((module) => ({ default: module.InventoryListPage }))
 );
 const InventoryCreatePage = lazy(() =>
-  import('./features/inventory/InventoryCreatePage').then((module) => ({ default: module.InventoryCreatePage }))
+  import('./features/StockEntry/InventoryCreatePage').then((module) => ({ default: module.InventoryCreatePage }))
+);
+const InventorySessionsListPage = lazy(() =>
+  import('./features/inventory/InventorySessionsListPage').then((module) => ({ default: module.InventorySessionsListPage }))
+);
+const InventoryDetailPage = lazy(() =>
+  import('./features/inventory/InventoryDetailPage').then((module) => ({ default: module.InventoryDetailPage }))
 );
 const TransferListPage = lazy(() =>
   import('./features/transfers/pages/TransferListPage').then((module) => ({ default: module.TransferListPage }))
@@ -102,6 +108,9 @@ function DocumentMetaSync() {
     } else if (path.includes('/reports')) {
       title = 'Hisobotlar - AvtoCRM';
       description = "AvtoCRM hisobotlar bo'limi. Sotuv, kirim, foyda va o'tkazmalar bo'yicha analitik hisobotlarni ko'ring.";
+    } else if (path === '/inventory-sessions' || path.includes('/inventory-session/')) {
+      title = 'Inventarizatsiya - AvtoCRM';
+      description = "AvtoCRM inventarizatsiya bo'limi. Mahsulotlarni hisobga olish va tekshirish.";
     } else if (path.includes('/inventory')) {
       title = 'Kirim - AvtoCRM';
       description = "AvtoCRM kirim bo'limi. Ta'minotchilardan kelgan mahsulotlar, xarid summasi va qarzdorlikni nazorat qiling.";
@@ -231,6 +240,16 @@ function App() {
           {/* Inventory - Create */}
           <Route path={`/:lang/inventory/new`} element={
             withLayout(<InventoryCreatePage />)
+          } />
+          
+          {/* Inventory Sessions - List */}
+          <Route path={`/:lang/inventory-sessions`} element={
+            withLayout(<InventorySessionsListPage />)
+          } />
+          
+          {/* Inventory Session - Detail */}
+          <Route path={`/:lang/inventory-session/:id`} element={
+            withLayout(<InventoryDetailPage />)
           } />
           
           {/* Transfers - List */}
