@@ -147,6 +147,7 @@ export function SalesPage() {
         existingItem.total = existingItem.selling_price * existingItem.quantity;
         return newItems;
       }
+      console.log('Adding product to cart:', product.name );
       return [
         ...prevItems,
         {
@@ -164,6 +165,8 @@ export function SalesPage() {
 
   const findProductByBarcode = useCallback(async (barcode: string, isFromScan: boolean = true): Promise<Product | null> => {
     const normalizedBarcode = barcode.trim();
+    console.log('Searching for barcode:', barcode);
+
     if (!normalizedBarcode) return null;
 
     const localProduct = safeProducts.find((product) =>
@@ -519,7 +522,7 @@ export function SalesPage() {
             position: absolute; 
             left: 0; 
             top: 0; 
-            width: 75mm; 
+            width:75mm; 
             min-height: 100mm;
             height: 100mm;
             background: white; 
@@ -625,6 +628,7 @@ export function SalesPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           <div className="font-medium dark:text-white">
+                            {/* {product.name} */}
                             {product.name || product.sku || product.shtrix_code || product.barcode || "Noma'lum mahsulot"}
                           </div>
                           <div className="text-xs text-muted-foreground dark:text-gray-400">
@@ -1019,6 +1023,7 @@ export function SalesPage() {
                 Xaridingiz uchun rahmat!
               </div>
             </div>
+
             <div className="p-4 border-t dark:border-gray-600 flex flex-col gap-2 print:hidden sm:flex-row">
               <Button className="flex-1" onClick={printReceipt}>
                 Chop etish
