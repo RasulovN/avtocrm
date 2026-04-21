@@ -198,12 +198,12 @@ export function useBarcodeScanner({
     };
 
     window.addEventListener('keydown', handleGlobalKeyDown, true);
-    document.addEventListener('keydown', handleGlobalKeyDown, true);
+    // document.addEventListener('keydown', handleGlobalKeyDown, true);
     
     return () => {
       listening = false;
       window.removeEventListener('keydown', handleGlobalKeyDown, true);
-      document.removeEventListener('keydown', handleGlobalKeyDown, true);
+      // document.removeEventListener('keydown', handleGlobalKeyDown, true);
       if (flushTimeout) {
         clearTimeout(flushTimeout);
       }
