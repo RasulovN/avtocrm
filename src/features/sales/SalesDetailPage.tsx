@@ -179,8 +179,11 @@ export function SalesDetailPage() {
             font-size: 8px;
             line-height: 1.3;
             overflow: visible;
+            color: black;
+            print-color-adjust: black;
           }
           .print-hidden { display: none !important; }
+          .print:{colot: black}
         }
         }
       `}</style>
@@ -430,44 +433,44 @@ export function SalesDetailPage() {
       </Dialog>
 
       {showReceipt && sale && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={handleCloseReceipt}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 " onClick={handleCloseReceipt}>
           <div className="receipt-content receipt-print bg-white dark:bg-gray-800 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto p-4" onClick={e => e.stopPropagation()}>
-            <div className="text-center border-b dark:border-gray-600 pb-3 mb-3">
-              <h4 className="text-xl font-bold dark:text-white">AvtoCRM</h4>
-              <p className="text-sm dark:text-gray-300">Sotuv cheki #{sale.id}</p>
-              <p className="text-xs dark:text-gray-400">{formatDate(sale.created_at)}</p>
+            <div className="text-center border-b dark:border-gray-600 pb-3 mb-3 ">
+              <h4 className="text-xl font-bold dark:text-white print:text-black">AvtoCRM</h4>
+              <p className="text-sm dark:text-gray-300 print:text-black">Sotuv cheki #{sale.id}</p>
+              <p className="text-xs dark:text-gray-400 print:text-black">{formatDate(sale.created_at)}</p>
             </div>
             <div className="text-xs border-b dark:border-gray-600 pb-2 mb-2 dark:text-gray-300">
-              {sale.store_name && <div className="flex justify-between"><span>Do'kon:</span><span>{sale.store_name}</span></div>}
-              {sale.seller_name && <div className="flex justify-between"><span>Sotuvchi:</span><span>{sale.seller_name}</span></div>}
-              {sale.customer_name && <div className="flex justify-between"><span>Mijoz:</span><span>{sale.customer_name}</span></div>}
+              {sale.store_name && <div className="flex justify-between print:text-black"><span>Do'kon:</span><span>{sale.store_name}</span></div>}
+              {sale.seller_name && <div className="flex justify-between print:text-black"><span>Sotuvchi:</span><span>{sale.seller_name}</span></div>}
+              {sale.customer_name && <div className="flex justify-between print:text-black"><span>Mijoz:</span><span>{sale.customer_name}</span></div>}
             </div>
             <div className="space-y-1 text-sm dark:text-gray-300">
               {sale.items?.map((item, idx) => (
-                <div key={idx} className="flex justify-between">
+                <div key={idx} className="flex justify-between print:text-black">
                   <span>{item.product_name || `#${item.product}`} x{item.quantity}</span>
                   <span>{formatCurrency(parseFloat(item.total_price))}</span>
                 </div>
               ))}
             </div>
             {sale.discount_amount && parseFloat(sale.discount_amount) > 0 && (
-              <div className="flex justify-between text-red-500 text-xs">
+              <div className="flex justify-between text-red-500 text-xs print:text-black">
                 <span>Chegirma:</span>
                 <span>-{formatCurrency(parseFloat(sale.discount_amount))}</span>
               </div>
             )}
             <div className="border-t dark:border-gray-600 pt-2 mt-2">
-              <div className="flex justify-between font-bold dark:text-white">
+              <div className="flex justify-between font-bold dark:text-white print:text-black">
                 <span>JAMI:</span>
                 <span>{formatCurrency(parseFloat(sale.total_amount))}</span>
               </div>
             </div>
         <div className="text-xs border-t dark:border-gray-600 mt-2 pt-2 dark:text-gray-300">
-              <div className="flex justify-between"><span>Naqd:</span><span>{formatCurrency(parseFloat(sale.paid_amount))}</span></div>
-              {sale.debt && Number(sale.debt) > 0 && <div className="flex justify-between text-red-500"><span>Qarz:</span><span>{formatCurrency(Number(sale.debt))}</span></div>}
+              <div className="flex justify-between print:text-black"><span>Naqd:</span><span>{formatCurrency(parseFloat(sale.paid_amount))}</span></div>
+              {sale.debt && Number(sale.debt) > 0 && <div className="flex justify-between text-red-500 print:text-black"><span>Qarz:</span><span>{formatCurrency(Number(sale.debt))}</span></div>}
             </div>
-            <div className="text-center text-xs mt-2 dark:text-gray-400">Xaridingiz uchun rahmat!</div>
-            <div className="flex gap-2 mt-4 print-hidden">
+            <div className="text-center text-xs mt-2 dark:text-gray-400 print:text-black">Xaridingiz uchun rahmat!</div>
+            <div className="flex gap-2 mt-4 print-hidden print:text-black">
               <Button className="flex-1" onClick={(e) => { e.stopPropagation(); window.print(); }}>Chop etish</Button>
               <Button variant="outline" className="flex-1" onClick={handleCloseReceipt}>Yopish</Button>
             </div>

@@ -528,8 +528,10 @@ export function SalesPage() {
             background: white;  
             font-size: 6px; 
             overflow: visible;
+            color: black;
+            print-color-adjust: black;
           }
-          .print-hidden { display: none !important; }
+          .print-hidden { display: none !important; } 
         }
         }
           `}</style>
@@ -910,7 +912,7 @@ export function SalesPage() {
                   )}
                   {debt > 0 && (
                     <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground dark:text-gray-400">Qarz:</span>
+                      <span className="text-muted-foreground dark:text-gray-400 print:text-black">Qarz:</span>
                       <span className="font-bold text-red-600 dark:text-red-400">{formatCurrency(debt)}</span>
                     </div>
                   )}
@@ -941,9 +943,9 @@ export function SalesPage() {
             </div>
             <div className="p-4 space-y-3">
               <div className="text-center border-b dark:border-gray-600 pb-3">
-                <h4 className="text-xl font-bold dark:text-white">AvtoCRM</h4>
-                <p className="text-sm text-muted-foreground dark:text-gray-400">Sotuv cheki</p>
-                <p className="text-xs text-muted-foreground dark:text-gray-400">{new Date().toLocaleString()}</p>
+                <h4 className="text-xl font-bold dark:text-white print:text-black">AvtoCRM</h4>
+                <p className="text-sm text-muted-foreground dark:text-gray-400 print:text-black">Sotuv cheki</p>
+                <p className="text-xs text-muted-foreground dark:text-gray-400 print:text-black">{new Date().toLocaleString('uz-UZ', { hour12: false})}</p>
               </div>
               <div className="border-b dark:border-gray-600 pb-2 text-sm dark:text-gray-300">
                 {selectedCustomerId &&
@@ -951,11 +953,11 @@ export function SalesPage() {
                     const customer = customers.find((c) => String(c.id) === selectedCustomerId);
                     return customer ? (
                       <>
-                        <div className="flex justify-between">
+                        <div className="flex justify-between print:text-black">
                           <span>Mijoz:</span>
                           <span>{customer.full_name}</span>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex justify-between print:text-black">
                           <span>Telefon:</span>
                           <span>{customer.phone_number}</span>
                         </div>
@@ -965,12 +967,12 @@ export function SalesPage() {
               </div>
 
               <div className="space-y-2 text-sm">
-                <div className="font-semibold dark:text-white">Tovarlar:</div>
+                <div className="font-semibold dark:text-white print:text-black">Tovarlar:</div>
                 {items.map((item, idx) => (
-                  <div key={idx} className="flex justify-between dark:text-gray-300">
-                    <div className="flex-1">
+                  <div key={idx} className="flex justify-between dark:text-gray-300 print:text-black">
+                    <div className="flex-1 print:text-black ">
                       <span>{item.product_name}</span>
-                      <span className="text-muted-foreground dark:text-gray-400"> x{item.quantity}</span>
+                      <span className="text-muted-foreground dark:text-gray-400 print:text-black"> x{item.quantity}</span>
                     </div>
                     <span>{formatCurrency(item.total)}</span>
                   </div>
@@ -978,50 +980,50 @@ export function SalesPage() {
               </div>
 
               <div className="border-t dark:border-gray-600 pt-2 space-y-1 text-sm">
-                <div className="flex justify-between dark:text-gray-300">
+                <div className="flex justify-between dark:text-gray-300 print:text-black">
                   <span>Jami:</span>
                   <span>{formatCurrency(subtotal)}</span>
                 </div>
                 {discount > 0 && (
-                  <div className="flex justify-between dark:text-gray-300">
+                  <div className="flex justify-between dark:text-gray-300 print:text-black">
                     <span>Chegirma ({discountType === 'p' ? `${discount}%` : ''}):</span>
                     <span>-{formatCurrency(calculatedDiscount)}</span>
                   </div>
                 )}
-                <div className="flex justify-between font-bold text-lg dark:text-white">
+                <div className="flex justify-between font-bold text-lg dark:text-white print:text-black">
                   <span>JAMI:</span>
                   <span>{formatCurrency(receiptTotal)}</span>
                 </div>
               </div>
 
               <div className="border-t dark:border-gray-600 pt-2 space-y-1 text-sm">
-                <div className="flex justify-between dark:text-gray-300">
+                <div className="flex justify-between dark:text-gray-300 print:text-black">
                   <span>Naqd:</span>
                   <span>{formatCurrency(cashAmount)}</span>
                 </div>
-                <div className="flex justify-between dark:text-gray-300">
+                <div className="flex justify-between dark:text-gray-300 print:text-black">
                   <span>Karta:</span>
                   <span>{formatCurrency(cardAmount)}</span>
                 </div>
-                <div className="flex justify-between dark:text-gray-300">
+                <div className="flex justify-between dark:text-gray-300 print:text-black">
                   <span>Jami to'landi:</span>
                   <span>{formatCurrency(totalPaid)}</span>
                 </div>
                 {change > 0 && (
-                  <div className="flex justify-between text-blue-600 dark:text-blue-400">
+                  <div className="flex justify-between text-blue-600 dark:text-blue-400 print:text-black">
                     <span>Qaytim:</span>
                     <span>{formatCurrency(change)}</span>
                   </div>
                 )}
                 {debt > 0 && (
-                  <div className="flex justify-between text-red-600 dark:text-red-400">
+                  <div className="flex justify-between text-red-600 dark:text-red-400 print:text-black">
                     <span>Qarz:</span>
                     <span>{formatCurrency(debt)}</span>
                   </div>
                 )}
               </div>
 
-              <div className="text-center text-xs text-muted-foreground dark:text-gray-400 pt-3">
+              <div className="text-center text-xs text-muted-foreground dark:text-gray-400 pt-3 print:text-black">
                 Xaridingiz uchun rahmat!
               </div>
             </div>
