@@ -55,7 +55,9 @@ export const categoryService = {
     if (params?.page) searchParams.append('page', params.page.toString());
     if (params?.limit) searchParams.append('limit', params.limit.toString());
 
-    const response = await apiClient.get(`/products/categories/?${searchParams.toString()}`);
+    const queryString = searchParams.toString();
+    const url = queryString ? `/products/categories/?${queryString}` : '/products/categories/';
+    const response = await apiClient.get(url);
     const payload = response.data as unknown;
     if (Array.isArray(payload)) {
       const data = payload.map(normalizeCategory);

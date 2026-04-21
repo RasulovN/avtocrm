@@ -94,8 +94,8 @@ api.interceptors.response.use(
     const url = error.config?.url || '';
 
     // Prevent logout recursion and suppress logging for these endpoints
-    if (url.includes('/users/logout/') || url.includes('/products/categories')) {
-      if (status === 401) {
+    if (url.includes('/users/logout/') || url.includes('/products/categories') || url.includes('/debts/')) {
+      if (status === 401 || status === 404) {
         return Promise.reject(error);
       }
     }

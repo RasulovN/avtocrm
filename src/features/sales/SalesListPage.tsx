@@ -63,24 +63,24 @@ export function SalesListPage() {
     {
       key: 'store_name',
       header: t('stores.title'),
-      render: (item) => item.store_name || item.store,
+      render: (item) => item.store_name || String(item.store),
     },
     {
       key: 'customer_name',
       header: t('customers.title'),
-      render: (item) => item.customer_name || item.customer,
+      render: (item) => item.customer_name || String(item.customer),
     },
     {
       key: 'total_amount',
       header: t('common.total'),
       className: 'font-medium',
-      render: (item) => formatCurrency(parseFloat(item.total_amount)),
+      render: (item) => formatCurrency(parseFloat(item.total_amount || '0')),
     },
     {
       key: 'paid_amount',
       header: t('sales.paid'),
       className: 'text-green-600',
-      render: (item) => formatCurrency(parseFloat(item.paid_amount)),
+      render: (item) => formatCurrency(parseFloat(item.paid_amount || '0')),
     },
     {
       key: 'debt',
@@ -126,7 +126,7 @@ export function SalesListPage() {
   const stats = {
     totalSales: sales.length,
     totalAmount: sales.reduce((sum, s) => sum + parseFloat(s.total_amount || '0'), 0),
-    totalDebt: sales.reduce((sum, s) => sum + (parseFloat(s.debt) || 0), 0),
+    totalDebt: sales.reduce((sum, s) => sum + (s.debt != null ? parseFloat(String(s.debt)) : 0), 0),
   };
 
   return (
@@ -180,8 +180,10 @@ export function SalesListPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-xs text-muted-foreground">#{index + 1}</p>
-                    <p className="font-semibold text-foreground">{t('stores.title')}: {item.store_name || item.store}</p>
-                    <p className="text-sm text-muted-foreground">{t('customers.title')}: {item.customer_name || item.customer}</p>
+                    <p className="font-semibold text-foreground">{t('stores.title')}: {item.store_name || String(item.store)}</p>
+                    <Link to={`/${lang}/sales/${item.id}`} >
+                    <p className="text-sm text-muted-foreground">{t('customers.title')}: {item.customer_name || String(item.customer)}</p>
+                    </Link>
                     <p className="mt-1 text-sm text-muted-foreground">{formatDate(item.created_at)}</p>
                   </div>
                   <span className={`shrink-0 rounded-full px-2 py-1 text-xs ${item.status === 'partial' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'

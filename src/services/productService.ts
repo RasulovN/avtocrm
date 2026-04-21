@@ -306,7 +306,9 @@ export const productService = {
     if (filters?.page) params.append('page', filters.page.toString());
     if (filters?.limit) params.append('limit', filters.limit.toString());
 
-    const response = await apiClient.get(`/products/?${params.toString()}`);
+    const queryString = params.toString();
+    const url = queryString ? `/products/?${queryString}` : '/products/';
+    const response = await apiClient.get(url);
     return parsePaginatedProducts(response.data, filters);
   },
 

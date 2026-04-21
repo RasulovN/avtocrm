@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, memo, useMemo } from 'react';
+import { useEffect, useRef, useState, memo, useMemo, useCallback } from 'react';
 import JsBarcode from 'jsbarcode';
 
 interface BarcodePrintProps {

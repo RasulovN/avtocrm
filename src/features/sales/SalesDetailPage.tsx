@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, User, ShoppingCart, CreditCard, Calendar, Tag, DollarSign, Wallet, Printer } from 'lucide-react';
@@ -29,38 +29,19 @@ export function SalesDetailPage() {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentType, setPaymentType] = useState<'cash' | 'card'>('cash');
   const [paying, setPaying] = useState(false);
-  const [debtPayments, setDebtPayments] = useState<Array<{
-    id: number;
-    amount: string;
-    type: 'cash' | 'card';
-    created_at: string;
-  }>>([]);
   const [showReceipt, setShowReceipt] = useState(false);
+  const loadRef = useRef(false);
 
   useEffect(() => {
     const loadSale = async () => {
-      if (!saleId) {
-        setSale(null);
-        setLoading(false);
-        return;
-      }
+      if (!saleId || loadRef.current) return;
+      loadRef.current = true;
+      
       try {
         setLoading(true);
         const res = await salesService.getById(saleId);
         setSale(res);
-        
-        const debtId = Number(saleId);
-        if (!isNaN(debtId)) {
-          try {
-            const payments = await customerApiService.getDebtPayments(debtId);
-            setDebtPayments(Array.isArray(payments) ? payments : []);
-          } catch (e) {
-            console.error('Failed to load debt payments:', e);
-            setDebtPayments([]);
-          }
-        }
       } catch (error) {
-        console.error('Failed to load sale details:', error);
         setSale(null);
       } finally {
         setLoading(false);
@@ -83,7 +64,7 @@ export function SalesDetailPage() {
       setPaying(true);
       const parsedAmount = Number(paymentAmount);
       const normalizedAmount = Number.isFinite(parsedAmount)
-        ? String((parsedAmount))
+        ? String(parsedAmount)
         : paymentAmount;
       await customerApiService.createDebtPaymentForSale({
         sale: Number(saleId),
@@ -91,16 +72,11 @@ export function SalesDetailPage() {
         type: paymentType,
       });
       setShowPaymentDialog(false);
-
       setPaymentAmount('');
       
       const res = await salesService.getById(saleId);
       setSale(res);
-      
-      const payments = await customerApiService.getDebtPayments(Number(saleId));
-      setDebtPayments(Array.isArray(payments) ? payments : []);
-    } catch (error) {
-      console.error('Failed to create debt payment:', error);
+    } catch {
     } finally {
       setPaying(false);
     }
@@ -182,8 +158,7 @@ export function SalesDetailPage() {
             color: black;
             print-color-adjust: black;
           }
-          .print-hidden { display: none !important; }
-          .print:{colot: black}
+          .print-hidden { display: none !important; } 
         }
         }
       `}</style>
@@ -281,31 +256,6 @@ export function SalesDetailPage() {
               </Button>
             )}
           </div>
-
-          {debtPayments.length > 0 && (
-            <div className="bg-card dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-              <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
-                <CreditCard className="h-5 w-5" />
-                Qarz to'lovlari tarixi
-              </h3>
-              <div className="space-y-3">
-                {debtPayments.map((payment) => (
-                  <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                        <CreditCard className="h-5 w-5 text-green-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium">{payment.type === 'cash' ? 'Naqd' : 'Karta'}</p>
-                        <p className="text-xs text-muted-foreground">{formatDate(payment.created_at)}</p>
-                      </div>
-                    </div>
-                    <p className="font-semibold text-green-600">{formatCurrency(parseFloat(payment.amount))}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="space-y-6">

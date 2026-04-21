@@ -51,7 +51,15 @@ export const customerApiService = {
   },
 
   getDebtPayments: async (saleId: number) => {
-    const response = await apiClient.get(`/debts/${saleId}/`);
-    return response.data;
+    try {
+      const response = await apiClient.get(`/debts/${saleId}/`);
+      return response.data;
+    } catch (error) {
+      const axiosError = error as { response?: { status?: number } };
+      if (axiosError.response?.status === 404) {
+        return [];
+      }
+      throw error;
+    }
   },
 };

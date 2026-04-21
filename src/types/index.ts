@@ -168,7 +168,7 @@ export interface Supplier {
   address_uz?: string;
   address_uz_cyrl?: string;
   is_active?: boolean;
-  debt: number;
+  debt: number | string;
   created_at?: string;
 }
 
