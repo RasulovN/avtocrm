@@ -171,7 +171,7 @@ export function SalesListPage() {
         <div className="text-center py-8 text-muted-foreground">
           <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
           <p>{t('sales.noData')}</p>
-        </div>
+        </div> 
       ) : (
         <>
           <div className="space-y-3 md:hidden">

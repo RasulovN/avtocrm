@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, type ChangeEvent, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, User, DollarSign, FileText } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
@@ -11,6 +11,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { supplierService } from '../../services/supplierService';
 import type { Supplier, SupplierFormData } from '../../types';
 import { latinToCyrillic } from '../../utils/transliteration';
+import { formatCurrency, formatDate } from '../../utils';
+
+interface SupplierPayment {
+  id: number;
+  amount: string;
+  type: 'cash' | 'card';
+  note?: string;
+  created_at: string;
+}
 
 export function SupplierListPage() {
   const { t } = useTranslation();
@@ -22,6 +31,10 @@ export function SupplierListPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailSupplier, setDetailSupplier] = useState<Supplier | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [supplierPayments, setSupplierPayments] = useState<SupplierPayment[]>([]);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [formData, setFormData] = useState<SupplierFormData>({
     name_uz: '',
@@ -75,6 +88,8 @@ export function SupplierListPage() {
     }
   }, [page]);
 
+  const totalSupplierDebt = suppliers.reduce((sum, s) => sum + (typeof s.debt === 'number' ? s.debt : 0), 0);
+
   useEffect(() => {
     void loadSuppliers();
   }, [loadSuppliers]);
@@ -90,6 +105,23 @@ export function SupplierListPage() {
     } finally {
       setDeleting(false);
       setDeleteId(null);
+    }
+  };
+
+  const handleOpenDetail = async (supplier: Supplier) => {
+    setDetailSupplier(supplier);
+    setDetailOpen(true);
+    setDetailLoading(true);
+    setSupplierPayments([]);
+    
+    try {
+      const fresh = await supplierService.getById(supplier.id);
+      setDetailSupplier(fresh);
+      setSupplierPayments((fresh as any).payments || []);
+    } catch (error) {
+      console.error('Failed to load supplier detail:', error);
+    } finally {
+      setDetailLoading(false);
     }
   };
 
@@ -168,6 +200,15 @@ export function SupplierListPage() {
     },
     { key: 'address', header: t('suppliers.address') },
     {
+      key: 'debt',
+      header: t('suppliers.debt'),
+      render: (item: Supplier) => (
+        <span className={(typeof item.debt === 'number' && item.debt > 0) ? 'text-red-500 font-semibold' : ''}>
+          {formatCurrency(typeof item.debt === 'number' ? item.debt : 0)}
+        </span>
+      ),
+    },
+    {
       key: 'description',
       header: t('common.description'),
       render: (item: Supplier) => item.description ?? item.description_uz ?? '-',
@@ -178,6 +219,14 @@ export function SupplierListPage() {
       className: 'text-right',
       render: (item: Supplier) => (
         <div className="flex items-center justify-end gap-2">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleOpenDetail(item); }}
+            title={t('suppliers.debt')}
+          >
+            <DollarSign className="h-4 w-4" />
+          </Button>
           <Button variant="ghost" size="icon" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleOpenDialog(item); }}>
             <Edit className="h-4 w-4" />
           </Button>
@@ -201,6 +250,17 @@ export function SupplierListPage() {
           </Button>
         }
       />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="rounded-lg border bg-card p-4 shadow-sm">
+          <p className="text-sm text-muted-foreground">Ta'minotchilar soni</p>
+          <p className="text-2xl font-bold">{suppliers.length}</p>
+        </div>
+        <div className="rounded-lg border bg-card p-4 shadow-sm">
+          <p className="text-sm text-muted-foreground">Jami qarzdorlik</p>
+          <p className="text-2xl font-bold text-red-500">{formatCurrency(totalSupplierDebt)}</p>
+        </div>
+      </div>
 
       {suppliers.length > 0 && (
         <div className="space-y-3 md:hidden">
@@ -334,6 +394,56 @@ export function SupplierListPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('common.cancel')}</Button>
             <Button onClick={handleSave} disabled={saving}>{saving ? t('common.loading') : t('common.save')}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              {detailSupplier?.name_uz || detailSupplier?.name || 'Ta\'minotchi'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg bg-muted p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Jami qarzdorlik</span>
+                <span className="text-xl font-bold text-red-500">
+                  {formatCurrency(typeof detailSupplier?.debt === 'number' ? detailSupplier.debt : 0)}
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-sm font-medium mb-2">To'lovlar tarixi</h4>
+              {detailLoading ? (
+                <div className="text-center py-4 text-muted-foreground">{t('common.loading')}</div>
+              ) : supplierPayments.length > 0 ? (
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {supplierPayments.map((payment) => (
+                    <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                          <DollarSign className="h-4 w-4 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{payment.type === 'cash' ? 'Naqd' : 'Karta'}</p>
+                          <p className="text-xs text-muted-foreground">{formatDate(payment.created_at)}</p>
+                        </div>
+                      </div>
+                      <p className="font-semibold text-green-600">{formatCurrency(parseFloat(payment.amount))}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center py-4 text-muted-foreground">To'lovlar topilmadi</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDetailOpen(false)}>{t('common.close')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

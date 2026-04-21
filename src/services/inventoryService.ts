@@ -1,6 +1,6 @@
 import { apiClient } from './api';
 import type { Inventory, InventoryFormData, PaginatedResponse, ApiResponse, ContractEntry } from '../types';
-import type { SupplierPayment } from '../features/inventory/InventoryListPage';
+import type { SupplierPayment } from '../features/StockEntry/InventoryListPage';
 
 export const inventoryService = {
   getAll: async (params?: { page?: number; limit?: number }): Promise<PaginatedResponse<Inventory>> => {
