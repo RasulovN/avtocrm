@@ -513,24 +513,26 @@ export function SalesPage() {
 
   return (
     <div>
-<style>{`
-        @media print {
-          @page { size: 58mm auto; margin: 0; }
+    <style>{`
+         @media print {
+          @page { size: 100% auto; margin: 0; }
           body * { visibility: hidden; }
-          .receipt-print, .receipt-print * { visibility: visible; }
-          .receipt-print { 
+          .receipt-print, .receipt-content, .receipt-print *, .receipt-content * { visibility: visible; }
+          .receipt-print, .receipt-content { 
             position: absolute; 
             left: 0; 
             top: 0; 
-            width:75mm; 
-            min-height: 100mm;
-            height: 100mm;
-            background: white; 
-            padding: 2mm;
+            width: 100%; 
+            min-height: auto;
+            height: auto;
+            background: white;  
+            font-size: 6px; 
             overflow: visible;
           }
+          .print-hidden { display: none !important; }
         }
-      `}</style>
+        }
+          `}</style>
       {/* /* Main Sales Interface */ }
       <div className="space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -629,10 +631,10 @@ export function SalesPage() {
                         <div className="flex-1">
                           <div className="font-medium dark:text-white">
                             {/* {product.name} */}
-                            {product.name || product.sku || product.shtrix_code || product.barcode || "Noma'lum mahsulot"}
+                            {product.name || product.sku  || "Noma'lum mahsulot"}
                           </div>
                           <div className="text-xs text-muted-foreground dark:text-gray-400">
-                            {product.sku || product.shtrix_code || product.barcode}
+                            {product.sku ||  product.barcode}
                           </div>
                         </div>
                         <div className="text-right ml-3">
@@ -654,7 +656,7 @@ export function SalesPage() {
             <div className="bg-card border border-gray-900 rounded-lg flex min-h-80 flex-col xl:flex-1">
               <div className="p-3 pb-2">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <h4 className="text-base font-semibold flex items-center gap-2 dark:text-white">
+                  <h4 className="text-base font-semibold flex items-center gap-2 dark:text-white print:hidden ">
                     <DollarSign className="h-4 w-4" /> Chek
                     <span className="inline-flex items-center rounded bg-secondary dark:bg-gray-800 px-1.5 py-0.5 text-xs font-medium dark:text-gray-200 ml-1">
                       {items.length}
@@ -931,7 +933,7 @@ export function SalesPage() {
       {showReceipt && (
         <div className="receipt-modal fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="receipt-content receipt-print bg-white dark:bg-gray-800 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-4 border-b dark:border-gray-600 flex justify-between items-center">
+            <div className="p-4 border-b dark:border-gray-600 flex justify-between items-center print:hidden ">
               <h3 className="text-lg font-bold dark:text-white">Chek</h3>
               <Button variant="ghost" size="icon" onClick={() => setShowReceipt(false)}>
                 <X className="h-4 w-4" />

@@ -173,11 +173,10 @@ export function SalesDetailPage() {
             left: 0; 
             top: 0; 
             width: 75mm; 
-            min-height: 80mm;
-            height: 80mm;
-            background: white; 
-            padding: 2mm;
-            font-size: 9px;
+            min-height: 100vh;
+            height: 100vh;
+            background: white;  
+            font-size: 8px;
             line-height: 1.3;
             overflow: visible;
           }
