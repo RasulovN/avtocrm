@@ -100,6 +100,21 @@ const getRowStatus = (row: DraftRow): Exclude<StatusFilter, 'all'> => {
   return 'matched';
 };
 
+const getStatusLabel = (status: Exclude<StatusFilter, 'all'>) => {
+  if (status === 'matched') return 'Mos';
+  if (status === 'shortage') return 'Kamomat';
+  if (status === 'overage') return 'Ortiqcha';
+  return 'Pending';
+};
+
+const getStatusBadgeClassName = (status: Exclude<StatusFilter, 'all'>) => cn(
+  'inline-flex rounded-full px-3 py-1 text-xs font-semibold',
+  status === 'matched' && 'bg-emerald-50 text-emerald-700',
+  status === 'shortage' && 'bg-rose-50 text-rose-700',
+  status === 'overage' && 'bg-amber-50 text-amber-700',
+  status === 'pending' && 'bg-slate-100 text-slate-700'
+);
+
 export default function InventorizationPage() {
   const { t } = useTranslation();
   const { products, loading } = useProducts();
@@ -370,10 +385,10 @@ export default function InventorizationPage() {
         description="Avto zapchastlar bo'yicha inventorization jarayoni. Avval do'kon tanlanadi, keyin mahsulotlar jadvalda sanaladi."
         actions={!showStartSelector ? (
           <>
-            <Button variant="outline" onClick={handleSave} disabled={!hasRows}>
+            <Button variant="outline" onClick={handleSave} disabled={!hasRows} className="w-full sm:w-auto">
               Saqlash
             </Button>
-            <Button onClick={handleGenerate} disabled={!allCompleted}>
+            <Button onClick={handleGenerate} disabled={!allCompleted} className="w-full sm:w-auto">
               <WandSparkles className="mr-2 h-4 w-4" />
               Generatsiya qilish
             </Button>
@@ -405,7 +420,7 @@ export default function InventorizationPage() {
             </Select>
 
             <div className="flex justify-end">
-              <Button onClick={handleStart} disabled={!selectedStartStoreId}>
+              <Button onClick={handleStart} disabled={!selectedStartStoreId} className="w-full sm:w-auto">
                 Inventorizationni boshlash
               </Button>
             </div>
@@ -413,45 +428,45 @@ export default function InventorizationPage() {
         </Card>
       ) : (
         <>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
             <Card>
-              <CardContent className="flex items-center gap-3 p-5">
-                <div className="rounded-xl bg-primary/10 p-3 text-primary">
-                  <ClipboardCheck className="h-5 w-5" />
+              <CardContent className="flex items-center gap-3 p-4 sm:p-5">
+                <div className="rounded-xl bg-primary/10 p-2.5 text-primary sm:p-3">
+                  <ClipboardCheck className="h-4 w-4 sm:h-5 sm:w-5" />
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Mahsulot</p>
-                  <p className="text-2xl font-bold">{stats.total}</p>
+                  <p className="text-xl font-bold sm:text-2xl">{stats.total}</p>
                 </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardContent className="flex items-center gap-3 p-5">
-                <div className="rounded-xl bg-emerald-50 p-3 text-emerald-700">
-                  <Package className="h-5 w-5" />
+              <CardContent className="flex items-center gap-3 p-4 sm:p-5">
+                <div className="rounded-xl bg-emerald-50 p-2.5 text-emerald-700 sm:p-3">
+                  <Package className="h-4 w-4 sm:h-5 sm:w-5" />
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Tekshirildi</p>
-                  <p className="text-2xl font-bold">{stats.checked}</p>
+                  <p className="text-xl font-bold sm:text-2xl">{stats.checked}</p>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="flex items-center gap-3 p-5">
-                <div className="rounded-xl bg-rose-50 p-3 text-rose-700">
-                  <TriangleAlert className="h-5 w-5" />
+            <Card className="col-span-2 xl:col-span-1">
+              <CardContent className="flex items-center gap-3 p-4 sm:p-5">
+                <div className="rounded-xl bg-rose-50 p-2.5 text-rose-700 sm:p-3">
+                  <TriangleAlert className="h-4 w-4 sm:h-5 sm:w-5" />
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Kamomat / Ortiqcha</p>
-                  <p className="text-2xl font-bold">{stats.shortage} / {stats.overage}</p>
+                  <p className="text-xl font-bold sm:text-2xl">{stats.shortage} / {stats.overage}</p>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="p-5">
+            <Card className="col-span-2 xl:col-span-1">
+              <CardContent className="p-4 sm:p-5">
                 <div className="mb-2 flex items-center justify-between">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Jarayon</p>
                   <p className="text-lg font-bold text-primary">{stats.progress}%</p>
@@ -481,7 +496,7 @@ export default function InventorizationPage() {
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="Mahsulot nomi yoki barcode bo'yicha qidiring"
-                  className="pl-9 pr-12"
+                  className="h-11 pl-9 pr-12 text-base"
                 />
                 <button
                   type="button"
@@ -525,19 +540,19 @@ export default function InventorizationPage() {
           <Card className="overflow-hidden">
             <CardHeader className="border-b bg-muted/30 pb-4">
               <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <CardTitle className="text-lg">Productlar listi</CardTitle>
-                  <Button variant="outline" size="sm" onClick={() => setActiveStoreId('')}>
+                  <Button variant="outline" size="sm" onClick={() => setActiveStoreId('')} className="w-full sm:w-auto">
                     Do'konni almashtirish
                   </Button>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
                   <button
                     type="button"
                     onClick={() => setReviewFilter('all')}
                     className={cn(
-                      'rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+                      'shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-colors',
                       reviewFilter === 'all'
                         ? 'border-primary bg-primary text-primary-foreground'
                         : 'border-border bg-background text-foreground hover:bg-accent'
@@ -549,7 +564,7 @@ export default function InventorizationPage() {
                     type="button"
                     onClick={() => setReviewFilter('checked')}
                     className={cn(
-                      'rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+                      'shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-colors',
                       reviewFilter === 'checked'
                         ? 'border-primary bg-primary text-primary-foreground'
                         : 'border-border bg-background text-foreground hover:bg-accent'
@@ -561,7 +576,7 @@ export default function InventorizationPage() {
                     type="button"
                     onClick={() => setReviewFilter('unchecked')}
                     className={cn(
-                      'rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+                      'shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-colors',
                       reviewFilter === 'unchecked'
                         ? 'border-primary bg-primary text-primary-foreground'
                         : 'border-border bg-background text-foreground hover:bg-accent'
@@ -578,7 +593,183 @@ export default function InventorizationPage() {
               ) : filteredRows.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground">Mos mahsulot topilmadi.</div>
               ) : (
-                <div className="overflow-x-auto">
+                <>
+                  <div className="space-y-3 p-4 lg:hidden">
+                    {filteredRows.map((row) => {
+                      const productId = String(row.product.id);
+                      const systemQty = getSystemQty(row);
+                      const difference = getDifference(row);
+                      const status = getRowStatus(row);
+                      const images = getProductImages(row.product);
+                      const hasImage = images.length > 0;
+
+                      return (
+                        <div key={productId} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+                          <div className="flex items-start gap-3">
+                            {hasImage ? (
+                              <button
+                                type="button"
+                                onClick={() => openImageModal(row.product)}
+                                className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border bg-muted"
+                              >
+                                <img
+                                  src={images[0]}
+                                  alt={row.product.name}
+                                  className="h-full w-full object-cover"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                  }}
+                                />
+                              </button>
+                            ) : (
+                              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border bg-muted">
+                                <Image className="h-6 w-6 text-muted-foreground" />
+                              </div>
+                            )}
+
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-semibold">{row.product.name}</p>
+                                  <p className="mt-1 text-xs text-muted-foreground">
+                                    {row.product.category_name || "Kategoriya ko'rsatilmagan"}
+                                  </p>
+                                </div>
+                                <span className={getStatusBadgeClassName(status)}>
+                                  {getStatusLabel(status)}
+                                </span>
+                              </div>
+
+                              <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                                <div className="rounded-lg bg-muted/40 p-2">
+                                  <p>SKU</p>
+                                  <p className="mt-1 truncate font-medium text-foreground">{row.product.sku || '-'}</p>
+                                </div>
+                                <div className="rounded-lg bg-muted/40 p-2">
+                                  <p>Barcode</p>
+                                  <p className="mt-1 truncate font-medium text-foreground">{row.product.barcode || '-'}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="mt-4 grid grid-cols-2 gap-2">
+                            <div className="rounded-xl bg-muted/40 p-3">
+                              <p className="text-xs text-muted-foreground">Bazadagi count</p>
+                              <p className="mt-1 text-base font-semibold">{row.baseQty.toLocaleString('ru-RU')}</p>
+                            </div>
+                            <div className="rounded-xl bg-muted/40 p-3">
+                              <p className="text-xs text-muted-foreground">System count</p>
+                              <p className="mt-1 text-base font-semibold">{systemQty.toLocaleString('ru-RU')}</p>
+                            </div>
+                            <div className="rounded-xl bg-muted/40 p-3">
+                              <p className="text-xs text-muted-foreground">Farq</p>
+                              <p className={cn('mt-1 text-base font-semibold', difference < 0 && 'text-rose-600', difference > 0 && 'text-amber-700')}>
+                                {difference > 0 ? '+' : ''}{difference.toLocaleString('ru-RU')}
+                              </p>
+                            </div>
+                            <div className="rounded-xl bg-muted/40 p-3">
+                              <p className="text-xs text-muted-foreground">Holat</p>
+                              <p className="mt-1 text-base font-semibold">{getStatusLabel(status)}</p>
+                            </div>
+                          </div>
+
+                          <div className="mt-4 space-y-3">
+                            <div>
+                              <label className="mb-1.5 block text-sm font-medium">Yangi count</label>
+                              <Input
+                                type="number"
+                                min={0}
+                                inputMode="numeric"
+                                value={row.actualQty}
+                                onChange={(event) => handleActualChange(productId, Number(event.target.value))}
+                                onFocus={() => handleInputFocus(productId)}
+                                onBlur={() => handleInputBlur(productId)}
+                                className="h-11 text-base font-semibold"
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="mb-1.5 flex items-center gap-2 text-sm font-medium">
+                                  <ShoppingCart className="h-4 w-4 text-green-500" />
+                                  Sotilganlari
+                                </label>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  inputMode="numeric"
+                                  value={row.sales}
+                                  onChange={(event) => handleImpactChange(productId, 'sales', Number(event.target.value))}
+                                  onFocus={() => handleInputFocus(productId)}
+                                  onBlur={() => handleInputBlur(productId)}
+                                  className="h-11 text-base"
+                                />
+                              </div>
+                              <div>
+                                <label className="mb-1.5 flex items-center gap-2 text-sm font-medium">
+                                  <ArrowUpToLine className="h-4 w-4 text-blue-500" />
+                                  Tr chiqim
+                                </label>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  inputMode="numeric"
+                                  value={row.transferOut}
+                                  onChange={(event) => handleImpactChange(productId, 'transferOut', Number(event.target.value))}
+                                  onFocus={() => handleInputFocus(productId)}
+                                  onBlur={() => handleInputBlur(productId)}
+                                  className="h-11 text-base"
+                                />
+                              </div>
+                              <div>
+                                <label className="mb-1.5 flex items-center gap-2 text-sm font-medium">
+                                  <ArrowDownToLine className="h-4 w-4 text-purple-500" />
+                                  Tr kirim
+                                </label>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  inputMode="numeric"
+                                  value={row.transferIn}
+                                  onChange={(event) => handleImpactChange(productId, 'transferIn', Number(event.target.value))}
+                                  onFocus={() => handleInputFocus(productId)}
+                                  onBlur={() => handleInputBlur(productId)}
+                                  className="h-11 text-base"
+                                />
+                              </div>
+                              <div>
+                                <label className="mb-1.5 flex items-center gap-2 text-sm font-medium">
+                                  <Package className="h-4 w-4 text-orange-500" />
+                                  Kirim
+                                </label>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  inputMode="numeric"
+                                  value={row.incoming}
+                                  onChange={(event) => handleImpactChange(productId, 'incoming', Number(event.target.value))}
+                                  onFocus={() => handleInputFocus(productId)}
+                                  onBlur={() => handleInputBlur(productId)}
+                                  className="h-11 text-base"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="mt-4">
+                            <Button variant="outline" className="w-full" onClick={() => handleReset(productId)}>
+                              <RefreshCcw className="mr-2 h-4 w-4" />
+                              Reset
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="hidden overflow-x-auto lg:block">
                   <table className="w-full min-w-370">
                     <thead className="bg-muted/40">
                       <tr className="border-b text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -674,20 +865,9 @@ export default function InventorizationPage() {
                                 {difference > 0 ? '+' : ''}{difference.toLocaleString('ru-RU')}
                               </span>
                             </td>
-                             <td className="px-4 py-3 text-center">
-                              <span
-                                className={cn(
-                                  'inline-flex rounded-full px-3 py-1 text-xs font-semibold',
-                                  status === 'matched' && 'bg-emerald-50 text-emerald-700',
-                                  status === 'shortage' && 'bg-rose-50 text-rose-700',
-                                  status === 'overage' && 'bg-amber-50 text-amber-700',
-                                  status === 'pending' && 'bg-slate-100 text-slate-700'
-                                )}
-                              >
-                                {status === 'matched' && 'Mos'}
-                                {status === 'shortage' && 'Kamomat'}
-                                {status === 'overage' && 'Ortiqcha'}
-                                {status === 'pending' && 'Pending'}
+                            <td className="px-4 py-3 text-center">
+                              <span className={getStatusBadgeClassName(status)}>
+                                {getStatusLabel(status)}
                               </span>
                             </td>
 
@@ -784,6 +964,7 @@ export default function InventorizationPage() {
                     </tbody>
                   </table>
                 </div>
+                </>
               )}
             </CardContent>
           </Card>
