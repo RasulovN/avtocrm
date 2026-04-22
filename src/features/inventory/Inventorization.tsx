@@ -8,7 +8,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardCheck,
-  File,
   Image,
   Package,
   RefreshCcw,
@@ -695,7 +694,7 @@ export default function InventorizationPage() {
                                 className="h-9 text-center"
                               />
                               <div className="mt-1 flex items-center justify-center gap-1 border rounded-lg p-2">
-                              <File className="text-green-500" />
+                              <ShoppingCart className="text-green-500" />
                                 <span>{row.sales}</span>
                               </div>
                             </td>
