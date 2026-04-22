@@ -46,6 +46,14 @@ class Logger {
     const formatted = this.formatEntry(entry);
     
     if (environment === 'development') {
+      // Suppress 404 network errors in console
+      if (level === 'error' && data && typeof data === 'object' && 'additionalData' in data) {
+        const additionalData = (data as { additionalData?: { status?: number; url?: string } }).additionalData;
+        if (additionalData?.status === 404) {
+          return; // Don't log 404 errors to console
+        }
+      }
+      
       switch (level) {
         case 'error':
           console.error(formatted);
