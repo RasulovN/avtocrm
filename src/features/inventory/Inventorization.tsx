@@ -538,7 +538,7 @@ export default function InventorizationPage() {
                                       <button
                                         type="button"
                                         onClick={() => openImageModal(row.product)}
-                                        className="relative flex-shrink-0 h-10 w-10 overflow-hidden rounded-lg border bg-muted hover:opacity-80 transition-opacity"
+                                        className="relative shrink-0 h-10 w-10 overflow-hidden rounded-lg border bg-muted hover:opacity-80 transition-opacity"
                                       >
                                         <img
                                           src={images[0]}
@@ -551,7 +551,7 @@ export default function InventorizationPage() {
                                         />
                                       </button>
                                     ) : (
-                                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border bg-muted">
+                                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border bg-muted">
                                         <Image className="h-5 w-5 text-muted-foreground" />
                                       </div>
                                     )}

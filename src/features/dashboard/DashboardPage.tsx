@@ -219,7 +219,7 @@ export function DashboardPage() {
         description={isAdmin ? 'Filiallar kesimida umumiy ko‘rsatkichlar' : 'Filialingiz bo‘yicha tezkor statistika'}
       />
 
-      <Card className="border-primary/20 bg-gradient-to-r from-primary/5 via-background to-emerald-500/5">
+      <Card className="border-primary/20 bg-linear-to-r from-primary/5 via-background to-emerald-500/5">
         <CardContent className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center">
           <Select value={statType} onValueChange={(value) => handleStatTypeChange(value as ReportsFilter)}>
             <SelectTrigger className="w-full lg:w-40">
@@ -268,7 +268,7 @@ export function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-sky-500/10 to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-br from-sky-500/10 to-transparent" />
           <CardHeader className="relative flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">{t('dashboard.totalProducts')}</CardTitle>
             <Package className="h-4 w-4 text-sky-600" />
@@ -283,7 +283,7 @@ export function DashboardPage() {
         </Card>
 
         <Card className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-br from-emerald-500/10 to-transparent" />
           <CardHeader className="relative flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">{t('dashboard.totalRevenue')}</CardTitle>
             <DollarSign className="h-4 w-4 text-emerald-600" />
@@ -298,7 +298,7 @@ export function DashboardPage() {
         </Card>
 
         <Card className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-rose-500/10 to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-br from-rose-500/10 to-transparent" />
           <CardHeader className="relative flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">{t('dashboard.totalDebt')}</CardTitle>
             <CreditCard className="h-4 w-4 text-rose-600" />
@@ -313,7 +313,7 @@ export function DashboardPage() {
         </Card>
 
         <Card className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-br from-amber-500/10 to-transparent" />
           <CardHeader className="relative flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">{t('dashboard.supplierDebt')}</CardTitle>
             <Truck className="h-4 w-4 text-amber-600" />
@@ -367,7 +367,7 @@ export function DashboardPage() {
                     </div>
                     <div className="mt-3 h-2.5 rounded-full bg-muted">
                       <div
-                        className="h-2.5 rounded-full bg-gradient-to-r from-primary to-emerald-400"
+                        className="h-2.5 rounded-full bg-linear-to-r from-primary to-emerald-400"
                         style={{ width }}
                       />
                     </div>
