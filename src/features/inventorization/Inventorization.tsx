@@ -521,6 +521,10 @@ export default function InventorizationPage() {
                                 onChange={(event) => handleImpactChange(productId, 'transferOut', Number(event.target.value))}
                                 className="h-9 text-center"
                               />
+                              <div className="mt-1 flex items-center justify-center gap-1 border rounded-lg p-2">
+                              <ArrowUpToLine className="text-blue-500" />
+                                <span>{row.transferOut}</span>
+                              </div>
                             </td>
                             <td className="px-2 py-3">
                               <Input
@@ -530,6 +534,10 @@ export default function InventorizationPage() {
                                 onChange={(event) => handleImpactChange(productId, 'transferIn', Number(event.target.value))}
                                 className="h-9 text-center"
                               />
+                              <div className="mt-1 flex items-center justify-center gap-1 border rounded-lg p-2">
+                              <ArrowDownToLine className="text-purple-500" />
+                                <span>{row.transferIn}</span>
+                              </div>
                             </td>
                             <td className="px-2 py-3">
                               <Input
@@ -539,6 +547,10 @@ export default function InventorizationPage() {
                                 onChange={(event) => handleImpactChange(productId, 'incoming', Number(event.target.value))}
                                 className="h-9 text-center"
                               />
+                              <div className="mt-1 flex items-center justify-center gap-1 border rounded-lg p-2">
+                              <Package className="text-orange-500" />
+                                <span>{row.incoming}</span>
+                              </div>
                             </td>
                             <td className="px-4 py-3 text-center text-sm font-semibold">
                               <span className={cn(difference < 0 && 'text-rose-600', difference > 0 && 'text-amber-700')}>
