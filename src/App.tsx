@@ -83,6 +83,7 @@ const ReportsPage = lazy(() =>
 
 // Styles
 import './i18n';
+import InventorizationNew from './features/inventorization/Inventorization';
 
 const DEFAULT_META = {
   title: 'AvtoCRM - Avto ehtiyot qismlar boshqaruv tizimi',
@@ -255,6 +256,9 @@ function App() {
           {/* Inventorization */}
           <Route path={`/:lang/inventorization`} element={
             withLayout(<InventorySessionsListPage />)
+          } />
+          <Route path={`/:lang/inventorization/new2`} element={
+            withLayout(<InventorizationNew />)
           } />
 
           <Route path={`/:lang/inventorization/new`} element={
