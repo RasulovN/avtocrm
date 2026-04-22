@@ -37,16 +37,13 @@ const InventoryCreatePage = lazy(() =>
   import('./features/StockEntry/InventoryCreatePage').then((module) => ({ default: module.InventoryCreatePage }))
 );
 const InventorySessionsListPage = lazy(() =>
-  import('./features/inventory/InventorySessionsListPage').then((module) => ({ default: module.InventorySessionsListPage }))
-);
-const InventoryCreateSessionPage = lazy(() =>
-  import('./features/inventory/InventoryCreateSessionPage').then((module) => ({ default: module.InventoryCreateSessionPage }))
-);
+  import('./features/inventorization/InventorizationListPage').then((module) => ({ default: module.InventorySessionsListPage }))
+); 
 const InventoryDetailPage = lazy(() =>
   import('./features/inventory/InventoryDetailPage').then((module) => ({ default: module.InventoryDetailPage }))
 );
 const InventoryShortagesPage = lazy(() =>
-  import('./features/inventory/InventoryShortagesPage').then((module) => ({ default: module.InventoryShortagesPage }))
+  import('./features/inventorization/InventorizationShortagesPage').then((module) => ({ default: module.InventoryShortagesPage }))
 );
 const TransferListPage = lazy(() =>
   import('./features/transfers/pages/TransferListPage').then((module) => ({ default: module.TransferListPage }))
