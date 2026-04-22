@@ -5,15 +5,20 @@ import {
   ArrowDownToLine,
   ArrowUpToLine,
   Camera,
+  ChevronLeft,
+  ChevronRight,
   ClipboardCheck,
   File,
+  Image,
   Package,
   RefreshCcw,
   Search,
   ShoppingCart,
   TriangleAlert,
   WandSparkles,
+  X,
 } from 'lucide-react';
+import { API_ORIGIN } from '../../services/api';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
@@ -25,6 +30,33 @@ import { useAuthStore } from '../../app/store';
 import { storeService } from '../../services/storeService';
 import type { Product, Store } from '../../types';
 import { cn, } from '../../utils';
+
+const resolveImageUrl = (image?: string | unknown): string => {
+  if (typeof image !== 'string' || !image) return '';
+  if (image.startsWith('http://') || image.startsWith('https://')) return image;
+  if (image.startsWith('/')) return `${API_ORIGIN}${image}`;
+  return `${API_ORIGIN}/${image}`;
+};
+
+const getProductImages = (product: Product): string[] => {
+  const images: string[] = [];
+  if (product.image) {
+    const resolved = resolveImageUrl(product.image);
+    if (resolved) images.push(resolved);
+  }
+  if (product.images) {
+    if (Array.isArray(product.images)) {
+      product.images.forEach((img) => {
+        const resolved = resolveImageUrl(img);
+        if (resolved) images.push(resolved);
+      });
+    } else if (typeof product.images === 'string') {
+      const resolved = resolveImageUrl(product.images);
+      if (resolved) images.push(resolved);
+    }
+  }
+  return [...new Set(images)];
+};
 
 type StatusFilter = 'all' | 'pending' | 'matched' | 'shortage' | 'overage';
 type ImpactKey = 'sales' | 'transferOut' | 'transferIn' | 'incoming';
@@ -81,6 +113,9 @@ export default function InventorizationPage() {
   const [draftRows, setDraftRows] = useState<Record<string, DraftRow>>({});
   const [showScanner, setShowScanner] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [imageModalImages, setImageModalImages] = useState<string[]>([]);
+  const [imageModalIndex, setImageModalIndex] = useState(0);
 
   const loadStores = useCallback(async () => {
     try {
@@ -227,6 +262,29 @@ export default function InventorizationPage() {
 
   const handleScanSearch = async (barcode: string) => {
     setQuery(barcode);
+  };
+
+  const openImageModal = (product: Product) => {
+    const images = getProductImages(product);
+    if (images.length > 0) {
+      setImageModalImages(images);
+      setImageModalIndex(0);
+      setImageModalOpen(true);
+    }
+  };
+
+  const closeImageModal = () => {
+    setImageModalOpen(false);
+    setImageModalImages([]);
+    setImageModalIndex(0);
+  };
+
+  const goToPrevImage = () => {
+    setImageModalIndex((prev) => (prev > 0 ? prev - 1 : imageModalImages.length - 1));
+  };
+
+  const goToNextImage = () => {
+    setImageModalIndex((prev) => (prev < imageModalImages.length - 1 ? prev + 1 : 0));
   };
 
   const stats = useMemo(() => {
@@ -471,12 +529,41 @@ export default function InventorizationPage() {
                         return (
                           <tr key={productId} className="transition-colors hover:bg-accent/25">
                             <td className="px-4 py-3">
-                              <div className="min-w-55">
-                                <p className="font-medium">{row.product.name}</p>
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                  {row.product.category_name || "Kategoriya ko'rsatilmagan"}
-                                </p>
-                              </div>
+                              {(() => {
+                                const images = getProductImages(row.product);
+                                const hasImage = images.length > 0;
+                                return (
+                                  <div className="flex items-center gap-3 min-w-55">
+                                    {hasImage ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => openImageModal(row.product)}
+                                        className="relative flex-shrink-0 h-10 w-10 overflow-hidden rounded-lg border bg-muted hover:opacity-80 transition-opacity"
+                                      >
+                                        <img
+                                          src={images[0]}
+                                          alt={row.product.name}
+                                          className="h-full w-full object-cover"
+                                          onError={(e) => {
+                                            const target = e.target as HTMLImageElement;
+                                            target.style.display = 'none';
+                                          }}
+                                        />
+                                      </button>
+                                    ) : (
+                                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border bg-muted">
+                                        <Image className="h-5 w-5 text-muted-foreground" />
+                                      </div>
+                                    )}
+                                    <div>
+                                      <p className="font-medium">{row.product.name}</p>
+                                      <p className="mt-1 text-xs text-muted-foreground">
+                                        {row.product.category_name || "Kategoriya ko'rsatilmagan"}
+                                      </p>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
                             </td>
                             <td className="px-4 py-3">
                               <div className="space-y-1 text-sm">
@@ -632,6 +719,56 @@ export default function InventorizationPage() {
             onOpenChange={setShowScanner}
             onScan={handleScanSearch}
           />
+
+          {imageModalOpen && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+              onClick={closeImageModal}
+            >
+              <div className="relative max-h-[90vh] max-w-[90vw] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  onClick={closeImageModal}
+                  className="absolute top-2 right-2 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+
+                {imageModalImages.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={goToPrevImage}
+                      className="absolute left-2 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+                    >
+                      <ChevronLeft className="h-6 w-6" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={goToNextImage}
+                      className="absolute right-2 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+                    >
+                      <ChevronRight className="h-6 w-6" />
+                    </button>
+                  </>
+                )}
+
+                <div className="flex items-center justify-center">
+                  <img
+                    src={imageModalImages[imageModalIndex]}
+                    alt={`Image ${imageModalIndex + 1} of ${imageModalImages.length}`}
+                    className="max-h-[85vh] max-w-full object-contain"
+                  />
+                </div>
+
+                {imageModalImages.length > 1 && (
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/50 px-4 py-2 text-white">
+                    {imageModalIndex + 1} / {imageModalImages.length}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
