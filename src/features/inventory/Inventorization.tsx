@@ -59,6 +59,7 @@ const getProductImages = (product: Product): string[] => {
 };
 
 type StatusFilter = 'all' | 'pending' | 'matched' | 'shortage' | 'overage';
+type ReviewFilter = 'all' | 'checked' | 'unchecked';
 type ImpactKey = 'sales' | 'transferOut' | 'transferIn' | 'incoming';
 
 interface DraftRow {
@@ -109,8 +110,10 @@ export default function InventorizationPage() {
   const [activeStoreId, setActiveStoreId] = useState(userStoreId || '');
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [reviewFilter, setReviewFilter] = useState<ReviewFilter>('unchecked');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [draftRows, setDraftRows] = useState<Record<string, DraftRow>>({});
+  const [editingProductIds, setEditingProductIds] = useState<string[]>([]);
   const [showScanner, setShowScanner] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [imageModalOpen, setImageModalOpen] = useState(false);
@@ -165,6 +168,7 @@ export default function InventorizationPage() {
   useEffect(() => {
     if (!activeStoreId) {
       setDraftRows({});
+      setEditingProductIds([]);
       setSavedAt(null);
       return;
     }
@@ -188,6 +192,7 @@ export default function InventorizationPage() {
     }, {});
 
     setDraftRows(nextRows);
+    setEditingProductIds([]);
     setSavedAt(null);
   }, [availableProducts, activeStoreId]);
 
@@ -198,6 +203,8 @@ export default function InventorizationPage() {
 
     return rows.filter((row) => {
       const status = getRowStatus(row);
+      const isChecked = status !== 'pending';
+      const isEditing = editingProductIds.includes(String(row.product.id));
       const matchesQuery =
         !normalizedQuery ||
         [row.product.name, row.product.sku, row.product.barcode, row.product.shtrix_code]
@@ -206,10 +213,14 @@ export default function InventorizationPage() {
 
       const matchesCategory = selectedCategory === 'all' || row.product.category_name === selectedCategory;
       const matchesStatus = statusFilter === 'all' || status === statusFilter;
+      const matchesReviewFilter =
+        reviewFilter === 'all' ||
+        (reviewFilter === 'checked' && isChecked) ||
+        (reviewFilter === 'unchecked' && (!isChecked || isEditing));
 
-      return matchesQuery && matchesCategory && matchesStatus;
+      return matchesQuery && matchesCategory && matchesStatus && matchesReviewFilter;
     });
-  }, [rows, query, selectedCategory, statusFilter]);
+  }, [rows, query, selectedCategory, statusFilter, reviewFilter, editingProductIds]);
 
   const updateRow = (productId: string, updater: (row: DraftRow) => DraftRow) => {
     setDraftRows((current) => {
@@ -252,11 +263,22 @@ export default function InventorizationPage() {
     }));
   };
 
+  const handleInputFocus = (productId: string) => {
+    setEditingProductIds((current) => (
+      current.includes(productId) ? current : [...current, productId]
+    ));
+  };
+
+  const handleInputBlur = (productId: string) => {
+    setEditingProductIds((current) => current.filter((id) => id !== productId));
+  };
+
   const handleStart = () => {
     if (!selectedStartStoreId) return;
     setActiveStoreId(selectedStartStoreId);
     setQuery('');
     setStatusFilter('all');
+    setReviewFilter('unchecked');
     setSelectedCategory('all');
   };
 
@@ -288,16 +310,24 @@ export default function InventorizationPage() {
   };
 
   const stats = useMemo(() => {
-    const total = filteredRows.length;
-    const checked = filteredRows.filter((row) => getRowStatus(row) !== 'pending').length;
-    const matched = filteredRows.filter((row) => getRowStatus(row) === 'matched').length;
-    const shortage = filteredRows.filter((row) => getRowStatus(row) === 'shortage').length;
-    const overage = filteredRows.filter((row) => getRowStatus(row) === 'overage').length;
+    const total = rows.length;
+    const checked = rows.filter((row) => getRowStatus(row) !== 'pending').length;
+    const matched = rows.filter((row) => getRowStatus(row) === 'matched').length;
+    const shortage = rows.filter((row) => getRowStatus(row) === 'shortage').length;
+    const overage = rows.filter((row) => getRowStatus(row) === 'overage').length;
     const progress = total > 0 ? Math.round((checked / total) * 100) : 0;
-    const totalBaseQty = filteredRows.reduce((sum, row) => sum + row.baseQty, 0);
+    const totalBaseQty = rows.reduce((sum, row) => sum + row.baseQty, 0);
 
     return { total, checked, matched, shortage, overage, progress, totalBaseQty };
-  }, [filteredRows]);
+  }, [rows]);
+
+  const reviewCounts = useMemo(() => {
+    const total = rows.length;
+    const checked = rows.filter((row) => getRowStatus(row) !== 'pending').length;
+    const unchecked = total - checked;
+
+    return { total, checked, unchecked };
+  }, [rows]);
 
   const allCompleted = stats.total > 0 && stats.checked === stats.total;
   const hasRows = rows.length > 0;
@@ -487,11 +517,52 @@ export default function InventorizationPage() {
 
           <Card className="overflow-hidden">
             <CardHeader className="border-b bg-muted/30 pb-4">
-              <div className="flex items-center justify-between gap-3">
-                <CardTitle className="text-lg">Productlar listi</CardTitle>
-                <Button variant="outline" size="sm" onClick={() => setActiveStoreId('')}>
-                  Do'konni almashtirish
-                </Button>
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between gap-3">
+                  <CardTitle className="text-lg">Productlar listi</CardTitle>
+                  <Button variant="outline" size="sm" onClick={() => setActiveStoreId('')}>
+                    Do'konni almashtirish
+                  </Button>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setReviewFilter('all')}
+                    className={cn(
+                      'rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+                      reviewFilter === 'all'
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : 'border-border bg-background text-foreground hover:bg-accent'
+                    )}
+                  >
+                    Hammasi ({reviewCounts.total})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReviewFilter('checked')}
+                    className={cn(
+                      'rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+                      reviewFilter === 'checked'
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : 'border-border bg-background text-foreground hover:bg-accent'
+                    )}
+                  >
+                    Tekshirilganlar ({reviewCounts.checked})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReviewFilter('unchecked')}
+                    className={cn(
+                      'rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+                      reviewFilter === 'unchecked'
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : 'border-border bg-background text-foreground hover:bg-accent'
+                    )}
+                  >
+                    Tekshirilmaganlar ({reviewCounts.unchecked})
+                  </button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
@@ -583,6 +654,8 @@ export default function InventorizationPage() {
                                 min={0}
                                 value={row.actualQty}
                                 onChange={(event) => handleActualChange(productId, Number(event.target.value))}
+                                onFocus={() => handleInputFocus(productId)}
+                                onBlur={() => handleInputBlur(productId)}
                                 className="h-9 text-center font-semibold"
                               />
                             </td>
@@ -593,6 +666,8 @@ export default function InventorizationPage() {
                                 min={0}
                                 value={row.sales}
                                 onChange={(event) => handleImpactChange(productId, 'sales', Number(event.target.value))}
+                                onFocus={() => handleInputFocus(productId)}
+                                onBlur={() => handleInputBlur(productId)}
                                 className="h-9 text-center"
                               />
                               <div className="mt-1 flex items-center justify-center gap-1 border rounded-lg p-2">
@@ -606,6 +681,8 @@ export default function InventorizationPage() {
                                 min={0}
                                 value={row.transferOut}
                                 onChange={(event) => handleImpactChange(productId, 'transferOut', Number(event.target.value))}
+                                onFocus={() => handleInputFocus(productId)}
+                                onBlur={() => handleInputBlur(productId)}
                                 className="h-9 text-center"
                               />
                               <div className="mt-1 flex items-center justify-center gap-1 border rounded-lg p-2">
@@ -619,6 +696,8 @@ export default function InventorizationPage() {
                                 min={0}
                                 value={row.transferIn}
                                 onChange={(event) => handleImpactChange(productId, 'transferIn', Number(event.target.value))}
+                                onFocus={() => handleInputFocus(productId)}
+                                onBlur={() => handleInputBlur(productId)}
                                 className="h-9 text-center"
                               />
                               <div className="mt-1 flex items-center justify-center gap-1 border rounded-lg p-2">
@@ -632,6 +711,8 @@ export default function InventorizationPage() {
                                 min={0}
                                 value={row.incoming}
                                 onChange={(event) => handleImpactChange(productId, 'incoming', Number(event.target.value))}
+                                onFocus={() => handleInputFocus(productId)}
+                                onBlur={() => handleInputBlur(productId)}
                                 className="h-9 text-center"
                               />
                               <div className="mt-1 flex items-center justify-center gap-1 border rounded-lg p-2">
