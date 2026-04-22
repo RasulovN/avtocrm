@@ -27,6 +27,17 @@ const removeAuth = async () => {
 
 const hasStoredAuth = () => Boolean(authService.getCurrentUser());
 
+// Disable axios XHR debug logging
+// if (typeof window !== 'undefined' && window.XMLHttpRequest) {
+//   const originalOpen = window.XMLHttpRequest.prototype.open;
+//   window.XMLHttpRequest.prototype.open = function(...args) {
+//     if (args[1] && typeof args[1] === 'string' && !args[1].includes('localhost:5173')) {
+//       // Suppress logs for production URLs
+//     }
+//     return originalOpen.apply(this, args);
+//   };
+// }
+
 // Create axios instance
 const api: AxiosInstance = axios.create({
   baseURL: BaSE_URL,
@@ -83,9 +94,9 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor for error handling
+// Response interceptor for error handling (no logging on success)
 api.interceptors.response.use(
-  (response: AxiosResponse) => response,
+  (response) => response,
   (error) => {
     const errorData = error.response?.data;
     const status = error.response?.status;

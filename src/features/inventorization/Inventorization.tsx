@@ -24,7 +24,7 @@ import { useProducts } from '../../context/ProductContext';
 import { useAuthStore } from '../../app/store';
 import { storeService } from '../../services/storeService';
 import type { Product, Store } from '../../types';
-import { cn, formatCurrency } from '../../utils';
+import { cn, } from '../../utils';
 
 type StatusFilter = 'all' | 'pending' | 'matched' | 'shortage' | 'overage';
 type ImpactKey = 'sales' | 'transferOut' | 'transferIn' | 'incoming';
@@ -363,7 +363,7 @@ export default function InventorizationPage() {
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-muted">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-primary to-emerald-500 transition-all"
+                    className="h-full rounded-full bg-linear-to-r from-primary to-emerald-500 transition-all"
                     style={{ width: `${stats.progress}%` }}
                   />
                 </div>
@@ -443,12 +443,12 @@ export default function InventorizationPage() {
                 <div className="p-8 text-center text-muted-foreground">Mos mahsulot topilmadi.</div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[1480px]">
+                  <table className="w-full min-w-370">
                     <thead className="bg-muted/40">
                       <tr className="border-b text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                         <th className="px-4 py-3">Mahsulot</th>
                         <th className="px-4 py-3">SKU / Barcode</th>
-                        <th className="px-4 py-3 text-right">Xarid</th>
+                        {/* <th className="px-4 py-3 text-right">Xarid</th> */}
                         <th className="px-4 py-3 text-center">Bazadagi count</th>
                         <th className="px-2 py-3 text-center">Yangi count</th>
                          <th className="px-4 py-3 text-center">System count</th>
@@ -471,7 +471,7 @@ export default function InventorizationPage() {
                         return (
                           <tr key={productId} className="transition-colors hover:bg-accent/25">
                             <td className="px-4 py-3">
-                              <div className="min-w-[220px]">
+                              <div className="min-w-55">
                                 <p className="font-medium">{row.product.name}</p>
                                 <p className="mt-1 text-xs text-muted-foreground">
                                   {row.product.category_name || "Kategoriya ko'rsatilmagan"}
@@ -482,13 +482,13 @@ export default function InventorizationPage() {
                               <div className="space-y-1 text-sm">
                                 <p>{row.product.sku || '-'}</p>
                                 <p className="font-mono text-xs text-muted-foreground">
-                                  {row.product.barcode || row.product.shtrix_code || '-'}
+                                  {row.product.barcode || '-'}
                                 </p>
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-right text-sm">
+                            {/* <td className="px-4 py-3 text-right text-sm">
                               {formatCurrency(row.product.purchase_price ?? row.product.min_purchase_price ?? 0)}
-                            </td>
+                            </td> */}
                             <td className="px-4 py-3 text-center text-sm font-semibold">{row.baseQty.toLocaleString('ru-RU')}</td>
                                <td className="px-2 py-3">
                               <Input

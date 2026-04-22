@@ -43,14 +43,14 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    logger.info('[ProductContext] useEffect triggered', {
-      hasSession,
-      initialLoadRef: initialLoadRef.current,
-      language: i18n.language,
-    });
+    // logger.info('[ProductContext] useEffect triggered', {
+    //   hasSession,
+    //   initialLoadRef: initialLoadRef.current,
+    //   language: i18n.language,
+    // });
 
     if (!hasSession) {
-      logger.info('[ProductContext] No session, resetting');
+      // logger.info('[ProductContext] No session, resetting');
       initialLoadRef.current = true;
       prevLangRef.current = i18n.language;
       setProducts([]);
@@ -60,7 +60,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (initialLoadRef.current) {
-      logger.info('[ProductContext] Initial load, fetching products');
+      // logger.info('[ProductContext] Initial load, fetching products');
       initialLoadRef.current = false;
       void refreshProducts();
       return;
@@ -68,7 +68,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
     
     const currentLang = i18n.language;
     if (prevLangRef.current !== currentLang) {
-      logger.info('[ProductContext] Language changed, fetching products');
+      // logger.info('[ProductContext] Language changed, fetching products');
       prevLangRef.current = currentLang;
       void refreshProducts();
     }
