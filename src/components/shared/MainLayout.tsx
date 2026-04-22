@@ -54,7 +54,7 @@ const navItems: NavItem[] = [
   { titleKey: 'nav.dashboard', href: '/dashboard', icon: LayoutDashboard, access: 'all' },
   { titleKey: 'nav.products', href: '/products', icon: Package, access: 'all' },
   // { titleKey: 'nav.categories', href: '/categories', icon: Tags, access: 'all' },
-  { titleKey: 'nav.inventory', href: '/inventory', icon: ArrowDownToLine, access: 'superuser' },
+  { titleKey: 'nav.inventory', href: '/stockentry', icon: ArrowDownToLine, access: 'superuser' },
   { titleKey: 'nav.inventorization', href: '/inventorization', icon: ClipboardCheck, access: 'all' },
   { titleKey: 'nav.transfers', href: '/transfers', icon: ArrowRightLeft, access: 'all' },
   { titleKey: 'nav.sales', href: '/sales', icon: DollarSign, access: 'all' },
@@ -68,9 +68,9 @@ const navItems: NavItem[] = [
 
 // Sub-navigation for modules that have both list and create pages
 const subNavs: Record<string, SubNavItem[]> = {
-  '/inventory': [
-    { titleKey: 'inventory.list', href: '/inventory', icon: List },
-    { titleKey: 'inventory.createIncomingStock', href: '/inventory/new', icon: Plus },
+  '/stockentry': [
+    { titleKey: 'stockentry.list', href: '/stockentry', icon: List },
+    { titleKey: 'stockentry.createIncomingStock', href: '/stockentry/new', icon: Plus },
   ],
   '/inventorization': [
     { titleKey: 'inventory.inventorizationList', href: '/inventorization', icon: List },

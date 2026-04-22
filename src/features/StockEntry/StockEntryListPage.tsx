@@ -41,7 +41,7 @@ interface DisplayInventory {
 
 type DisplayInventoryRow = DisplayInventory & { rowNumber: number };
 
-export function InventoryListPage() {
+export function StockEntryListPage() {
   const { t } = useTranslation();
   const params = useParams();
   const lang = params.lang || 'uz';

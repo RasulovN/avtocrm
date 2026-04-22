@@ -30,11 +30,11 @@ const ProductBarcodePage = lazy(() =>
 const CategoryListPage = lazy(() =>
   import('./features/categories/CategoryListPage').then((module) => ({ default: module.CategoryListPage }))
 );
-const InventoryListPage = lazy(() =>
-  import('./features/StockEntry/InventoryListPage').then((module) => ({ default: module.InventoryListPage }))
+const StockEntryListPage = lazy(() =>
+  import('./features/StockEntry/StockEntryListPage').then((module) => ({ default: module.StockEntryListPage }))
 );
-const InventoryCreatePage = lazy(() =>
-  import('./features/StockEntry/InventoryCreatePage').then((module) => ({ default: module.InventoryCreatePage }))
+const StockEntryCreatePage = lazy(() =>
+  import('./features/StockEntry/StockEntryCreatePage').then((module) => ({ default: module.StockEntryCreatePage }))
 );
 const InventorySessionsListPage = lazy(() =>
   import('./features/inventory/InventorizationListPage').then((module) => ({ default: module.InventorySessionsListPage }))
@@ -241,13 +241,13 @@ function App() {
           } />
           
           {/* Inventory (Kirim) - List */}
-          <Route path={`/:lang/inventory`} element={
-            withLayout(<InventoryListPage />)
+          <Route path={`/:lang/stockentry`} element={
+            withLayout(<StockEntryListPage />)
           } />
           
           {/* Inventory - Create */}
-          <Route path={`/:lang/inventory/new`} element={
-            withLayout(<InventoryCreatePage />)
+          <Route path={`/:lang/stockentry/new`} element={
+            withLayout(<StockEntryCreatePage />)
           } />
           
           {/* Inventorization */}
@@ -260,7 +260,7 @@ function App() {
 
 
           <Route path={`/:lang/inventorization/kirimlar`} element={
-            withLayout(<InventoryListPage />)
+            withLayout(<StockEntryListPage />)
           } />
 
           <Route path={`/:lang/inventorization/kamomat`} element={

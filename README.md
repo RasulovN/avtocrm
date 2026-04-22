@@ -108,8 +108,8 @@ Ilova til prefiksi bilan ishlaydi:
 - `/:lang/products/:id/edit`
 - `/:lang/products/:id/barcode`
 - `/:lang/categories`
-- `/:lang/inventory`
-- `/:lang/inventory/new`
+- `/:lang/stockentry`
+- `/:lang/stockentry/new`
 - `/:lang/transfers`
 - `/:lang/transfers/new`
 - `/:lang/transfers/requests`

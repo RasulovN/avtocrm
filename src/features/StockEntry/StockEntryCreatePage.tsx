@@ -25,7 +25,7 @@ interface InventoryFormItem {
   total: number;
 }
 
-export function InventoryCreatePage() {
+export function StockEntryCreatePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuthStore();
