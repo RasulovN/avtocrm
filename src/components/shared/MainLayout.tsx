@@ -54,8 +54,8 @@ const navItems: NavItem[] = [
   { titleKey: 'nav.dashboard', href: '/dashboard', icon: LayoutDashboard, access: 'all' },
   { titleKey: 'nav.products', href: '/products', icon: Package, access: 'all' },
   // { titleKey: 'nav.categories', href: '/categories', icon: Tags, access: 'all' },
-  { titleKey: 'nav.inventory', href: '/stockentry', icon: ArrowDownToLine, access: 'superuser' },
-  { titleKey: 'nav.inventorization', href: '/inventorization', icon: ClipboardCheck, access: 'all' },
+  { titleKey: 'nav.stockentry', href: '/stockentry', icon: ArrowDownToLine, access: 'superuser' },
+  { titleKey: 'nav.inventory', href: '/inventory', icon: ClipboardCheck, access: 'all' },
   { titleKey: 'nav.transfers', href: '/transfers', icon: ArrowRightLeft, access: 'all' },
   { titleKey: 'nav.sales', href: '/sales', icon: DollarSign, access: 'all' },
   { titleKey: 'nav.customers', href: '/customers', icon: Users, access: 'all' },
@@ -72,11 +72,11 @@ const subNavs: Record<string, SubNavItem[]> = {
     { titleKey: 'stockentry.list', href: '/stockentry', icon: List },
     { titleKey: 'stockentry.createIncomingStock', href: '/stockentry/new', icon: Plus },
   ],
-  '/inventorization': [
-    { titleKey: 'inventory.inventorizationList', href: '/inventorization', icon: List },
-    { titleKey: 'inventory.inventorizationIncoming', href: '/inventorization/kirimlar', icon: ArrowDownToLine },
-    { titleKey: 'inventory.shortages', href: '/inventorization/kamomat', icon: TriangleAlert },
-    { titleKey: 'inventory.newInventorization', href: '/inventorization/new', icon: Plus },
+  '/inventory': [
+    { titleKey: 'inventory.inventoryList', href: '/inventory', icon: List },
+    { titleKey: 'inventory.inventoryIncoming', href: '/inventory/kirimlar', icon: ArrowDownToLine },
+    { titleKey: 'inventory.shortages', href: '/inventory/kamomat', icon: TriangleAlert },
+    { titleKey: 'inventory.newInventory', href: '/inventory/new', icon: Plus },
   ],
   '/transfers': [
     { titleKey: 'transfers.list', href: '/transfers', icon: List },

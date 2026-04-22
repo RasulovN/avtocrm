@@ -115,7 +115,7 @@ const getStatusBadgeClassName = (status: Exclude<StatusFilter, 'all'>) => cn(
   status === 'pending' && 'bg-slate-100 text-slate-700'
 );
 
-export default function InventorizationPage() {
+export default function InventoryPage() {
   const { t } = useTranslation();
   const { products, loading } = useProducts();
   const { user } = useAuthStore();
@@ -843,10 +843,7 @@ export default function InventorizationPage() {
                                   {row.product.barcode || '-'}
                                 </p>
                               </div>
-                            </td>
-                            {/* <td className="px-4 py-3 text-right text-sm">
-                              {formatCurrency(row.product.purchase_price ?? row.product.min_purchase_price ?? 0)}
-                            </td> */}
+                            </td> 
                             <td className="px-4 py-3 text-center text-sm font-semibold">{row.baseQty.toLocaleString('ru-RU')}</td>
                                <td className="px-2 py-3">
                               <Input
@@ -930,28 +927,7 @@ export default function InventorizationPage() {
                               <Package className="text-orange-500" />
                                 <span>{row.incoming}</span>
                               </div>
-                            </td>
-                            {/* <td className="px-4 py-3 text-center text-sm font-semibold">
-                              <span className={cn(difference < 0 && 'text-rose-600', difference > 0 && 'text-amber-700')}>
-                                {difference > 0 ? '+' : ''}{difference.toLocaleString('ru-RU')}
-                              </span>
-                            </td> */}
-                            {/* <td className="px-4 py-3 text-center">
-                              <span
-                                className={cn(
-                                  'inline-flex rounded-full px-3 py-1 text-xs font-semibold',
-                                  status === 'matched' && 'bg-emerald-50 text-emerald-700',
-                                  status === 'shortage' && 'bg-rose-50 text-rose-700',
-                                  status === 'overage' && 'bg-amber-50 text-amber-700',
-                                  status === 'pending' && 'bg-slate-100 text-slate-700'
-                                )}
-                              >
-                                {status === 'matched' && 'Mos'}
-                                {status === 'shortage' && 'Kamomat'}
-                                {status === 'overage' && 'Ortiqcha'}
-                                {status === 'pending' && 'Pending'}
-                              </span>
-                            </td> */}
+                            </td> 
                             <td className="px-4 py-3 text-center">
                               <Button variant="outline" size="sm" onClick={() => handleReset(productId)}>
                                 <RefreshCcw className="mr-2 h-4 w-4" />

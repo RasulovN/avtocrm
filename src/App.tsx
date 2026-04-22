@@ -37,13 +37,13 @@ const StockEntryCreatePage = lazy(() =>
   import('./features/StockEntry/StockEntryCreatePage').then((module) => ({ default: module.StockEntryCreatePage }))
 );
 const InventorySessionsListPage = lazy(() =>
-  import('./features/inventory/InventorizationListPage').then((module) => ({ default: module.InventorySessionsListPage }))
+  import('./features/inventory/InventoryListPage').then((module) => ({ default: module.InventorySessionsListPage }))
 ); 
 const InventoryDetailPage = lazy(() =>
   import('./features/inventory/InventoryDetailPage').then((module) => ({ default: module.InventoryDetailPage }))
 );
 const InventoryShortagesPage = lazy(() =>
-  import('./features/inventory/InventorizationShortagesPage').then((module) => ({ default: module.InventoryShortagesPage }))
+  import('./features/inventory/InventoryShortagesPage').then((module) => ({ default: module.InventoryShortagesPage }))
 );
 const TransferListPage = lazy(() =>
   import('./features/transfers/pages/TransferListPage').then((module) => ({ default: module.TransferListPage }))
@@ -79,8 +79,8 @@ const ReportsPage = lazy(() =>
 );
 
 // Styles
-import './i18n';
-import InventorizationNew from './features/inventory/Inventorization';
+import './i18n'; 
+import InventoryPage from './features/inventory/InventoryPage';
 
 const DEFAULT_META = {
   title: 'AvtoCRM - Avto ehtiyot qismlar boshqaruv tizimi',
@@ -113,7 +113,7 @@ function DocumentMetaSync() {
       title = 'Hisobotlar - AvtoCRM';
       description = "AvtoCRM hisobotlar bo'limi. Sotuv, kirim, foyda va o'tkazmalar bo'yicha analitik hisobotlarni ko'ring.";
     } else if (
-      path.includes('/inventorization') ||
+      path.includes('/inventory') ||
       path === '/inventory-sessions' ||
       path.includes('/inventory-session/')
     ) {
@@ -240,30 +240,30 @@ function App() {
             withLayout(<CategoryListPage />)
           } />
           
-          {/* Inventory (Kirim) - List */}
+          {/* Stock entry (Kirim) - List */}
           <Route path={`/:lang/stockentry`} element={
             withLayout(<StockEntryListPage />)
           } />
           
-          {/* Inventory - Create */}
+          {/* Stock entry - Create */}
           <Route path={`/:lang/stockentry/new`} element={
             withLayout(<StockEntryCreatePage />)
           } />
           
-          {/* Inventorization */}
-          <Route path={`/:lang/inventorization`} element={
+          {/* Inventorizatsiya */}
+          <Route path={`/:lang/inventory`} element={
             withLayout(<InventorySessionsListPage />)
           } />
-          <Route path={`/:lang/inventorization/new`} element={
-            withLayout(<InventorizationNew />)
+          <Route path={`/:lang/inventory/new`} element={
+            withLayout(<InventoryPage />)
           } />
 
 
-          <Route path={`/:lang/inventorization/kirimlar`} element={
+          <Route path={`/:lang/inventory/kirimlar`} element={
             withLayout(<StockEntryListPage />)
           } />
 
-          <Route path={`/:lang/inventorization/kamomat`} element={
+          <Route path={`/:lang/inventory/kamomat`} element={
             withLayout(<InventoryShortagesPage />)
           } />
 
