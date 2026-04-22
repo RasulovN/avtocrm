@@ -48,17 +48,43 @@ export interface InventoryStats {
 const INVENTORY_ENDPOINT = '/inventory';
 const INVENTORY_ITEM_ENDPOINT = '/inventory-item';
 
+const buildInventoryListUrl = (params?: { page?: number; limit?: number; status?: string }) => {
+  const searchParams = new URLSearchParams();
+  if (params?.page) searchParams.append('page', params.page.toString());
+  if (params?.limit) searchParams.append('limit', params.limit.toString());
+  if (params?.status) searchParams.append('status', params.status);
+
+  const query = searchParams.toString();
+  return query ? `${INVENTORY_ENDPOINT}?${query}` : INVENTORY_ENDPOINT;
+};
+
 export const inventoryApi = {
   getSessions: async (params?: { page?: number; limit?: number; status?: string }): Promise<{ data: InventorySession[]; total: number }> => {
-    const searchParams = new URLSearchParams();
-    if (params?.page) searchParams.append('page', params.page.toString());
-    if (params?.limit) searchParams.append('limit', params.limit.toString());
-    if (params?.status) searchParams.append('status', params.status);
+    try {
+      const response = await apiClient.get<{ data: InventorySession[]; total: number }>(
+        buildInventoryListUrl(params),
+        { expectedErrorStatuses: params?.status ? [404] : undefined }
+      );
+      return response.data;
+    } catch (error) {
+      const status = typeof error === 'object' && error !== null && 'response' in error
+        ? (error as { response?: { status?: number } }).response?.status
+        : undefined;
 
-    const response = await apiClient.get<{ data: InventorySession[]; total: number }>(
-      `${INVENTORY_ENDPOINT}/?${searchParams.toString()}`
-    );
-    return response.data;
+      // Some environments expose the sessions list endpoint, but not query-string filtering.
+      // Fall back to fetching the full list and filter on the client.
+      if (status === 404 && params?.status) {
+        const fallbackResponse = await apiClient.get<{ data: InventorySession[]; total: number }>(INVENTORY_ENDPOINT);
+        const filteredData = fallbackResponse.data.data.filter((session) => session.status === params.status);
+        return {
+          ...fallbackResponse.data,
+          data: filteredData,
+          total: filteredData.length,
+        };
+      }
+
+      throw error;
+    }
   },
 
   getSession: async (id: number): Promise<InventorySession> => {

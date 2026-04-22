@@ -44,8 +44,7 @@ export function InventorySessionsListPage({
 
   useEffect(() => {
     loadStores();
-    fetchSessions();
-  }, [loadStores, fetchSessions]);
+  }, [loadStores]);
 
   useEffect(() => {
     fetchSessions(statusFilter !== 'all' ? { status: statusFilter } : undefined);

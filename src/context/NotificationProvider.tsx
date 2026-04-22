@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { NotificationWebSocketService } from '../services/NotificationWebSocketService';
+import { authService } from '../services/authService';
 
 type ConnectionStatus = 'connecting' | 'open' | 'closed' | 'error' | 'reconnecting';
 
@@ -33,6 +34,14 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   useEffect(() => {
     if (mountedRef.current) return;
     mountedRef.current = true;
+
+    const isAuthenticated = authService.isAuthenticated();
+    const shouldConnect = isAuthenticated && !import.meta.env.DEV;
+
+    if (!shouldConnect) {
+      setConnectionStatus('closed');
+      return;
+    }
 
     const ws = new NotificationWebSocketService(WS_URL);
     wsRef.current = ws;
