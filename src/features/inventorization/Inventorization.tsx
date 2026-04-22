@@ -449,12 +449,12 @@ export default function InventorizationPage() {
                         <th className="px-4 py-3">SKU / Barcode</th>
                         <th className="px-4 py-3 text-right">Xarid</th>
                         <th className="px-4 py-3 text-center">Bazadagi count</th>
+                        <th className="px-2 py-3 text-center">Yangi count</th>
+                         <th className="px-4 py-3 text-center">System count</th>
                         <th className="px-2 py-3 text-center">Sotilganlari</th>
                         <th className="px-2 py-3 text-center">Tr chiqim</th>
                         <th className="px-2 py-3 text-center">Tr kirim</th>
                         <th className="px-2 py-3 text-center">Kirim</th>
-                        <th className="px-4 py-3 text-center">System count</th>
-                        <th className="px-2 py-3 text-center">Yangi count</th>
                         <th className="px-4 py-3 text-center">Farq</th>
                         <th className="px-4 py-3 text-center">Holat</th>
                         <th className="px-4 py-3 text-center">Amal</th>
@@ -489,6 +489,16 @@ export default function InventorizationPage() {
                               {formatCurrency(row.product.purchase_price ?? row.product.min_purchase_price ?? 0)}
                             </td>
                             <td className="px-4 py-3 text-center text-sm font-semibold">{row.baseQty.toLocaleString('ru-RU')}</td>
+                               <td className="px-2 py-3">
+                              <Input
+                                type="number"
+                                min={0}
+                                value={row.actualQty}
+                                onChange={(event) => handleActualChange(productId, Number(event.target.value))}
+                                className="h-9 text-center font-semibold"
+                              />
+                            </td>
+                               <td className="px-4 py-3 text-center text-sm font-semibold">{systemQty.toLocaleString('ru-RU')}</td>
                             <td className="px-2 py-3">
                               <Input
                                 type="number"
@@ -523,16 +533,6 @@ export default function InventorizationPage() {
                                 value={row.incoming}
                                 onChange={(event) => handleImpactChange(productId, 'incoming', Number(event.target.value))}
                                 className="h-9 text-center"
-                              />
-                            </td>
-                            <td className="px-4 py-3 text-center text-sm font-semibold">{systemQty.toLocaleString('ru-RU')}</td>
-                            <td className="px-2 py-3">
-                              <Input
-                                type="number"
-                                min={0}
-                                value={row.actualQty}
-                                onChange={(event) => handleActualChange(productId, Number(event.target.value))}
-                                className="h-9 text-center font-semibold"
                               />
                             </td>
                             <td className="px-4 py-3 text-center text-sm font-semibold">
