@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CheckCircle2, AlertTriangle, Clock } from 'lucide-react';
-import type { InventoryItem } from '../../services/inventory.api';
+import type { InventoryItem } from '../../../services/inventory.api';
 
 interface InventoryRowProps {
   item: InventoryItem;

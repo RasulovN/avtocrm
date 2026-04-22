@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { CheckCircle2, Clock, CircleDot, Package, AlertTriangle } from 'lucide-react';
-import type { InventorySession, InventoryStats } from '../../services/inventory.api';
+import type { InventorySession, InventoryStats } from '../../../services/inventory.api';
 
 interface InventoryHeaderProps {
   session: InventorySession | null;
@@ -74,7 +74,7 @@ export function InventoryHeader({
           <button
             onClick={onLoadProducts}
             disabled={!canLoadProducts || loadingProducts}
-            className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500"
+            className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary   h-9 px-4 py-2  text-white hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500"
           >
             {loadingProducts ? (
               <>

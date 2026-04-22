@@ -5,9 +5,9 @@ import toast from 'react-hot-toast';
 import { ArrowLeft } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { Button } from '../../components/ui/Button';
-import { InventoryHeader } from './InventoryHeader';
-import { InventoryTable } from './InventoryTable';
-import { InventoryTableSkeleton, InventoryStatsSkeleton } from './InventorySkeleton';
+import { InventoryHeader } from './components/InventoryHeader';
+import { InventoryTable } from './components/InventoryTable';
+import { InventoryTableSkeleton, InventoryStatsSkeleton } from './components/InventorySkeleton';
 import { useInventoryStore } from '../../store/inventory.store';
 
 export function InventoryDetailPage() {

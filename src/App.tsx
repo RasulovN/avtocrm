@@ -37,13 +37,13 @@ const InventoryCreatePage = lazy(() =>
   import('./features/StockEntry/InventoryCreatePage').then((module) => ({ default: module.InventoryCreatePage }))
 );
 const InventorySessionsListPage = lazy(() =>
-  import('./features/inventorization/InventorizationListPage').then((module) => ({ default: module.InventorySessionsListPage }))
+  import('./features/inventory/InventorizationListPage').then((module) => ({ default: module.InventorySessionsListPage }))
 ); 
 const InventoryDetailPage = lazy(() =>
   import('./features/inventory/InventoryDetailPage').then((module) => ({ default: module.InventoryDetailPage }))
 );
 const InventoryShortagesPage = lazy(() =>
-  import('./features/inventorization/InventorizationShortagesPage').then((module) => ({ default: module.InventoryShortagesPage }))
+  import('./features/inventory/InventorizationShortagesPage').then((module) => ({ default: module.InventoryShortagesPage }))
 );
 const TransferListPage = lazy(() =>
   import('./features/transfers/pages/TransferListPage').then((module) => ({ default: module.TransferListPage }))
@@ -80,7 +80,7 @@ const ReportsPage = lazy(() =>
 
 // Styles
 import './i18n';
-import InventorizationNew from './features/inventorization/Inventorization';
+import InventorizationNew from './features/inventory/Inventorization';
 
 const DEFAULT_META = {
   title: 'AvtoCRM - Avto ehtiyot qismlar boshqaruv tizimi',

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { InventoryRow } from './InventoryRow';
-import type { InventoryItem } from '../../services/inventory.api';
+import type { InventoryItem } from '../../../services/inventory.api';
 
 interface InventoryTableProps {
   items: InventoryItem[];
