@@ -39,8 +39,14 @@ const InventoryCreatePage = lazy(() =>
 const InventorySessionsListPage = lazy(() =>
   import('./features/inventory/InventorySessionsListPage').then((module) => ({ default: module.InventorySessionsListPage }))
 );
+const InventoryCreateSessionPage = lazy(() =>
+  import('./features/inventory/InventoryCreateSessionPage').then((module) => ({ default: module.InventoryCreateSessionPage }))
+);
 const InventoryDetailPage = lazy(() =>
   import('./features/inventory/InventoryDetailPage').then((module) => ({ default: module.InventoryDetailPage }))
+);
+const InventoryShortagesPage = lazy(() =>
+  import('./features/inventory/InventoryShortagesPage').then((module) => ({ default: module.InventoryShortagesPage }))
 );
 const TransferListPage = lazy(() =>
   import('./features/transfers/pages/TransferListPage').then((module) => ({ default: module.TransferListPage }))
@@ -108,7 +114,11 @@ function DocumentMetaSync() {
     } else if (path.includes('/reports')) {
       title = 'Hisobotlar - AvtoCRM';
       description = "AvtoCRM hisobotlar bo'limi. Sotuv, kirim, foyda va o'tkazmalar bo'yicha analitik hisobotlarni ko'ring.";
-    } else if (path === '/inventory-sessions' || path.includes('/inventory-session/')) {
+    } else if (
+      path.includes('/inventorization') ||
+      path === '/inventory-sessions' ||
+      path.includes('/inventory-session/')
+    ) {
       title = 'Inventarizatsiya - AvtoCRM';
       description = "AvtoCRM inventarizatsiya bo'limi. Mahsulotlarni hisobga olish va tekshirish.";
     } else if (path.includes('/inventory')) {
@@ -242,6 +252,23 @@ function App() {
             withLayout(<InventoryCreatePage />)
           } />
           
+          {/* Inventorization */}
+          <Route path={`/:lang/inventorization`} element={
+            withLayout(<InventorySessionsListPage />)
+          } />
+
+          <Route path={`/:lang/inventorization/new`} element={
+            withLayout(<InventoryCreateSessionPage />)
+          } />
+
+          <Route path={`/:lang/inventorization/kirimlar`} element={
+            withLayout(<InventoryListPage />)
+          } />
+
+          <Route path={`/:lang/inventorization/kamomat`} element={
+            withLayout(<InventoryShortagesPage />)
+          } />
+
           {/* Inventory Sessions - List */}
           <Route path={`/:lang/inventory-sessions`} element={
             withLayout(<InventorySessionsListPage />)

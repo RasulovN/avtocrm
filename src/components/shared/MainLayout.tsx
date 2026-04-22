@@ -27,6 +27,8 @@ import {
   ArrowLeft,
   Download,
   Users,
+  ClipboardCheck,
+  TriangleAlert,
 } from 'lucide-react';
 import { NotificationProvider } from '../../context/NotificationProvider';
 import { NotificationToast } from './NotificationToast';
@@ -53,6 +55,7 @@ const navItems: NavItem[] = [
   { titleKey: 'nav.products', href: '/products', icon: Package, access: 'all' },
   // { titleKey: 'nav.categories', href: '/categories', icon: Tags, access: 'all' },
   { titleKey: 'nav.inventory', href: '/inventory', icon: ArrowDownToLine, access: 'superuser' },
+  { titleKey: 'nav.inventorization', href: '/inventorization', icon: ClipboardCheck, access: 'all' },
   { titleKey: 'nav.transfers', href: '/transfers', icon: ArrowRightLeft, access: 'all' },
   { titleKey: 'nav.sales', href: '/sales', icon: DollarSign, access: 'all' },
   { titleKey: 'nav.customers', href: '/customers', icon: Users, access: 'all' },
@@ -68,6 +71,12 @@ const subNavs: Record<string, SubNavItem[]> = {
   '/inventory': [
     { titleKey: 'inventory.list', href: '/inventory', icon: List },
     { titleKey: 'inventory.createIncomingStock', href: '/inventory/new', icon: Plus },
+  ],
+  '/inventorization': [
+    { titleKey: 'inventory.inventorizationList', href: '/inventorization', icon: List },
+    { titleKey: 'inventory.inventorizationIncoming', href: '/inventorization/kirimlar', icon: ArrowDownToLine },
+    { titleKey: 'inventory.shortages', href: '/inventorization/kamomat', icon: TriangleAlert },
+    { titleKey: 'inventory.newInventorization', href: '/inventorization/new', icon: Plus },
   ],
   '/transfers': [
     { titleKey: 'transfers.list', href: '/transfers', icon: List },
@@ -337,7 +346,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
                 const isActive = location.pathname.startsWith(`/${lang}${item.href}`) ||
                                (item.href === '/dashboard' && location.pathname === `/${lang}`);
                 
-                const hasSubNav = isSuperUser && !!subNavs[item.href];
+                const hasSubNav = !!filteredSubNavs[item.href];
                 
                 return (
                   <Link

@@ -14,7 +14,13 @@ import { storeService } from '../../services/storeService';
 import type { Store } from '../../types';
 import { formatDate } from '../../utils';
 
-export function InventorySessionsListPage() {
+interface InventorySessionsListPageProps {
+  defaultCreateDialogOpen?: boolean;
+}
+
+export function InventorySessionsListPage({
+  defaultCreateDialogOpen = false,
+}: InventorySessionsListPageProps) {
   const { t } = useTranslation();
   const params = useParams();
   const lang = params.lang || 'uz';
@@ -44,6 +50,12 @@ export function InventorySessionsListPage() {
   useEffect(() => {
     fetchSessions(statusFilter !== 'all' ? { status: statusFilter } : undefined);
   }, [statusFilter, fetchSessions]);
+
+  useEffect(() => {
+    if (defaultCreateDialogOpen) {
+      setShowCreateDialog(true);
+    }
+  }, [defaultCreateDialogOpen]);
 
   const handleCreateSession = async () => {
     if (!selectedStore) {

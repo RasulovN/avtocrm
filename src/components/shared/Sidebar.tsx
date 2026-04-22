@@ -18,6 +18,10 @@ import {
   ChevronDown,
   ChevronRight,
   ClipboardCheck,
+  ArrowDownToLine,
+  TriangleAlert,
+  Plus,
+  List,
 } from 'lucide-react';
 import { cn } from '../../utils';
 import { useAuthStore } from '../../app/store';
@@ -36,7 +40,17 @@ const navItems: NavItem[] = [
   { titleKey: 'nav.products', href: '/products', icon: Package },
   // { titleKey: 'nav.categories', href: '/categories', icon: Folder },
   { titleKey: 'nav.inventory', href: '/inventory', icon: ArrowDownToLine, roles: ['admin'] },
-  { titleKey: 'nav.inventorySessions', href: '/inventory-sessions', icon: ClipboardCheck, },
+  {
+    titleKey: 'nav.inventorization',
+    href: '/inventorization',
+    icon: ClipboardCheck,
+    children: [
+      { titleKey: 'inventory.inventorizationList', href: '/inventorization', icon: List },
+      { titleKey: 'inventory.inventorizationIncoming', href: '/inventorization/kirimlar', icon: ArrowDownToLine },
+      { titleKey: 'inventory.shortages', href: '/inventorization/kamomat', icon: TriangleAlert },
+      { titleKey: 'inventory.newInventorization', href: '/inventorization/new', icon: Plus },
+    ],
+  },
   { titleKey: 'nav.transfers', href: '/transfers', icon: ArrowRightLeft },
   { titleKey: 'nav.transferRequests', href: '/transfer-requests', icon: Send },
   { titleKey: 'nav.sales', href: '/sales', icon: DollarSign },
