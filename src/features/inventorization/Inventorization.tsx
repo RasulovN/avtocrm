@@ -250,6 +250,7 @@ export default function InventorizationPage() {
           </CardContent>
         </Card>
 
+      </div>
         <Card>
           <CardContent className="p-5">
             <div className="mb-2 flex items-center justify-between">
@@ -265,7 +266,6 @@ export default function InventorizationPage() {
             <p className="mt-2 text-xs text-muted-foreground">{selectedStoreName} bo'yicha inventorization jarayoni</p>
           </CardContent>
         </Card>
-      </div>
 
       <Card>
         <CardHeader className="pb-4">
