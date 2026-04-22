@@ -57,6 +57,10 @@ const getProductImages = (product: Product): string[] => {
   return [...new Set(images)];
 };
 
+const normalizeCategoryValue = (value?: string | null) => (
+  typeof value === 'string' ? value.trim().toLowerCase() : ''
+);
+
 type StatusFilter = 'all' | 'pending' | 'matched' | 'shortage' | 'overage';
 type ReviewFilter = 'all' | 'checked' | 'unchecked';
 type ImpactKey = 'sales' | 'transferOut' | 'transferIn' | 'incoming';
@@ -143,18 +147,6 @@ export default function InventorizationPage() {
     }
   }, [isAdmin, userStoreId]);
 
-  const categories = useMemo(() => {
-    const values = Array.from(
-      new Set(
-        products
-          .map((product) => product.category_name)
-          .filter((value): value is string => typeof value === 'string' && value.trim() !== '')
-      )
-    );
-
-    return values.sort((a, b) => a.localeCompare(b));
-  }, [products]);
-
   const availableProducts = useMemo(() => {
     if (!activeStoreId) return [];
 
@@ -163,6 +155,20 @@ export default function InventorizationPage() {
       return qty > 0 || String(product.store_id || '') === String(activeStoreId);
     });
   }, [products, activeStoreId]);
+
+  const categories = useMemo(() => {
+    const categoryMap = new Map<string, string>();
+
+    availableProducts.forEach((product) => {
+      const categoryName = typeof product.category_name === 'string' ? product.category_name.trim() : '';
+      const normalized = normalizeCategoryValue(categoryName);
+      if (normalized && !categoryMap.has(normalized)) {
+        categoryMap.set(normalized, categoryName);
+      }
+    });
+
+    return Array.from(categoryMap.values()).sort((a, b) => a.localeCompare(b));
+  }, [availableProducts]);
 
   useEffect(() => {
     if (!activeStoreId) {
@@ -210,7 +216,9 @@ export default function InventorizationPage() {
           .filter((value): value is string => typeof value === 'string' && value.trim() !== '')
           .some((value) => value.toLowerCase().includes(normalizedQuery));
 
-      const matchesCategory = selectedCategory === 'all' || row.product.category_name === selectedCategory;
+      const matchesCategory =
+        selectedCategory === 'all' ||
+        normalizeCategoryValue(row.product.category_name) === normalizeCategoryValue(selectedCategory);
       const matchesStatus = statusFilter === 'all' || status === statusFilter;
       const matchesReviewFilter =
         reviewFilter === 'all' ||
