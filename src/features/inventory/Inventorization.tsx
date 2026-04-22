@@ -110,7 +110,7 @@ export default function InventorizationPage() {
   const [activeStoreId, setActiveStoreId] = useState(userStoreId || '');
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [reviewFilter, setReviewFilter] = useState<ReviewFilter>('unchecked');
+  const [reviewFilter, setReviewFilter] = useState<ReviewFilter>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [draftRows, setDraftRows] = useState<Record<string, DraftRow>>({});
   const [editingProductIds, setEditingProductIds] = useState<string[]>([]);
@@ -278,7 +278,7 @@ export default function InventorizationPage() {
     setActiveStoreId(selectedStartStoreId);
     setQuery('');
     setStatusFilter('all');
-    setReviewFilter('unchecked');
+    setReviewFilter('all');
     setSelectedCategory('all');
   };
 
@@ -581,12 +581,14 @@ export default function InventorizationPage() {
                         <th className="px-4 py-3 text-center">Bazadagi count</th>
                         <th className="px-2 py-3 text-center">Yangi count</th>
                          <th className="px-4 py-3 text-center">System count</th>
+                          <th className="px-4 py-3 text-center">Farq</th>
+                                <th className="px-4 py-3 text-center">Holat</th>
                         <th className="px-2 py-3 text-center">Sotilganlari</th>
                         <th className="px-2 py-3 text-center">Tr chiqim</th>
                         <th className="px-2 py-3 text-center">Tr kirim</th>
                         <th className="px-2 py-3 text-center">Kirim</th>
-                        <th className="px-4 py-3 text-center">Farq</th>
-                        <th className="px-4 py-3 text-center">Holat</th>
+                        {/* <th className="px-4 py-3 text-center">Farq</th> */}
+                        {/* <th className="px-4 py-3 text-center">Holat</th> */}
                         <th className="px-4 py-3 text-center">Amal</th>
                       </tr>
                     </thead>
@@ -658,8 +660,30 @@ export default function InventorizationPage() {
                                 onBlur={() => handleInputBlur(productId)}
                                 className="h-9 text-center font-semibold"
                               />
-                            </td>
+                              </td>
                                <td className="px-4 py-3 text-center text-sm font-semibold">{systemQty.toLocaleString('ru-RU')}</td>
+                             <td className="px-4 py-3 text-center text-sm font-semibold">
+                              <span className={cn(difference < 0 && 'text-rose-600', difference > 0 && 'text-amber-700')}>
+                                {difference > 0 ? '+' : ''}{difference.toLocaleString('ru-RU')}
+                              </span>
+                            </td>
+                             <td className="px-4 py-3 text-center">
+                              <span
+                                className={cn(
+                                  'inline-flex rounded-full px-3 py-1 text-xs font-semibold',
+                                  status === 'matched' && 'bg-emerald-50 text-emerald-700',
+                                  status === 'shortage' && 'bg-rose-50 text-rose-700',
+                                  status === 'overage' && 'bg-amber-50 text-amber-700',
+                                  status === 'pending' && 'bg-slate-100 text-slate-700'
+                                )}
+                              >
+                                {status === 'matched' && 'Mos'}
+                                {status === 'shortage' && 'Kamomat'}
+                                {status === 'overage' && 'Ortiqcha'}
+                                {status === 'pending' && 'Pending'}
+                              </span>
+                            </td>
+
                             <td className="px-2 py-3">
                               <Input
                                 type="number"
@@ -720,12 +744,12 @@ export default function InventorizationPage() {
                                 <span>{row.incoming}</span>
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-center text-sm font-semibold">
+                            {/* <td className="px-4 py-3 text-center text-sm font-semibold">
                               <span className={cn(difference < 0 && 'text-rose-600', difference > 0 && 'text-amber-700')}>
                                 {difference > 0 ? '+' : ''}{difference.toLocaleString('ru-RU')}
                               </span>
-                            </td>
-                            <td className="px-4 py-3 text-center">
+                            </td> */}
+                            {/* <td className="px-4 py-3 text-center">
                               <span
                                 className={cn(
                                   'inline-flex rounded-full px-3 py-1 text-xs font-semibold',
@@ -740,7 +764,7 @@ export default function InventorizationPage() {
                                 {status === 'overage' && 'Ortiqcha'}
                                 {status === 'pending' && 'Pending'}
                               </span>
-                            </td>
+                            </td> */}
                             <td className="px-4 py-3 text-center">
                               <Button variant="outline" size="sm" onClick={() => handleReset(productId)}>
                                 <RefreshCcw className="mr-2 h-4 w-4" />
