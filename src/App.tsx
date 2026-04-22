@@ -257,13 +257,10 @@ function App() {
           <Route path={`/:lang/inventorization`} element={
             withLayout(<InventorySessionsListPage />)
           } />
-          <Route path={`/:lang/inventorization/new2`} element={
+          <Route path={`/:lang/inventorization/new`} element={
             withLayout(<InventorizationNew />)
           } />
 
-          <Route path={`/:lang/inventorization/new`} element={
-            withLayout(<InventoryCreateSessionPage />)
-          } />
 
           <Route path={`/:lang/inventorization/kirimlar`} element={
             withLayout(<InventoryListPage />)
