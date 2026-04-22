@@ -508,10 +508,10 @@ export default function InventorizationPage() {
                                 onChange={(event) => handleImpactChange(productId, 'sales', Number(event.target.value))}
                                 className="h-9 text-center"
                               />
-                              {/* <div className="mt-1 flex items-center justify-center gap-1 border rounded-lg p-2">
-                              <File className="text-green-500" /> 1
+                              <div className="mt-1 flex items-center justify-center gap-1 border rounded-lg p-2">
+                              <File className="text-green-500" />
                                 <span>{row.sales}</span>
-                              </div> */}
+                              </div>
                             </td>
                             <td className="px-2 py-3">
                               <Input
