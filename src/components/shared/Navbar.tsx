@@ -14,8 +14,7 @@ export function Navbar() {
 
   const getPageTitle = (pathname: string): string => {
     if (pathname.startsWith('/dashboard')) return t('nav.dashboard');
-    if (pathname.startsWith('/products')) return t('nav.products');
-    // if (pathname.startsWith('/categories')) return t('nav.categories');
+    if (pathname.startsWith('/products')) return t('nav.products'); 
     if (pathname.startsWith('/inventory')) return t('nav.inventory');
     if (pathname.startsWith('/transfers')) return t('nav.transfers');
     if (pathname.startsWith('/sales')) return t('nav.sales');

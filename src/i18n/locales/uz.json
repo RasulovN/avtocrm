@@ -130,7 +130,11 @@
     "productAdded": "Mahsulot muvaffaqiyatli qo'shildi",
     "productUpdated": "Mahsulot muvaffaqiyatli yangilandi",
     "productDeleted": "Mahsulot muvaffaqiyatli o'chirildi",
-    "productSaved": "Mahsulot saqlandi"
+    "productSaved": "Mahsulot saqlandi",
+    "ProductLocatiion": "Mahsulot joylashuvi",
+    "productLocation": "Mahsulot joylashuvi",
+    "productLocationPlaceholder": "Mahsulot joylashuvi kiriting...",
+    "productLocationDescription": "Mahsulot joylashuvini kiriting"
   },
   "categories": {
     "title": "Kategoriyalar",

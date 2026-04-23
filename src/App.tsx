@@ -30,6 +30,9 @@ const ProductBarcodePage = lazy(() =>
 const CategoryListPage = lazy(() =>
   import('./features/categories/CategoryListPage').then((module) => ({ default: module.CategoryListPage }))
 );
+const ProductLocationPage = lazy(() =>
+  import('./features/product-location/ProductLocationPage').then((module) => ({ default: module.ProductLocationPage }))
+);
 const StockEntryListPage = lazy(() =>
   import('./features/StockEntry/StockEntryListPage').then((module) => ({ default: module.StockEntryListPage }))
 );
@@ -236,8 +239,11 @@ function App() {
           } />
           
           {/* Categories */}
-          <Route path={`/:lang/categories`} element={
+          <Route path={`/:lang/products/categories`} element={
             withLayout(<CategoryListPage />)
+          } />
+          <Route path={`/:lang/products/location`} element={
+            withLayout(<ProductLocationPage />)
           } />
           
           {/* Stock entry (Kirim) - List */}

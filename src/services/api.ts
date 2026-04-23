@@ -4,11 +4,10 @@ import { handleError } from '../utils/errorHandler';
 import { authService } from './authService';
 import { isDev } from '../config/environment';
 
-const rawUrl = import.meta.env.VITE_API_URL || (isDev ? '/api' : 'https://api.avtoyon.uz/api');
-const BaSE_URL = rawUrl.replace(/\/$/, '');
-export const URL = rawUrl.replace(/\/api\/?$/, '') || (isDev ? '/' : 'https://api.avtoyon.uz');
+const BaSE_URL = isDev ? '/api' : 'https://api.avtoyon.uz/api';
+export const URL = isDev ? '/' : 'https://api.avtoyon.uz';
 export const API_BASE_URL = BaSE_URL;
-export const API_ORIGIN = rawUrl.replace(/\/api\/?$/, '') || (isDev ? '' : BaSE_URL.replace(/\/api\/?$/, ''));
+export const API_ORIGIN = isDev ? '' : BaSE_URL.replace(/\/api\/?$/, '');
 
 export interface ApiRequestConfig extends AxiosRequestConfig {
   expectedErrorStatuses?: number[];
@@ -125,7 +124,7 @@ api.interceptors.response.use(
     } else {
       const message = errorData?.message || errorData?.msg || error.message || 'Server error';
       handleError(new Error(message), { 
-        showToast: !isDev,
+        showToast: !isDev, 
         logData: { status, url: error.config?.url }
       });
     }

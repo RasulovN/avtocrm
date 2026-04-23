@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, type ChangeEvent, type KeyboardEvent } from 'react';
 import toast from 'react-hot-toast';
-import { ScanBarcode, Trash2, DollarSign, Search, X, UserPlus } from 'lucide-react';
+import { ScanBarcode, Trash2, DollarSign, Search, X, UserPlus, Eye, Package, Barcode, MapPin, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/Dialog';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -27,6 +27,39 @@ interface CartItem {
   selling_price: number;
   total: number;
 }
+
+const getProductImages = (product?: Product | null): string[] => {
+  if (!product) return [];
+
+  const images: string[] = [];
+
+  if (product.image) images.push(product.image);
+
+  if (product.images) {
+    if (Array.isArray(product.images)) {
+      images.push(...product.images.filter((image): image is string => typeof image === 'string' && Boolean(image)));
+    } else if (typeof product.images === 'string') {
+      images.push(product.images);
+    }
+  }
+
+  return [...new Set(images.filter(Boolean))];
+};
+
+const getStaticProductLocation = (product?: Product | null) => {
+  const source = String(product?.id ?? '0');
+  const code = source.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  const zones = ['Asosiy ombor', 'Savdo zal', 'Yuk qabul zonasi', 'Zaxira qator'];
+  const shelves = ['A-1', 'B-2', 'C-3', 'D-4', 'E-5', 'F-6'];
+  const levels = ['Yuqori qavat', "O'rta qavat", 'Pastki qavat'];
+
+  return {
+    zone: zones[code % zones.length],
+    shelf: shelves[code % shelves.length],
+    level: levels[code % levels.length],
+    note: "Statik ma'lumot, backend tayyor bo'lgach real lokatsiya bilan almashtiriladi.",
+  };
+};
 
 const playSuccessSound = () => {
   try {
@@ -92,6 +125,10 @@ export function SalesPage() {
   const [showNewCustomerDialog, setShowNewCustomerDialog] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState('');
   const [newCustomerPhone, setNewCustomerPhone] = useState('');
+  const [showProductDialog, setShowProductDialog] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [productLoading, setProductLoading] = useState(false);
+  const [productError, setProductError] = useState('');
 
   const safeStores = useMemo(() => (Array.isArray(stores) ? stores : []), [stores]);
   const safeProducts = useMemo(() => {
@@ -237,6 +274,8 @@ export function SalesPage() {
   const totalPaid = useMemo(() => cashAmount + cardAmount, [cashAmount, cardAmount]);
   const change = useMemo(() => Math.max(0, totalPaid - totalWithDiscount), [totalPaid, totalWithDiscount]);
   const debt = useMemo(() => Math.max(0, totalWithDiscount - totalPaid), [totalPaid, totalWithDiscount]);
+  const productImages = getProductImages(selectedProduct);
+  const productLocation = getStaticProductLocation(selectedProduct);
   const filteredProducts = useMemo(() => {
     let result = safeProducts;
     if (categoryFilter) {
@@ -511,6 +550,37 @@ export function SalesPage() {
     }
   };
 
+  const handleOpenProductDialog = useCallback(async (product: Product) => {
+    const hydratedProduct = hydrateProductFromCatalog(product);
+    setSelectedProduct(hydratedProduct);
+    setShowProductDialog(true);
+    setProductError('');
+
+    if (!hydratedProduct.id) {
+      setProductError('Mahsulot ID topilmadi.');
+      return;
+    }
+
+    try {
+      setProductLoading(true);
+      const fullProduct = await productService.getById(String(hydratedProduct.id));
+      setSelectedProduct((prev) => ({ ...(prev ?? hydratedProduct), ...fullProduct }));
+    } catch {
+      setProductError("Mahsulot detallari yuklanmadi.");
+    } finally {
+      setProductLoading(false);
+    }
+  }, [hydrateProductFromCatalog]);
+
+  const handleProductDialogChange = useCallback((open: boolean) => {
+    setShowProductDialog(open);
+    if (!open) {
+      setSelectedProduct(null);
+      setProductError('');
+      setProductLoading(false);
+    }
+  }, []);
+
   return (
     <div>
     <style>{`
@@ -629,7 +699,7 @@ export function SalesPage() {
                       className="w-full text-left rounded-lg p-2.5 border border-gray-900 hover:bg-accent dark:hover:bg-gray-900 transition-colors"
                       onClick={() => handleProductClick(product)}
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
                           <div className="font-medium dark:text-white">
                             {/* {product.name} */}
@@ -639,12 +709,26 @@ export function SalesPage() {
                             {product.sku ||  product.barcode}
                           </div>
                         </div>
-                        <div className="text-right ml-3">
-                          <div className="font-bold dark:text-white">{formatCurrency(product.selling_price ?? 0)}</div>
-                          <div className="flex items-center justify-end">
-                            <span className="inline-flex items-center rounded bg-primary/10 dark:bg-gray-600 px-1.5 py-0.5 text-xs font-medium dark:text-gray-200">
-                              {product.quantity}
-                            </span>
+                        <div className="ml-3 flex items-start gap-2">
+                          <button
+                            type="button"
+                            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-input bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200 dark:hover:bg-gray-800"
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              void handleOpenProductDialog(product);
+                            }}
+                            aria-label="Mahsulot detalini ko'rish"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          <div className="text-right">
+                            <div className="font-bold dark:text-white">{formatCurrency(product.selling_price ?? 0)}</div>
+                            <div className="flex items-center justify-end">
+                              <span className="inline-flex items-center rounded bg-primary/10 dark:bg-gray-600 px-1.5 py-0.5 text-xs font-medium dark:text-gray-200">
+                                {product.quantity}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1064,6 +1148,147 @@ export function SalesPage() {
               Saqlash
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showProductDialog} onOpenChange={handleProductDialogChange}>
+        <DialogContent className="max-w-3xl pb-6">
+          <DialogHeader>
+            <DialogTitle>Mahsulot tafsilotlari</DialogTitle>
+          </DialogHeader>
+
+          {productLoading ? (
+            <div className="flex h-64 items-center justify-center">
+              <div className="flex items-center gap-3 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Mahsulot ma'lumotlari yuklanmoqda...</span>
+              </div>
+            </div>
+          ) : productError ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+              {productError}
+            </div>
+          ) : (
+            <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+              <div className="space-y-4">
+                <div className="overflow-hidden rounded-2xl border bg-muted">
+                  {productImages.length > 0 ? (
+                    <img
+                      src={productImages[0]}
+                      alt={selectedProduct?.name || 'Mahsulot rasmi'}
+                      className="h-72 w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-72 w-full items-center justify-center text-muted-foreground">
+                      <div className="flex flex-col items-center gap-2">
+                        <ImageIcon className="h-10 w-10" />
+                        <span>Rasm mavjud emas</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {productImages.length > 1 && (
+                  <div className="grid grid-cols-4 gap-2">
+                    {productImages.slice(1, 5).map((image, index) => (
+                      <div key={`${image}-${index}`} className="overflow-hidden rounded-xl border bg-muted">
+                        <img
+                          src={image}
+                          alt={`${selectedProduct?.name || 'Mahsulot'} ${index + 2}`}
+                          className="h-16 w-full object-cover"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-2xl font-semibold">
+                    {selectedProduct?.name || "Noma'lum mahsulot"}
+                  </h4>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {selectedProduct?.description || "Mahsulot uchun qo'shimcha tavsif kiritilmagan."}
+                  </p>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border p-4">
+                    <div className="mb-2 flex items-center gap-2 text-muted-foreground">
+                      <Package className="h-4 w-4" />
+                      <span className="text-sm">Asosiy ma'lumot</span>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">ID</span>
+                        <span className="font-medium">{selectedProduct?.id || '-'}</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Kategoriya</span>
+                        <span className="font-medium text-right">{selectedProduct?.category_name || "Ko'rsatilmagan"}</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Soni</span>
+                        <span className="font-medium">{selectedProduct?.quantity ?? selectedProduct?.total_count ?? 0}</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Do'kon</span>
+                        <span className="font-medium text-right">{selectedProduct?.store_name || '-'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border p-4">
+                    <div className="mb-2 flex items-center gap-2 text-muted-foreground">
+                      <Barcode className="h-4 w-4" />
+                      <span className="text-sm">Kod va narxlar</span>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">SKU</span>
+                        <span className="font-medium">{selectedProduct?.sku || '-'}</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Barcode</span>
+                        <span className="font-medium">{selectedProduct?.barcode || selectedProduct?.shtrix_code || '-'}</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Sotuv narxi</span>
+                        <span className="font-medium">{formatCurrency(selectedProduct?.selling_price ?? 0)}</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Tannarx</span>
+                        <span className="font-medium">{formatCurrency(selectedProduct?.purchase_price ?? 0)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4">
+                  <div className="mb-3 flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-primary" />
+                    <h5 className="font-semibold">Joylashuvi</h5>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl bg-background p-3">
+                      <p className="text-xs text-muted-foreground">Zona</p>
+                      <p className="mt-1 font-medium">{productLocation.zone}</p>
+                    </div>
+                    <div className="rounded-xl bg-background p-3">
+                      <p className="text-xs text-muted-foreground">Polka</p>
+                      <p className="mt-1 font-medium">{productLocation.shelf}</p>
+                    </div>
+                    <div className="rounded-xl bg-background p-3">
+                      <p className="text-xs text-muted-foreground">Joylashuv darajasi</p>
+                      <p className="mt-1 font-medium">{productLocation.level}</p>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-xs text-muted-foreground">{productLocation.note}</p>
+                </div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

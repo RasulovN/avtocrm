@@ -128,7 +128,11 @@
     "productAdded": "Маҳсулот муваффақиятли қўшилди",
     "productUpdated": "Маҳсулот муваффақиятли янгиланди",
     "productDeleted": "Маҳсулот муваффақиятли ўчирилди",
-    "productSaved": "Маҳсулот сақланди"
+    "productSaved": "Маҳсулот сақланди",
+    "ProductLocatiion": "Маҳсулот жойлашуви",
+    "productLocation": "Маҳсулот жойлашуви",
+    "productLocationPlaceholder": "Маҳсулот жойлашуви киритинг...",
+    "productLocationDescription": "Маҳсулот жойлашувини киритинг"
   },
   "categories": {
     "title": "Категориялар",

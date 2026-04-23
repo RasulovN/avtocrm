@@ -36,8 +36,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { titleKey: 'nav.dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { titleKey: 'nav.products', href: '/products', icon: Package },
-  // { titleKey: 'nav.categories', href: '/categories', icon: Folder },
+  { titleKey: 'nav.products', href: '/products', icon: Package }, 
   { titleKey: 'nav.stockentry', href: '/stockentry', icon: ArrowDownToLine, roles: ['admin'] },
   {
     titleKey: 'nav.inventory',
