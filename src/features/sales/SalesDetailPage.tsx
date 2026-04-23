@@ -8,6 +8,7 @@ import { Input } from '../../components/ui/Input';
 import { salesService } from '../../services/salesService';
 import { customerApiService } from '../../services/customerService';
 import { productService } from '../../services/productService';
+import { API_BASE_URL } from '../../services/api';
 import { formatCurrency, formatDate } from '../../utils';
 import type { Product, Sale, SaleItem } from '../../types';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/Dialog';
@@ -69,6 +70,7 @@ export function SalesDetailPage() {
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [selectedSaleItem, setSelectedSaleItem] = useState<SaleItem | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [productLocations, setProductLocations] = useState<any[]>([]);
   const [productLoading, setProductLoading] = useState(false);
   const [productError, setProductError] = useState('');
   const loadRef = useRef(false);
@@ -82,7 +84,7 @@ export function SalesDetailPage() {
         setLoading(true);
         const res = await salesService.getById(saleId);
         setSale(res);
-      } catch (error) {
+      } catch {
         setSale(null);
       } finally {
         setLoading(false);
@@ -118,6 +120,7 @@ export function SalesDetailPage() {
       const res = await salesService.getById(saleId);
       setSale(res);
     } catch {
+      // Handle payment error silently
     } finally {
       setPaying(false);
     }
@@ -181,6 +184,7 @@ export function SalesDetailPage() {
   const handleOpenProductDialog = async (item: SaleItem) => {
     setSelectedSaleItem(item);
     setSelectedProduct(null);
+    setProductLocations([]);
     setProductError('');
     setShowProductDialog(true);
 
@@ -193,6 +197,28 @@ export function SalesDetailPage() {
       setProductLoading(true);
       const product = await productService.getById(String(item.product));
       setSelectedProduct(product);
+      console.log('Selected product ID:', product.id);
+
+      // Fetch product data with location
+      try {
+        const productsRes = await fetch(`${API_BASE_URL}/products/?limit=500`);
+        if (productsRes.ok) {
+          const products = await productsRes.json();
+          console.log('Fetched products:', products);
+          const matchedProduct = products.find((p: any) => p.id == product.id);
+          if (matchedProduct && matchedProduct.location) {
+            setProductLocations([matchedProduct]); // Wrap in array for consistency
+          } else {
+            setProductLocations([]);
+          }
+        } else {
+          console.error('Failed to fetch products:', productsRes.status);
+          setProductLocations([]);
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        setProductLocations([]);
+      }
     } catch {
       setProductError("Mahsulot detallari yuklanmadi.");
     } finally {
@@ -573,34 +599,51 @@ export function SalesDetailPage() {
                       </div>
                       <div className="flex justify-between gap-4">
                         <span className="text-muted-foreground">Sotuv narxi</span>
-                        <span className="font-medium">{formatCurrency(selectedProduct?.selling_price ?? Number(selectedSaleItem?.unit_price) ?? 0)}</span>
+                        <span className="font-medium">{formatCurrency(selectedProduct?.selling_price ? selectedProduct.selling_price : (selectedSaleItem?.unit_price ? Number(selectedSaleItem.unit_price) : 0))}</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
+                {/* productLocation */}
                 <div className="rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4">
                   <div className="mb-3 flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-primary" />
                     <h5 className="font-semibold">Joylashuvi</h5>
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-xl bg-background p-3">
-                      <p className="text-xs text-muted-foreground">Zona</p>
-                      <p className="mt-1 font-medium">{productLocation.zone}</p>
+                  {productLocations.length > 0 ? (
+                    productLocations.map((prod, index) => (
+                      <div key={index} className="mb-4 last:mb-0">
+                        <div className="grid gap-3 sm:grid-cols-1">
+                          <div className="rounded-xl bg-background p-3">
+                            <p className="text-xs text-muted-foreground">Zona</p>
+                            <p className="mt-1 font-medium">{prod.location ? prod.location.name : 'Noma\'lum'}</p>
+                          </div>
+                        </div>
+                        <p className="mt-3 text-xs text-muted-foreground">{prod.location ? prod.location.description : 'Tavsif mavjud emas'}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <div>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div className="rounded-xl bg-background p-3">
+                          <p className="text-xs text-muted-foreground">Zona</p>
+                          <p className="mt-1 font-medium">{productLocation.zone}</p>
+                        </div>
+                        <div className="rounded-xl bg-background p-3">
+                          <p className="text-xs text-muted-foreground">Polka</p>
+                          <p className="mt-1 font-medium">{productLocation.shelf}</p>
+                        </div>
+                        <div className="rounded-xl bg-background p-3">
+                          <p className="text-xs text-muted-foreground">Joylashuv darajasi</p>
+                          <p className="mt-1 font-medium">{productLocation.level}</p>
+                        </div>
+                      </div>
+                      <p className="mt-3 text-xs text-muted-foreground">{productLocation.note}</p>
                     </div>
-                    <div className="rounded-xl bg-background p-3">
-                      <p className="text-xs text-muted-foreground">Polka</p>
-                      <p className="mt-1 font-medium">{productLocation.shelf}</p>
-                    </div>
-                    <div className="rounded-xl bg-background p-3">
-                      <p className="text-xs text-muted-foreground">Joylashuv darajasi</p>
-                      <p className="mt-1 font-medium">{productLocation.level}</p>
-                    </div>
-                  </div>
-                  <p className="mt-3 text-xs text-muted-foreground">{productLocation.note}</p>
+                  )}
                 </div>
-
+                {/* productLocation end */}
                 <div className="rounded-xl border p-4">
                   <h5 className="mb-3 font-semibold">Sotuvdagi ma'lumot</h5>
                   <div className="grid gap-3 sm:grid-cols-3 text-sm">
