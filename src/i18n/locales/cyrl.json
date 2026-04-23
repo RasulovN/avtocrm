@@ -142,6 +142,24 @@
     "unitDeleted": "Бирлик муваффақиятли ўчирилди",
     "noUnits": "Бирликлар йўқ"
   },
+  "productLocations": {
+      "title": "Маҳсулот жойлашувлари",
+      "list": "Рўйхат",
+      "addLocation": "Жойлашув қўшиш",
+      "editLocation": "Жойлашувни таҳрирлаш",
+      "deleteLocation": "Жойлашувни ўчириш",
+      "locationName": "Жойлашув номи",
+      "locationNameCyrl": "Жойлашув номи (Кирилл)",
+      "description": "Тавсиф",
+      "descriptionCyrl": "Тавсиф (Кирилл)",
+      "noLocations": "Жойлашувлар йўқ",
+      "locationAdded": "Жойлашув муваффақиятли қўшилди",
+      "locationUpdated": "Жойлашув муваффақиятли янгиланди",
+      "locationDeleted": "Жойлашув муваффақиятли ўчирилди",
+      "confirmDelete": "Ўчиришни тасдиқлайсизми?",
+      "searchPlaceholder": "Жойлашув бўйича қидириш...",
+      "createdAt": "Яратилган вақт"
+    },
   "categories": {
     "title": "Категориялар",
     "list": "Руйхат",
