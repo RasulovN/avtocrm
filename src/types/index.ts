@@ -153,13 +153,13 @@ export interface CategoryFormData {
 
 export interface ProductUnit {
   id: string;
-  name_uz: string;
-  name_uz_cyrl: string;
+  measurement_uz: string;
+  measurement_uz_cyrl: string;
 }
 
 export interface ProductUnitFormData {
-  name_uz: string;
-  name_uz_cyrl: string;
+  measurement_uz: string;
+  measurement_uz_cyrl: string;
 }
 
 // Supplier Types
