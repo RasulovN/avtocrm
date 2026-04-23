@@ -2,7 +2,7 @@ import { apiClient } from './api';
 import { latinToCyrillic } from '../utils/transliteration';
 
 export interface ProductLocation {
-  id: number;
+  id: string;
   location_uz: string;
   location_uz_cyrl: string;
   description_uz: string;
@@ -23,7 +23,7 @@ const normalizeLocation = (raw: unknown): ProductLocation => {
   const location_uz = String(item.location_uz ?? item.location ?? '');
   const description_uz = String(item.description_uz ?? item.description ?? '');
   return {
-    id: Number(item.id ?? 0),
+    id: String(item.id ?? 0),
     location_uz,
     location_uz_cyrl: String(item.location_uz_cyrl ?? latinToCyrillic(location_uz) ?? ''),
     description_uz,
@@ -55,7 +55,7 @@ export const productLocationService = {
     return parseLocations(response.data);
   },
 
-  getById: async (id: number): Promise<ProductLocation> => {
+  getById: async (id: string): Promise<ProductLocation> => {
     const response = await apiClient.get(`/products/store-product/locations/${id}/`);
     return normalizeLocation(response.data);
   },
@@ -66,13 +66,13 @@ export const productLocationService = {
     return normalizeLocation(response.data);
   },
 
-  update: async (id: number, data: Partial<ProductLocationFormData>): Promise<ProductLocation> => {
+  update: async (id: string, data: Partial<ProductLocationFormData>): Promise<ProductLocation> => {
     const payload = mapLocationPayload(data as ProductLocationFormData);
     const response = await apiClient.put(`/products/store-product/locations/${id}/`, payload);
     return normalizeLocation(response.data);
   },
 
-  delete: async (id: number): Promise<void> => {
+  delete: async (id: string): Promise<void> => {
     await apiClient.delete(`/products/store-product/locations/${id}/`);
   },
 };

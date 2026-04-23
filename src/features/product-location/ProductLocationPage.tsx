@@ -4,7 +4,7 @@ import { Plus, Pencil, Trash2, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../../app/store';
 import { PageHeader } from '../../components/shared/PageHeader';
-import { DataTable, type Column } from '../../components/shared/DataTable';
+import { DataTable, type EnhancedColumn } from '../../components/shared/DataTable';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -30,7 +30,7 @@ export function ProductLocationPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<ProductLocation | null>(null);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [formData, setFormData] = useState<ProductLocationFormData>({
@@ -152,7 +152,7 @@ export function ProductLocationPage() {
     location.location_uz.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const columns: Column<ProductLocation>[] = [
+  const columns: EnhancedColumn<ProductLocation>[] = [
     {
       key: 'location_uz',
       header: t('productLocations.locationName'),
@@ -278,7 +278,7 @@ export function ProductLocationPage() {
 
       {/* Desktop View */}
       <div className="hidden md:block">
-        <DataTable
+        <DataTable<ProductLocation>
           data={filteredLocations}
           columns={columns}
           loading={loading}
