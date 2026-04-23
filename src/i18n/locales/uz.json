@@ -134,7 +134,15 @@
     "ProductLocatiion": "Mahsulot joylashuvi",
     "productLocation": "Mahsulot joylashuvi",
     "productLocationPlaceholder": "Mahsulot joylashuvi kiriting...",
-    "productLocationDescription": "Mahsulot joylashuvini kiriting"
+    "productLocationDescription": "Mahsulot joylashuvini kiriting",
+     "units": "Birliklar",
+    "unitName": "Birlik nomi",
+    "addUnit": "Birlik qo'shish",
+    "editUnit": "Birlikni tahrirlash",
+    "unitAdded": "Birlik muvaffaqiyatli qo'shildi",
+    "unitUpdated": "Birlik muvaffaqiyatli yangilandi",
+    "unitDeleted": "Birlik muvaffaqiyatli o'chirildi",
+    "noUnits": "Birliklar yo'q"
   },
   "productLocations": {
     "title": "Mahsulot joylashuvlari",
@@ -152,7 +160,7 @@
     "locationDeleted": "Joylashuv muvaffaqiyatli o'chirildi",
     "confirmDelete": "O'chirishni tasdiqlaysizmi?",
     "searchPlaceholder": "Joylashuv bo'yicha qidirish...",
-    "createdAt": "Yaratilgan vaqt"
+    "createdAt": "Yaratilgan vaqt" 
   },
   "categories": {
     "title": "Kategoriyalar",

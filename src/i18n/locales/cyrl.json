@@ -132,7 +132,15 @@
     "ProductLocatiion": "Маҳсулот жойлашуви",
     "productLocation": "Маҳсулот жойлашуви",
     "productLocationPlaceholder": "Маҳсулот жойлашуви киритинг...",
-    "productLocationDescription": "Маҳсулот жойлашувини киритинг"
+    "productLocationDescription": "Маҳсулот жойлашувини киритинг",
+    "units": "Бирликлар",
+    "unitName": "Бирлик номи",
+    "addUnit": "Бирлик қўшиш",
+    "editUnit": "Бирликни таҳрирлаш",
+    "unitAdded": "Бирлик муваффақиятли қўшилди",
+    "unitUpdated": "Бирлик муваффақиятли янгиланди",
+    "unitDeleted": "Бирлик муваффақиятли ўчирилди",
+    "noUnits": "Бирликлар йўқ"
   },
   "categories": {
     "title": "Категориялар",
