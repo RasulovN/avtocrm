@@ -136,6 +136,24 @@
     "productLocationPlaceholder": "Mahsulot joylashuvi kiriting...",
     "productLocationDescription": "Mahsulot joylashuvini kiriting"
   },
+  "productLocations": {
+    "title": "Mahsulot joylashuvlari",
+    "list": "Ro'yxat",
+    "addLocation": "Joylashuv qo'shish",
+    "editLocation": "Joylashuvni tahrirlash",
+    "deleteLocation": "Joylashuvni o'chirish",
+    "locationName": "Joylashuv nomi",
+    "locationNameCyrl": "Joylashuv nomi (Kirill)",
+    "description": "Tavsif",
+    "descriptionCyrl": "Tavsif (Kirill)",
+    "noLocations": "Joylashuvlar yo'q",
+    "locationAdded": "Joylashuv muvaffaqiyatli qo'shildi",
+    "locationUpdated": "Joylashuv muvaffaqiyatli yangilandi",
+    "locationDeleted": "Joylashuv muvaffaqiyatli o'chirildi",
+    "confirmDelete": "O'chirishni tasdiqlaysizmi?",
+    "searchPlaceholder": "Joylashuv bo'yicha qidirish...",
+    "createdAt": "Yaratilgan vaqt"
+  },
   "categories": {
     "title": "Kategoriyalar",
     "list": "Ro'yxat",

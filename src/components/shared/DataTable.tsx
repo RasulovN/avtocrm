@@ -43,7 +43,7 @@ export interface StoreInventory {
   quantity: number;
 }
 
-interface DataTableProps<T extends { id: string }> {
+interface DataTableProps<T extends { id: string | number }> {
   data: T[];
   columns: EnhancedColumn<T>[];
   loading?: boolean;

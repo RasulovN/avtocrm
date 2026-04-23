@@ -11,7 +11,7 @@ import { Button } from '../ui/Button';
 interface ConfirmDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   title?: string;
   description?: string;
   confirmText?: string;
