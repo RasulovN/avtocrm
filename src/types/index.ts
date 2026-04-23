@@ -151,6 +151,17 @@ export interface CategoryFormData {
   image?: File | string | null;
 }
 
+export interface ProductUnit {
+  id: string;
+  name_uz: string;
+  name_uz_cyrl: string;
+}
+
+export interface ProductUnitFormData {
+  name_uz: string;
+  name_uz_cyrl: string;
+}
+
 // Supplier Types
 export interface Supplier {
   id: string;

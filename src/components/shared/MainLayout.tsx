@@ -29,6 +29,7 @@ import {
   Users,
   ClipboardCheck,
   TriangleAlert,
+  Ruler,
 } from 'lucide-react';
 import { NotificationProvider } from '../../context/NotificationProvider';
 import { NotificationToast } from './NotificationToast';
@@ -89,6 +90,7 @@ const subNavs: Record<string, SubNavItem[]> = {
   ],
   '/products': [
     { titleKey: 'products.list', href: '/products', icon: List },
+    { titleKey: 'products.units', href: '/products/units', icon: Ruler },
     { titleKey: 'categories.title', href: '/categories', icon: Tags },
     { titleKey: 'products.addProduct', href: '/products/new', icon: Plus },
   ],

@@ -27,6 +27,9 @@ const ProductFormPage = lazy(() =>
 const ProductBarcodePage = lazy(() =>
   import('./features/products/ProductBarcodePage').then((module) => ({ default: module.ProductBarcodePage }))
 );
+const ProductUnitPage = lazy(() =>
+  import('./features/products/ProductUnit').then((module) => ({ default: module.default }))
+);
 const CategoryListPage = lazy(() =>
   import('./features/categories/CategoryListPage').then((module) => ({ default: module.CategoryListPage }))
 );
@@ -233,6 +236,9 @@ function App() {
           
           <Route path={`/:lang/products/:id/barcode`} element={
             withLayout(<ProductBarcodePage />)
+          } />
+          <Route path={`/:lang/products/units`} element={
+            withLayout(<ProductUnitPage />)
           } />
           
           {/* Categories */}

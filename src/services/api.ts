@@ -3,6 +3,7 @@ import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { handleError } from '../utils/errorHandler';
 import { authService } from './authService';
 import { isDev } from '../config/environment';
+import { useAuthStore } from '../app/store';
 
 const rawUrl = import.meta.env.VITE_API_URL || (isDev ? '/api' : 'https://api.avtoyon.uz/api');
 const BaSE_URL = rawUrl.replace(/\/$/, '');
@@ -16,14 +17,11 @@ export interface ApiRequestConfig extends AxiosRequestConfig {
 }
 
 const removeAuth = async () => {
-  try {
-    await authService.logout();
-  } catch (error) {
-    console.warn('Logout API call failed:', error);
-  }
-  
   localStorage.removeItem('crm_user');
   localStorage.removeItem('crm_auth_time');
+  
+  // Update the auth store state and call logout API
+  useAuthStore.getState().logout();
 };
 
 const hasStoredAuth = () => Boolean(authService.getCurrentUser());

@@ -130,7 +130,15 @@
     "productAdded": "Mahsulot muvaffaqiyatli qo'shildi",
     "productUpdated": "Mahsulot muvaffaqiyatli yangilandi",
     "productDeleted": "Mahsulot muvaffaqiyatli o'chirildi",
-    "productSaved": "Mahsulot saqlandi"
+    "productSaved": "Mahsulot saqlandi",
+    "units": "Birliklar",
+    "unitName": "Birlik nomi",
+    "addUnit": "Birlik qo'shish",
+    "editUnit": "Birlikni tahrirlash",
+    "unitAdded": "Birlik muvaffaqiyatli qo'shildi",
+    "unitUpdated": "Birlik muvaffaqiyatli yangilandi",
+    "unitDeleted": "Birlik muvaffaqiyatli o'chirildi",
+    "noUnits": "Birliklar yo'q"
   },
   "categories": {
     "title": "Kategoriyalar",
