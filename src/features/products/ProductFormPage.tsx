@@ -109,8 +109,8 @@ export function ProductFormPage() {
         description_uz_cyrl: product.description_uz_cyrl || latinToCyrillic(product.description ?? ''),
         category: product.category ? String(product.category) : '',
         unit_measurement: product.unit_measurement ? String(product.unit_measurement) : '',
-        location: product.location_id || '',
-        item_id: product.item_id || '',
+        location: product.location_id ? String(product.location_id) : '',
+        item_id: product.item_id ? String(product.item_id) : '',
         images: [],
         is_active: product.is_active ?? true,
       });
@@ -471,38 +471,35 @@ export function ProductFormPage() {
                 />
               </div>
 
-              {isEditing && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="location">{t('productLocations.locationName')}</Label>
-                    <Select
-                      value={formData.location || ''}
-                      onValueChange={(value) => handleChange('location', value)}
-                      disabled={!formData.item_id}
-                    >
-                      <SelectTrigger id="location">
-                        <SelectValue placeholder={t('products.selectLocation')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {locations.map((location) => (
-                          <SelectItem key={location.id} value={location.id}>
-                            {location.location_uz}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+              <div className="space-y-2">
+                <Label htmlFor="location">{t('productLocations.locationName')}</Label>
+                <Select
+                  value={formData.location || ''}
+                  onValueChange={(value) => handleChange('location', value)}
+                >
+                  <SelectTrigger id="location">
+                    <SelectValue placeholder={t('products.selectLocation')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations.map((location) => (
+                      <SelectItem key={location.id} value={location.id}>
+                        {location.location_uz}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-                  <label className="flex items-center gap-3 rounded-lg border p-3">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(formData.is_active)}
-                      onChange={(e) => handleChange('is_active', e.target.checked)}
-                      className="h-4 w-4 rounded border-border"
-                    />
-                    <span className="text-sm font-medium">{t('products.isActive')}</span>
-                  </label>
-                </>
+              {isEditing && (
+                <label className="flex items-center gap-3 rounded-lg border p-3">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(formData.is_active)}
+                    onChange={(e) => handleChange('is_active', e.target.checked)}
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  <span className="text-sm font-medium">{t('products.isActive')}</span>
+                </label>
               )}
             </CardContent>
           </Card>
