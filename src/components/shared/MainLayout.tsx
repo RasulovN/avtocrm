@@ -31,6 +31,7 @@ import {
   TriangleAlert,
   LocationEdit,
   Ruler,
+  Undo2,
 } from 'lucide-react';
 import { NotificationProvider } from '../../context/NotificationProvider';
 import { NotificationToast } from './NotificationToast';
@@ -87,7 +88,8 @@ const subNavs: Record<string, SubNavItem[]> = {
   ], 
   '/sales': [
     { titleKey: 'sales.list', href: '/sales', icon: List },
-    { titleKey: 'sales.newSale', href: '/sales/new', icon: Plus },
+    { titleKey: 'nav.saleReturns', href: '/sales-returns', icon: Undo2 },
+    { titleKey: 'sales.newSale', href: '/sales/new', icon: Plus }
   ],
   '/products': [
     { titleKey: 'products.list', href: '/products', icon: List },

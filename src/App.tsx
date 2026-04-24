@@ -67,6 +67,12 @@ const SalesPage = lazy(() => import('./features/sales/SalesPage').then((module) 
 const SalesDetailPage = lazy(() =>
   import('./features/sales/SalesDetailPage').then((module) => ({ default: module.SalesDetailPage }))
 );
+const SaleReturnListPage = lazy(() =>
+  import('./features/sales/SaleReturnListPage').then((module) => ({ default: module.SaleReturnListPage }))
+);
+const SaleReturnCreatePage = lazy(() =>
+  import('./features/sales/SaleReturnCreatePage').then((module) => ({ default: module.SaleReturnCreatePage }))
+);
 const CustomerListPage = lazy(() =>
   import('./features/customers/CustomerListPage').then((module) => ({ default: module.CustomerListPage }))
 );
@@ -321,6 +327,16 @@ function App() {
           {/* Sales - Create (POS) */}
           <Route path={`/:lang/sales/new`} element={
             withLayout(<SalesPage />)
+          } />
+
+          {/* Sale Returns - List */}
+          <Route path={`/:lang/sales-returns`} element={
+            withLayout(<SaleReturnListPage />)
+          } />
+
+          {/* Sale Returns - Create */}
+          <Route path={`/:lang/sales-returns/new`} element={
+            withLayout(<SaleReturnCreatePage />)
           } />
 
           {/* Customers */}

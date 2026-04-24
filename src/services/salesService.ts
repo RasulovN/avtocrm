@@ -1,5 +1,5 @@
 import { apiClient } from './api';
-import type { Sale, SaleFormData, PaginatedResponse, ApiResponse, DashboardStats } from '../types';
+import type { Sale, SaleFormData, PaginatedResponse, ApiResponse, DashboardStats, SaleReturn, SaleReturnFormData } from '../types';
 
 export const salesService = {
   getAll: async (params?: { page?: number; limit?: number }): Promise<PaginatedResponse<Sale>> => {
@@ -37,6 +37,22 @@ export const salesService = {
 
   delete: async (id: string): Promise<void> => {
     await apiClient.delete(`/sales/${id}`);
+  },
+};
+
+export const saleReturnService = {
+  getAll: async (): Promise<SaleReturn[]> => {
+    const response = await apiClient.get<SaleReturn[] | { results: SaleReturn[] }>('/sales/sale-return/list/');
+    const payload = response.data;
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+    return (payload as any)?.results || [];
+  },
+
+  create: async (data: SaleReturnFormData): Promise<SaleReturn> => {
+    const response = await apiClient.post<ApiResponse<SaleReturn>>('/sales/sale-return/', data);
+    return response.data.data;
   },
 };
 

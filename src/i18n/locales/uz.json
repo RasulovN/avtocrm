@@ -58,6 +58,7 @@
     "stockentry": "Kirim",
     "inventory": "Inventorizatsiya",
     "inventorySessions": "Inventarizatsiya",
+    "saleReturns": "Vazratlar",
     "storeInfo": "Do'kon ma'lumotlari"
   },
   "auth": {
@@ -392,6 +393,23 @@
     "change": "Qaytim",
     "discount": "Chiqim",
     "discountAmount": "Chiqim miqdori"
+  },
+  "saleReturns": {
+    "title": "Vazratlar",
+    "listDescription": "Vazrat qilingan sotuvlar ro'yxati",
+    "newReturn": "Yangi vazrat",
+    "history": "Vazratlar tarixi",
+    "noData": "Vazratlar yo'q",
+    "selectSale": "Sotuvni tanlang",
+    "sale": "Sotuv",
+    "returnQuantity": "Qaytariladigan miqdor",
+    "comment": "Izoh",
+    "totalRefund": "Qaytarilgan summa",
+    "returnItems": "Qaytariladigan mahsulotlar",
+    "createSuccess": "Vazrat muvaffaqiyatli yaratildi",
+    "createError": "Vazrat yaratishda xatolik",
+    "invalidQuantity": "Miqdor sotilgan miqdordan oshmasligi kerak",
+    "returnSale": "Sotuvni qaytarish"
   },
   "customers": {
     "title": "Mijozlar",

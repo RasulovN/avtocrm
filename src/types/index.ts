@@ -465,6 +465,40 @@ export interface PaginatedResponse<T> {
   limit: number;
 }
 
+// Sale Return Types
+export interface SaleReturnItem {
+  id: number;
+  sale_item: number;
+  product: number;
+  product_name?: string;
+  quantity: number;
+}
+
+export interface SaleReturn {
+  id: number;
+  sale: number;
+  store: number;
+  store_name?: string;
+  customer: number;
+  seller: number;
+  seller_name?: string;
+  total_refund: string;
+  comment?: string;
+  items: SaleReturnItem[];
+  created_at?: string;
+}
+
+export interface SaleReturnFormItem {
+  sale_item: number;
+  quantity: number;
+}
+
+export interface SaleReturnFormData {
+  sale: number;
+  items: SaleReturnFormItem[];
+  comment?: string;
+}
+
 // Form Types
 export interface SelectOption {
   value: string;
