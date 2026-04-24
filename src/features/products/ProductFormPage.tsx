@@ -17,11 +17,19 @@ import {
 } from '../../components/ui/Select';
 import { productService } from '../../services/productService';
 import { API_ORIGIN, MEDIA_URL } from '../../services/api';
-import type { ProductFormData, ProductUnit } from '../../types';
+import type { ProductFormData, ProductUnit, CategoryFormData, ProductUnitFormData } from '../../types';
 import { latinToCyrillic } from '../../utils/transliteration';
 import { useCategories } from '../../context/CategoryContext';
 import { productUnitService } from '../../services/productUnitService';
 import { productLocationService, type ProductLocation } from '../../services/productLocationService';
+import { categoryService } from '../../services/categoryService';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../../components/ui/Dialog';
 
 const resolveImageUrl = (image?: string) => {
   if (!image || typeof image !== 'string') return '';
@@ -58,6 +66,23 @@ export function ProductFormPage() {
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [formData, setFormData] = useState<ProductFormData>(initialFormData);
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [savingCategory, setSavingCategory] = useState(false);
+  const [categoryImageFileName, setCategoryImageFileName] = useState('');
+  const [categoryImagePreview, setCategoryImagePreview] = useState('');
+  const [categoryFormData, setCategoryFormData] = useState<CategoryFormData>({
+    name_uz: '',
+    name_uz_cyrl: '',
+    description_uz: '',
+    description_uz_cyrl: '',
+    image: '',
+  });
+  const [isUnitDialogOpen, setIsUnitDialogOpen] = useState(false);
+  const [savingUnit, setSavingUnit] = useState(false);
+  const [unitFormData, setUnitFormData] = useState<ProductUnitFormData>({
+    measurement_uz: '',
+    measurement_uz_cyrl: '',
+  });
 
   const loadOptions = useCallback(async () => {
     try {
@@ -147,11 +172,6 @@ export function ProductFormPage() {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!formData.category || !formData.unit_measurement || !formData.name.trim()) {
-      toast.error(t('errors.validationError'));
-      return;
-    }
-
     try {
       setSaving(true);
       const payload: ProductFormData = {
@@ -226,6 +246,122 @@ export function ProductFormPage() {
 
   const allImages = [...existingImages, ...imagePreviews];
 
+  const handleOpenCategoryDialog = () => {
+    setIsCategoryDialogOpen(true);
+    setCategoryFormData({
+      name_uz: '',
+      name_uz_cyrl: '',
+      description_uz: '',
+      description_uz_cyrl: '',
+      image: '',
+    });
+    setCategoryImagePreview('');
+    setCategoryImageFileName('');
+  };
+
+  const handleCloseCategoryDialog = () => {
+    setIsCategoryDialogOpen(false);
+    if (categoryImagePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(categoryImagePreview);
+    }
+    setCategoryImagePreview('');
+    setCategoryImageFileName('');
+  };
+
+  const handleCategoryNameChange = (value: string) => {
+    setCategoryFormData((prev) => ({
+      ...prev,
+      name_uz: value,
+      name_uz_cyrl: latinToCyrillic(value),
+    }));
+  };
+
+  const handleCategoryDescriptionChange = (value: string) => {
+    setCategoryFormData((prev) => ({
+      ...prev,
+      description_uz: value,
+      description_uz_cyrl: latinToCyrillic(value),
+    }));
+  };
+
+  const handleCategoryImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setCategoryImageFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      setCategoryFormData((prev) => ({
+        ...prev,
+        image: file,
+      }));
+      setCategoryImagePreview(result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCategorySubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      setSavingCategory(true);
+      const created = await categoryService.create(categoryFormData);
+      toast.success(t('categories.categoryAdded'));
+      await refreshCategories();
+      handleChange('category', created.id);
+      handleCloseCategoryDialog();
+    } catch (error) {
+      console.error('Failed to save category:', error);
+      toast.error(t('errors.generic'));
+    } finally {
+      setSavingCategory(false);
+    }
+  };
+
+  const handleOpenUnitDialog = () => {
+    setIsUnitDialogOpen(true);
+    setUnitFormData({
+      measurement_uz: '',
+      measurement_uz_cyrl: '',
+    });
+  };
+
+  const handleCloseUnitDialog = () => {
+    setIsUnitDialogOpen(false);
+    setUnitFormData({
+      measurement_uz: '',
+      measurement_uz_cyrl: '',
+    });
+  };
+
+  const handleUnitNameChange = (value: string) => {
+    setUnitFormData((prev) => ({
+      ...prev,
+      measurement_uz: value,
+      measurement_uz_cyrl: latinToCyrillic(value),
+    }));
+  };
+
+  const handleUnitSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      setSavingUnit(true);
+      const created = await productUnitService.create(unitFormData);
+      toast.success(t('products.unitAdded'));
+      const unitList = await productUnitService.getAll();
+      setUnits(unitList);
+      handleChange('unit_measurement', created.id);
+      handleCloseUnitDialog();
+    } catch (error) {
+      console.error('Failed to save unit:', error);
+      toast.error(t('errors.generic'));
+    } finally {
+      setSavingUnit(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -269,28 +405,33 @@ export function ProductFormPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button type="button" variant="outline" >
+                <Button type="button" variant="outline" onClick={handleOpenCategoryDialog}>
                   {t('products.categoriesAdd')}
                 </Button>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="unit_measurement">{t('products.unitMeasurement')}</Label>
-                <Select
-                  value={formData.unit_measurement || ''}
-                  onValueChange={(value) => handleChange('unit_measurement', value)}
-                >
-                  <SelectTrigger id="unit_measurement">
-                    <SelectValue placeholder={t('products.selectUnitMeasurement')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {units.map((unit) => (
-                      <SelectItem key={unit.id} value={unit.id}>
-                        {unit.measurement_uz}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="flex items-end gap-2">
+                <div className="w-full">
+                  <Label htmlFor="unit_measurement">{t('products.unitMeasurement')}</Label>
+                  <Select
+                    value={formData.unit_measurement || ''}
+                    onValueChange={(value) => handleChange('unit_measurement', value)}
+                  >
+                    <SelectTrigger id="unit_measurement">
+                      <SelectValue placeholder={t('products.selectUnitMeasurement')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {units.map((unit) => (
+                        <SelectItem key={unit.id} value={unit.id}>
+                          {unit.measurement_uz}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button type="button" variant="outline" onClick={handleOpenUnitDialog}>
+                  {t('products.categoriesAdd')}
+                </Button>
               </div>
 
               <div className="space-y-2">
@@ -434,6 +575,123 @@ export function ProductFormPage() {
             {saving ? t('common.loading') : t('products.productSaved')}
           </Button>
         </div>
+
+        <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t('categories.addCategory')}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleCategorySubmit}>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="cat_name">{t('categories.categoryName')}</Label>
+                  <Input
+                    id="cat_name"
+                    value={categoryFormData.name_uz}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => handleCategoryNameChange(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cat_name_cyrl">{t('categories.categoryName')} (Cyrillic)</Label>
+                  <Input
+                    id="cat_name_cyrl"
+                    value={categoryFormData.name_uz_cyrl}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                      setCategoryFormData((prev) => ({ ...prev, name_uz_cyrl: e.target.value }))
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cat_description">{t('common.description')}</Label>
+                  <Input
+                    id="cat_description"
+                    value={categoryFormData.description_uz}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => handleCategoryDescriptionChange(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cat_description_cyrl">{t('common.description')} (Cyrillic)</Label>
+                  <Input
+                    id="cat_description_cyrl"
+                    value={categoryFormData.description_uz_cyrl}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                      setCategoryFormData((prev) => ({ ...prev, description_uz_cyrl: e.target.value }))
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cat_image">{t('products.image') || 'Image'}</Label>
+                  <Input
+                    id="cat_image"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleCategoryImageChange}
+                  />
+                  {categoryImageFileName ? (
+                    <p className="text-sm text-muted-foreground">{categoryImageFileName}</p>
+                  ) : null}
+                  {categoryImagePreview ? (
+                    <div className="mt-2">
+                      <img
+                        src={categoryImagePreview}
+                        alt={categoryFormData.name_uz || 'Category image'}
+                        className="h-24 w-24 rounded-md border object-cover"
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={handleCloseCategoryDialog}>
+                  {t('common.cancel')}
+                </Button>
+                <Button type="submit" disabled={savingCategory}>
+                  {savingCategory ? t('common.localLoading') : t('common.save')}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isUnitDialogOpen} onOpenChange={setIsUnitDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t('products.addUnit')}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleUnitSubmit}>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="unit_name">{t('products.unitName')}</Label>
+                  <Input
+                    id="unit_name"
+                    value={unitFormData.measurement_uz}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => handleUnitNameChange(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="unit_name_cyrl">{t('products.unitName')} (Cyrillic)</Label>
+                  <Input
+                    id="unit_name_cyrl"
+                    value={unitFormData.measurement_uz_cyrl}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                      setUnitFormData((prev) => ({ ...prev, measurement_uz_cyrl: e.target.value }))
+                    }
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={handleCloseUnitDialog}>
+                  {t('common.cancel')}
+                </Button>
+                <Button type="submit" disabled={savingUnit}>
+                  {savingUnit ? t('common.localLoading') : t('common.save')}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </form>
     </div>
   );
