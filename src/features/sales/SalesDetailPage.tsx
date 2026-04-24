@@ -31,7 +31,16 @@ const getProductImages = (product?: Product | null): string[] => {
 
   if (product.images) {
     if (Array.isArray(product.images)) {
-      images.push(...product.images.filter((image): image is string => typeof image === 'string' && Boolean(image)));
+      const imgUrls = product.images.map((img): string | null => {
+        if (typeof img === 'string') {
+          return img;
+        } else if (typeof img === 'object' && img !== null && 'image' in img) {
+          const imgObj = img as { image?: string };
+          return imgObj.image || null;
+        }
+        return null;
+      }).filter((image): image is string => Boolean(image));
+      images.push(...imgUrls);
     } else if (typeof product.images === 'string') {
       images.push(product.images);
     }

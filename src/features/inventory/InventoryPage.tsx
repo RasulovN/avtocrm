@@ -46,8 +46,14 @@ const getProductImages = (product: Product): string[] => {
   if (product.images) {
     if (Array.isArray(product.images)) {
       product.images.forEach((img) => {
-        const resolved = resolveImageUrl(img);
-        if (resolved) images.push(resolved);
+        if (typeof img === 'string') {
+          const resolved = resolveImageUrl(img);
+          if (resolved) images.push(resolved);
+        } else if (typeof img === 'object' && img !== null && 'image' in img) {
+          const imgObj = img as { image?: string };
+          const resolved = resolveImageUrl(imgObj.image);
+          if (resolved) images.push(resolved);
+        }
       });
     } else if (typeof product.images === 'string') {
       const resolved = resolveImageUrl(product.images);

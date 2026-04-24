@@ -135,14 +135,18 @@
     "productLocation": "Mahsulot joylashuvi",
     "productLocationPlaceholder": "Mahsulot joylashuvi kiriting...",
     "productLocationDescription": "Mahsulot joylashuvini kiriting",
-     "units": "Birliklar",
+    "units": "Birliklar",
+    "unitMeasurement": "O'lchov birligi",
+    "selectUnitMeasurement": "O'lchov birligini tanlang",
+    "selectLocation": "Joylashuvni tanlang",
     "unitName": "Birlik nomi",
     "addUnit": "Birlik qo'shish",
     "editUnit": "Birlikni tahrirlash",
     "unitAdded": "Birlik muvaffaqiyatli qo'shildi",
     "unitUpdated": "Birlik muvaffaqiyatli yangilandi",
     "unitDeleted": "Birlik muvaffaqiyatli o'chirildi",
-    "noUnits": "Birliklar yo'q"
+    "noUnits": "Birliklar yo'q",
+    "categoriesAdd": "Qo'shish"
   },
   "productLocations": {
     "title": "Mahsulot joylashuvlari",

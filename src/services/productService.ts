@@ -33,16 +33,73 @@ const resolveCategory = (raw: unknown): { id?: string; name?: string } => {
   return {};
 };
 
+const resolveMeasurement = (raw: unknown): { id?: string; name?: string } => {
+  if (!raw) return {};
+  if (typeof raw === 'string' || typeof raw === 'number') {
+    const text = String(raw);
+    return { id: text, name: text };
+  }
+  if (typeof raw === 'object') {
+    const item = raw as {
+      id?: string | number;
+      measurement?: string;
+      measurement_uz?: string;
+      measurement_uz_cyrl?: string;
+    };
+    return {
+      id: item.id !== undefined ? String(item.id) : undefined,
+      name: item.measurement_uz ?? item.measurement ?? item.measurement_uz_cyrl,
+    };
+  }
+  return {};
+};
+
+const resolveLocation = (
+  raw: unknown
+): { id?: string; name?: string; description?: string } => {
+  if (!raw) return {};
+  if (typeof raw === 'string' || typeof raw === 'number') {
+    const text = String(raw);
+    return { id: text, name: text };
+  }
+  if (typeof raw === 'object') {
+    const item = raw as {
+      id?: string | number;
+      name?: string;
+      location?: string;
+      location_uz?: string;
+      description?: string;
+      description_uz?: string;
+    };
+    return {
+      id: item.id !== undefined ? String(item.id) : undefined,
+      name: item.name ?? item.location ?? item.location_uz,
+      description: item.description ?? item.description_uz,
+    };
+  }
+  return {};
+};
+
 const normalizeImages = (images?: unknown[] | string | unknown, image?: unknown) => {
   if (Array.isArray(images)) {
-    const resolved = images.map((item) => resolveImageUrl(typeof item === 'string' ? item : undefined)).filter(Boolean);
+    const resolved = images.map((item) => {
+      if (typeof item === 'string') {
+        return { image: resolveImageUrl(item), product: 0 };
+      }
+      if (typeof item === 'object' && item !== null && 'image' in item) {
+        const imgObj = item as { image?: string; product?: number };
+        return { image: resolveImageUrl(imgObj.image), product: imgObj.product ?? 0 };
+      }
+      return null;
+    }).filter((item): item is { image: string; product: number } => item !== null && item.image !== '');
+    console.log('normalizeImages result:', resolved); // Debug
     return resolved.length > 0 ? resolved : undefined;
   }
   if (typeof images === 'string' && images.trim() !== '') {
-    return resolveImageUrl(images);
+    return [{ image: resolveImageUrl(images), product: 0 }];
   }
   if (typeof image === 'string' && image.trim() !== '') {
-    return resolveImageUrl(image);
+    return [{ image: resolveImageUrl(image), product: 0 }];
   }
   return undefined;
 };
@@ -62,6 +119,15 @@ const item = (raw ?? {}) as Partial<Product> & {
     description_uz_cyrl?: string;
     category?: unknown;
     category_id?: string | number;
+    category_name?: string;
+    unit_measurement?: string | number | { id?: string | number; measurement?: string; measurement_uz?: string };
+    measurement?: string;
+    measurement_uz?: string;
+    unit_measurement_name?: string;
+    item_id?: string | number;
+    store_product_id?: string | number;
+    location?: unknown;
+    location_id?: string | number;
     price?: number | string;
     quantity?: number | string;
     image?: string;
@@ -71,6 +137,7 @@ const item = (raw ?? {}) as Partial<Product> & {
     batches?: Array<{
       id: number;
       product: number;
+      product_name?: string;
       store: number;
       store_name: string;
       quantity: number;
@@ -78,12 +145,17 @@ const item = (raw ?? {}) as Partial<Product> & {
       selling_price: string;
       barcode: string;
       shtrix_code: string | null;
+      location?: { name?: string; description?: string } | null;
     }>;
   };
 
   const categoryInfo = resolveCategory(item.category ?? item.category_id);
+  const unitInfo = resolveMeasurement(item.unit_measurement);
+  const locationInfo = resolveLocation(item.location ?? item.location_id);
   const images = normalizeImages(item.images, item.image);
-  const image = resolveImageUrl(item.image) || (Array.isArray(images) ? images[0] : images || '');
+  console.log('normalizeProduct - item.images:', item.images); // Debug
+  console.log('normalizeProduct - images after normalize:', images); // Debug
+  const image = resolveImageUrl(item.image) || (Array.isArray(images) && images.length > 0 ? images[0].image : '');
   
   const batches = item.batches;
   let totalQuantity = 0;
@@ -123,10 +195,21 @@ const item = (raw ?? {}) as Partial<Product> & {
   return {
     id: String(item.product ?? item.id ?? item.product_id ?? item.barcode ?? item.barcode_value ?? item.shtrix_code ?? item.sku ?? item.product_name ?? ''),
     product_id: item.product ? String(item.product) : (item.product_id ? String(item.product_id) : undefined),
+    item_id: item.item_id !== undefined
+      ? String(item.item_id)
+      : item.store_product_id !== undefined
+        ? String(item.store_product_id)
+        : batches?.[0]?.id !== undefined
+          ? String(batches[0].id)
+          : undefined,
     name: item.name ?? item.product_name ?? item.title ?? item.name_uz ?? item.name_uz_cyrl ?? item.title_uz ?? item.title_uz_cyrl ?? '',
+    name_uz_cyrl: item.name_uz_cyrl ?? item.title_uz_cyrl,
     description: item.description ?? item.description_uz ?? item.description_uz_cyrl ?? '',
+    description_uz_cyrl: item.description_uz_cyrl,
     category: typeof item.category === 'number' ? item.category : (categoryInfo.id ? Number(categoryInfo.id) : 0),
-    category_name: categoryInfo.name ?? (typeof item.category === 'string' ? item.category : '') ?? '',
+    category_name: item.category_name ?? categoryInfo.name ?? (typeof item.category === 'string' ? item.category : '') ?? '',
+    unit_measurement: normalizeNumber(unitInfo.id ?? item.unit_measurement),
+    unit_measurement_name: item.unit_measurement_name ?? item.measurement_uz ?? item.measurement ?? unitInfo.name,
     supplier_id: String(item.supplier_id ?? item.supplier?.id ?? ''),
     supplier_name: item.supplier_name ?? item.supplier?.name ?? item.supplier?.name_uz ?? item.supplier?.name_uz_cyrl,
     store_id: item.store_id !== undefined ? String(item.store_id) : (item.store?.id !== undefined ? String(item.store.id) : undefined),
@@ -148,6 +231,9 @@ const item = (raw ?? {}) as Partial<Product> & {
     min_selling_price: minSellingPrice,
     max_selling_price: maxSellingPrice,
     inventory_by_store: inventoryByStore,
+    location_id: locationInfo.id,
+    location_name: locationInfo.name,
+    location_description: locationInfo.description,
     batches: batches?.map(b => ({
       ...b,
       product: Number(b.product),
@@ -186,10 +272,17 @@ const mapProductPayload = (
   const categoryId = typeof data.category === 'string' && data.category.trim() !== '' 
     ? data.category.trim() 
     : (typeof data.category === 'number' ? String(data.category) : undefined);
+  const unitMeasurementId = typeof data.unit_measurement === 'string' && data.unit_measurement.trim() !== ''
+    ? data.unit_measurement.trim()
+    : undefined;
+  const stringImages = Array.isArray(data.images)
+    ? data.images.filter((item): item is string => typeof item === 'string' && item.trim() !== '')
+    : [];
 
   if (useFormData) {
     const payload = new FormData();
     if (categoryId) payload.append('category', categoryId);
+    if (unitMeasurementId) payload.append('unit_measurement', unitMeasurementId);
     if (typeof data.name === 'string') {
       payload.append('name_uz', data.name);
       const cyr = typeof data.name_uz_cyrl === 'string' ? data.name_uz_cyrl : latinToCyrillic(data.name);
@@ -202,17 +295,18 @@ const mapProductPayload = (
         : latinToCyrillic(data.description);
       payload.append('description_uz_cyrl', cyr);
     }
-    if (data.is_active !== undefined) {
-      payload.append('is_active', String(data.is_active));
-    }
     imageFiles.forEach((file) => {
       payload.append('images', file);
+    });
+    stringImages.forEach((image) => {
+      payload.append('images', image);
     });
     return payload;
   }
 
   const payload: Record<string, unknown> = {};
   if (categoryId) payload.category = categoryId;
+  if (unitMeasurementId) payload.unit_measurement = unitMeasurementId;
   if (typeof data.name === 'string') {
     if (mode === 'update') {
       payload.name = data.name;
@@ -231,7 +325,10 @@ const mapProductPayload = (
         : latinToCyrillic(data.description);
     }
   }
-  if (data.is_active !== undefined) {
+  if (mode === 'create' && stringImages.length > 0) {
+    payload.images = stringImages;
+  }
+  if (mode === 'update' && data.is_active !== undefined) {
     payload.is_active = data.is_active;
   }
   return payload;
@@ -315,7 +412,10 @@ export const productService = {
   getById: async (id: string): Promise<Product> => {
     const response = await apiClient.get<ApiResponse<Product>>(`/products/${id}/`);
     const payload = response.data?.data ?? response.data;
-    return normalizeProduct(payload);
+    console.log('getById - Raw API response:', payload); // Debug
+    const result = normalizeProduct(payload);
+    console.log('getById - Normalized product:', result); // Debug
+    return result;
   },
 
   create: async (data: ProductFormData): Promise<Product> => {
@@ -326,6 +426,13 @@ export const productService = {
 
   update: async (id: string, data: Partial<ProductFormData>): Promise<Product> => {
     const response = await apiClient.put<ApiResponse<Product>>(`/products/${id}/`, mapProductPayload(data, { mode: 'update' }));
+    const itemId = typeof data.item_id === 'string' ? data.item_id.trim() : '';
+    const locationId = typeof data.location === 'string' ? data.location.trim() : '';
+    if (itemId && locationId) {
+      await apiClient.patch(`/products/item/${itemId}/`, {
+        location: Number(locationId),
+      });
+    }
     const payload = response.data?.data ?? response.data;
     return normalizeProduct(payload);
   },
