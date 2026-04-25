@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback, useRef, type MouseEvent } from 'react';
+import { useEffect, useMemo, useState, useCallback, type MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Plus, Edit, Trash2, Barcode, Search, Printer } from 'lucide-react';
@@ -28,7 +28,7 @@ export function ProductListPage() {
   const { user } = useAuthStore();
   const isAdmin = Boolean(user?.is_superuser);
   const userStoreId = user?.store_id;
-  const { categories } = useCategories();
+  const { categories, refreshCategories } = useCategories();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ProductFilters>({});
@@ -39,7 +39,6 @@ export function ProductListPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
-  const fetchedRef = useRef(false);
 
   const loadProducts = useCallback(async () => {
     try {
@@ -120,10 +119,14 @@ export function ProductListPage() {
   }, [filters, page, isAdmin, userStoreId]);
 
   useEffect(() => {
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
-    loadProducts();
+    void loadProducts();
   }, [loadProducts]);
+
+  useEffect(() => {
+    if (categories.length === 0) {
+      void refreshCategories();
+    }
+  }, [categories.length, refreshCategories]);
 
   const handleSearch = (value: string) => {
     setSearchQuery(value);
@@ -241,6 +244,36 @@ export function ProductListPage() {
 
   const columns: Column<Product>[] = [
     {
+      key: 'image',
+      header: t('products.image') || 'Image',
+      className: 'w-20',
+      render: (item: Product) => {
+        const imageUrl = Array.isArray(item.images) && item.images.length > 0 
+          ? (item.images[0] as any).image || item.image 
+          : item.image;
+
+        if (!imageUrl) {
+          return (
+            <div className="h-10 w-10 rounded border border-dashed bg-muted flex items-center justify-center">
+              <span className="text-xs text-muted-foreground">—</span>
+            </div>
+          );
+        }
+
+        return (
+          <img
+            src={imageUrl}
+            alt={item.name}
+            className="h-10 w-10 rounded object-cover border"
+            onError={(e) => {
+              const img = e.target as HTMLImageElement;
+              img.style.display = 'none';
+            }}
+          />
+        );
+      }
+    },
+    {
       key: 'sku',
       header: t('products.sku'),
       className: 'font-mono text-sm',
@@ -338,7 +371,7 @@ export function ProductListPage() {
             className="pl-10"
           />
         </div>
-        
+
         <Select
           value={filters.category || 'all'}
           onValueChange={(value) => handleFilterChange('category', value === 'all' ? '' : value)}
@@ -355,7 +388,7 @@ export function ProductListPage() {
             ))}
           </SelectContent>
         </Select>
-        
+
         {isAdmin && <Select
           value={filters.store_id || 'all'}
           onValueChange={(value) => handleFilterChange('store_id', value === 'all' ? '' : value)}

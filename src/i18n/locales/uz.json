@@ -58,6 +58,7 @@
     "stockentry": "Kirim",
     "inventory": "Inventorizatsiya",
     "inventorySessions": "Inventarizatsiya",
+    "saleReturns": "Vazratlar",
     "storeInfo": "Do'kon ma'lumotlari"
   },
   "auth": {
@@ -135,14 +136,18 @@
     "productLocation": "Mahsulot joylashuvi",
     "productLocationPlaceholder": "Mahsulot joylashuvi kiriting...",
     "productLocationDescription": "Mahsulot joylashuvini kiriting",
-     "units": "Birliklar",
+    "units": "Birliklar",
+    "unitMeasurement": "O'lchov birligi",
+    "selectUnitMeasurement": "O'lchov birligini tanlang",
+    "selectLocation": "Joylashuvni tanlang",
     "unitName": "Birlik nomi",
     "addUnit": "Birlik qo'shish",
     "editUnit": "Birlikni tahrirlash",
     "unitAdded": "Birlik muvaffaqiyatli qo'shildi",
     "unitUpdated": "Birlik muvaffaqiyatli yangilandi",
     "unitDeleted": "Birlik muvaffaqiyatli o'chirildi",
-    "noUnits": "Birliklar yo'q"
+    "noUnits": "Birliklar yo'q",
+    "categoriesAdd": "Qo'shish"
   },
   "productLocations": {
     "title": "Mahsulot joylashuvlari",
@@ -388,6 +393,23 @@
     "change": "Qaytim",
     "discount": "Chiqim",
     "discountAmount": "Chiqim miqdori"
+  },
+  "saleReturns": {
+    "title": "Vazratlar",
+    "listDescription": "Vazrat qilingan sotuvlar ro'yxati",
+    "newReturn": "Yangi vazrat",
+    "history": "Vazratlar tarixi",
+    "noData": "Vazratlar yo'q",
+    "selectSale": "Sotuvni tanlang",
+    "sale": "Sotuv",
+    "returnQuantity": "Qaytariladigan miqdor",
+    "comment": "Izoh",
+    "totalRefund": "Qaytarilgan summa",
+    "returnItems": "Qaytariladigan mahsulotlar",
+    "createSuccess": "Vazrat muvaffaqiyatli yaratildi",
+    "createError": "Vazrat yaratishda xatolik",
+    "invalidQuantity": "Miqdor sotilgan miqdordan oshmasligi kerak",
+    "returnSale": "Sotuvni qaytarish"
   },
   "customers": {
     "title": "Mijozlar",

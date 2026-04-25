@@ -277,7 +277,7 @@ export function ProductBarcodePage() {
         shtrix_code: product?.shtrix_code ?? null,
       }] : []);
   const noVisibleBatchesForStore = !canViewAllStores && batches.length > 0 && visibleBatches.length === 0;
-  const imageUrls = product?.images && (Array.isArray(product.images) ? product.images : [product.images]).filter(Boolean) || [];
+  const imageUrls = product?.images && (Array.isArray(product.images) ? product.images.map((img: any) => typeof img === 'string' ? img : img.image).filter(Boolean) : [product.images]).filter(Boolean) || [];
 
   return (
     <div className="space-y-6">

@@ -56,6 +56,7 @@
     "stockentry": "Кирим",
     "inventory": "Инвенторизация",
     "inventorySessions": "Инвентаризация",
+    "saleReturns": "Вазратлар",
     "storeInfo": "Дўкон маълумотлари"
   },
   "auth": {
@@ -134,13 +135,17 @@
     "productLocationPlaceholder": "Маҳсулот жойлашуви киритинг...",
     "productLocationDescription": "Маҳсулот жойлашувини киритинг",
     "units": "Бирликлар",
+    "unitMeasurement": "Ўлчов бирлиги",
+    "selectUnitMeasurement": "Ўлчов бирлигини танланг",
+    "selectLocation": "Жойлашувни танланг",
     "unitName": "Бирлик номи",
     "addUnit": "Бирлик қўшиш",
     "editUnit": "Бирликни таҳрирлаш",
     "unitAdded": "Бирлик муваффақиятли қўшилди",
     "unitUpdated": "Бирлик муваффақиятли янгиланди",
     "unitDeleted": "Бирлик муваффақиятли ўчирилди",
-    "noUnits": "Бирликлар йўқ"
+    "noUnits": "Бирликлар йўқ",
+    "categoriesAdd": "Қўшиш"
   },
   "productLocations": {
       "title": "Маҳсулот жойлашувлари",
@@ -383,6 +388,23 @@
     "summary": "Якун",
     "receipt": "Чек",
     "receiptDescription": "Транзаксия тафсилотлари"
+  },
+  "saleReturns": {
+    "title": "Вазратлар",
+    "listDescription": "Вазрат қилинган сотувлар рўйхати",
+    "newReturn": "Янги вазрат",
+    "history": "Вазратлар тарихи",
+    "noData": "Вазратлар йўқ",
+    "selectSale": "Сотувни танланг",
+    "sale": "Сотув",
+    "returnQuantity": "Қайтариладиган миқдор",
+    "comment": "Изоҳ",
+    "totalRefund": "Қайтарилган сумма",
+    "returnItems": "Қайтариладиган маҳсулотлар",
+    "createSuccess": "Вазрат муваффақиятли яратилди",
+    "createError": "Вазрат яратишда хатолик",
+    "invalidQuantity": "Миқдор сотилган миқдордан ошмаслиги керак",
+    "returnSale": "Сотувни қайтариш"
   },
   "customers": {
     "title": "Мижозлар",

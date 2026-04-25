@@ -62,9 +62,20 @@ export interface ProductStoreInventory {
   selling_price?: number;
 }
 
+export interface ProductLocation {
+  name: string;
+  description?: string;
+}
+
+export interface ProductImage {
+  image: string;
+  product: number;
+}
+
 export interface ProductBatch {
   id: number;
   product: number;
+  product_name?: string;
   store: number;
   store_name: string;
   quantity: number;
@@ -72,22 +83,26 @@ export interface ProductBatch {
   selling_price: string;
   barcode: string;
   shtrix_code: string | null;
+  location?: ProductLocation | null;
 }
 
 export interface Product {
   id: string;
   product_id?: string;
+  item_id?: string;
   name: string;
   name_uz_cyrl?: string;
   description: string;
   description_uz_cyrl?: string;
   category: number;
   category_name?: string;
+  unit_measurement?: number;
+  unit_measurement_name?: string;
   supplier_id?: string;
   supplier_name?: string;
   sku?: string;
   image?: string;
-  images?: string[] | string;
+  images?: ProductImage[] | string[] | string;
   barcode?: string;
   barcode_img?: string;
   shtrix_code?: string | null;
@@ -103,6 +118,9 @@ export interface Product {
   min_selling_price?: number;
   max_selling_price?: number;
   inventory_by_store?: ProductStoreInventory[];
+  location_id?: string;
+  location_name?: string;
+  location_description?: string;
   // Legacy fields (for backward compatibility)
   store_id?: string;
   store_name?: string;
@@ -113,6 +131,9 @@ export interface Product {
 
 export interface ProductFormData {
   category?: string;
+  unit_measurement?: string;
+  location?: string;
+  item_id?: string;
   name: string;
   name_uz_cyrl?: string;
   description?: string;
@@ -442,6 +463,40 @@ export interface PaginatedResponse<T> {
   total: number;
   page: number;
   limit: number;
+}
+
+// Sale Return Types
+export interface SaleReturnItem {
+  id: number;
+  sale_item: number;
+  product: number;
+  product_name?: string;
+  quantity: number;
+}
+
+export interface SaleReturn {
+  id: number;
+  sale: number;
+  store: number;
+  store_name?: string;
+  customer: number;
+  seller: number;
+  seller_name?: string;
+  total_refund: string;
+  comment?: string;
+  items: SaleReturnItem[];
+  created_at?: string;
+}
+
+export interface SaleReturnFormItem {
+  sale_item: number;
+  quantity: number;
+}
+
+export interface SaleReturnFormData {
+  sale: number;
+  items: SaleReturnFormItem[];
+  comment?: string;
 }
 
 // Form Types

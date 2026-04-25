@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, User, ShoppingCart, CreditCard, Calendar, Tag, DollarSign, Wallet, Printer, Eye, Package, Barcode, MapPin, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { ArrowLeft, User, ShoppingCart, CreditCard, Calendar, Tag, DollarSign, Wallet, Printer, Eye, Package, Barcode, MapPin, Image as ImageIcon, Loader2, Undo2 } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -31,7 +31,16 @@ const getProductImages = (product?: Product | null): string[] => {
 
   if (product.images) {
     if (Array.isArray(product.images)) {
-      images.push(...product.images.filter((image): image is string => typeof image === 'string' && Boolean(image)));
+      const imgUrls = product.images.map((img): string | null => {
+        if (typeof img === 'string') {
+          return img;
+        } else if (typeof img === 'object' && img !== null && 'image' in img) {
+          const imgObj = img as { image?: string };
+          return imgObj.image || null;
+        }
+        return null;
+      }).filter((image): image is string => Boolean(image));
+      images.push(...imgUrls);
     } else if (typeof product.images === 'string') {
       images.push(product.images);
     }
@@ -275,11 +284,17 @@ export function SalesDetailPage() {
         }
       />
 
-      <div className="flex justify-between">
+      <div className="flex justify-between gap-2">
         <Link to={`/${lang}/sales`} className="w-full sm:w-auto">
           <Button variant="outline" className="w-full sm:w-auto">
             <ArrowLeft className="mr-2 h-4 w-4" />
             {t('common.back')}
+          </Button>
+        </Link>
+        <Link to={`/${lang}/sales-returns/new?saleId=${sale.id}`} className="w-full sm:w-auto">
+          <Button variant="outline" className="w-full sm:w-auto">
+            <Undo2 className="mr-2 h-4 w-4" />
+            {t('saleReturns.returnSale')}
           </Button>
         </Link>
       </div>
