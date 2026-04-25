@@ -20,14 +20,25 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const { i18n } = useTranslation();
   const hasSession = useAuthStore((state) => Boolean(state.user || state.token));
+  const user = useAuthStore((state) => state.user);
+  const isAdmin = Boolean(user?.is_superuser);
+  const userStoreId = user?.store_id;
   const prevLangRef = useRef(i18n.language);
   const initialLoadRef = useRef(true);
 
-  const refreshProducts = useCallback(async () => {
+   const refreshProducts = useCallback(async () => {
+    console.log('refreshProducts called, isAdmin:', isAdmin, 'userStoreId:', userStoreId);
     try {
       setLoading(true);
-      const response = await productService.getAll({ limit: 500 });
+      const filters: { limit?: number; store_id?: string } = { limit: 500 };
+      if (!isAdmin && userStoreId) {
+        filters.store_id = userStoreId;
+      }
+      console.log('Fetching products with filters:', filters);
+      const response = await productService.getAll(filters);
+      console.log('Products API response:', response);
       const data = Array.isArray(response.data) ? response.data : [];
+      console.log('Products count:', data.length);
       setProducts(data);
       setError(null);
     } catch (err) {
@@ -40,39 +51,34 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAdmin, userStoreId]);
 
-  useEffect(() => {
-    // logger.info('[ProductContext] useEffect triggered', {
-    //   hasSession,
-    //   initialLoadRef: initialLoadRef.current,
-    //   language: i18n.language,
-    // });
+   useEffect(() => {
+     console.log('ProductContext useEffect triggered', {
+       hasSession,
+       initialLoad: initialLoadRef.current,
+       language: i18n.language,
+       userId: user?.id,
+       userStoreId: user?.store_id,
+       isAdmin: isAdmin,
+     });
 
-    if (!hasSession) {
-      // logger.info('[ProductContext] No session, resetting');
-      initialLoadRef.current = true;
-      prevLangRef.current = i18n.language;
-      setProducts([]);
-      setError(null);
-      setLoading(false);
-      return;
-    }
+     if (!hasSession) {
+       console.log('No session, resetting products');
+       initialLoadRef.current = true;
+       prevLangRef.current = i18n.language;
+       setProducts([]);
+       setError(null);
+       setLoading(false);
+       return;
+     }
 
-    if (initialLoadRef.current) {
-      // logger.info('[ProductContext] Initial load, fetching products');
-      initialLoadRef.current = false;
-      void refreshProducts();
-      return;
-    }
-    
-    const currentLang = i18n.language;
-    if (prevLangRef.current !== currentLang) {
-      // logger.info('[ProductContext] Language changed, fetching products');
-      prevLangRef.current = currentLang;
-      void refreshProducts();
-    }
-  }, [hasSession, i18n.language, refreshProducts]);
+     // Always refresh when store_id or admin status changes
+     console.log('Fetching products due to user/store change');
+     void refreshProducts();
+
+     // Note: We don't use initialLoadRef anymore since we want to refresh on every user/store change
+   }, [hasSession, i18n.language, userStoreId, isAdmin, refreshProducts]);
 
   const value = useMemo(() => ({
     products,

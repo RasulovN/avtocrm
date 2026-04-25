@@ -60,6 +60,8 @@ export interface ProductStoreInventory {
   quantity: number;
   purchase_price?: number;
   selling_price?: number;
+  location_name?: string;
+  location_description?: string;
 }
 
 export interface ProductLocation {

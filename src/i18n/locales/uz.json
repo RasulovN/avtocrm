@@ -147,7 +147,8 @@
     "unitUpdated": "Birlik muvaffaqiyatli yangilandi",
     "unitDeleted": "Birlik muvaffaqiyatli o'chirildi",
     "noUnits": "Birliklar yo'q",
-    "categoriesAdd": "Qo'shish"
+    "categoriesAdd": "Qo'shish",
+    "productTotalCount": "Jami soni"
   },
   "productLocations": {
     "title": "Mahsulot joylashuvlari",

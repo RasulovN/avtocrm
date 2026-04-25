@@ -46,21 +46,6 @@ const getProductImages = (product?: Product | null): string[] => {
   return [...new Set(images.filter(Boolean))];
 };
 
-const getStaticProductLocation = (product?: Product | null) => {
-  const source = String(product?.id ?? '0');
-  const code = source.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  const zones = ['Asosiy ombor', 'Savdo zal', 'Yuk qabul zonasi', 'Zaxira qator'];
-  const shelves = ['A-1', 'B-2', 'C-3', 'D-4', 'E-5', 'F-6'];
-  const levels = ['Yuqori qavat', "O'rta qavat", 'Pastki qavat'];
-
-  return {
-    zone: zones[code % zones.length],
-    shelf: shelves[code % shelves.length],
-    level: levels[code % levels.length],
-    note: "Statik ma'lumot, backend tayyor bo'lgach real lokatsiya bilan almashtiriladi.",
-  };
-};
-
 const playSuccessSound = () => {
   try {
     const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
@@ -109,6 +94,24 @@ export function SalesPage() {
   const { categories } = useCategories();
   const { products: allProducts, loading: productsLoading } = useProducts();
 
+  // Debug logs
+  useEffect(() => {
+    console.log('SalesPage - allProducts count:', allProducts.length, 'loading:', productsLoading);
+    if (allProducts.length > 0) {
+      console.log('Sample product:', allProducts[0]);
+      console.log('Unique store IDs:', [...new Set(allProducts.map(p => p.store_id))]);
+    }
+  }, [allProducts, productsLoading]);
+
+  // Debug: log products when they change
+  useEffect(() => {
+    console.log('SalesPage - allProducts loaded:', allProducts.length, 'productsLoading:', productsLoading);
+    if (allProducts.length > 0) {
+      console.log('First product:', allProducts[0]);
+      console.log('Store IDs:', [...new Set(allProducts.map(p => p.store_id))]);
+    }
+  }, [allProducts, productsLoading]);
+
   const [storeId, setStoreId] = useState(userStoreId);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [items, setItems] = useState<CartItem[]>([]);
@@ -129,20 +132,17 @@ export function SalesPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productLoading, setProductLoading] = useState(false);
   const [productError, setProductError] = useState('');
+  const [productLocation, setProductLocation] = useState<{ name?: string; description?: string } | null>(null);
 
   const safeStores = useMemo(() => (Array.isArray(stores) ? stores : []), [stores]);
-  const safeProducts = useMemo(() => {
-    if (productsLoading) return [];
-    const filtered = isAdmin ? allProducts : allProducts.filter((p) => p.store_id === userStoreId);
-    return filtered;
-  }, [allProducts, isAdmin, userStoreId, productsLoading]);
+  const safeProducts = useMemo(() => (Array.isArray(allProducts) ? allProducts : []), [allProducts]);
 
   const hydrateProductFromCatalog = useCallback((product: Product): Product => {
     // Ensure product has an id
     const productId = product.id || (product as any).product_id;
     const normalizedProduct = { ...product, id: productId };
 
-    const matchedProduct = safeProducts.find((item) =>
+    const matchedProduct = allProducts.find((item) =>
       String(item.id) === String(productId) ||
       (product.shtrix_code && item.shtrix_code === product.shtrix_code) ||
       (product.barcode && item.barcode === product.barcode) ||
@@ -151,22 +151,22 @@ export function SalesPage() {
 
     if (!matchedProduct) return normalizedProduct;
 
-    return {
-      ...matchedProduct,
-      ...normalizedProduct,
-      id: matchedProduct.id || productId,
-      name: product.name || matchedProduct.name,
-      sku: product.sku || matchedProduct.sku,
-      barcode: product.barcode || matchedProduct.barcode,
-      shtrix_code: product.shtrix_code || matchedProduct.shtrix_code,
-      purchase_price: product.purchase_price ?? matchedProduct.purchase_price,
-      selling_price: product.selling_price ?? matchedProduct.selling_price,
-      quantity: product.quantity ?? matchedProduct.quantity,
-      total_count: product.total_count ?? matchedProduct.total_count,
-      store_id: product.store_id || matchedProduct.store_id,
-      store_name: product.store_name || matchedProduct.store_name,
-    };
-  }, [safeProducts]);
+      return {
+        ...matchedProduct,
+        ...normalizedProduct,
+        id: matchedProduct.id || productId,
+        name: product.name || matchedProduct.name,
+        sku: product.sku || matchedProduct.sku,
+        barcode: product.barcode || matchedProduct.barcode,
+        shtrix_code: product.shtrix_code || matchedProduct.shtrix_code,
+        purchase_price: product.purchase_price ?? matchedProduct.purchase_price,
+        selling_price: product.selling_price ?? matchedProduct.selling_price,
+        quantity: product.quantity ?? matchedProduct.quantity,
+        total_count: product.total_count ?? matchedProduct.total_count,
+        store_id: product.store_id || matchedProduct.store_id,
+        store_name: product.store_name || matchedProduct.store_name,
+      };
+  }, [allProducts]);
 
   const addProduct = useCallback((product: Product) => {
     const productId = String(product.id || product.product_id || '');
@@ -275,14 +275,40 @@ export function SalesPage() {
   const change = useMemo(() => Math.max(0, totalPaid - totalWithDiscount), [totalPaid, totalWithDiscount]);
   const debt = useMemo(() => Math.max(0, totalWithDiscount - totalPaid), [totalPaid, totalWithDiscount]);
   const productImages = getProductImages(selectedProduct);
-  const productLocation = getStaticProductLocation(selectedProduct);
   const filteredProducts = useMemo(() => {
-    let result = safeProducts;
+    let result = allProducts;
+    if (storeId) {
+      result = result
+        .filter((p) => {
+          const storeInventory = p.inventory_by_store?.find(
+            (inv) => inv.store_id === storeId
+          );
+          return !!storeInventory && storeInventory.quantity > 0;
+        })
+        .map((p) => {
+          const storeInventory = p.inventory_by_store?.find(
+            (inv) => inv.store_id === storeId
+          );
+          if (storeInventory) {
+            return {
+              ...p,
+              quantity: storeInventory.quantity,
+              purchase_price: storeInventory.purchase_price,
+              selling_price: storeInventory.selling_price,
+              store_id: storeInventory.store_id,
+              store_name: storeInventory.store_name,
+              location_name: storeInventory.location_name,
+              location_description: storeInventory.location_description,
+            };
+          }
+          return p;
+        });
+    }
     if (categoryFilter) {
       result = result.filter((p) => String(p.category) === categoryFilter);
     }
     return result;
-  }, [safeProducts, categoryFilter]);
+  }, [allProducts, categoryFilter, storeId]);
   const displayedProducts = searchResults ?? filteredProducts;
 
   const loadData = useCallback(async () => {
@@ -555,6 +581,7 @@ export function SalesPage() {
     setSelectedProduct(hydratedProduct);
     setShowProductDialog(true);
     setProductError('');
+    setProductLocation(null);
 
     if (!hydratedProduct.id) {
       setProductError('Mahsulot ID topilmadi.');
@@ -564,7 +591,14 @@ export function SalesPage() {
     try {
       setProductLoading(true);
       const fullProduct = await productService.getById(String(hydratedProduct.id));
-      setSelectedProduct((prev) => ({ ...(prev ?? hydratedProduct), ...fullProduct }));
+      setSelectedProduct(fullProduct);
+      // Productdan location ma'lumotlarini olish
+      if (fullProduct.location_id) {
+        setProductLocation({
+          name: fullProduct.location_name,
+          description: fullProduct.location_description,
+        });
+      }
     } catch {
       setProductError("Mahsulot detallari yuklanmadi.");
     } finally {
@@ -578,6 +612,7 @@ export function SalesPage() {
       setSelectedProduct(null);
       setProductError('');
       setProductLoading(false);
+      setProductLocation(null);
     }
   }, []);
 
@@ -602,7 +637,6 @@ export function SalesPage() {
             print-color-adjust: black;
           }
           .print-hidden { display: none !important; } 
-        }
         }
           `}</style>
       {/* /* Main Sales Interface */ }
@@ -694,45 +728,52 @@ export function SalesPage() {
                   </div>
                 ) : (
                   displayedProducts.map((product) => (
-                    <button
-                      key={product.id}
-                      className="w-full text-left rounded-lg p-2.5 border border-gray-900 hover:bg-accent dark:hover:bg-gray-900 transition-colors"
-                      onClick={() => handleProductClick(product)}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1">
-                          <div className="font-medium dark:text-white">
-                            {/* {product.name} */}
-                            {product.name || product.sku  || "Noma'lum mahsulot"}
+                      <div
+                        key={product.id}
+                        className="w-full text-left rounded-lg p-2.5 border border-gray-900 hover:bg-accent dark:hover:bg-gray-900 transition-colors cursor-pointer"
+                        onClick={() => handleProductClick(product)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleProductClick(product);
+                          }
+                        }}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1">
+                            <div className="font-medium dark:text-white">
+                              {product.name || product.sku  || "Noma'lum mahsulot"}
+                            </div>
+                            <div className="text-xs text-muted-foreground dark:text-gray-400">
+                              {product.sku ||  product.barcode}
+                            </div>
                           </div>
-                          <div className="text-xs text-muted-foreground dark:text-gray-400">
-                            {product.sku ||  product.barcode}
-                          </div>
-                        </div>
-                        <div className="ml-3 flex items-start gap-2">
-                          <button
-                            type="button"
-                            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-input bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200 dark:hover:bg-gray-800"
-                            onClick={(event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                              void handleOpenProductDialog(product);
-                            }}
-                            aria-label="Mahsulot detalini ko'rish"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </button>
-                          <div className="text-right">
-                            <div className="font-bold dark:text-white">{formatCurrency(product.selling_price ?? 0)}</div>
-                            <div className="flex items-center justify-end">
-                              <span className="inline-flex items-center rounded bg-primary/10 dark:bg-gray-600 px-1.5 py-0.5 text-xs font-medium dark:text-gray-200">
-                                {product.quantity}
-                              </span>
+                          <div className="ml-3 flex items-start gap-2">
+                            <button
+                              type="button"
+                              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-input bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200 dark:hover:bg-gray-800"
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                void handleOpenProductDialog(product);
+                              }}
+                              aria-label="Mahsulot detalini ko'rish"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
+                            <div className="text-right">
+                              <div className="font-bold dark:text-white">{formatCurrency(product.selling_price ?? 0)}</div>
+                              <div className="flex items-center justify-end">
+                                <span className="inline-flex items-center rounded bg-primary/10 dark:bg-gray-600 px-1.5 py-0.5 text-xs font-medium dark:text-gray-200">
+                                  {product.quantity}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </button>
                   ))
                 )}
               </div>
@@ -1270,22 +1311,19 @@ export function SalesPage() {
                     <MapPin className="h-4 w-4 text-primary" />
                     <h5 className="font-semibold">Joylashuvi</h5>
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-xl bg-background p-3">
-                      <p className="text-xs text-muted-foreground">Zona</p>
-                      <p className="mt-1 font-medium">{productLocation.zone}</p>
+                  {productLocation && productLocation.name ? (
+                    <div>
+                      <div className="rounded-xl bg-background p-3">
+                        <p className="text-xs text-muted-foreground">Zona</p>
+                        <p className="mt-1 font-medium">{productLocation.name}</p>
+                      </div>
+                      <p className="mt-3 text-xs text-muted-foreground">{productLocation.description || 'Tavsif mavjud emas'}</p>
                     </div>
-                    <div className="rounded-xl bg-background p-3">
-                      <p className="text-xs text-muted-foreground">Polka</p>
-                      <p className="mt-1 font-medium">{productLocation.shelf}</p>
-                    </div>
-                    <div className="rounded-xl bg-background p-3">
-                      <p className="text-xs text-muted-foreground">Joylashuv darajasi</p>
-                      <p className="mt-1 font-medium">{productLocation.level}</p>
-                    </div>
-                  </div>
-                  <p className="mt-3 text-xs text-muted-foreground">{productLocation.note}</p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Mahsulot lokatsiyasi mavjud emas.</p>
+                  )}
                 </div>
+                
               </div>
             </div>
           )}

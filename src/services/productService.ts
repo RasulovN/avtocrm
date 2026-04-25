@@ -184,6 +184,8 @@ const item = (raw ?? {}) as Partial<Product> & {
         quantity: batch.quantity,
         purchase_price: purchasePrice,
         selling_price: sellingPrice,
+        location_name: batch.location?.name,
+        location_description: batch.location?.description,
       };
     });
   }

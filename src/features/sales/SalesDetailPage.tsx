@@ -31,37 +31,13 @@ const getProductImages = (product?: Product | null): string[] => {
 
   if (product.images) {
     if (Array.isArray(product.images)) {
-      const imgUrls = product.images.map((img): string | null => {
-        if (typeof img === 'string') {
-          return img;
-        } else if (typeof img === 'object' && img !== null && 'image' in img) {
-          const imgObj = img as { image?: string };
-          return imgObj.image || null;
-        }
-        return null;
-      }).filter((image): image is string => Boolean(image));
-      images.push(...imgUrls);
+      images.push(...product.images.filter((image): image is string => typeof image === 'string' && Boolean(image)));
     } else if (typeof product.images === 'string') {
       images.push(product.images);
     }
   }
 
   return [...new Set(images.filter(Boolean))];
-};
-
-const getStaticProductLocation = (product?: Product | null, saleItem?: SaleItem | null) => {
-  const source = String(product?.id ?? saleItem?.product ?? saleItem?.id ?? '0');
-  const code = source.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  const zones = ['Asosiy ombor', 'Savdo zal', 'Yuk qabul zonasi', 'Zaxira qator'];
-  const shelves = ['A-1', 'B-2', 'C-3', 'D-4', 'E-5', 'F-6'];
-  const levels = ['Yuqori qavat', "O'rta qavat", 'Pastki qavat'];
-
-  return {
-    zone: zones[code % zones.length],
-    shelf: shelves[code % shelves.length],
-    level: levels[code % levels.length],
-    note: "Statik ma'lumot, backend tayyor bo'lgach real lokatsiya bilan almashtiriladi.",
-  };
 };
 
 export function SalesDetailPage() {
@@ -79,7 +55,7 @@ export function SalesDetailPage() {
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [selectedSaleItem, setSelectedSaleItem] = useState<SaleItem | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [productLocations, setProductLocations] = useState<any[]>([]);
+  const [productLocation, setProductLocation] = useState<{ name?: string; description?: string } | null>(null);
   const [productLoading, setProductLoading] = useState(false);
   const [productError, setProductError] = useState('');
   const loadRef = useRef(false);
@@ -193,9 +169,9 @@ export function SalesDetailPage() {
   const handleOpenProductDialog = async (item: SaleItem) => {
     setSelectedSaleItem(item);
     setSelectedProduct(null);
-    setProductLocations([]);
     setProductError('');
     setShowProductDialog(true);
+    setProductLocation(null);
 
     if (!item.product) {
       setProductError('Mahsulot ID topilmadi.');
@@ -208,25 +184,12 @@ export function SalesDetailPage() {
       setSelectedProduct(product);
       console.log('Selected product ID:', product.id);
 
-      // Fetch product data with location
-      try {
-        const productsRes = await fetch(`${API_BASE_URL}/products/?limit=500`);
-        if (productsRes.ok) {
-          const products = await productsRes.json();
-          console.log('Fetched products:', products);
-          const matchedProduct = products.find((p: any) => p.id == product.id);
-          if (matchedProduct && matchedProduct.location) {
-            setProductLocations([matchedProduct]); // Wrap in array for consistency
-          } else {
-            setProductLocations([]);
-          }
-        } else {
-          console.error('Failed to fetch products:', productsRes.status);
-          setProductLocations([]);
-        }
-      } catch (error) {
-        console.error('Error fetching products:', error);
-        setProductLocations([]);
+      // Product`dan location ma'lumotlarini olish
+      if (product.location_id) {
+        setProductLocation({
+          name: product.location_name,
+          description: product.location_description,
+        });
       }
     } catch {
       setProductError("Mahsulot detallari yuklanmadi.");
@@ -242,11 +205,11 @@ export function SalesDetailPage() {
       setSelectedProduct(null);
       setProductError('');
       setProductLoading(false);
+      setProductLocation(null);
     }
   };
 
   const productImages = getProductImages(selectedProduct);
-  const productLocation = getStaticProductLocation(selectedProduct, selectedSaleItem);
 
   return (
     <div className="space-y-6">
@@ -626,22 +589,16 @@ export function SalesDetailPage() {
                     <MapPin className="h-4 w-4 text-primary" />
                     <h5 className="font-semibold">Joylashuvi</h5>
                   </div>
-                  {productLocations.length > 0 ? (
-                    productLocations.map((prod, index) => (
-                      <div key={index} className="mb-4 last:mb-0">
-                        <div className="grid gap-3 sm:grid-cols-1">
-                          <div className="rounded-xl bg-background p-3">
-                            <p className="text-xs text-muted-foreground">Zona</p>
-                            <p className="mt-1 font-medium">{prod.location ? prod.location.name : 'Noma\'lum'}</p>
-                          </div>
-                        </div>
-                        <p className="mt-3 text-xs text-muted-foreground">{prod.location ? prod.location.description : 'Tavsif mavjud emas'}</p>
-                      </div>
-                    ))
-                  ) : (
+                  {productLocation ? (
                     <div>
-                      <p className="text-sm text-muted-foreground">Mahsulot lokatsiyasi mavjud emas.</p>
+                      <div className="rounded-xl bg-background p-3">
+                        <p className="text-xs text-muted-foreground">Zona</p>
+                        <p className="mt-1 font-medium">{productLocation.name}</p>
+                      </div>
+                      <p className="mt-3 text-xs text-muted-foreground">{productLocation.description}</p>
                     </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Mahsulot lokatsiyasi mavjud emas.</p>
                   )}
                 </div>
                 {/* productLocation end */}
@@ -662,6 +619,26 @@ export function SalesDetailPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Location section */}
+                <div className="rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4">
+                  <div className="mb-3 flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-primary" />
+                    <h5 className="font-semibold">Joylashuvi</h5>
+                  </div>
+                  {productLocation && productLocation.name ? (
+                    <div>
+                      <div className="rounded-xl bg-background p-3">
+                        <p className="text-xs text-muted-foreground">Zona</p>
+                        <p className="mt-1 font-medium">{productLocation.name}</p>
+                      </div>
+                      <p className="mt-3 text-xs text-muted-foreground">{productLocation.description || 'Tavsif mavjud emas'}</p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Mahsulot lokatsiyasi mavjud emas.</p>
+                  )}
+                </div>
+                {/* Location end */}
               </div>
             </div>
           )}

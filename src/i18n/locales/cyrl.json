@@ -145,7 +145,8 @@
     "unitUpdated": "Бирлик муваффақиятли янгиланди",
     "unitDeleted": "Бирлик муваффақиятли ўчирилди",
     "noUnits": "Бирликлар йўқ",
-    "categoriesAdd": "Қўшиш"
+    "categoriesAdd": "Қўшиш",
+    "productTotalCount": "Жами сони"
   },
   "productLocations": {
       "title": "Маҳсулот жойлашувлари",

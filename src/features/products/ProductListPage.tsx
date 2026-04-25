@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useCallback, type MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Edit, Trash2, Barcode, Search, Printer } from 'lucide-react';
+import { Plus, Edit, Trash2, Barcode, Search, Printer, Power } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column, type StoreInventory } from '../../components/shared/DataTable';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
@@ -39,6 +39,7 @@ export function ProductListPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [deactivating, setDeactivating] = useState(false);
 
   const loadProducts = useCallback(async () => {
     try {
@@ -172,75 +173,100 @@ export function ProductListPage() {
     setSelectedProductIds((prev) => (ids.every((id) => prev.includes(id)) ? prev.filter((id) => !ids.includes(id)) : Array.from(new Set([...prev, ...ids]))));
   };
 
-  const handlePrintSelected = () => {
-    const printContent = document.getElementById('selected-products-barcode-print-area');
-    if (!printContent || selectedProducts.length === 0) return;
+   const handlePrintSelected = () => {
+     const printContent = document.getElementById('selected-products-barcode-print-area');
+     if (!printContent || selectedProducts.length === 0) return;
 
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+     const printWindow = window.open('', '_blank');
+     if (!printWindow) return;
 
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Print Selected Barcodes</title>
-          <style>
-            @page {
-              size: auto;
-              margin: 4mm;
-            }
-            html, body {
-              margin: 0;
-              padding: 0;
-              background: #fff;
-              font-family: Arial, sans-serif;
-            }
-            body {
-              padding: 2mm;
-            }
-            .barcode-sheet {
-              display: flex;
-              flex-wrap: wrap;
-              align-items: flex-start;
-              gap: 3mm;
-            }
-            .barcode-label {
-              display: inline-flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              gap: 1.5mm;
-              width: fit-content;
-              max-width: 58mm;
-              padding: 2mm 3mm;
-              box-sizing: border-box;
-              break-inside: avoid;
-              page-break-inside: avoid;
-            }
-            .barcode-label-name {
-              margin: 0;
-              font-size: 11px;
-              font-weight: 600;
-              line-height: 1.2;
-              text-align: center;
-            }
-            .barcode-label svg {
-              display: block;
-              width: auto !important;
-              max-width: 52mm;
-              height: 18mm !important;
-              overflow: visible;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="barcode-sheet">${printContent.innerHTML}</div>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-  };
+     printWindow.document.write(`
+       <html>
+         <head>
+           <title>Print Selected Barcodes</title>
+           <style>
+             @page {
+               size: auto;
+               margin: 4mm;
+             }
+             html, body {
+               margin: 0;
+               padding: 0;
+               background: #fff;
+               font-family: Arial, sans-serif;
+             }
+             body {
+               padding: 2mm;
+             }
+             .barcode-sheet {
+               display: flex;
+               flex-wrap: wrap;
+               align-items: flex-start;
+               gap: 3mm;
+             }
+             .barcode-label {
+               display: inline-flex;
+               flex-direction: column;
+               align-items: center;
+               justify-content: center;
+               gap: 1.5mm;
+               width: fit-content;
+               max-width: 58mm;
+               padding: 2mm 3mm;
+               box-sizing: border-box;
+               break-inside: avoid;
+               page-break-inside: avoid;
+             }
+             .barcode-label-name {
+               margin: 0;
+               font-size: 11px;
+               font-weight: 600;
+               line-height: 1.2;
+               text-align: center;
+             }
+             .barcode-label svg {
+               display: block;
+               width: auto !important;
+               max-width: 52mm;
+               height: 18mm !important;
+               overflow: visible;
+             }
+           </style>
+         </head>
+         <body>
+           <div class="barcode-sheet">${printContent.innerHTML}</div>
+         </body>
+       </html>
+     `);
+     printWindow.document.close();
+     printWindow.focus();
+     printWindow.print();
+   };
+
+   const handleDeactivateSelected = async () => {
+     if (selectedProductIds.length === 0) return;
+
+     const confirmMessage = selectedProductIds.length === 1
+       ? '1 ta mahsulotni faolsizlantirishni xohlayasizmi?'
+       : `${selectedProductIds.length} ta mahsulotni faolsizlantirishni xohlayasizmi?`;
+
+     if (!window.confirm(confirmMessage)) {
+       return;
+     }
+
+     try {
+       setDeactivating(true);
+       await Promise.all(
+         selectedProductIds.map(id => productService.update(id, { is_active: false }))
+       );
+       setSelectedProductIds([]);
+       await loadProducts();
+     } catch (error) {
+       console.error('Failed to deactivate products:', error);
+     } finally {
+       setDeactivating(false);
+     }
+   };
 
   const columns: Column<Product>[] = [
     {
@@ -409,10 +435,22 @@ export function ProductListPage() {
           <p className="text-sm text-muted-foreground">
             {selectedProducts.length} ta mahsulot tanlandi
           </p>
-          <Button onClick={handlePrintSelected}>
-            <Printer className="mr-2 h-4 w-4" />
-            {t('products.printBarcode')}
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handlePrintSelected}>
+              <Printer className="mr-2 h-4 w-4" />
+              {t('products.printBarcode')}
+            </Button>
+            {isAdmin && (
+              <Button
+                variant="destructive"
+                onClick={handleDeactivateSelected}
+                disabled={deactivating}
+              >
+                <Power className="mr-2 h-4 w-4" />
+                {deactivating ? 'Faolsizlantirilmoqda...' : 'Faolsizlantirish'}
+              </Button>
+            )}
+          </div>
         </div>
       )}
 

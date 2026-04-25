@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '../ui/Table';
+import { t } from 'i18next';
 
 export type ColumnKey<T> = keyof T | (string & {});
 
@@ -275,7 +276,7 @@ export function DataTable<T extends { id: string }>({
             )}
           </div>
         ) : (
-          <div className="min-w-[640px] sm:min-w-[720px]" style={{ minWidth }}>
+          <div className="min-w-160 sm:min-w-180" style={{ minWidth }}>
             <Table>
               <TableHeader className="sticky top-0 bg-muted/50 backdrop-blur-sm z-10">
                 <TableRow className="hover:bg-transparent">
@@ -373,7 +374,7 @@ export function DataTable<T extends { id: string }>({
       {showFooter && stats && !isMobile && (
         <div className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-3 sm:flex-row sm:flex-wrap sm:gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Total:</span>
+            <span className="text-sm text-muted-foreground">{t('products.productTotalCount')}</span>
             <span className="font-semibold">{stats.totalQuantity.toLocaleString()}</span>
           </div>
           
