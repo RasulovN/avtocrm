@@ -414,9 +414,7 @@ export const productService = {
   getById: async (id: string): Promise<Product> => {
     const response = await apiClient.get<ApiResponse<Product>>(`/products/${id}/`);
     const payload = response.data?.data ?? response.data;
-    console.log('getById - Raw API response:', payload); // Debug
     const result = normalizeProduct(payload);
-    console.log('getById - Normalized product:', result); // Debug
     return result;
   },
 
