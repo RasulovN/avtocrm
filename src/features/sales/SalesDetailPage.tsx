@@ -640,21 +640,7 @@ export function SalesDetailPage() {
                     ))
                   ) : (
                     <div>
-                      <div className="grid gap-3 sm:grid-cols-3">
-                        <div className="rounded-xl bg-background p-3">
-                          <p className="text-xs text-muted-foreground">Zona</p>
-                          <p className="mt-1 font-medium">{productLocation.zone}</p>
-                        </div>
-                        <div className="rounded-xl bg-background p-3">
-                          <p className="text-xs text-muted-foreground">Polka</p>
-                          <p className="mt-1 font-medium">{productLocation.shelf}</p>
-                        </div>
-                        <div className="rounded-xl bg-background p-3">
-                          <p className="text-xs text-muted-foreground">Joylashuv darajasi</p>
-                          <p className="mt-1 font-medium">{productLocation.level}</p>
-                        </div>
-                      </div>
-                      <p className="mt-3 text-xs text-muted-foreground">{productLocation.note}</p>
+                      <p className="text-sm text-muted-foreground">Mahsulot lokatsiyasi mavjud emas.</p>
                     </div>
                   )}
                 </div>
