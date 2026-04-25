@@ -224,7 +224,7 @@ export function SaleReturnListPage() {
             </DialogTitle>
           </DialogHeader>
           {selectedReturn && (
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-muted-foreground">{t('sales.saleDetails')}</p>
@@ -306,7 +306,7 @@ export function SaleReturnListPage() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDetailOpen(false)}>
+            <Button onClick={() => setDetailOpen(false)}>
               {t('common.close')}
             </Button>
           </DialogFooter>
