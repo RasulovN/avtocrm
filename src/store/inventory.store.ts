@@ -1,196 +1,150 @@
 import { create } from 'zustand';
-import type { InventorySession, InventoryItem, InventoryStats } from '../services/inventory.api';
-import { inventoryApi, type CreateInventorySession } from '../services/inventory.api';
+import type { InventorySession, InventoryProduct } from '../services/inventory.api';
+import { inventoryApi } from '../services/inventory.api';
 
 interface InventoryState {
   sessions: InventorySession[];
-  currentSession: InventorySession | null;
-  items: InventoryItem[];
-  stats: InventoryStats | null;
+  currentSessionProducts: InventoryProduct[];
+  currentSessionChecked: InventoryProduct[];
   loading: boolean;
   itemsLoading: boolean;
-  updatingItemId: number | null;
+  scanningProductId: number | null;
   error: string | null;
-  
-  fetchSessions: (params?: { status?: string }) => Promise<void>;
-  fetchSession: (id: number) => Promise<void>;
-  createSession: (data: CreateInventorySession) => Promise<InventorySession>;
-  loadProducts: (sessionId: number) => Promise<void>;
-  fetchItems: (sessionId: number) => Promise<void>;
-  updateItemCount: (itemId: number, countedQty: number) => Promise<void>;
-  completeInventory: (sessionId: number) => Promise<void>;
-  setCurrentSession: (session: InventorySession | null) => void;
+
+  fetchSessions: () => Promise<void>;
+  startSession: (storeId: number) => Promise<number>;
+  fetchSessionProducts: (sessionId: number) => Promise<void>;
+  scanProduct: (sessionId: number, productId: number, quantity: number) => Promise<void>;
+  finalizeSession: (sessionId: number) => Promise<void>;
+  cancelSession: (sessionId: number) => Promise<void>;
   clearError: () => void;
 }
 
-const debouncedUpdates: Map<number, NodeJS.Timeout> = new Map();
+const debouncedScans: Map<number, ReturnType<typeof setTimeout>> = new Map();
 
 export const useInventoryStore = create<InventoryState>((set, get) => ({
   sessions: [],
-  currentSession: null,
-  items: [],
-  stats: null,
+  currentSessionProducts: [],
+  currentSessionChecked: [],
   loading: false,
   itemsLoading: false,
-  updatingItemId: null,
+  scanningProductId: null,
   error: null,
 
-  fetchSessions: async (params) => {
+  fetchSessions: async () => {
     set({ loading: true, error: null });
     try {
-      const response = await inventoryApi.getSessions(params);
-      set({ sessions: response.data, loading: false });
+      const sessions = await inventoryApi.getSessions();
+      set({ sessions, loading: false });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to fetch sessions';
       set({ error: message, loading: false });
     }
   },
 
-  fetchSession: async (id) => {
+  startSession: async (storeId) => {
     set({ loading: true, error: null });
     try {
-      const session = await inventoryApi.getSession(id);
-      set({ currentSession: session, loading: false });
+      const response = await inventoryApi.startSession({ store_id: storeId });
+      set({ loading: false });
+      return response.session_id;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to fetch session';
-      set({ error: message, loading: false });
-    }
-  },
-
-  createSession: async (data) => {
-    set({ loading: true, error: null });
-    try {
-      const session = await inventoryApi.createSession(data);
-      set((state) => ({
-        sessions: [session, ...state.sessions],
-        loading: false,
-      }));
-      return session;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to create session';
+      const message = error instanceof Error ? error.message : 'Failed to start session';
       set({ error: message, loading: false });
       throw error;
     }
   },
 
-  loadProducts: async (sessionId) => {
+  fetchSessionProducts: async (sessionId) => {
     set({ itemsLoading: true, error: null });
     try {
-      const items = await inventoryApi.loadProducts(sessionId);
-      const itemsWithStatus = items.map((item) => ({
-        ...item,
-        status: item.counted_qty === null 
-          ? 'pending' 
-          : item.counted_qty === item.expected_qty 
-            ? 'matched' 
-            : 'mismatch',
-        difference: item.counted_qty !== null ? item.counted_qty - item.expected_qty : undefined,
-      }));
-      set({ items: itemsWithStatus, itemsLoading: false });
-      
-      const stats = calculateStats(itemsWithStatus);
-      set({ stats });
+      const detail = await inventoryApi.getSessionProducts(sessionId);
+      set({
+        currentSessionProducts: detail.products,
+        currentSessionChecked: detail.checked,
+        itemsLoading: false,
+      });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to load products';
+      const message = error instanceof Error ? error.message : 'Failed to fetch session products';
       set({ error: message, itemsLoading: false });
     }
   },
 
-  fetchItems: async (sessionId) => {
-    set({ itemsLoading: true, error: null });
-    try {
-      const items = await inventoryApi.getItems(sessionId);
-      const itemsWithStatus = items.map((item) => ({
-        ...item,
-        status: item.counted_qty === null 
-          ? 'pending' 
-          : item.counted_qty === item.expected_qty 
-            ? 'matched' 
-            : 'mismatch',
-        difference: item.counted_qty !== null ? item.counted_qty - item.expected_qty : undefined,
-      }));
-      set({ items: itemsWithStatus, itemsLoading: false });
-      
-      const stats = calculateStats(itemsWithStatus);
-      set({ stats });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to fetch items';
-      set({ error: message, itemsLoading: false });
-    }
-  },
-
-  updateItemCount: async (itemId, countedQty) => {
-    const { items } = get();
-    const itemIndex = items.findIndex((i) => i.id === itemId);
-    if (itemIndex === -1) return;
-
-    const existingTimeout = debouncedUpdates.get(itemId);
+  scanProduct: async (sessionId, productId, quantity) => {
+    const existingTimeout = debouncedScans.get(productId);
     if (existingTimeout) {
       clearTimeout(existingTimeout);
     }
 
-    const newItems = [...items];
-    newItems[itemIndex] = {
-      ...newItems[itemIndex],
-      counted_qty: countedQty,
-      difference: countedQty - newItems[itemIndex].expected_qty,
-      status: countedQty === newItems[itemIndex].expected_qty ? 'matched' : 'mismatch',
-    };
-    set({ items: newItems });
+    // Optimistic update
+    set((state) => ({
+      currentSessionProducts: state.currentSessionProducts.map((p) =>
+        p.product_id === productId ? { ...p, scanned: quantity, is_check: true } : p
+      ),
+    }));
 
     const timeoutId = setTimeout(async () => {
       try {
-        set({ updatingItemId: itemId });
-        await inventoryApi.updateItem(itemId, { counted_qty: countedQty });
-        
-        const updatedItems = [...get().items];
-        const idx = updatedItems.findIndex((i) => i.id === itemId);
-        if (idx !== -1) {
-          const stats = calculateStats(updatedItems);
-          set({ stats, updatingItemId: null });
-        }
+        set({ scanningProductId: productId });
+        await inventoryApi.scanProduct({ session_id: sessionId, product_id: productId, quantity });
+        // Refresh list after successful scan
+        const detail = await inventoryApi.getSessionProducts(sessionId);
+        set({
+          currentSessionProducts: detail.products,
+          currentSessionChecked: detail.checked,
+          scanningProductId: null,
+        });
       } catch {
-        set({ updatingItemId: null });
-        const originalItems = get().items;
-        const originalIndex = originalItems.findIndex((i) => i.id === itemId);
-        if (originalIndex !== -1) {
-          const restoredItems = [...originalItems];
-          restoredItems[originalIndex] = {
-            ...restoredItems[originalIndex],
-            status: restoredItems[originalIndex].counted_qty === restoredItems[originalIndex].expected_qty 
-              ? 'matched' 
-              : 'mismatch',
-            difference: restoredItems[originalIndex].counted_qty !== null 
-              ? restoredItems[originalIndex].counted_qty - restoredItems[originalIndex].expected_qty 
-              : undefined,
-          };
-          set({ items: restoredItems });
+        set({ scanningProductId: null });
+        // Re-fetch to restore correct state
+        try {
+          const detail = await inventoryApi.getSessionProducts(sessionId);
+          set({
+            currentSessionProducts: detail.products,
+            currentSessionChecked: detail.checked,
+          });
+        } catch {
+          // Ignore secondary error
         }
       }
-      debouncedUpdates.delete(itemId);
-    }, 500);
+      debouncedScans.delete(productId);
+    }, 600);
 
-    debouncedUpdates.set(itemId, timeoutId);
+    debouncedScans.set(productId, timeoutId);
   },
 
-  completeInventory: async (sessionId) => {
+  finalizeSession: async (sessionId) => {
     set({ loading: true, error: null });
     try {
-      const session = await inventoryApi.completeInventory(sessionId);
+      await inventoryApi.finalizeSession({ session_id: sessionId });
       set((state) => ({
-        currentSession: session,
-        sessions: state.sessions.map((s) => (s.id === sessionId ? session : s)),
+        sessions: state.sessions.map((s) =>
+          s.id === sessionId ? { ...s, status: 'completed' as const } : s
+        ),
         loading: false,
       }));
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to complete inventory';
+      const message = error instanceof Error ? error.message : 'Failed to finalize inventory';
       set({ error: message, loading: false });
       throw error;
     }
   },
 
-  setCurrentSession: (session) => {
-    set({ currentSession: session });
+  cancelSession: async (sessionId) => {
+    set({ loading: true, error: null });
+    try {
+      await inventoryApi.cancelSession({ session_id: sessionId });
+      set((state) => ({
+        sessions: state.sessions.map((s) =>
+          s.id === sessionId ? { ...s, status: 'cancelled' as const } : s
+        ),
+        loading: false,
+      }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to cancel inventory';
+      set({ error: message, loading: false });
+      throw error;
+    }
   },
 
   clearError: () => {
@@ -198,23 +152,3 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   },
 }));
 
-function calculateStats(items: InventoryItem[]): InventoryStats {
-  const stats: InventoryStats = {
-    total: items.length,
-    matched: 0,
-    mismatch: 0,
-    pending: 0,
-  };
-
-  items.forEach((item) => {
-    if (item.counted_qty === null) {
-      stats.pending++;
-    } else if (item.counted_qty === item.expected_qty) {
-      stats.matched++;
-    } else {
-      stats.mismatch++;
-    }
-  });
-
-  return stats;
-}

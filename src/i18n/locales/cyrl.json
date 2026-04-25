@@ -38,7 +38,8 @@
     "to": "дан",
     "of": "жами",
     "print": "Чоп етиш",
-    "export": "Експорт"
+    "export": "Експорт",
+    "progress": "Жараён"
   },
   "nav": {
     "dashboard": "Бош саҳифа",
@@ -246,8 +247,22 @@
     "status": "Ҳолат",
     "enterQty": "Миқдор киритинг",
     "searchPlaceholder": "Маҳсулот номи ёки SKU бўйича қидиринг...",
+    "checked": "Текширилган",
+    "declared": "Декларация",
+    "scanned": "Сканерланган",
+    "moved": "Кўчирилган",
+    "final": "Якуний",
+    "cancelInventory": "Бекор қилиш",
+    "finalizeInventory": "Якунлаш",
+    "cancelledSuccess": "Инвентаризация бекор қилинди",
+    "cancelFailed": "Бекор қилишда хатолик",
+    "confirmCancel": "Инвентаризацияни бекор қилишни тасдиқлайсизми?",
+    "hideChecked": "Текширилганларни яшириш",
+    "showChecked": "Текширилганларни кўрсатиш",
     "noSearchResults": "Қидирув натижалари йўқ",
-    "noItems": "Маҳсулотлар йўқ"
+    "noItems": "Маҳсулотлар йўқ",
+    "session": "Сессия",
+    "barcodeScanner": "Барcоде сканер"
   },
   "stockentry": {
     "title": "Кирим",
@@ -320,7 +335,25 @@
     "enterQty": "Миқдор киритинг",
     "searchPlaceholder": "Маҳсулот номи ёки SKU бўйича қидиринг...",
     "noSearchResults": "Қидирув натижалари йўқ",
-    "noItems": "Маҳсулотлар йўқ"
+    "noItems": "Маҳсулотлар йўқ",
+    "checked": "Текширилган",
+    "uncheckedOnly": "Текширилмаганлар",
+    "allProducts": "Барча маҳсулотлар",
+    "soldOut": "Сотилган",
+    "returned": "Вазрат",
+    "transferOut": "Тр чиқим",
+    "transferIn": "Тр кирим",
+    "entry": "Кирим",
+    "scanned": "Сканер",
+    "finalizeInventory": "Якунлаш",
+    "cancelInventory": "Бекор қилиш",
+    "confirmCancel": "Инвентаризацияни бекор қилишни хоҳлайсизми?",
+    "cancelledSuccess": "Инвентаризация бекор қилинди",
+    "cancelFailed": "Инвентаризацияни бекор қилишда хатолик",
+    "progress": "Жараён",
+    "hideChecked": "Текширилганларни яшириш",
+    "showChecked": "Текширилганларни кўрсатиш",
+    "barcode": "Барcоде"
   },
   "transfers": {
     "title": "Ўтказмалар",
