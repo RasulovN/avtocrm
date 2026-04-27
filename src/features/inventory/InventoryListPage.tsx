@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Plus, FileText, Eye, CheckCircle2, Clock, CircleDot, Package } from 'lucide-react';
+import { Plus, FileText, Eye, CheckCircle2, Clock, CircleDot, Package, XCircle } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent } from '../../components/ui/Card';
@@ -31,7 +31,7 @@ export function InventorySessionsListPage({
   const [stores, setStores] = useState<Store[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  const { sessions, loading, fetchSessions, createSession } = useInventoryStore();
+  const { sessions, loading, fetchSessions, startSession } = useInventoryStore();
 
   const loadStores = useCallback(async () => {
     try {
@@ -47,8 +47,8 @@ export function InventorySessionsListPage({
   }, [loadStores]);
 
   useEffect(() => {
-    fetchSessions(statusFilter !== 'all' ? { status: statusFilter } : undefined);
-  }, [statusFilter, fetchSessions]);
+    fetchSessions();
+  }, [fetchSessions]);
 
   useEffect(() => {
     if (defaultCreateDialogOpen) {
@@ -63,11 +63,11 @@ export function InventorySessionsListPage({
     }
 
     try {
-      const session = await createSession({ store_id: parseInt(selectedStore) });
+      const sessionId = await startSession(parseInt(selectedStore));
       setShowCreateDialog(false);
       setSelectedStore('');
       toast.success(t('inventory.sessionCreated'));
-      navigate(`/${lang}/inventory-session/${session.id}`);
+      navigate(`/${lang}/inventory-session/${sessionId}`);
     } catch {
       toast.error(t('inventory.createFailed'));
     }
@@ -76,22 +76,32 @@ export function InventorySessionsListPage({
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'draft':
+      case 'd':
         return {
           icon: CircleDot,
           label: t('inventory.statusDraft'),
           className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
         };
       case 'in_progress':
+      case 'p':
         return {
           icon: Clock,
           label: t('inventory.statusInProgress'),
           className: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
         };
       case 'completed':
+      case 'e':
         return {
           icon: CheckCircle2,
           label: t('inventory.statusCompleted'),
           className: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+        };
+      case 'cancelled':
+      case 'c':
+        return {
+          icon: XCircle,
+          label: t('common.cancelled'),
+          className: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
         };
       default:
         return {
@@ -113,20 +123,6 @@ export function InventorySessionsListPage({
           <Plus className="h-4 w-4 mr-2" />
           {t('inventory.startInventory')}
         </Button>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder={t('inventory.filterStatus')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('inventory.allStatuses')}</SelectItem>
-            <SelectItem value="draft">{t('inventory.statusDraft')}</SelectItem>
-            <SelectItem value="in_progress">{t('inventory.statusInProgress')}</SelectItem>
-            <SelectItem value="completed">{t('inventory.statusCompleted')}</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
       {loading ? (
