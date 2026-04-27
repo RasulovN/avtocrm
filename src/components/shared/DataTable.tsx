@@ -428,7 +428,7 @@ export function DataTable<T extends { id: string }>({
         <DialogContent size="sm">
           <DialogHeader>
             <DialogTitle>
-              {selectedItemName ? `${selectedItemName} - Do'konlar bo'yicha` : 'Do\'konlar bo\'yicha soni'}
+              {selectedItemName ? `${selectedItemName} - ${t("components.filterByStore")}` : 'Do\'konlar bo\'yicha soni'}
             </DialogTitle>
             <DialogDescription>
               Jami miqdor: {selectedInventory.reduce((sum, inv) => sum + inv.quantity, 0).toLocaleString()} ta
@@ -436,7 +436,7 @@ export function DataTable<T extends { id: string }>({
           </DialogHeader>
           <DialogBody>
             {selectedInventory.length === 0 ? (
-              <p className="text-muted-foreground text-center py-4">Ma'lumot yo'q</p>
+              <p className="text-muted-foreground text-center py-4">{t("components.noData")}</p>
             ) : (
               <div className="space-y-3">
                 {selectedInventory.map((inv, idx) => (

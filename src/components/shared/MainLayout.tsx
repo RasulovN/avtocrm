@@ -617,6 +617,4 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
       </div>
     </div>
   );
-}
-
-
+} 

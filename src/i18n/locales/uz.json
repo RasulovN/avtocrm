@@ -644,6 +644,25 @@
     },
     "ready": "Tayyor",
     "processing": "Qayta ishlanmoqda"
-  }
-}
+  },
+
+  "components": {
+    "noData": "Ma'lumot yo'q",
+    "loading": "Yuklanmoqda...",
+    "error": "Xatolik yuz berdi",
+    "filterByStore": "Do'konlar bo'yicha"
+  },
+  "mainLayout": {
+    "skipToMainContent": "Asosiy kontentga o'tish",
+    "appName": "AvtoCRM",
+    "appDescription": "Auto Spare Parts"
+  },
+   "notifications": {
+     "title": "Bildirishnomalar",
+     "newMessage": " ta yangi xabar",
+     "noNewMessage": "Yangi xabar yo'q",
+     "markAsRead": "O'qildi",
+     "noNotifications": "Bildirishnoma topilmadi"
+   }
+ }
 

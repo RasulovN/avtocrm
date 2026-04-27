@@ -639,5 +639,17 @@
     },
     "ready": "Тайёр",
     "processing": "Қайта ишланмоқда"
+  },
+  "mainLayout": {
+    "skipToMainContent": "Асосий контентга ўтиш",
+    "appName": "AvtoCRM",
+    "appDescription": "Auto Spare Parts"
+  },
+  "notifications": {
+    "title": "Билдиришномалар",
+    "newMessage": " та янги хабар",
+    "noNewMessage": "Янги хабар йўқ",
+    "markAsRead": "Ўқилди",
+    "noNotifications": "Билдиришнома топилмади"
   }
 }
