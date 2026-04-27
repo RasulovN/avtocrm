@@ -27,18 +27,18 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
   const initialLoadRef = useRef(true);
 
    const refreshProducts = useCallback(async () => {
-    console.log('refreshProducts called, isAdmin:', isAdmin, 'userStoreId:', userStoreId);
+    // logger.info('refreshProducts called, isAdmin:', isAdmin, 'userStoreId:', userStoreId);
     try {
       setLoading(true);
       const filters: { limit?: number; store_id?: string } = { limit: 500 };
       if (!isAdmin && userStoreId) {
         filters.store_id = userStoreId;
       }
-      console.log('Fetching products with filters:', filters);
+      logger.info('Fetching products with filters:', filters);
       const response = await productService.getAll(filters);
-      console.log('Products API response:', response);
+      logger.info('Products API response:', response);
       const data = Array.isArray(response.data) ? response.data : [];
-      console.log('Products count:', data.length);
+      logger.info('Products count:', data.length);
       setProducts(data);
       setError(null);
     } catch (err) {
@@ -54,7 +54,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
   }, [isAdmin, userStoreId]);
 
    useEffect(() => {
-     console.log('ProductContext useEffect triggered', {
+     logger.info('ProductContext useEffect triggered', {
        hasSession,
        initialLoad: initialLoadRef.current,
        language: i18n.language,
@@ -64,7 +64,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
      });
 
      if (!hasSession) {
-       console.log('No session, resetting products');
+       logger.info('No session, resetting products');
        initialLoadRef.current = true;
        prevLangRef.current = i18n.language;
        setProducts([]);
@@ -74,7 +74,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
      }
 
      // Always refresh when store_id or admin status changes
-     console.log('Fetching products due to user/store change');
+     logger.info('Fetching products due to user/store change');
      void refreshProducts();
 
      // Note: We don't use initialLoadRef anymore since we want to refresh on every user/store change
@@ -99,7 +99,7 @@ export function useProducts() {
   if (!context) {
     throw new Error('useProducts must be used within ProductProvider');
   }
-  // console.log('[useProducts] Hook called, returning:', {
+  // logger.info('[useProducts] Hook called, returning:', {
   //   productsCount: context.products.length,
   //   loading: context.loading,
   //   hasError: !!context.error,

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { NotificationWebSocketService } from '../services/NotificationWebSocketService';
 import { authService } from '../services/authService';
+import { logger } from '../utils/logger';
 
 type ConnectionStatus = 'connecting' | 'open' | 'closed' | 'error' | 'reconnecting';
 
@@ -47,7 +48,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     wsRef.current = ws;
 
     ws.addListener((data) => {
-      console.log('[NotificationProvider] Yangi notification:', data);
+      logger.info('[NotificationProvider] Yangi notification:', data);
       setNotifications((prev) => [{ ...data, read: false }, ...prev]);
       // Toast va audio trigger qilinadi (quyida)
     });
