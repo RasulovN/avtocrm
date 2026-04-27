@@ -17,6 +17,7 @@ import { useProducts } from '../../context/ProductContext';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import type { Store, Product } from '../../types';
 import { formatCurrency } from '../../utils';
+import { logger } from '../../utils/logger';
 
 interface CartItem {
   product_id: string;
@@ -60,7 +61,7 @@ const playSuccessSound = () => {
     oscillator.start(audioContext.currentTime);
     oscillator.stop(audioContext.currentTime + 0.15);
   } catch {
-    console.warn('Audio not supported');
+    logger.warn('Audio not supported');
 
   }
 };
@@ -79,7 +80,7 @@ const playErrorSound = () => {
     oscillator.start(audioContext.currentTime);
     oscillator.stop(audioContext.currentTime + 0.3);
   } catch {
-    console.warn('Audio not supported');
+    logger.warn('Audio not supported');
   }
 };
 
@@ -96,19 +97,18 @@ export function SalesPage() {
 
   // Debug logs
   useEffect(() => {
-    console.log('SalesPage - allProducts count:', allProducts.length, 'loading:', productsLoading);
     if (allProducts.length > 0) {
-      console.log('Sample product:', allProducts[0]);
-      console.log('Unique store IDs:', [...new Set(allProducts.map(p => p.store_id))]);
+      logger.info('Sample product:', allProducts[0]);
+      logger.info('Unique store IDs:', [...new Set(allProducts.map(p => p.store_id))]);
     }
   }, [allProducts, productsLoading]);
 
   // Debug: log products when they change
   useEffect(() => {
-    console.log('SalesPage - allProducts loaded:', allProducts.length, 'productsLoading:', productsLoading);
+    // console.log('SalesPage - allProducts loaded:', allProducts.length, 'productsLoading:', productsLoading);
     if (allProducts.length > 0) {
-      console.log('First product:', allProducts[0]);
-      console.log('Store IDs:', [...new Set(allProducts.map(p => p.store_id))]);
+      logger.info('First product:', allProducts[0]);
+      logger.info('Store IDs:', [...new Set(allProducts.map(p => p.store_id))]);
     }
   }, [allProducts, productsLoading]);
 
@@ -183,8 +183,7 @@ export function SalesPage() {
         existingItem.quantity += 1;
         existingItem.total = existingItem.selling_price * existingItem.quantity;
         return newItems;
-      }
-      console.log('Adding product to cart:', product.name );
+      } 
       return [
         ...prevItems,
         {
@@ -202,7 +201,7 @@ export function SalesPage() {
 
   const findProductByBarcode = useCallback(async (barcode: string, isFromScan: boolean = true): Promise<Product | null> => {
     const normalizedBarcode = barcode.trim();
-    console.log('Searching for barcode:', barcode);
+    logger.info('Searching for barcode:', barcode);
 
     if (!normalizedBarcode) return null;
 
@@ -323,7 +322,7 @@ export function SalesPage() {
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
-      console.error('Failed to load data:', error);
+      logger.error('Failed to load data:', error);
       const fallbackStores = [
         { id: '1', name: 'Main Store', is_warehouse: false, created_at: '' },
       ];
@@ -496,7 +495,7 @@ export function SalesPage() {
       setNewCustomerName('');
       setNewCustomerPhone('');
     } catch (error) {
-      console.error('Failed to create customer:', error);
+      logger.error('Failed to create customer:', error);
     }
   };
 
