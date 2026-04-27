@@ -521,9 +521,9 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
                   <div className="absolute right-0 top-12 z-50 w-80 rounded-xl border bg-background p-3 shadow-lg">
                     <div className="mb-3 flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-semibold">Bildirishnomalar</p>
+                        <p className="text-sm font-semibold">{t("notifications.title")}</p>
                         <p className="text-xs text-muted-foreground">
-                          {unreadCount > 0 ? `${unreadCount} ta yangi xabar` : 'Yangi xabar yo\'q'}
+                          {unreadCount > 0 ? `${unreadCount} ta yangi xabar` : t("notifications.noNewMessage")}
                         </p>
                       </div>
                       {unreadCount > 0 && (
@@ -539,7 +539,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
                     <div className="max-h-96 space-y-2 overflow-y-auto">
                       {notifications.length === 0 ? (
                         <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                          Bildirishnoma topilmadi
+                          {t("notifications.noNotifications")}
                         </div>
                       ) : (
                         notifications.map((item) => (
