@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import QrScanner from 'react-qr-barcode-scanner';
 import { BarcodeFormat, type Result } from '@zxing/library';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/Dialog';
-import { X, CheckCircle, AlertCircle, Loader2, ScanBarcode } from 'lucide-react';
+import { CheckCircle, AlertCircle, Loader2, ScanBarcode } from 'lucide-react';
 import { cn } from '../utils';
 
 interface ScannerModalProps {
@@ -163,9 +163,9 @@ export function ScannerModal({ open, onOpenChange, onScan }: ScannerModalProps) 
             )}
           >
             {status === 'scanning' || status === 'searching' ? (
-              <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
+              <Loader2 className="h-4 w-4 animate-spin shrink-0" />
             ) : (
-              <Icon className="h-4 w-4 flex-shrink-0" />
+              <Icon className="h-4 w-4 shrink-0" />
             )}
             <span className="truncate">{message}</span>
           </div>

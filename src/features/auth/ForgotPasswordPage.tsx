@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
 import { Card, CardContent, CardDescription, CardHeader } from '../../components/ui/Card';
+import { t } from 'i18next';
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -19,10 +20,10 @@ export function ForgotPasswordPage() {
     try {
       setSubmitting(true);
       await authService.forgotPassword({ email });
-      toast.success('Parol tiklash havolasi emailga yuborildi');
+      toast.success(t('forgotPassword.sendResetLink'));
       setEmail('');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'So‘rov yuborilmadi';
+      const message = error instanceof Error ? error.message : t('forgotPassword.noSended');
       toast.error(message);
     } finally {
       setSubmitting(false);
@@ -37,8 +38,8 @@ export function ForgotPasswordPage() {
             <Mail className="w-8 h-8 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold">Parolni tiklash</h1>
-            <CardDescription>Email manzilingizga tiklash havolasini yuboramiz</CardDescription>
+            <h1 className="text-2xl font-semibold">{t('forgotPassword.title')}  </h1>
+            <CardDescription>{t('forgotPassword.description')}</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
@@ -55,10 +56,10 @@ export function ForgotPasswordPage() {
               />
             </div>
             <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? 'Yuborilmoqda...' : 'Havola yuborish'}
+              {submitting ? 'Yuborilmoqda...' : t('forgotPassword.sendResetLink')}
             </Button>
             <Link to="/login" className="block text-center text-sm text-primary hover:underline">
-              Kirishga qaytish
+              {t('auth.backToLogin')}
             </Link>
           </form>
         </CardContent>
