@@ -174,7 +174,7 @@ export function SalesDetailPage() {
     setProductLocation(null);
 
     if (!item.product) {
-      setProductError('Mahsulot ID topilmadi.');
+      setProductError(t('messages.productIdNotFound'));
       return;
     }
 
@@ -192,7 +192,7 @@ export function SalesDetailPage() {
         });
       }
     } catch {
-      setProductError("Mahsulot detallari yuklanmadi.");
+      setProductError(t('messages.productAddError', 'Маҳсулот деталлари юкланмади.'));
     } finally {
       setProductLoading(false);
     }
@@ -267,7 +267,7 @@ export function SalesDetailPage() {
           <div className="bg-card dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
             <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
               <ShoppingCart className="h-5 w-5" />
-              Mahsulotlar
+              {t('products.title')}
             </h3>
             <div className="space-y-3">
               {sale.items?.length ? (
@@ -278,7 +278,7 @@ export function SalesDetailPage() {
                         {index + 1}
                       </div>
                       <div>
-                        <p className="font-medium">{item.product_name || `Mahsulot #${item.product}`}</p>
+                        <p className="font-medium">{item.product_name || `${t('products.title')} #${item.product}`}</p>
                         <p className="text-sm text-muted-foreground">{item.quantity} x {formatCurrency(parseFloat(item.unit_price))}</p>
                       </div>
                     </div>
@@ -289,7 +289,7 @@ export function SalesDetailPage() {
                         size="icon"
                         className="h-10 w-10 shrink-0"
                         onClick={() => void handleOpenProductDialog(item)}
-                        aria-label="Mahsulot detalini ko'rish"
+                        aria-label={t('sales.productDetails')}
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
@@ -306,7 +306,7 @@ export function SalesDetailPage() {
             
             <div className="mt-6 pt-4 border-t dark:border-gray-700 space-y-2">
               <div className="flex justify-between text-muted-foreground">
-                <span>Jami</span>
+                <span>{t('sales.total')}</span>
                 <span>{formatCurrency(parseFloat(sale.total_amount) + (sale.discount_amount ? parseFloat(sale.discount_amount) : 0))}</span>
               </div>
               {sale.discount_amount && parseFloat(sale.discount_amount) > 0 && (
@@ -316,7 +316,7 @@ export function SalesDetailPage() {
                 </div>
               )}
               <div className="flex justify-between text-lg font-bold pt-2 border-t dark:border-gray-700">
-                <span>Jami to'lov</span>
+                <span>{t('inventory.paid')}</span>
                 <span className="text-green-600">{formatCurrency(parseFloat(sale.total_amount))}</span>
               </div>
             </div>
@@ -329,15 +329,15 @@ export function SalesDetailPage() {
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20">
-                <p className="text-sm text-muted-foreground mb-1">To'langan</p>
+                <p className="text-sm text-muted-foreground mb-1">{t('inventory.paid')}</p>
                 <p className="text-xl font-bold text-green-600">{formatCurrency(parseFloat(sale.paid_amount))}</p>
               </div>
               <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20">
-                <p className="text-sm text-muted-foreground mb-1">Qarz</p>
+                <p className="text-sm text-muted-foreground mb-1">{t('sales.debt')}</p>
                 <p className="text-xl font-bold text-amber-600">{formatCurrency(Number(sale.debt) || 0)}</p>
               </div>
               <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20">
-                <p className="text-sm text-muted-foreground mb-1">Holat</p>
+                <p className="text-sm text-muted-foreground mb-1">{t('common.status')}</p>
                 <div className="mt-1">{getStatusBadge(sale.status)}</div>
               </div>
             </div>
@@ -363,7 +363,7 @@ export function SalesDetailPage() {
                 </div>
                 <div>
                   <p className="font-medium">{sale.customer_name || sale.customer}</p>
-                  <p className="text-sm text-muted-foreground">Mijoz</p>
+                  <p className="text-sm text-muted-foreground">{t('sales.customer')}</p>
                 </div>
               </div>
             </div>
@@ -381,7 +381,7 @@ export function SalesDetailPage() {
                 </div>
                 <div>
                   <p className="font-medium">{sale.seller_name || sale.seller}</p>
-                  <p className="text-sm text-muted-foreground">Sotuvchi</p>
+                  <p className="text-sm text-muted-foreground">{t('users.seller')}</p>
                 </div>
               </div>
             </div>
@@ -395,20 +395,20 @@ export function SalesDetailPage() {
             {sale.discount_amount && parseFloat(sale.discount_amount) > 0 ? (
               <div className="space-y-3">
                 <div className="flex justify-between items-center p-3 rounded-lg bg-red-50 dark:bg-red-900/20">
-                  <span className="text-sm text-muted-foreground">Turi</span>
+                  <span className="text-sm text-muted-foreground">{t('stores.type')}</span>
                   <span className="font-medium">{sale.discount_type === 'p' ? 'Foiz (%)' : "So'm"}</span>
                 </div>
                 <div className="flex justify-between items-center p-3 rounded-lg bg-red-50 dark:bg-red-900/20">
-                  <span className="text-sm text-muted-foreground">Qiymati</span>
+                  <span className="text-sm text-muted-foreground">{t('sales.amount')}</span>
                   <span className="font-medium">{sale.discount_type === 'p' ? sale.discount_value : formatCurrency(parseFloat(sale.discount_value || '0'))}</span>
                 </div>
                 <div className="flex justify-between items-center p-3 rounded-lg bg-red-100 dark:bg-red-900/40">
-                  <span className="text-sm font-medium">Chegirma summasi</span>
+                  <span className="text-sm font-medium">{t('sales.discount')}</span>
                   <span className="font-bold text-red-600">-{formatCurrency(parseFloat(sale.discount_amount))}</span>
                 </div>
               </div>
             ) : (
-              <p className="text-muted-foreground text-center py-4">Chegirmaqo'llanmagan</p>
+              <p className="text-muted-foreground text-center py-4">{t('sales.noDiscount')}</p>
             )}
           </div>
 
@@ -423,7 +423,7 @@ export function SalesDetailPage() {
               </div>
               <div>
                 <p className="font-medium">{formatDate(sale.created_at)}</p>
-                <p className="text-sm text-muted-foreground">Sotuv vaqti</p>
+                <p className="text-sm text-muted-foreground">{t('common.date')}</p>
               </div>
             </div>
           </div>
@@ -433,41 +433,41 @@ export function SalesDetailPage() {
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
         <DialogContent className='pb-6'>
           <DialogHeader>
-            <DialogTitle>Qarzni to'lash</DialogTitle>
-            <DialogDescription>Quyida qarzni to'lash uchun ma'lumotlarni kiriting</DialogDescription>
+            <DialogTitle>{t('customers.debtPaymentTitle')}</DialogTitle>
+            <DialogDescription>{t('salesDetail.debtPaymentDescription')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="p-4 rounded-lg bg-muted">
-              <p className="text-sm text-muted-foreground">Jami qarz</p>
+              <p className="text-sm text-muted-foreground">{t('dashboard.totalDebt')}</p>
               <p className="text-xl font-bold text-amber-500">{formatCurrency(Number(sale?.debt) || 0)}</p>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">To'lov summasi</label>
+              <label className="text-sm font-medium">{t('customers.paymentAmount')}</label>
               <Input
                 type="number"
                 value={paymentAmount}
                 onChange={(e) => setPaymentAmount(e.target.value)}
-                placeholder="Summani kiriting"
+                placeholder={t('placeholders.enterAmount')}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">To'lov turi</label>
+              <label className="text-sm font-medium">{t('sales.paymentMethod')}</label>
               <Select value={paymentType} onValueChange={(value) => setPaymentType(value as 'cash' | 'card')}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="cash">Naqd</SelectItem>
-                  <SelectItem value="card">Karta</SelectItem>
+                  <SelectItem value="cash">{t('sales.cash')}</SelectItem>
+                  <SelectItem value="card">{t('sales.card')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setShowPaymentDialog(false)}>
-                Bekor qilish
+                {t('common.cancel')}
               </Button>
               <Button className="flex-1" onClick={handleDebtPayment} disabled={paying || !paymentAmount}>
-                {paying ? 'To\'lanmoqda...' : 'To\'lash'}
+                {paying ? t('common.loading') : t('customers.payNow')}
               </Button>
             </div>
           </div>
@@ -477,9 +477,9 @@ export function SalesDetailPage() {
       <Dialog open={showProductDialog} onOpenChange={handleProductDialogChange}>
         <DialogContent className="max-w-3xl pb-6">
           <DialogHeader>
-            <DialogTitle>Mahsulot tafsilotlari</DialogTitle>
+            <DialogTitle>{t('sales.productDetails')}</DialogTitle>
             <DialogDescription>
-              Sotuvga qo'shilgan mahsulotning to'liq ma'lumotlari.
+              {t('salesDetail.productFullInfo')}
             </DialogDescription>
           </DialogHeader>
 
@@ -487,7 +487,7 @@ export function SalesDetailPage() {
             <div className="flex h-64 items-center justify-center">
               <div className="flex items-center gap-3 text-muted-foreground">
                 <Loader2 className="h-5 w-5 animate-spin" />
-                <span>Mahsulot ma'lumotlari yuklanmoqda...</span>
+                <span>{t('salesDetail.productInfoLoading')}</span>
               </div>
             </div>
           ) : productError ? (
@@ -501,14 +501,14 @@ export function SalesDetailPage() {
                   {productImages.length > 0 ? (
                     <img
                       src={productImages[0]}
-                      alt={selectedProduct?.name || selectedSaleItem?.product_name || 'Mahsulot rasmi'}
+                      alt={selectedProduct?.name || selectedSaleItem?.product_name || t('products.image')}
                       className="h-72 w-full object-cover"
                     />
                   ) : (
                     <div className="flex h-72 w-full items-center justify-center text-muted-foreground">
                       <div className="flex flex-col items-center gap-2">
                         <ImageIcon className="h-10 w-10" />
-                        <span>Rasm mavjud emas</span>
+                        <span>{t('sales.noImage')}</span>
                       </div>
                     </div>
                   )}
@@ -520,7 +520,7 @@ export function SalesDetailPage() {
                       <div key={`${image}-${index}`} className="overflow-hidden rounded-xl border bg-muted">
                         <img
                           src={image}
-                          alt={`${selectedProduct?.name || 'Mahsulot'} ${index + 2}`}
+                          alt={`${selectedProduct?.name || t('products.title')} ${index + 2}`}
                           className="h-16 w-full object-cover"
                         />
                       </div>
@@ -532,10 +532,10 @@ export function SalesDetailPage() {
               <div className="space-y-4">
                 <div>
                   <h4 className="text-2xl font-semibold">
-                    {selectedProduct?.name || selectedSaleItem?.product_name || `Mahsulot #${selectedSaleItem?.product}`}
+                    {selectedProduct?.name || selectedSaleItem?.product_name || `${t('products.title')} #${selectedSaleItem?.product}`}
                   </h4>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {selectedProduct?.description || "Mahsulot uchun qo'shimcha tavsif kiritilmagan."}
+                    {selectedProduct?.description || t('sales.noDescription')}
                   </p>
                 </div>
 
@@ -543,7 +543,7 @@ export function SalesDetailPage() {
                   <div className="rounded-xl border p-4">
                     <div className="mb-2 flex items-center gap-2 text-muted-foreground">
                       <Package className="h-4 w-4" />
-                      <span className="text-sm">Asosiy ma'lumot</span>
+                      <span className="text-sm">{t('salesDetail.basicInfo')}</span>
                     </div>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between gap-4">
@@ -551,11 +551,11 @@ export function SalesDetailPage() {
                         <span className="font-medium">{selectedProduct?.id || selectedSaleItem?.product || '-'}</span>
                       </div>
                       <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">Kategoriya</span>
+                        <span className="text-muted-foreground">{t('sales.category')}</span>
                         <span className="font-medium text-right">{selectedProduct?.category_name || "Ko'rsatilmagan"}</span>
                       </div>
                       <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">Soni</span>
+                        <span className="text-muted-foreground">{t('sales.quantity')}</span>
                         <span className="font-medium">{selectedProduct?.quantity ?? selectedProduct?.total_count ?? selectedSaleItem?.quantity ?? 0}</span>
                       </div>
                     </div>
@@ -564,7 +564,7 @@ export function SalesDetailPage() {
                   <div className="rounded-xl border p-4">
                     <div className="mb-2 flex items-center gap-2 text-muted-foreground">
                       <Barcode className="h-4 w-4" />
-                      <span className="text-sm">Kod va narxlar</span>
+                      <span className="text-sm">{t('sales.codesAndPrices')}</span>
                     </div>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between gap-4">
@@ -576,7 +576,7 @@ export function SalesDetailPage() {
                         <span className="font-medium">{selectedProduct?.barcode || selectedProduct?.shtrix_code || '-'}</span>
                       </div>
                       <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">Sotuv narxi</span>
+                        <span className="text-muted-foreground">{t('sales.sellingPrice')}</span>
                         <span className="font-medium">{formatCurrency(selectedProduct?.selling_price ? selectedProduct.selling_price : (selectedSaleItem?.unit_price ? Number(selectedSaleItem.unit_price) : 0))}</span>
                       </div>
                     </div>
@@ -592,29 +592,29 @@ export function SalesDetailPage() {
                   {productLocation ? (
                     <div>
                       <div className="rounded-xl bg-background p-3">
-                        <p className="text-xs text-muted-foreground">Zona</p>
+                        <p className="text-xs text-muted-foreground">{t('sales.zone')}</p>
                         <p className="mt-1 font-medium">{productLocation.name}</p>
                       </div>
                       <p className="mt-3 text-xs text-muted-foreground">{productLocation.description}</p>
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">Mahsulot lokatsiyasi mavjud emas.</p>
+                    <p className="text-sm text-muted-foreground">{t('sales.noLocation')}</p>
                   )}
                 </div>
                 {/* productLocation end */}
                 <div className="rounded-xl border p-4">
-                  <h5 className="mb-3 font-semibold">Sotuvdagi ma'lumot</h5>
+                  <h5 className="mb-3 font-semibold">{t('salesDetail.saleInfo')}</h5>
                   <div className="grid gap-3 sm:grid-cols-3 text-sm">
                     <div>
-                      <p className="text-muted-foreground">Sotilgan miqdor</p>
+                      <p className="text-muted-foreground">{t('sales.quantity')}</p>
                       <p className="mt-1 font-medium">{selectedSaleItem?.quantity ?? 0} dona</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Dona narxi</p>
+                      <p className="text-muted-foreground">{t('sales.price')}</p>
                       <p className="mt-1 font-medium">{formatCurrency(Number(selectedSaleItem?.unit_price) || 0)}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Jami</p>
+                      <p className="text-muted-foreground">{t('sales.total')}</p>
                       <p className="mt-1 font-medium">{formatCurrency(Number(selectedSaleItem?.total_price) || 0)}</p>
                     </div>
                   </div>
@@ -629,13 +629,13 @@ export function SalesDetailPage() {
                   {productLocation && productLocation.name ? (
                     <div>
                       <div className="rounded-xl bg-background p-3">
-                        <p className="text-xs text-muted-foreground">Zona</p>
+                        <p className="text-xs text-muted-foreground">{t('sales.zone')}</p>
                         <p className="mt-1 font-medium">{productLocation.name}</p>
                       </div>
-                      <p className="mt-3 text-xs text-muted-foreground">{productLocation.description || 'Tavsif mavjud emas'}</p>
+                      <p className="mt-3 text-xs text-muted-foreground">{productLocation.description || t('sales.noDescription')}</p>
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">Mahsulot lokatsiyasi mavjud emas.</p>
+                    <p className="text-sm text-muted-foreground">{t('sales.noLocation')}</p>
                   )}
                 </div>
                 {/* Location end */}
@@ -654,9 +654,9 @@ export function SalesDetailPage() {
               <p className="text-xs dark:text-gray-400 print:text-black">{formatDate(sale.created_at)}</p>
             </div>
             <div className="text-xs border-b dark:border-gray-600 pb-2 mb-2 dark:text-gray-300">
-              {sale.store_name && <div className="flex justify-between print:text-black"><span>Do'kon:</span><span>{sale.store_name}</span></div>}
-              {sale.seller_name && <div className="flex justify-between print:text-black"><span>Sotuvchi:</span><span>{sale.seller_name}</span></div>}
-              {sale.customer_name && <div className="flex justify-between print:text-black"><span>Mijoz:</span><span>{sale.customer_name}</span></div>}
+              {sale.store_name && <div className="flex justify-between print:text-black"><span>{t('sales.store')}:</span><span>{sale.store_name}</span></div>}
+              {sale.seller_name && <div className="flex justify-between print:text-black"><span>{t('users.seller')}:</span><span>{sale.seller_name}</span></div>}
+              {sale.customer_name && <div className="flex justify-between print:text-black"><span>{t('sales.customer')}:</span><span>{sale.customer_name}</span></div>}
             </div>
             <div className="space-y-1 text-sm dark:text-gray-300">
               {sale.items?.map((item, idx) => (
@@ -668,24 +668,24 @@ export function SalesDetailPage() {
             </div>
             {sale.discount_amount && parseFloat(sale.discount_amount) > 0 && (
               <div className="flex justify-between text-red-500 text-xs print:text-black">
-                <span>Chegirma:</span>
+                <span>{t('sales.discount')}:</span>
                 <span>-{formatCurrency(parseFloat(sale.discount_amount))}</span>
               </div>
             )}
             <div className="border-t dark:border-gray-600 pt-2 mt-2">
               <div className="flex justify-between font-bold dark:text-white print:text-black">
-                <span>JAMI:</span>
+                <span>{t('sales.totalAmount')}</span>
                 <span>{formatCurrency(parseFloat(sale.total_amount))}</span>
               </div>
             </div>
         <div className="text-xs border-t dark:border-gray-600 mt-2 pt-2 dark:text-gray-300">
-              <div className="flex justify-between print:text-black"><span>Naqd:</span><span>{formatCurrency(parseFloat(sale.paid_amount))}</span></div>
-              {sale.debt && Number(sale.debt) > 0 && <div className="flex justify-between text-red-500 print:text-black"><span>Qarz:</span><span>{formatCurrency(Number(sale.debt))}</span></div>}
+              <div className="flex justify-between print:text-black"><span>{t('sales.cash')}:</span><span>{formatCurrency(parseFloat(sale.paid_amount))}</span></div>
+              {sale.debt && Number(sale.debt) > 0 && <div className="flex justify-between text-red-500 print:text-black"><span>{t('sales.debt')}:</span><span>{formatCurrency(Number(sale.debt))}</span></div>}
             </div>
-            <div className="text-center text-xs mt-2 dark:text-gray-400 print:text-black">Xaridingiz uchun rahmat!</div>
+            <div className="text-center text-xs mt-2 dark:text-gray-400 print:text-black">{t('sales.thanks')}</div>
             <div className="flex gap-2 mt-4 print-hidden print:text-black">
-              <Button className="flex-1" onClick={(e) => { e.stopPropagation(); window.print(); }}>Chop etish</Button>
-              <Button variant="outline" className="flex-1" onClick={handleCloseReceipt}>Yopish</Button>
+              <Button className="flex-1" onClick={(e) => { e.stopPropagation(); window.print(); }}>{t('sales.print')}</Button>
+              <Button variant="outline" className="flex-1" onClick={handleCloseReceipt}>{t('common.close')}</Button>
             </div>
           </div>
         </div>

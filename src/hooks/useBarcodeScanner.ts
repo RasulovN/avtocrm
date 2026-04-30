@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 
 export interface UseBarcodeScannerOptions {
   onScan: (barcode: string) => Promise<void> | void;
@@ -14,6 +15,7 @@ export function useBarcodeScanner({
   scannerMaxGap = 250,
   duplicateDelay = 1000,
 }: UseBarcodeScannerOptions) {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [value, setValue] = useState('');
   const [status, setStatus] = useState<'idle' | 'scanning' | 'searching' | 'success' | 'not_found' | 'error'>('idle');
@@ -78,18 +80,18 @@ export function useBarcodeScanner({
     lastScannedRef.current = { code: trimmed, timestamp: now };
     
     setStatus('searching');
-    setMessage(`Qidirilmoqda: ${trimmed}...`);
+    setMessage(`${t('common.loading')} ${trimmed}...`);
 
     try {
       await onScan(trimmed);
       playSuccessSound();
       setStatus('success');
-      setMessage(`Topildi: ${trimmed}`);
+      setMessage(`${t('messages.success')}: ${trimmed}`);
     } catch (error) {
       playErrorSound();
       setStatus('not_found');
-      setMessage(`Topilmadi: ${trimmed}`);
-      toast.error(`Mahsulot topilmadi: ${trimmed}`);
+      setMessage(`${t('sales.noProducts')}: ${trimmed}`);
+      toast.error(`${t('sales.noProducts')}: ${trimmed}`);
     }
 
     setTimeout(() => {

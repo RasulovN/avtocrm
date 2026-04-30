@@ -253,11 +253,11 @@ export function SupplierListPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="rounded-lg border bg-card p-4 shadow-sm">
-          <p className="text-sm text-muted-foreground">Ta'minotchilar soni</p>
+          <p className="text-sm text-muted-foreground">{t('dashboard.totalSuppliers', 'Таъминотчилар сони')}</p>
           <p className="text-2xl font-bold">{suppliers.length}</p>
         </div>
         <div className="rounded-lg border bg-card p-4 shadow-sm">
-          <p className="text-sm text-muted-foreground">Jami qarzdorlik</p>
+          <p className="text-sm text-muted-foreground">{t('dashboard.totalDebt', 'Жами қарздорлик')}</p>
           <p className="text-2xl font-bold text-red-500">{formatCurrency(totalSupplierDebt)}</p>
         </div>
       </div>
@@ -409,7 +409,7 @@ export function SupplierListPage() {
           <div className="space-y-4">
             <div className="rounded-lg bg-muted p-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Jami qarzdorlik</span>
+                <span className="text-sm text-muted-foreground">{t('dashboard.totalDebt', 'Жами қарздорлик')}</span>
                 <span className="text-xl font-bold text-red-500">
                   {formatCurrency(typeof detailSupplier?.debt === 'number' ? detailSupplier.debt : 0)}
                 </span>
@@ -417,7 +417,7 @@ export function SupplierListPage() {
             </div>
 
             <div>
-              <h4 className="text-sm font-medium mb-2">To'lovlar tarixi</h4>
+              <h4 className="text-sm font-medium mb-2">{t('history.payments')}</h4>
               {detailLoading ? (
                 <div className="text-center py-4 text-muted-foreground">{t('common.loading')}</div>
               ) : supplierPayments.length > 0 ? (
@@ -438,7 +438,7 @@ export function SupplierListPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-center py-4 text-muted-foreground">To'lovlar topilmadi</p>
+                <p className="text-center py-4 text-muted-foreground">{t('common.noData')}</p>
               )}
             </div>
           </div>

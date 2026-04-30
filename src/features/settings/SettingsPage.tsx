@@ -90,7 +90,7 @@ export function SettingsPage() {
     try {
       setForgotSending(true);
       await authService.forgotPassword({ email: forgotEmail });
-      toast.success('Parolni tiklash uchun emailingizga havola yuborildi');
+      toast.success(t('messages.resetLinkSentSettings'));
       setForgotDialogOpen(false);
       setForgotEmail('');
     } catch (error) {
@@ -106,7 +106,7 @@ export function SettingsPage() {
     setProfileSaving(true);
     setTimeout(() => {
       setProfileSaving(false);
-      toast.success('Profilni yangilash hali backendga ulanmagan');
+      toast.success(t('messages.profileUpdateNotConnected'));
     }, 500);
   };
 
@@ -123,7 +123,7 @@ export function SettingsPage() {
         new_password: passwordData.newPassword,
         confirm_password: passwordData.confirmPassword,
       });
-      toast.success('Parol muvaffaqiyatli yangilandi');
+      toast.success(t('messages.passwordUpdated'));
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (error) {
       const message = error instanceof Error ? error.message : t('errors.generic');

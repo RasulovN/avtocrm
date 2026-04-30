@@ -424,7 +424,7 @@ export function StoreListPage() {
 
           {currentStore.is_active === false && (
             <div className="mt-4 p-3 rounded-lg bg-red-50 border border-red-200">
-              <p className="text-sm text-red-600">Do'kon faol emas</p>
+              <p className="text-sm text-red-600">{t('stores.inactiveStore')}</p>
             </div>
           )}
         </div>
@@ -432,7 +432,7 @@ export function StoreListPage() {
 
       {!isAdmin && !currentStore && !loading && (
         <div className="rounded-xl border border-dashed p-8 text-center">
-          <p className="text-muted-foreground">Do'kon ma'lumotlari topilmadi</p>
+          <p className="text-muted-foreground">{t('messages.storeInfoNotFound')}</p>
         </div>
       )}
 

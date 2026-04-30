@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '../ui/Table';
-import { t } from 'i18next';
+import { useTranslation } from 'react-i18next';
 
 export type ColumnKey<T> = keyof T | (string & {});
 
@@ -94,6 +94,7 @@ export function DataTable<T extends { id: string }>({
   onToggleRowSelection,
   onToggleAllRows,
 }: DataTableProps<T>) {
+  const { t } = useTranslation();
   const [isMobile, setIsMobile] = useState(false);
   const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const safeColumns = useMemo(() => (Array.isArray(columns) ? columns : []), [columns]);
@@ -198,7 +199,7 @@ export function DataTable<T extends { id: string }>({
     };
 
     return (
-      <div className="flex items-center gap-2 cursor-pointer group" onClick={handleClick} title="Ko'rish uchun bosing">
+      <div className="flex items-center gap-2 cursor-pointer group" onClick={handleClick} title={t('titles.clickToView')}>
         <span className="font-semibold text-base">{total.toLocaleString()}</span>
         <Eye className="h-4 w-4 text-muted-foreground group-hover:opacity-100 transition-opacity" />
       </div>
@@ -436,7 +437,7 @@ export function DataTable<T extends { id: string }>({
           </DialogHeader>
           <DialogBody>
             {selectedInventory.length === 0 ? (
-              <p className="text-muted-foreground text-center py-4">Ma'lumot yo'q</p>
+              <p className="text-muted-foreground text-center py-4">{t('common.noData')}</p>
             ) : (
               <div className="space-y-3">
                 {selectedInventory.map((inv, idx) => (

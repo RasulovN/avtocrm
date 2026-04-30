@@ -247,8 +247,8 @@ export function ProductListPage() {
      if (selectedProductIds.length === 0) return;
 
      const confirmMessage = selectedProductIds.length === 1
-       ? '1 ta mahsulotni faolsizlantirishni xohlayasizmi?'
-       : `${selectedProductIds.length} ta mahsulotni faolsizlantirishni xohlayasizmi?`;
+       ? t('products.deactivateOne', '1 та маҳсулотни фаолсизлантиришни хоҳлайсизми?')
+       : `${selectedProductIds.length} ${t('products.deactivateMultiple', 'та маҳсулотни фаолсизлантиришни хоҳлайсизми?')}`;
 
      if (!window.confirm(confirmMessage)) {
        return;
@@ -424,8 +424,8 @@ export function ProductListPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t('common.all')}</SelectItem>
-            <SelectItem value="1">Main Store</SelectItem>
-            <SelectItem value="2">Warehouse</SelectItem>
+            <SelectItem value="1">Асосий дўкон</SelectItem>
+            <SelectItem value="2">Омбор</SelectItem>
           </SelectContent>
         </Select>}
       </div>
@@ -433,7 +433,7 @@ export function ProductListPage() {
       {selectedProducts.length > 0 && (
         <div className="flex items-center justify-between rounded-lg border bg-muted/20 px-4 py-3">
           <p className="text-sm text-muted-foreground">
-            {selectedProducts.length} ta mahsulot tanlandi
+            {selectedProducts.length} {t('products.selectedProducts', 'та маҳсулот танланди')}
           </p>
           <div className="flex gap-2">
             <Button onClick={handlePrintSelected}>

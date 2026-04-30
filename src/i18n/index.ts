@@ -12,11 +12,11 @@ const resources: Resource = {
 };
 
 const normalizeLanguage = (lang: string | null | undefined): 'uz' | 'cyrl' => {
-  if (!lang) return 'uz';
+  if (!lang) return 'cyrl';
   const lower = lang.toLowerCase();
   if (lower.startsWith('uz-cyrl') || lower.startsWith('cyrl')) return 'cyrl';
   if (lower.startsWith('uz')) return 'uz';
-  return 'uz';
+  return 'cyrl';
 };
 
 const isBrowser = typeof window !== 'undefined';
@@ -32,7 +32,7 @@ i18n
   .use(initReactI18next)
   .init({
     resources,
-    fallbackLng: 'uz',
+    fallbackLng: 'cyrl',
     supportedLngs: ['uz', 'cyrl'],
     lng: normalizedLanguage,
     interpolation: {

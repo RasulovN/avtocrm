@@ -191,7 +191,7 @@ export function CategoryListPage() {
   const columns: Column<Category>[] = [
     {
       key: 'image',
-      header: 'Image',
+      header: t('products.image') || 'Image',
       render: (item: Category) =>
         item.image ? (
           <img
@@ -380,7 +380,7 @@ export function CategoryListPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="name_cyrl">{t('categories.categoryName')} (Cyrillic)</Label>
+                    <Label htmlFor="name_cyrl">{t('categories.categoryName')} (Кириллча)</Label>
                     <Input
                       id="name_cyrl"
                       value={formData.name_uz_cyrl}
@@ -398,7 +398,7 @@ export function CategoryListPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="description_cyrl">{t('common.description')} (Cyrillic)</Label>
+                    <Label htmlFor="description_cyrl">{t('common.description')} (Кириллча)</Label>
                     <Input
                       id="description_cyrl"
                       value={formData.description_uz_cyrl}

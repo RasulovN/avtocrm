@@ -229,11 +229,11 @@ export function ReportsPage() {
       <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:w-auto">
         <Select value={statType} onValueChange={(value) => handleStatTypeChange(value as ReportsFilter)}>
           <SelectTrigger className="w-full sm:w-36">
-            <SelectValue placeholder="Statistika turi" />
+            <SelectValue placeholder={t('placeholders.statType')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="monthly">Oylik</SelectItem>
-            <SelectItem value="weekly">Haftalik</SelectItem>
+            <SelectItem value="monthly">{t('reports.periods.month')}</SelectItem>
+            <SelectItem value="weekly">{t('reports.periods.week')}</SelectItem>
           </SelectContent>
         </Select>
 
@@ -255,7 +255,7 @@ export function ReportsPage() {
 
         <Select value={filters.branchId} onValueChange={handleBranchChange}>
           <SelectTrigger className="w-full sm:w-45">
-            <SelectValue placeholder="Filialni tanlang" />
+            <SelectValue placeholder={t('placeholders.selectBranch')} />
           </SelectTrigger>
           <SelectContent>
             {availableBranches.map((branch) => (
@@ -280,7 +280,7 @@ export function ReportsPage() {
                 <CircleDollarSign className="h-5 w-5 text-emerald-600" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Jami daromad</p>
+                <p className="text-xs text-muted-foreground">{t('dashboard.totalRevenue')}</p>
                 <p className="text-lg font-semibold">{formatCurrency(data.summary.totalRevenue)}</p>
               </div>
             </div>
@@ -295,7 +295,7 @@ export function ReportsPage() {
                 <TrendingUp className="h-5 w-5 text-violet-600" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Sof foyda</p>
+                <p className="text-xs text-muted-foreground">{t('reports.stats.netProfit')}</p>
                 <p className="text-lg font-semibold">{formatCurrency(data.summary.totalProfit)}</p>
               </div>
             </div>
@@ -310,7 +310,7 @@ export function ReportsPage() {
                 <CreditCard className="h-5 w-5 text-red-600" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Jami xarajat</p>
+                <p className="text-xs text-muted-foreground">{t('sales.totalCost')}</p>
                 <p className="text-lg font-semibold">{formatCurrency(data.summary.totalExpenses)}</p>
               </div>
             </div>
@@ -325,7 +325,7 @@ export function ReportsPage() {
                 <ShoppingCart className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Buyurtmalar</p>
+                <p className="text-xs text-muted-foreground">{t('customers.totalOrders')}</p>
                 <p className="text-lg font-semibold">{formatCompactNumber(data.summary.totalOrders)}</p>
               </div>
             </div>
@@ -336,8 +336,8 @@ export function ReportsPage() {
       <div className="grid gap-4 xl:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Filial statistikasi</CardTitle>
-            <CardDescription>Tanlangan davr bo&apos;yicha filiallar kesimida</CardDescription>
+            <CardTitle className="text-lg">{t('reports.storePerformance')}</CardTitle>
+            <CardDescription>{t('reports.storePerformanceDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {data.branchStatistics.length === 0 ? (
@@ -376,10 +376,10 @@ export function ReportsPage() {
         <Card>
           <CardHeader>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle className="text-lg">Foyda trendi</CardTitle>
+              <CardTitle className="text-lg">{t('reports.performanceTrend')}</CardTitle>
               <Select value={trendChartType} onValueChange={(value) => setTrendChartType(value as 'line' | 'bar')}>
                 <SelectTrigger className="h-9 w-full sm:w-28">
-                  <SelectValue placeholder="Chart turi" />
+                  <SelectValue placeholder={t('placeholders.chartType')} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="line">Line</SelectItem>
@@ -457,13 +457,13 @@ export function ReportsPage() {
       <div className="grid gap-4 xl:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Eng ko&apos;p sotilgan mahsulotlar</CardTitle>
-            <CardDescription>Tanlangan davr bo&apos;yicha TOP mahsulotlar</CardDescription>
+            <CardTitle className="text-lg">{t('dashboard.topProducts')}</CardTitle>
+            <CardDescription>{t('reports.topProductsDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {data.topSellingProducts.length === 0 ? (
               <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-                Ma&apos;lumot topilmadi
+                {t('common.noData')}
               </div>
             ) : (
               data.topSellingProducts.map((product) => (
@@ -490,8 +490,8 @@ export function ReportsPage() {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Mijoz qarzlari</CardTitle>
-              <CardDescription>Tanlangan davrdagi mijoz qarzlari</CardDescription>
+              <CardTitle className="text-lg">{t('dashboard.totalDebt')}</CardTitle>
+              <CardDescription>{t('reports.customerDebtsDesc', 'Танланган даврдаги мижоз қарзлари')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {data.debts.customerDebts.length === 0 ? (
@@ -514,13 +514,13 @@ export function ReportsPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Ta&apos;minotchi qarzlari</CardTitle>
-              <CardDescription>Tanlangan davrdagi ta&apos;minotchi qarzlari</CardDescription>
+              <CardTitle className="text-lg">{t("reports.supplierDebts")}</CardTitle>
+              <CardDescription>{t("reports.supplierDebtsDesc")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {data.debts.supplierDebts.length === 0 ? (
                 <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-                  Ta&apos;minotchi qarzlari yo&apos;q
+                  {t("reports.noSupplierDebts")}
                 </div>
               ) : (
                 data.debts.supplierDebts.map((debt, index) => (
@@ -538,7 +538,7 @@ export function ReportsPage() {
         </div>
       </div>
 
-      {loading ? <div className="text-sm text-muted-foreground">Yuklanmoqda...</div> : null}
+      {loading ? <div className="text-sm text-muted-foreground">{t('common.loading')}</div> : null}
     </div>
   );
 }

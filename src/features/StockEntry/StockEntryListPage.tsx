@@ -454,7 +454,7 @@ export function StockEntryListPage() {
             <Eye className="h-4 w-4" />
           </Button>
           {item.items && item.items.length > 0 && (
-            <Button variant="ghost" size="sm" onClick={() => handlePrintAllInventoryBarcodes(item)} title="Print All Barcodes">
+            <Button variant="ghost" size="sm" onClick={() => handlePrintAllInventoryBarcodes(item)} title={t('titles.printAllBarcodes')}>
               <Printer className="h-4 w-4" />
             </Button>
           )}
@@ -563,7 +563,7 @@ export function StockEntryListPage() {
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
         <DialogContent className="max-w-2xl pb-6">
           <DialogHeader>
-            <DialogTitle>Inventory Details</DialogTitle>
+            <DialogTitle>{t('stockEntry.detailsTitle')}</DialogTitle>
             <DialogDescription>
               {formatDate(selectedInventory?.created_at || '')}
             </DialogDescription>
@@ -605,7 +605,7 @@ export function StockEntryListPage() {
               {selectedInventory.items && selectedInventory.items.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <h4 className="text-sm font-semibold">Products</h4>
+                    <h4 className="text-sm font-semibold">{t('products.title')}</h4>
                     <Button
                       variant="outline"
                       size="sm"
@@ -630,7 +630,7 @@ export function StockEntryListPage() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handlePrintInventoryBarcode(selectedInventory, idx)}
-                                title="Print Barcode"
+                                title={t('titles.printBarcode')}
                               >
                                 <Printer className="h-4 w-4" />
                               </Button>
@@ -642,15 +642,15 @@ export function StockEntryListPage() {
                               <p className="mt-1 break-all font-mono text-xs">{item.product_barcode || '-'}</p>
                             </div>
                             <div className="rounded-lg bg-muted/30 p-3">
-                              <p className="text-xs text-muted-foreground">Qty</p>
+                              <p className="text-xs text-muted-foreground">{t('sales.quantity')}</p>
                               <p className="mt-1 font-semibold">{item.quantity}</p>
                             </div>
                             <div className="rounded-lg bg-muted/30 p-3">
-                              <p className="text-xs text-muted-foreground">Price</p>
+                              <p className="text-xs text-muted-foreground">{t('sales.price')}</p>
                               <p className="mt-1 font-semibold">{formatCurrency(item.purchase_price)}</p>
                             </div>
                             <div className="rounded-lg bg-muted/30 p-3">
-                              <p className="text-xs text-muted-foreground">Total</p>
+                              <p className="text-xs text-muted-foreground">{t('sales.total')}</p>
                               <p className="mt-1 font-semibold">{formatCurrency(item.total)}</p>
                             </div>
                           </div>
@@ -662,13 +662,13 @@ export function StockEntryListPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Product</TableHead>
+                          <TableHead>{t('products.title')}</TableHead>
                           <TableHead>SKU</TableHead>
                           <TableHead>Barcode</TableHead>
-                          <TableHead>Qty</TableHead>
-                          <TableHead>Price</TableHead>
-                          <TableHead>Total</TableHead>
-                          <TableHead>Actions</TableHead>
+                          <TableHead>{t('sales.quantity')}</TableHead>
+                          <TableHead>{t('sales.price')}</TableHead>
+                          <TableHead>{t('sales.total')}</TableHead>
+                          <TableHead>{t('common.actions')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -686,7 +686,7 @@ export function StockEntryListPage() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handlePrintInventoryBarcode(selectedInventory, idx)}
-                                  title="Print Barcode"
+                                  title={t('titles.printBarcode')}
                                 >
                                   <Printer className="h-4 w-4" />
                                 </Button>
@@ -702,19 +702,19 @@ export function StockEntryListPage() {
 
               {/* Payment History */}
               <div className="mt-6">
-                <h4 className="text-sm font-semibold mb-2">Kirim tarixi</h4>
+                <h4 className="text-sm font-semibold mb-2">{t('history.stockEntry')}</h4>
                 {loadingPayments ? (
-                  <div className="text-muted-foreground text-sm">Yuklanmoqda...</div>
+                  <div className="text-muted-foreground text-sm">{t('common.loading')}</div>
                 ) : paymentHistory.length === 0 ? (
-                  <div className="text-muted-foreground text-sm">To'lovlar topilmadi</div>
+                  <div className="text-muted-foreground text-sm">{t('common.noData')}</div>
                 ) : (
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead>ID</TableHead>
-                          <TableHead>Miqdor</TableHead>
-                          <TableHead>Izoh</TableHead>
+                          <TableHead>{t('sales.amount')}</TableHead>
+                          <TableHead>{t('saleReturns.comment')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -739,7 +739,7 @@ export function StockEntryListPage() {
       <Dialog open={showBarcodeDialog} onOpenChange={setShowBarcodeDialog}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Print Barcodes</DialogTitle>
+            <DialogTitle>{t('products.printBarcodes')}</DialogTitle>
             <DialogDescription>
               Product barcodes for this inventory
             </DialogDescription>
@@ -751,31 +751,31 @@ export function StockEntryListPage() {
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
         <DialogContent className='pb-6'>
           <DialogHeader>
-            <DialogTitle>To'lov</DialogTitle>
+            <DialogTitle>{t('customers.debtPaymentTitle')}</DialogTitle>
             <DialogDescription>
               Taminotchiga qarz to'lash
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="p-4 rounded-lg bg-muted">
-              <p className="text-sm text-muted-foreground">Qarz summasi</p>
+              <p className="text-sm text-muted-foreground">{t('dashboard.totalDebt')}</p>
               <p className="text-xl font-bold text-red-500">{formatCurrency(selectedInventory?.debt || 0)}</p>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">To'lov summasi</label>
+              <label className="text-sm font-medium">{t('customers.paymentAmount')}</label>
               <Input
                 type="number"
                 value={paymentAmount}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setPaymentAmount(e.target.value)}
-                placeholder="Summa kiriting"
+                placeholder={t('placeholders.enterAmount')}
               />
             </div>
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setShowPaymentDialog(false)}>
-                Bekor qilish
+                {t('common.cancel')}
               </Button>
               <Button className="flex-1" onClick={handleSubmitPayment} disabled={paying || !paymentAmount}>
-                {paying ? 'Yuklanmoqda...' : 'To\'lash'}
+                {paying ? t('common.loading') : t('customers.payNow')}
               </Button>
             </div>
           </div>

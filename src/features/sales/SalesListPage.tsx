@@ -146,15 +146,15 @@ export function SalesListPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-lg border bg-card p-4 shadow-sm">
-          <p className="text-sm text-muted-foreground">Jami sotuvlar</p>
+          <p className="text-sm text-muted-foreground">{t('dashboard.totalSales')}</p>
           <p className="text-2xl font-bold">{stats.totalSales}</p>
         </div>
         <div className="rounded-lg border bg-card p-4 shadow-sm">
-          <p className="text-sm text-muted-foreground">Jami sotuvlar summasi</p>
+          <p className="text-sm text-muted-foreground">{t('dashboard.totalRevenue')}</p>
           <p className="text-2xl font-bold text-green-600">{formatCurrency(stats.totalAmount)}</p>
         </div>
         <div className="rounded-lg border bg-card p-4 shadow-sm">
-          <p className="text-sm text-muted-foreground">Jami qarzdorlik</p>
+          <p className="text-sm text-muted-foreground">{t('dashboard.totalDebt')}</p>
           <p className="text-2xl font-bold text-red-500">{formatCurrency(stats.totalDebt)}</p>
         </div>
       </div>

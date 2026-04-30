@@ -588,6 +588,9 @@
   "reports": {
     "title": "Hisobotlar",
     "description": "Sotuv, kirim va o'tkazmalar bo'yicha real analitika",
+    "supplierDebts": "Ta'minotchi qarzlari",
+    "supplierDebtsDesc": "Tanlangan davrdagi ta'minotchi qarzlari",
+    "noSupplierDebts": "Ta'minotchi qarzlari yo'q",
     "stats": {
       "totalSales": "Jami sotuvlar",
       "totalPurchases": "Jami xaridlar",
@@ -644,6 +647,109 @@
     },
     "ready": "Tayyor",
     "processing": "Qayta ishlanmoqda"
+  },
+  "notifications": {
+    "title": "Bildirishnomalar",
+    "noNewMessages": "Yangi xabar yo'q",
+    "newMessages": "{{count}} ta yangi xabar",
+    "markAsRead": "O'qildi",
+    "notFound": "Bildirishnoma topilmadi"
+  },
+  "salesDetail": {
+    "debtPaymentDescription": "Quyida qarzni to'lash uchun ma'lumotlarni kiriting",
+    "productFullInfo": "Sotuvga qo'shilgan mahsulotning to'liq ma'lumotlari.",
+    "productInfoLoading": "Mahsulot ma'lumotlari yuklanmoqda...",
+    "basicInfo": "Asosiy ma'lumot",
+    "saleInfo": "Sotuvdagi ma'lumot"
+  },
+  "history": {
+    "payments": "To'lovlar tarixi",
+    "stockEntry": "Kirim tarixi"
+  },
+  "messages": {
+    "storeInfoNotFound": "Do'kon ma'lumotlari topilmadi",
+    "passwordUpdated": "Parol muvaffaqiyatli yangilandi",
+    "barcodeMissing": "Barcode yo'q",
+    "productIdNotFound": "Mahsulot ID topilmadi",
+    "resetLinkSentSettings": "Parolni tiklash uchun emailingizga havola yuborildi",
+    "profileUpdateNotConnected": "Profilni yangilash hali backendga ulanmagan",
+    "passwordsNotMatch": "Parollar mos emas",
+    "resetLinkSent": "Parol tiklash havolasi emailga yuborildi"
+  },
+  "placeholders": {
+    "enterAmount": "Summani kiriting",
+    "enterLocationName": "Joylashuv nomini kiriting",
+    "enterLocationNameCyrl": "Joylashuv nomini kirillcha kiriting",
+    "enterDescription": "Tavsifni kiriting",
+    "enterDescriptionCyrl": "Tavsifni kirillcha kiriting",
+    "searchProducts": "Poisk: nomi, artikul, shtrixkod",
+    "selectStore": "Do'konni tanlang",
+    "selectCategory": "Kategoriyani tanlang",
+    "selectCustomer": "Mijozni tanlang",
+    "customerName": "Mijoz ismi",
+    "statType": "Statistika turi",
+    "selectBranch": "Filialni tanlang",
+    "chartType": "Chart turi",
+    "period": "Davr",
+    "branch": "Filial",
+    "scanBarcode": "Shtrixkodni skanerlang yoki kiriting..."
+  },
+  "titles": {
+    "clickToView": "Ko'rish uchun bosing",
+    "printAllBarcodes": "Barcha shtrixkodlarni chop etish",
+    "printBarcode": "Shtrixkodni chop etish"
+  },
+  "auth": {
+    "login": "Kirish",
+    "logout": "Chiqish",
+    "username": "Foydalanuvchi nomi",
+    "password": "Parol",
+    "loginButton": "Kirish",
+    "loginError": "Login yoki parol noto'g'ri",
+    "profile": "Profil",
+    "profileDescription": "Hisobingiz ma'lumotlarini yangilang",
+    "changePassword": "Parolni o'zgartirish",
+    "changePasswordDescription": "Xavfsizlik uchun parolni tez-tez o'zgartiring",
+    "currentPassword": "Joriy parol",
+    "newPassword": "Yangi parol",
+    "confirmPassword": "Parolni tasdiqlang",
+    "updatePassword": "Parolni yangilash",
+    "email": "Email",
+    "loginHistory": "Kirishlar tarixi",
+    "loginHistoryDescription": "Hisobingizga oxirgi kirishlar ro'yxati",
+    "forgotPassword": "Parolni unutdingizmi?",
+    "forgotPasswordDescription": "Parolni tiklash uchun emailingizni kiriting. Sizga tiklash havolasi yuboriladi.",
+    "sendResetLink": "Havola yuborish",
+    "emailRequired": "Email kiritish majburiy",
+    "backToLogin": "Kirishga qaytish",
+    "setNewPasswordDesc": "Hisobingiz uchun yangi parol o'rnating",
+    "sending": "Yuborilmoqda...",
+    "resetPasswordTitle": "Parolni tiklash",
+    "resetPasswordDesc": "Email manzilingizga tiklash havolasini yuboramiz"
+  },
+  "seo": {
+    "defaultTitle": "AvtoCRM - Avto ehtiyot qismlar boshqaruv tizimi",
+    "defaultDesc": "Avto ehtiyot qismlar do'konlari uchun professional CRM tizimi. Mahsulotlar, sotuvlar, kirim-chiqim va hisobotlarni bitta panelda boshqaring.",
+    "dashboardTitle": "Bosh sahifa - AvtoCRM",
+    "dashboardDesc": "AvtoCRM bosh sahifasi. Do'konlar, sotuvlar va ombor holatini real vaqtda kuzating.",
+    "productsTitle": "Mahsulotlar - AvtoCRM",
+    "productsDesc": "AvtoCRM mahsulotlar bo'limi. Avto ehtiyot qismlar katalogi, barcode va zaxiralarni boshqaring.",
+    "salesTitle": "Sotuvlar - AvtoCRM",
+    "salesDesc": "AvtoCRM sotuvlar bo'limi. Chek, to'lov usullari va buyurtmalar oqimini boshqaring.",
+    "reportsTitle": "Hisobotlar - AvtoCRM",
+    "reportsDesc": "AvtoCRM hisobotlar bo'limi. Sotuv, kirim, foyda va o'tkazmalar bo'yicha analitik hisobotlarni ko'ring.",
+    "inventoryTitle": "Inventarizatsiya - AvtoCRM",
+    "inventoryDesc": "AvtoCRM inventarizatsiya bo'limi. Mahsulotlarni hisobga olish va tekshirish.",
+    "stockEntryTitle": "Kirim - AvtoCRM",
+    "stockEntryDesc": "AvtoCRM kirim bo'limi. Ta'minotchilardan kelgan mahsulotlar, xarid summasi va qarzdorlikni nazorat qiling.",
+    "transfersTitle": "O'tkazmalar - AvtoCRM",
+    "transfersDesc": "AvtoCRM o'tkazmalar bo'limi. Do'konlar orasidagi mahsulot harakatini boshqaring.",
+    "customersTitle": "Mijozlar - AvtoCRM",
+    "customersDesc": "AvtoCRM mijozlar bo'limi. Mijozlar ro'yxati, buyurtmalari, to'lovlari va qarz tarixini ko'ring.",
+    "storesTitle": "Do'konlar - AvtoCRM",
+    "storesDesc": "AvtoCRM do'konlar bo'limi. Filiallar, do'kon ma'lumotlari va foydalanuvchilarni boshqaring.",
+    "loginTitle": "Kirish - AvtoCRM",
+    "loginDesc": "AvtoCRM tizimiga xavfsiz kirish sahifasi."
   }
 }
 

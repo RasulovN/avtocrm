@@ -1,4 +1,5 @@
 import { forwardRef, type InputHTMLAttributes } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '../utils';
 
 interface BarcodeInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'onKeyDown'> {
@@ -10,6 +11,8 @@ interface BarcodeInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 
 
 export const BarcodeInput = forwardRef<HTMLInputElement, BarcodeInputProps>(
   ({ value, onChange, onKeyDown, status = 'idle', className, ...props }, ref) => {
+    const { t } = useTranslation();
+
     return (
       <div className="relative">
         <input
@@ -18,7 +21,7 @@ export const BarcodeInput = forwardRef<HTMLInputElement, BarcodeInputProps>(
           value={value}
           onChange={onChange}
           onKeyDown={onKeyDown}
-          placeholder="Shtrixkodni skanerlang yoki kiriting..."
+          placeholder={t('placeholders.scanBarcode')}
           className={cn(
             'w-full px-3 py-2 text-sm border rounded-md transition-colors',
             'bg-white dark:bg-gray-900',

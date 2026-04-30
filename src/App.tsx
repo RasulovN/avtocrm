@@ -101,7 +101,7 @@ const DEFAULT_META = {
 
 function DocumentMetaSync() {
   const location = useLocation();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   useEffect(() => {
     const path = location.pathname.toLowerCase();
@@ -109,43 +109,43 @@ function DocumentMetaSync() {
     html.lang = i18n.language === 'cyrl' ? 'uz-Cyrl' : 'uz';
     html.dir = 'ltr';
 
-    let title = DEFAULT_META.title;
-    let description = DEFAULT_META.description;
+    let title = t('seo.defaultTitle');
+    let description = t('seo.defaultDesc');
 
     if (path.includes('/dashboard')) {
-      title = 'Bosh sahifa - AvtoCRM';
-      description = "AvtoCRM bosh sahifasi. Do'konlar, sotuvlar va ombor holatini real vaqtda kuzating.";
+      title = t('seo.dashboardTitle');
+      description = t('seo.dashboardDesc');
     } else if (path.includes('/products')) {
-      title = 'Mahsulotlar - AvtoCRM';
-      description = "AvtoCRM mahsulotlar bo'limi. Avto ehtiyot qismlar katalogi, barcode va zaxiralarni boshqaring.";
+      title = t('seo.productsTitle');
+      description = t('seo.productsDesc');
     } else if (path.includes('/sales')) {
-      title = 'Sotuvlar - AvtoCRM';
-      description = "AvtoCRM sotuvlar bo'limi. Chek, to'lov usullari va buyurtmalar oqimini boshqaring.";
+      title = t('seo.salesTitle');
+      description = t('seo.salesDesc');
     } else if (path.includes('/reports')) {
-      title = 'Hisobotlar - AvtoCRM';
-      description = "AvtoCRM hisobotlar bo'limi. Sotuv, kirim, foyda va o'tkazmalar bo'yicha analitik hisobotlarni ko'ring.";
+      title = t('seo.reportsTitle');
+      description = t('seo.reportsDesc');
     } else if (
       path.includes('/inventory') ||
       path === '/inventory-sessions' ||
       path.includes('/inventory-session/')
     ) {
-      title = 'Inventarizatsiya - AvtoCRM';
-      description = "AvtoCRM inventarizatsiya bo'limi. Mahsulotlarni hisobga olish va tekshirish.";
-    } else if (path.includes('/inventory')) {
-      title = 'Kirim - AvtoCRM';
-      description = "AvtoCRM kirim bo'limi. Ta'minotchilardan kelgan mahsulotlar, xarid summasi va qarzdorlikni nazorat qiling.";
+      title = t('seo.inventoryTitle');
+      description = t('seo.inventoryDesc');
+    } else if (path.includes('/stockentry') || path.includes('/inventory/kirimlar')) {
+      title = t('seo.stockEntryTitle');
+      description = t('seo.stockEntryDesc');
     } else if (path.includes('/transfers')) {
-      title = "O'tkazmalar - AvtoCRM";
-      description = "AvtoCRM o'tkazmalar bo'limi. Do'konlar orasidagi mahsulot harakatini boshqaring.";
+      title = t('seo.transfersTitle');
+      description = t('seo.transfersDesc');
     } else if (path.includes('/customers')) {
-      title = 'Mijozlar - AvtoCRM';
-      description = "AvtoCRM mijozlar bo'limi. Mijozlar ro'yxati, buyurtmalari, to'lovlari va qarz tarixini ko'ring.";
+      title = t('seo.customersTitle');
+      description = t('seo.customersDesc');
     }   else if (path.includes('/stores')) {
-      title = "Do'konlar - AvtoCRM";
-      description = "AvtoCRM do'konlar bo'limi. Filiallar, do'kon ma'lumotlari va foydalanuvchilarni boshqaring.";
+      title = t('seo.storesTitle');
+      description = t('seo.storesDesc');
     } else if (path === '/login') {
-      title = 'Kirish - AvtoCRM';
-      description = "AvtoCRM tizimiga xavfsiz kirish sahifasi.";
+      title = t('seo.loginTitle');
+      description = t('seo.loginDesc');
     }
 
     document.title = title;
@@ -160,7 +160,7 @@ function DocumentMetaSync() {
 
 function App() {
   const { theme } = useThemeStore();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const checkAuth = useAuthStore((state) => state.checkAuth);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isAuthLoading = useAuthStore((state) => state.isLoading);
@@ -182,12 +182,12 @@ function App() {
   if (isAuthLoading) {
     return (
       <main id="main-content" className="flex min-h-screen items-center justify-center" aria-busy="true">
-        <div className="text-sm text-muted-foreground">Yuklanmoqda...</div>
+        <div className="text-sm text-muted-foreground">{t('common.loading')}</div>
       </main>
     );
   }
 
-  const currentLang = i18n.language || 'uz';
+  const currentLang = i18n.language || 'cyrl';
 
   const requireAuth = (element: React.ReactNode) =>
     isAuthenticated() ? element : <Navigate to="/login" replace />;
@@ -197,7 +197,7 @@ function App() {
 
   const routeFallback = (
     <main id="main-content" className="flex min-h-screen items-center justify-center" aria-busy="true">
-      <div className="text-sm text-muted-foreground">Yuklanmoqda...</div>
+      <div className="text-sm text-muted-foreground">{t('common.loading')}</div>
     </main>
   );
 

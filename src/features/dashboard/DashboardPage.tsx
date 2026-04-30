@@ -223,11 +223,11 @@ export function DashboardPage() {
         <CardContent className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center">
           <Select value={statType} onValueChange={(value) => handleStatTypeChange(value as ReportsFilter)}>
             <SelectTrigger className="w-full lg:w-40">
-              <SelectValue placeholder="Davr" />
+              <SelectValue placeholder={t('placeholders.period')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="monthly">Oylik</SelectItem>
-              <SelectItem value="weekly">Haftalik</SelectItem>
+              <SelectItem value="monthly">{t('reports.periods.month')}</SelectItem>
+              <SelectItem value="weekly">{t('reports.periods.week')}</SelectItem>
             </SelectContent>
           </Select>
 
@@ -253,7 +253,7 @@ export function DashboardPage() {
             disabled={!isAdmin}
           >
             <SelectTrigger className="w-full lg:w-52">
-              <SelectValue placeholder="Filial" />
+              <SelectValue placeholder={t('placeholders.branch')} />
             </SelectTrigger>
             <SelectContent>
               {availableBranches.map((branch) => (
@@ -335,7 +335,7 @@ export function DashboardPage() {
               <Trophy className="h-5 w-5 text-amber-500" />
               {t('dashboard.topProducts')}
             </CardTitle>
-            <CardDescription>Tanlangan davr bo‘yicha eng ko‘p sotilgan mahsulotlar</CardDescription>
+            <CardDescription>{t('reports.topProductsDescription', 'Танланган давр бўйича энг кўп сотилган маҳсулотлар')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {loading ? (
@@ -380,8 +380,8 @@ export function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Filtr xulosasi</CardTitle>
-            <CardDescription>Aktiv parametrlar</CardDescription>
+            <CardTitle className="text-lg">{t('dashboard.filterSummary', 'Фильтр хулосаси')}</CardTitle>
+            <CardDescription>{t('dashboard.activeParameters', 'Фаол параметрлар')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3 rounded-xl border p-3">
@@ -400,12 +400,12 @@ export function DashboardPage() {
               <Store className="h-4 w-4 text-primary" />
               <div className="text-sm">
                 <p className="font-medium">{selectedBranchLabel}</p>
-                <p className="text-muted-foreground">Tanlangan filial</p>
+                <p className="text-muted-foreground">{t('placeholders.branch', 'Танланган филиал')}</p>
               </div>
             </div>
 
             <div className="rounded-xl border p-3 text-sm">
-              <p className="text-muted-foreground">Hisobot sanasi</p>
+              <p className="text-muted-foreground">{t('dashboard.reportDate', 'Ҳисобот санаси')}</p>
               <p className="mt-1 font-medium">{stats?.report_date ? formatDate(stats.report_date) : '-'}</p>
             </div>
           </CardContent>

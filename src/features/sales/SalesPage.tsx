@@ -18,6 +18,7 @@ import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import type { Store, Product } from '../../types';
 import { formatCurrency } from '../../utils';
 import { logger } from '../../utils/logger';
+import { useTranslation } from 'react-i18next';
 
 interface CartItem {
   product_id: string;
@@ -85,6 +86,7 @@ const playErrorSound = () => {
 };
 
 export function SalesPage() {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const isAdmin = Boolean(user?.is_superuser);
   const userStoreId = user?.store_id || '';
@@ -171,7 +173,7 @@ export function SalesPage() {
   const addProduct = useCallback((product: Product) => {
     const productId = String(product.id || product.product_id || '');
     if (!productId) {
-      toast.error('Mahsulot ID topilmadi');
+      toast.error(t('messages.productIdNotFound'));
       return;
     }
 
@@ -244,7 +246,7 @@ export function SalesPage() {
       playSuccessSound();
     } else {
       playErrorSound();
-      toast.error(`Mahsulot topilmadi: ${barcode}`);
+      toast.error(`${t('messages.productNotFound')}: ${barcode}`);
     }
   }, [findProductByBarcode, addProduct]);
 
@@ -437,14 +439,14 @@ export function SalesPage() {
     if (product) {
       addProduct(product);
       playSuccessSound();
-      toast.success(`Mahsulot topildi: ${product.name || barcode}`);
+      toast.success(`${t('messages.productFound')}: ${product.name || barcode}`);
       // Clear any search results and input
       barcodeOnChange({ target: { value: '' } } as ChangeEvent<HTMLInputElement>);
       setSearchResults(null);
       setShowScanner(false);
     } else {
       playErrorSound();
-      toast.error(`Mahsulot topilmadi: ${barcode}`);
+      toast.error(`${t('messages.productNotFound')}: ${barcode}`);
     }
   };
 
@@ -564,14 +566,14 @@ export function SalesPage() {
       // Ensure product is properly hydrated and has ID
       const hydratedProduct = hydrateProductFromCatalog(product);
       if (!hydratedProduct.id && !(hydratedProduct as any).product_id) {
-        toast.error('Mahsulot ID topilmadi. Iltimos, scan qilib yoki katalogdan tanlab ko\'ring.');
+        toast.error(t('messages.productIdNotFound'));
         return;
       }
       addProduct(hydratedProduct);
       barcodeOnChange({ target: { value: '' } } as ChangeEvent<HTMLInputElement>);
       setSearchResults(null);
     } catch (error) {
-      toast.error('Mahsulot qo\'shishda xatolik yuz berdi');
+      toast.error(t('messages.productAddError'));
     }
   };
 
@@ -583,7 +585,7 @@ export function SalesPage() {
     setProductLocation(null);
 
     if (!hydratedProduct.id) {
-      setProductError('Mahsulot ID topilmadi.');
+      setProductError(t('messages.productIdNotFound'));
       return;
     }
 
@@ -599,7 +601,7 @@ export function SalesPage() {
         });
       }
     } catch {
-      setProductError("Mahsulot detallari yuklanmadi.");
+      setProductError(t('messages.productNotFound'));
     } finally {
       setProductLoading(false);
     }
@@ -642,8 +644,8 @@ export function SalesPage() {
       <div className="space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight dark:text-white">Sotuvlar (POS)</h2>
-            <p className="text-sm text-muted-foreground dark:text-gray-400">Panel prodaj</p>
+            <h2 className="text-2xl font-bold tracking-tight dark:text-white">{t('sales.title')} (POS)</h2>
+            <p className="text-sm text-muted-foreground dark:text-gray-400">{t('sales.salesPanel')}</p>
           </div>
         </div>
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-12 xl:gap-3 xl:h-[calc(100vh-11rem)]">
@@ -651,13 +653,14 @@ export function SalesPage() {
             <div className="bg-card border border-gray-900 rounded-lg flex min-h-80 flex-col p-3 xl:min-h-0 xl:flex-1">
               <div className="mb-3">
                 <h4 className="text-base font-semibold flex items-center gap-2 dark:text-white mb-2">
-                  Mahsulotlar                  </h4>
+                  {t('products.title')}
+                </h4>
                 <div className="flex flex-col justify-between gap-2 sm:flex-row">
                   <div className="relative w-full">
                     <Search className="absolute left-2.5 top-3 h-4 w-4 text-muted-foreground dark:text-gray-400 z-10" />
                     <Input
                       ref={inputRef}
-                      placeholder="Poisk: nomi, artikul, shtrixkod"
+                      placeholder={t('placeholders.searchProducts')}
                       value={barcodeValue}
                       onChange={barcodeOnChange}
                       onKeyDown={handleBarcodeManual}
@@ -691,7 +694,7 @@ export function SalesPage() {
                   {isAdmin && (
                     <Select value={storeId} onValueChange={setStoreId}>
                       <SelectTrigger className="h-8 w-full dark:bg-gray-900 dark:border-gray-600 dark:text-white sm:w-40">
-                        <SelectValue placeholder="Do'kon" />
+                        <SelectValue placeholder={t('placeholders.selectStore')} />
                       </SelectTrigger>
                       <SelectContent>
                         {safeStores.map((s) => (
@@ -704,7 +707,7 @@ export function SalesPage() {
                   )}
                   <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                     <SelectTrigger className="h-8 w-full dark:bg-gray-900 dark:border-gray-600 dark:text-white sm:w-40">
-                      <SelectValue placeholder="Kategoriya" />
+                      <SelectValue placeholder={t('placeholders.selectCategory')} />
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map((cat) => (
@@ -719,11 +722,11 @@ export function SalesPage() {
               <div className="flex-1 overflow-y-auto space-y-1.5">
                 {searchLoading ? (
                   <div className="py-8 text-center text-sm text-muted-foreground dark:text-gray-400">
-                    Qidirilmoqda...
+                    {t('common.loading')}
                   </div>
                 ) : displayedProducts.length === 0 ? (
                   <div className="py-8 text-center text-sm text-muted-foreground dark:text-gray-400">
-                    Mahsulot topilmadi
+                    {t('messages.productNotFound')}
                   </div>
                 ) : (
                   displayedProducts.map((product) => (
@@ -743,7 +746,7 @@ export function SalesPage() {
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1">
                             <div className="font-medium dark:text-white">
-                              {product.name || product.sku  || "Noma'lum mahsulot"}
+                              {product.name || product.sku  || t('sales.unknownProduct')}
                             </div>
                             <div className="text-xs text-muted-foreground dark:text-gray-400">
                               {product.sku ||  product.barcode}
@@ -758,7 +761,7 @@ export function SalesPage() {
                                 event.stopPropagation();
                                 void handleOpenProductDialog(product);
                               }}
-                              aria-label="Mahsulot detalini ko'rish"
+                              aria-label={t('sales.productDetails')}
                             >
                               <Eye className="h-4 w-4" />
                             </button>
@@ -783,7 +786,7 @@ export function SalesPage() {
               <div className="p-3 pb-2">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <h4 className="text-base font-semibold flex items-center gap-2 dark:text-white print:hidden ">
-                    <DollarSign className="h-4 w-4" /> Chek
+                    <DollarSign className="h-4 w-4" /> {t('sales.receipt')}
                     <span className="inline-flex items-center rounded bg-secondary dark:bg-gray-800 px-1.5 py-0.5 text-xs font-medium dark:text-gray-200 ml-1">
                       {items.length}
                     </span>
@@ -794,7 +797,7 @@ export function SalesPage() {
                     className="h-7 self-start px-2 text-sm text-red-500 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-900/20 sm:self-auto"
                     onClick={() => setItems([])}
                   >
-                    <Trash2 className="h-3.5 w-3.5 mr-1" /> Tozalash
+                    <Trash2 className="h-3.5 w-3.5 mr-1" /> {t('sales.clear')}
                   </Button>
                 </div>
               </div>
@@ -802,7 +805,7 @@ export function SalesPage() {
                 {items.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground dark:text-gray-400">
                     <ScanBarcode className="h-10 w-10 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Shtrixkod skanerlang</p>
+                    <p className="text-sm">{t('sales.scanBarcode')}</p>
                   </div>
                 ) : (
                   items.map((item, index) => (
@@ -829,7 +832,7 @@ export function SalesPage() {
                       </div>
                       <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-3 sm:gap-1.5">
                         <div>
-                          <div className="text-muted-foreground dark:text-gray-400 mb-1">Soni</div>
+                          <div className="text-muted-foreground dark:text-gray-400 mb-1">{t('sales.quantity')}</div>
                           <div className="flex items-center gap-1">
                             <Button
                               type="button"
@@ -860,7 +863,7 @@ export function SalesPage() {
                           </div>
                         </div>
                         <div>
-                          <div className="text-muted-foreground dark:text-gray-400 mb-1">Narx</div>
+                          <div className="text-muted-foreground dark:text-gray-400 mb-1">{t('sales.price')}</div>
                           <Input
                             type="number"
                             min="0"
@@ -870,7 +873,7 @@ export function SalesPage() {
                           />
                         </div>
                         <div>
-                          <div className="text-muted-foreground dark:text-gray-400 mb-1">Jami</div>
+                          <div className="text-muted-foreground dark:text-gray-400 mb-1">{t('sales.total')}</div>
                           <div className="h-7 flex items-center justify-center bg-green-100 dark:bg-green-900/30 rounded text-xs font-semibold text-green-700 dark:text-green-400">
                             {formatCurrency(item.total)}
                           </div>
@@ -882,23 +885,23 @@ export function SalesPage() {
               </div>
               <div className="p-3 pt-2 space-y-1.5 bg-muted/30 dark:bg-gray-900/50">
                 <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground dark:text-gray-400">Tovarlar:</span>
+                  <span className="text-muted-foreground dark:text-gray-400">{t('sales.items')}</span>
                   <span className="font-medium dark:text-gray-200">{items.length}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground dark:text-gray-400">Summa:</span>
+                  <span className="text-muted-foreground dark:text-gray-400">{t('sales.amount')}</span>
                   <span className="font-medium dark:text-gray-200">{formatCurrency(subtotal)}</span>
                 </div>
                 {discount > 0 && (
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground dark:text-gray-400">
-                      Chegirma ({discountType === 'p' ? `${discount}%` : ''}):
+                      {t('sales.discount')} ({discountType === 'p' ? `${discount}%` : ''}):
                     </span>
                     <span className="font-medium dark:text-gray-200">-{formatCurrency(calculatedDiscount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between pt-1.5 border-t dark:border-gray-600">
-                  <span className="font-semibold dark:text-white">JAMI:</span>
+                  <span className="font-semibold dark:text-white">{t('sales.totalAmount')}</span>
                   <span className="text-xl font-bold text-green-600 dark:text-green-400">
                     {formatCurrency(totalWithDiscount)}
                   </span>
@@ -909,15 +912,15 @@ export function SalesPage() {
           <div className="flex flex-col space-y-2 xl:col-span-3">
             <div className="bg-card border border-gray-900 rounded-lg flex min-h-80 flex-col xl:flex-1">
               <div className="p-3 pb-2">
-                <h4 className="text-base font-semibold dark:text-white">To'lov</h4>
+                <h4 className="text-base font-semibold dark:text-white">{'Тўлов'}</h4>
               </div>
               <div className="px-3 flex-1 space-y-3">
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground dark:text-gray-400">Mijoz</Label>
+                  <Label className="text-xs text-muted-foreground dark:text-gray-400">{t('sales.customer')}</Label>
                   <div className="flex gap-2">
                     <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
                       <SelectTrigger className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white">
-                        <SelectValue placeholder="Mijozni tanlang" />
+                        <SelectValue placeholder={t('placeholders.selectCustomer')} />
                       </SelectTrigger>
                       <SelectContent>
                         {customers.map((customer) => (
@@ -941,7 +944,7 @@ export function SalesPage() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground dark:text-gray-400">Tezkor to'lov</Label>
+                  <Label className="text-xs text-muted-foreground dark:text-gray-400">{t('sales.quickPayment')}</Label>
                   <div className="grid grid-cols-2 gap-1.5">
                     <Button
                       type="button"
@@ -951,7 +954,7 @@ export function SalesPage() {
                       }`}
                       onClick={handleQuickCash}
                     >
-                      Naqd
+                      {t('sales.cash')}
                     </Button>
                     <Button
                       type="button"
@@ -961,13 +964,13 @@ export function SalesPage() {
                       }`}
                       onClick={handleQuickCard}
                     >
-                      Karta
+                      {t('sales.card')}
                     </Button>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <div>
-                    <Label className="text-xs dark:text-gray-300">Naqd</Label>
+                    <Label className="text-xs dark:text-gray-300">{t('sales.cash')}</Label>
                     <Input
                       type="number"
                       min="0"
@@ -978,7 +981,7 @@ export function SalesPage() {
                     />
                   </div>
                   <div>
-                    <Label className="text-xs dark:text-gray-300">Karta</Label>
+                    <Label className="text-xs dark:text-gray-300">{t('sales.card')}</Label>
                     <Input
                       type="number"
                       min="0"
@@ -989,14 +992,14 @@ export function SalesPage() {
                     />
                   </div>
                   <div>
-                    <Label className="text-xs dark:text-gray-300">Chegirma</Label>
+                    <Label className="text-xs dark:text-gray-300">{t('sales.discount')}</Label>
                     <div className="flex gap-1">
                       <Select value={discountType} onValueChange={(val: 'p' | 'f') => setDiscountType(val)}>
                         <SelectTrigger className="h-9 w-20 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="f">So'm</SelectItem>
+                          <SelectItem value="f">{t('sales.uzs')}</SelectItem>
                           <SelectItem value="p">%</SelectItem>
                         </SelectContent>
                       </Select>
@@ -1013,7 +1016,7 @@ export function SalesPage() {
                 </div>
                 <div className="rounded-lg p-2.5 bg-muted/50 dark:bg-gray-900 space-y-1.5">
                   <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground dark:text-gray-400">Jami:</span>
+                    <span className="text-muted-foreground dark:text-gray-400">{t('sales.total')}:</span>
                     <span className="font-bold dark:text-white">{formatCurrency(subtotal)}</span>
                   </div>
                   {discount > 0 && (
@@ -1025,18 +1028,18 @@ export function SalesPage() {
                     </div>
                   )}
                   <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground dark:text-gray-400">To'landi:</span>
+                    <span className="text-muted-foreground dark:text-gray-400">{t('inventory.paid')}:</span>
                     <span className="font-bold dark:text-white">{formatCurrency(totalPaid)}</span>
                   </div>
                   {change > 0 && (
                     <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground dark:text-gray-400">Qaytim:</span>
+                      <span className="text-muted-foreground dark:text-gray-400">{t('sales.change')}</span>
                       <span className="font-bold text-blue-600 dark:text-blue-400">{formatCurrency(change)}</span>
                     </div>
                   )}
                   {debt > 0 && (
                     <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground dark:text-gray-400 print:text-black">Qarz:</span>
+                      <span className="text-muted-foreground dark:text-gray-400 print:text-black">{t('sales.debt')}</span>
                       <span className="font-bold text-red-600 dark:text-red-400">{formatCurrency(debt)}</span>
                     </div>
                   )}
@@ -1047,7 +1050,7 @@ export function SalesPage() {
                   onClick={handleFinishSale}
                   disabled={saving || items.length === 0}
                 >
-                  {saving ? 'Yuklanmoqda...' : `Sotuvni yakunlash — ${formatCurrency(totalWithDiscount)}`}
+                  {saving ? t('common.loading') : `${t('common.submit')} — ${formatCurrency(totalWithDiscount)}`}
                 </Button>
               </div>
             </div>
@@ -1068,7 +1071,7 @@ export function SalesPage() {
             <div className="p-4 space-y-3">
               <div className="text-center border-b dark:border-gray-600 pb-3">
                 <h4 className="text-xl font-bold dark:text-white print:text-black">AvtoCRM</h4>
-                <p className="text-sm text-muted-foreground dark:text-gray-400 print:text-black">Sotuv cheki</p>
+                <p className="text-sm text-muted-foreground dark:text-gray-400 print:text-black">{t('sales.receipt')}</p>
                 <p className="text-xs text-muted-foreground dark:text-gray-400 print:text-black">{new Date().toLocaleString('uz-UZ', { hour12: false})}</p>
               </div>
               <div className="border-b dark:border-gray-600 pb-2 text-sm dark:text-gray-300">
@@ -1078,11 +1081,11 @@ export function SalesPage() {
                     return customer ? (
                       <>
                         <div className="flex justify-between print:text-black">
-                          <span>Mijoz:</span>
+                          <span>{t('sales.customer')}:</span>
                           <span>{customer.full_name}</span>
                         </div>
                         <div className="flex justify-between print:text-black">
-                          <span>Telefon:</span>
+                          <span>{t('sales.phone')}:</span>
                           <span>{customer.phone_number}</span>
                         </div>
                       </>
@@ -1091,7 +1094,7 @@ export function SalesPage() {
               </div>
 
               <div className="space-y-2 text-sm">
-                <div className="font-semibold dark:text-white print:text-black">Tovarlar:</div>
+                <div className="font-semibold dark:text-white print:text-black">{t('sales.items')}</div>
                 {items.map((item, idx) => (
                   <div key={idx} className="flex justify-between dark:text-gray-300 print:text-black">
                     <div className="flex-1 print:text-black ">
@@ -1105,59 +1108,59 @@ export function SalesPage() {
 
               <div className="border-t dark:border-gray-600 pt-2 space-y-1 text-sm">
                 <div className="flex justify-between dark:text-gray-300 print:text-black">
-                  <span>Jami:</span>
+                  <span>{t('sales.total')}:</span>
                   <span>{formatCurrency(subtotal)}</span>
                 </div>
                 {discount > 0 && (
                   <div className="flex justify-between dark:text-gray-300 print:text-black">
-                    <span>Chegirma ({discountType === 'p' ? `${discount}%` : ''}):</span>
+                    <span>{t('sales.discount')} ({discountType === 'p' ? `${discount}%` : ''}):</span>
                     <span>-{formatCurrency(calculatedDiscount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between font-bold text-lg dark:text-white print:text-black">
-                  <span>JAMI:</span>
+                  <span>{t('sales.totalAmount')}</span>
                   <span>{formatCurrency(receiptTotal)}</span>
                 </div>
               </div>
 
               <div className="border-t dark:border-gray-600 pt-2 space-y-1 text-sm">
                 <div className="flex justify-between dark:text-gray-300 print:text-black">
-                  <span>Naqd:</span>
+                  <span>{t('sales.cash')}:</span>
                   <span>{formatCurrency(cashAmount)}</span>
                 </div>
                 <div className="flex justify-between dark:text-gray-300 print:text-black">
-                  <span>Karta:</span>
+                  <span>{t('sales.card')}:</span>
                   <span>{formatCurrency(cardAmount)}</span>
                 </div>
                 <div className="flex justify-between dark:text-gray-300 print:text-black">
-                  <span>Jami to'landi:</span>
+                  <span>{t('inventory.paid')}:</span>
                   <span>{formatCurrency(totalPaid)}</span>
                 </div>
                 {change > 0 && (
                   <div className="flex justify-between text-blue-600 dark:text-blue-400 print:text-black">
-                    <span>Qaytim:</span>
+                    <span>{t('sales.change')}</span>
                     <span>{formatCurrency(change)}</span>
                   </div>
                 )}
                 {debt > 0 && (
                   <div className="flex justify-between text-red-600 dark:text-red-400 print:text-black">
-                    <span>Qarz:</span>
+                    <span>{t('sales.debt')}</span>
                     <span>{formatCurrency(debt)}</span>
                   </div>
                 )}
               </div>
 
               <div className="text-center text-xs text-muted-foreground dark:text-gray-400 pt-3 print:text-black">
-                Xaridingiz uchun rahmat!
+                {t('sales.thanks')}
               </div>
             </div>
 
             <div className="p-4 border-t dark:border-gray-600 flex flex-col gap-2 print:hidden sm:flex-row">
               <Button className="flex-1" onClick={printReceipt}>
-                Chop etish
+                {t('sales.print')}
               </Button>
               <Button variant="outline" className="flex-1" onClick={resetSale}>
-                Yangi sotuv
+                {t('sales.newSale')}
               </Button>
             </div>
           </div>
@@ -1169,15 +1172,15 @@ export function SalesPage() {
       <Dialog open={showNewCustomerDialog} onOpenChange={setShowNewCustomerDialog}>
         <DialogContent size="md">
           <DialogHeader>
-            <DialogTitle>Yangi mijoz qo'shish</DialogTitle>
+            <DialogTitle>{t('sales.addCustomer')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pb-6">
             <div className="space-y-2">
-              <Label>Ism</Label>
-              <Input value={newCustomerName} onChange={(e) => setNewCustomerName(e.target.value)} placeholder="Mijoz ismi" />
+              <Label>{t('sales.name')}</Label>
+              <Input value={newCustomerName} onChange={(e) => setNewCustomerName(e.target.value)} placeholder={t('placeholders.customerName')} />
             </div>
             <div className="space-y-2">
-              <Label>Telefon</Label>
+              <Label>{t('sales.phone')}</Label>
               <Input
                 value={newCustomerPhone}
                 onChange={(e) => setNewCustomerPhone(e.target.value)}
@@ -1185,7 +1188,7 @@ export function SalesPage() {
               />
             </div>
             <Button onClick={handleCreateCustomer} className="w-full">
-              Saqlash
+              {t('common.save')}
             </Button>
           </div>
         </DialogContent>
@@ -1194,14 +1197,14 @@ export function SalesPage() {
       <Dialog open={showProductDialog} onOpenChange={handleProductDialogChange}>
         <DialogContent className="max-w-3xl pb-6">
           <DialogHeader>
-            <DialogTitle>Mahsulot tafsilotlari</DialogTitle>
+            <DialogTitle>{t('sales.productDetails')}</DialogTitle>
           </DialogHeader>
 
           {productLoading ? (
             <div className="flex h-64 items-center justify-center">
               <div className="flex items-center gap-3 text-muted-foreground">
                 <Loader2 className="h-5 w-5 animate-spin" />
-                <span>Mahsulot ma'lumotlari yuklanmoqda...</span>
+                <span>{t('salesDetail.productInfoLoading')}</span>
               </div>
             </div>
           ) : productError ? (
@@ -1215,14 +1218,14 @@ export function SalesPage() {
                   {productImages.length > 0 ? (
                     <img
                       src={productImages[0]}
-                      alt={selectedProduct?.name || 'Mahsulot rasmi'}
+                      alt={selectedProduct?.name || t('products.image')}
                       className="h-72 w-full object-cover"
                     />
                   ) : (
                     <div className="flex h-72 w-full items-center justify-center text-muted-foreground">
                       <div className="flex flex-col items-center gap-2">
                         <ImageIcon className="h-10 w-10" />
-                        <span>Rasm mavjud emas</span>
+                        <span>{t('sales.noImage')}</span>
                       </div>
                     </div>
                   )}
@@ -1234,7 +1237,7 @@ export function SalesPage() {
                       <div key={`${image}-${index}`} className="overflow-hidden rounded-xl border bg-muted">
                         <img
                           src={image}
-                          alt={`${selectedProduct?.name || 'Mahsulot'} ${index + 2}`}
+                          alt={`${selectedProduct?.name || t('products.title')} ${index + 2}`}
                           className="h-16 w-full object-cover"
                         />
                       </div>
@@ -1246,10 +1249,10 @@ export function SalesPage() {
               <div className="space-y-4">
                 <div>
                   <h4 className="text-2xl font-semibold">
-                    {selectedProduct?.name || "Noma'lum mahsulot"}
+                    {selectedProduct?.name || t('sales.unknownProduct')}
                   </h4>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {selectedProduct?.description || "Mahsulot uchun qo'shimcha tavsif kiritilmagan."}
+                    {selectedProduct?.description || t('sales.noDescription')}
                   </p>
                 </div>
 
@@ -1257,7 +1260,7 @@ export function SalesPage() {
                   <div className="rounded-xl border p-4">
                     <div className="mb-2 flex items-center gap-2 text-muted-foreground">
                       <Package className="h-4 w-4" />
-                      <span className="text-sm">Asosiy ma'lumot</span>
+                      <span className="text-sm">{t('salesDetail.basicInfo')}</span>
                     </div>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between gap-4">
@@ -1265,15 +1268,15 @@ export function SalesPage() {
                         <span className="font-medium">{selectedProduct?.id || '-'}</span>
                       </div>
                       <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">Kategoriya</span>
-                        <span className="font-medium text-right">{selectedProduct?.category_name || "Ko'rsatilmagan"}</span>
+                        <span className="text-muted-foreground">{t('sales.category')}</span>
+                        <span className="font-medium text-right">{selectedProduct?.category_name || "-"}</span>
                       </div>
                       <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">Soni</span>
+                        <span className="text-muted-foreground">{t('sales.quantity')}</span>
                         <span className="font-medium">{selectedProduct?.quantity ?? selectedProduct?.total_count ?? 0}</span>
                       </div>
                       <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">Do'kon</span>
+                        <span className="text-muted-foreground">{t('sales.store')}</span>
                         <span className="font-medium text-right">{selectedProduct?.store_name || '-'}</span>
                       </div>
                     </div>
@@ -1282,7 +1285,7 @@ export function SalesPage() {
                   <div className="rounded-xl border p-4">
                     <div className="mb-2 flex items-center gap-2 text-muted-foreground">
                       <Barcode className="h-4 w-4" />
-                      <span className="text-sm">Kod va narxlar</span>
+                      <span className="text-sm">{t('sales.codesAndPrices')}</span>
                     </div>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between gap-4">
@@ -1294,32 +1297,31 @@ export function SalesPage() {
                         <span className="font-medium">{selectedProduct?.barcode || selectedProduct?.shtrix_code || '-'}</span>
                       </div>
                       <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">Sotuv narxi</span>
+                        <span className="text-muted-foreground">{t('sales.sellingPrice')}</span>
                         <span className="font-medium">{formatCurrency(selectedProduct?.selling_price ?? 0)}</span>
                       </div>
                       <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">Tannarx</span>
+                        <span className="text-muted-foreground">{t('sales.purchasePrice')}</span>
                         <span className="font-medium">{formatCurrency(selectedProduct?.purchase_price ?? 0)}</span>
                       </div>
                     </div>
                   </div>
                 </div>
-            {/* Product Location */}
                 <div className="rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4">
                   <div className="mb-3 flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-primary" />
-                    <h5 className="font-semibold">Joylashuvi</h5>
+                    <h5 className="font-semibold">{t('sales.location')}</h5>
                   </div>
                   {productLocation && productLocation.name ? (
                     <div>
                       <div className="rounded-xl bg-background p-3">
-                        <p className="text-xs text-muted-foreground">Zona</p>
+                        <p className="text-xs text-muted-foreground">{t('sales.zone')}</p>
                         <p className="mt-1 font-medium">{productLocation.name}</p>
                       </div>
-                      <p className="mt-3 text-xs text-muted-foreground">{productLocation.description || 'Tavsif mavjud emas'}</p>
+                      <p className="mt-3 text-xs text-muted-foreground">{productLocation.description || t('sales.noDescription')}</p>
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">Mahsulot lokatsiyasi mavjud emas.</p>
+                    <p className="text-sm text-muted-foreground">{t('sales.noLocation')}</p>
                   )}
                 </div>
                 

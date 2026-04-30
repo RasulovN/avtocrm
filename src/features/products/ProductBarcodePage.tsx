@@ -239,7 +239,7 @@ export function ProductBarcodePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="text-muted-foreground">Loading...</div>
+        <div className="text-muted-foreground">{t('common.loading')}</div>
       </div>
     );
   }
@@ -306,32 +306,32 @@ export function ProductBarcodePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Product Information</CardTitle>
+          <CardTitle>{t('products.productInfo', 'Маҳсулот маълумотлари')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Basic Info */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <div>
-              <Label className="text-muted-foreground text-sm">Name</Label>
+              <Label className="text-muted-foreground text-sm">{t('common.name')}</Label>
               <p className="font-semibold text-lg">{product?.name}</p>
             </div>
             <div>
-              <Label className="text-muted-foreground text-sm">Category</Label>
+              <Label className="text-muted-foreground text-sm">{t('products.category')}</Label>
               <p className="font-medium">{product?.category_name ?? product?.category}</p>
             </div>
             <div>
-              <Label className="text-muted-foreground text-sm">Status</Label>
+              <Label className="text-muted-foreground text-sm">{t('common.status')}</Label>
               <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${product?.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'}`}>
                 {product?.is_active ? 'Active' : 'Inactive'}
               </span>
             </div>
             <div>
-              <Label className="text-muted-foreground text-sm">Selling Price</Label>
+              <Label className="text-muted-foreground text-sm">{t('products.sellingPrice')}</Label>
               <p className="font-semibold text-xl">{formatCurrency(product?.selling_price || 0)}</p>
             </div>
             {product?.created_at && (
               <div>
-                <Label className="text-muted-foreground text-sm">Created</Label>
+                <Label className="text-muted-foreground text-sm">{t('common.createdAt')}</Label>
                 <p className="text-sm text-muted-foreground">{formatDate(product.created_at)}</p>
               </div>
             )}
@@ -340,7 +340,7 @@ export function ProductBarcodePage() {
           {/* Description */}
           {product?.description && (
             <div className="space-y-2">
-              <Label className="text-muted-foreground text-sm">Description</Label>
+              <Label className="text-muted-foreground text-sm">{t('common.description')}</Label>
               <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{product.description}</p>
             </div>
           )}
@@ -406,7 +406,7 @@ export function ProductBarcodePage() {
                           </div>
                         </>
                       ) : (
-                        <div className="text-xs text-muted-foreground">Barcode yo'q</div>
+                        <div className="text-xs text-muted-foreground">{t('messages.barcodeMissing')}</div>
                       )}
                     </div>
                     <Button onClick={() => handlePrint(key)} className="w-full">

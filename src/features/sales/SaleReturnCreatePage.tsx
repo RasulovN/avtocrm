@@ -274,7 +274,7 @@ function SaleItemRow({
           {item.product}
         </div>
         <div>
-          <p className="font-medium">{item.product_name || `Mahsulot #${item.product}`}</p>
+          <p className="font-medium">{item.product_name || `Маҳсулот #${item.product}`}</p>
           <p className="text-sm text-muted-foreground">
             {t('sales.quantity')}: {item.quantity} x {formatCurrency(parseFloat(item.unit_price))} = {formatCurrency(parseFloat(item.total_price))}
           </p>

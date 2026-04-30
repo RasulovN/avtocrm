@@ -77,7 +77,7 @@ export function SaleReturnListPage() {
       render: (item) => (
         <div>
           <p className="font-medium">{item.seller_name || String(item.seller)}</p>
-          <p className="text-xs text-muted-foreground">Sotuv #{item.sale}</p>
+          <p className="text-xs text-muted-foreground">{t('sales.sale')} #{item.sale}</p>
         </div>
       ),
     },
@@ -164,7 +164,7 @@ export function SaleReturnListPage() {
                   <div>
                     <p className="text-xs text-muted-foreground">#{index + 1}</p>
                     <p className="font-semibold text-foreground">{t('stores.title')}: {item.store_name || String(item.store)}</p>
-                    <p className="text-sm text-muted-foreground">Sotuv #{item.sale}</p>
+                    <p className="text-sm text-muted-foreground">{t('sales.sale')} #{item.sale}</p>
                     <p className="text-sm text-muted-foreground">{item.seller_name || String(item.seller)}</p>
                   </div>
                 </div>
@@ -228,7 +228,7 @@ export function SaleReturnListPage() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-muted-foreground">{t('sales.saleDetails')}</p>
-                  <p className="font-medium">Sotuv #{selectedReturn.sale}</p>
+                  <p className="font-medium">{t('sales.sale')} #{selectedReturn.sale}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">{t('stores.title')}</p>

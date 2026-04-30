@@ -71,8 +71,8 @@ export function StockEntryCreatePage() {
       if (axiosErr.response?.status === 401) return;
       console.error('Failed to load data:', error);
       setStores([
-        { id: '1', name: 'Main Store', is_warehouse: false, created_at: '' },
-        { id: '2', name: 'Warehouse', is_warehouse: true, created_at: '' },
+        { id: '1', name: 'Асосий дўкон', is_warehouse: false, created_at: '' },
+        { id: '2', name: 'Омбор', is_warehouse: true, created_at: '' },
       ]);
       setSuppliers([
         { id: '1', name: 'AutoParts Co', debt: 0, created_at: '' },
@@ -206,7 +206,7 @@ export function StockEntryCreatePage() {
                         value={s.id}
                         disabled={s.type === 's'}
                       >
-                        {s.name} {s.type === 's' ? ' ( doʻkon )' : ''}
+                        {s.name} {s.type === 's' ? ' ( дўкон )' : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>

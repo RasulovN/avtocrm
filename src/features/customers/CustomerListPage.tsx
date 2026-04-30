@@ -241,11 +241,11 @@ export function CustomerListPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className="rounded-lg border bg-card p-4 shadow-sm">
-          <p className="text-sm text-muted-foreground">Jami mijozlar</p>
+          <p className="text-sm text-muted-foreground">{t('customers.totalCustomers')}</p>
           <p className="text-2xl font-bold">{stats.totalCustomers}</p>
         </div>
         <div className="rounded-lg border bg-card p-4 shadow-sm">
-          <p className="text-sm text-muted-foreground">Jami qarzdorlik</p>
+          <p className="text-sm text-muted-foreground">{t('dashboard.totalDebt')}</p>
           <p className="text-2xl font-bold text-red-500">{formatCurrency(stats.totalDebt)}</p>
         </div>
       </div>

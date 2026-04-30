@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import { Mail } from 'lucide-react';
 import { authService } from '../../services/authService';
 import { Button } from '../../components/ui/Button';
@@ -9,6 +10,7 @@ import { Label } from '../../components/ui/Label';
 import { Card, CardContent, CardDescription, CardHeader } from '../../components/ui/Card';
 
 export function ForgotPasswordPage() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -19,7 +21,7 @@ export function ForgotPasswordPage() {
     try {
       setSubmitting(true);
       await authService.forgotPassword({ email });
-      toast.success('Parol tiklash havolasi emailga yuborildi');
+      toast.success(t('messages.resetLinkSent'));
       setEmail('');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'So‘rov yuborilmadi';
@@ -37,8 +39,8 @@ export function ForgotPasswordPage() {
             <Mail className="w-8 h-8 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold">Parolni tiklash</h1>
-            <CardDescription>Email manzilingizga tiklash havolasini yuboramiz</CardDescription>
+            <h1 className="text-2xl font-semibold">{t('auth.resetPasswordTitle')}</h1>
+            <CardDescription>{t('auth.resetPasswordDesc')}</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
@@ -55,10 +57,10 @@ export function ForgotPasswordPage() {
               />
             </div>
             <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? 'Yuborilmoqda...' : 'Havola yuborish'}
+              {submitting ? t('auth.sending') : t('auth.sendResetLink')}
             </Button>
             <Link to="/login" className="block text-center text-sm text-primary hover:underline">
-              Kirishga qaytish
+              {t('auth.backToLogin')}
             </Link>
           </form>
         </CardContent>

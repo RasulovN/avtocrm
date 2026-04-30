@@ -307,7 +307,7 @@ export function ProductLocationPage() {
                     value={formData.location_uz}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => handleNameChange(e.target.value)}
                     required
-                    placeholder="Joylashuv nomini kiriting"
+                    placeholder={t('placeholders.enterLocationName')}
                   />
                 </div>
                 <div className="space-y-2">
@@ -321,7 +321,7 @@ export function ProductLocationPage() {
                         location_uz_cyrl: e.target.value 
                       }))
                     }
-                    placeholder="Joylashuv nomini kirillcha kiriting"
+                    placeholder={t('placeholders.enterLocationNameCyrl')}
                   />
                 </div>
                 <div className="space-y-2">
@@ -330,7 +330,7 @@ export function ProductLocationPage() {
                     id="description"
                     value={formData.description_uz}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => handleDescriptionChange(e.target.value)}
-                    placeholder="Tavsifni kiriting"
+                    placeholder={t('placeholders.enterDescription')}
                   />
                 </div>
                 <div className="space-y-2">
@@ -344,7 +344,7 @@ export function ProductLocationPage() {
                         description_uz_cyrl: e.target.value 
                       }))
                     }
-                    placeholder="Tavsifni kirillcha kiriting"
+                    placeholder={t('placeholders.enterDescriptionCyrl')}
                   />
                 </div>
               </div>

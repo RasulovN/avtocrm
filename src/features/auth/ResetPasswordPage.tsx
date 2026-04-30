@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import { KeyRound } from 'lucide-react';
 import { authService } from '../../services/authService';
 import { Button } from '../../components/ui/Button';
@@ -10,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader } from '../../components
 
 export function ResetPasswordPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { uidb64 = '', token = '' } = useParams();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -23,7 +25,7 @@ export function ResetPasswordPage() {
     }
 
     if (newPassword !== confirmPassword) {
-      toast.error('Parollar mos emas');
+      toast.error(t('messages.passwordsNotMatch'));
       return;
     }
 
@@ -33,7 +35,7 @@ export function ResetPasswordPage() {
         new_password: newPassword,
         confirm_password: confirmPassword,
       });
-      toast.success('Parol muvaffaqiyatli yangilandi');
+      toast.success(t('messages.passwordUpdated'));
       navigate('/login', { replace: true });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Parol yangilanmadi';
@@ -51,14 +53,14 @@ export function ResetPasswordPage() {
             <KeyRound className="h-8 w-8 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold">Yangi parol</h1>
-            <CardDescription>Hisobingiz uchun yangi parol o'rnating</CardDescription>
+            <h1 className="text-2xl font-semibold">{t('auth.newPassword')}</h1>
+            <CardDescription>{t('auth.setNewPasswordDesc')}</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="new_password">Yangi parol</Label>
+              <Label htmlFor="new_password">{t('auth.newPassword')}</Label>
               <Input
                 id="new_password"
                 type="password"
@@ -68,7 +70,7 @@ export function ResetPasswordPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirm_password">Parolni tasdiqlang</Label>
+              <Label htmlFor="confirm_password">{t('auth.confirmPassword')}</Label>
               <Input
                 id="confirm_password"
                 type="password"
@@ -78,10 +80,10 @@ export function ResetPasswordPage() {
               />
             </div>
             <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? 'Saqlanmoqda...' : 'Parolni yangilash'}
+              {submitting ? t('common.saving') : t('auth.updatePassword')}
             </Button>
             <Link to="/login" className="block text-center text-sm text-primary hover:underline">
-              Kirishga qaytish
+              {t('auth.backToLogin')}
             </Link>
           </form>
         </CardContent>
