@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNotifications } from '../../context/NotificationProvider';
+import { t } from 'i18next';
 
 export const NotificationToast: React.FC = () => {
   const [toast, setToast] = useState<any>(null);
@@ -26,9 +27,7 @@ export const NotificationToast: React.FC = () => {
           markAsRead(toast.id);
           setToast(null);
         }}
-      >
-        Mark as read
-      </button>
+      >{t("components.markAsRead")}</button>
     </div>
   );
 };

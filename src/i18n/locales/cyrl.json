@@ -599,7 +599,13 @@
     "networkError": "Тармоқ хатолиги",
     "notFound": "Топилмади",
     "unauthorized": "Рухсат йўқ",
-    "validationError": "Ма'лумотларни текшириш хатолиги"
+    "validationError": "Ма'лумотларни текшириш хатолиги",
+    "requestFailed": "Сўров юборилмади"
+  },
+  "components": {
+    "filterByStore": "Дўконлар бўйича",
+    "countByStore": "Дўконлар бўйича сони",
+    "noData": "Маълумот топилмади"
   },
   "reports": {
     "title": "Ҳисоботлар",

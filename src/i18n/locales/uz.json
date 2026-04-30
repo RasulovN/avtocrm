@@ -83,8 +83,10 @@
     "forgotPassword": "Parolni unutdingizmi?",
     "forgotPasswordDescription": "Parolni tiklash uchun emailingizni kiriting. Sizga tiklash havolasi yuboriladi.",
     "sendResetLink": "Havola yuborish",
-    "emailRequired": "Email kiritish majburiy"
+    "emailRequired": "Email kiritish majburiy",
+    "backToLogin": "Kirishga qaytish"
   },
+
   "dashboard": {
     "title": "Bosh sahifa",
     "totalProducts": "Jami mahsulotlar",
@@ -583,7 +585,13 @@
     "networkError": "Tarmoq xatoligi",
     "notFound": "Topilmadi",
     "unauthorized": "Ruxsat yo'q",
-    "validationError": "Ma'lumotlarni tekshirish xatoligi"
+    "validationError": "Ma'lumotlarni tekshirish xatoligi",
+    "requestFailed": "So'rov yuborilmadi"
+  },
+  "components": {
+    "filterByStore": "Do'konlar bo'yicha",
+    "countByStore": "Do'konlar bo'yicha soni",
+    "noData": "Ma'lumot topilmadi"
   },
   "reports": {
     "title": "Hisobotlar",

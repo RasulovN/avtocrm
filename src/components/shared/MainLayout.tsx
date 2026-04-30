@@ -85,7 +85,7 @@ const subNavs: Record<string, SubNavItem[]> = {
     { titleKey: 'transfers.list', href: '/transfers', icon: List },
     { titleKey: 'transfers.createTransfer', href: '/transfers/new', icon: Plus },
     { titleKey: 'transfers.requestTransfer', href: '/transfers/requests', icon: Download },
-  ], 
+  ],
   '/sales': [
     { titleKey: 'sales.list', href: '/sales', icon: List },
     { titleKey: 'nav.saleReturns', href: '/sales-returns', icon: Undo2 },
@@ -95,7 +95,7 @@ const subNavs: Record<string, SubNavItem[]> = {
     { titleKey: 'products.list', href: '/products', icon: List },
     { titleKey: 'categories.title', href: '/products/categories', icon: Tags },
     { titleKey: 'products.ProductLocatiion', href: '/products/location', icon: LocationEdit },
-    { titleKey: 'products.units', href: '/products/units', icon: Ruler }, 
+    { titleKey: 'products.units', href: '/products/units', icon: Ruler },
     { titleKey: 'products.addProduct', href: '/products/new', icon: Plus },
   ],
   '/stores': [
@@ -150,7 +150,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
 
   // Get current path without language prefix
   const currentPath = location.pathname;
-  
+
   // Filter subNavs based on user role
   const filteredSubNavs = Object.entries(subNavs).reduce((acc, [key, items]) => {
     if (key === '/stores') {
@@ -162,23 +162,23 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
     }
     return acc;
   }, {} as Record<string, SubNavItem[]>);
-  
+
   // Check if current path is part of a sub-nav module
-  const activeSubNavKey = Object.keys(filteredSubNavs).find(key => 
+  const activeSubNavKey = Object.keys(filteredSubNavs).find(key =>
     currentPath.includes(key) && currentPath.startsWith(`/${lang}${key}`)
   );
   const activeSubNav = activeSubNavKey ? filteredSubNavs[activeSubNavKey] : null;
-  
+
   // Check if we're on a sub-nav page (but not the main page of that module)
   const isOnSubNavPage = activeSubNavKey && !currentPath.endsWith(`/${lang}${activeSubNavKey}`) && !currentPath.endsWith(`/${lang}${activeSubNavKey}/`);
   const [showSubNav, setShowSubNav] = useState(() => Boolean(activeSubNavKey));
-  
+
   // Determine if we should show sub-nav sidebar
   const shouldShowSubNav = isOnSubNavPage || showSubNav;
 
   // Find the parent nav item for back button
-  const parentNavItem = activeSubNavKey 
-    ? navItems.find(item => item.href === activeSubNavKey) 
+  const parentNavItem = activeSubNavKey
+    ? navItems.find(item => item.href === activeSubNavKey)
     : null;
 
   // Keep sub-navigation open when the current route is inside a submenu page.
@@ -192,7 +192,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const currentPath = location.pathname;
     const pathParts = currentPath.split('/').filter(Boolean);
-    
+
     if (pathParts[0] !== 'uz' && pathParts[0] !== 'cyrl') {
       // Already handled by routing
     } else if (pathParts[0] !== i18n.language) {
@@ -207,10 +207,10 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
   const switchLanguage = (newLang: string) => {
     i18n.changeLanguage(newLang);
     localStorage.setItem('i18nextLng', newLang);
-    
+
     const currentPath = location.pathname;
     const pathParts = currentPath.split('/').filter(Boolean);
-    
+
     if (pathParts[0] === 'uz' || pathParts[0] === 'cyrl') {
       pathParts[0] = newLang;
       navigate('/' + pathParts.join('/'));
@@ -308,15 +308,15 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
                   <ArrowLeft className="h-5 w-5 shrink-0" />
                   {!isCollapsed && <span>{t('common.back')}</span>}
                 </button>
-                
+
                 <div className="my-2 border-t" />
-                
+
                 {parentNavItem && !isCollapsed && (
                   <div className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase">
                     {t(parentNavItem.titleKey)}
                   </div>
                 )}
-                
+
                 {activeSubNav.map((subItem) => {
                   const href = `/${lang}${subItem.href}`;
                   const isActive = location.pathname === href;
@@ -342,42 +342,42 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
               </>
             ) : (
               navItems
-              .filter((item) => {
-                if (!item.access || item.access === 'all') return true;
-                if (item.access === 'superuser') return isSuperUser;
-                return !isSuperUser;
-              })
-              .map((item) => {
-                const href = `/${lang}${item.href}`;
-                const isActive = location.pathname.startsWith(`/${lang}${item.href}`) ||
-                               (item.href === '/dashboard' && location.pathname === `/${lang}`);
-                
-                const hasSubNav = !!filteredSubNavs[item.href];
-                
-                return (
-                  <Link
-                    key={item.href}
-                    to={href}
-                    onClick={() => handleMainNavClick(item)}
-                    className={cn(
-                      'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
-                      isActive && !shouldShowSubNav
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                      isCollapsed && 'justify-center px-2'
-                    )}
-                    title={isCollapsed ? t(item.titleKey) : undefined}
-                  >
-                    <item.icon className="h-5 w-5 shrink-0" />
-                    {!isCollapsed && (
-                      <span className="flex-1">{t(item.titleKey)}</span>
-                    )}
-                    {!isCollapsed && hasSubNav && (
-                      <ChevronRight className="h-4 w-4 opacity-50" />
-                    )}
-                  </Link>
-                );
-              })
+                .filter((item) => {
+                  if (!item.access || item.access === 'all') return true;
+                  if (item.access === 'superuser') return isSuperUser;
+                  return !isSuperUser;
+                })
+                .map((item) => {
+                  const href = `/${lang}${item.href}`;
+                  const isActive = location.pathname.startsWith(`/${lang}${item.href}`) ||
+                    (item.href === '/dashboard' && location.pathname === `/${lang}`);
+
+                  const hasSubNav = !!filteredSubNavs[item.href];
+
+                  return (
+                    <Link
+                      key={item.href}
+                      to={href}
+                      onClick={() => handleMainNavClick(item)}
+                      className={cn(
+                        'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                        isActive && !shouldShowSubNav
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                        isCollapsed && 'justify-center px-2'
+                      )}
+                      title={isCollapsed ? t(item.titleKey) : undefined}
+                    >
+                      <item.icon className="h-5 w-5 shrink-0" />
+                      {!isCollapsed && (
+                        <span className="flex-1">{t(item.titleKey)}</span>
+                      )}
+                      {!isCollapsed && hasSubNav && (
+                        <ChevronRight className="h-4 w-4 opacity-50" />
+                      )}
+                    </Link>
+                  );
+                })
             )}
           </nav>
 
@@ -387,7 +387,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
           )}>
             {!isCollapsed ? (
               <div className="relative" ref={profileRef}>
-                <div 
+                <div
                   className="flex items-center justify-between mb-3 cursor-pointer"
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
                 >
@@ -419,16 +419,16 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
                       </div>
                     </div>
                     <div className="pt-2 border-t space-y-2">
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         className="w-full justify-start"
                         onClick={() => navigate(`/${lang}/settings`)}
                       >
                         <Settings className="h-4 w-4 mr-2" />
                         {t('nav.settings')}
                       </Button>
-                      <Button 
-                        variant="destructive" 
+                      <Button
+                        variant="destructive"
                         className="w-full justify-start"
                         onClick={handleLogout}
                       >
@@ -441,7 +441,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
               </div>
             ) : (
               <div className="relative" ref={profileRef}>
-                <div 
+                <div
                   className="h-8 w-8 rounded-full bg-primary flex items-center justify-center cursor-pointer"
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
                 >
@@ -458,8 +458,8 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
                       <p className="text-xs text-muted-foreground capitalize">{currentUser.role}</p>
                     </div>
                     <div className="pt-2 border-t space-y-2">
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         className="w-full justify-start"
                         onClick={() => navigate(`/${lang}/settings`)}
@@ -467,8 +467,8 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
                         <Settings className="h-4 w-4 mr-2" />
                         {t('nav.settings')}
                       </Button>
-                      <Button 
-                        variant="destructive" 
+                      <Button
+                        variant="destructive"
                         size="sm"
                         className="w-full justify-start"
                         onClick={handleLogout}
@@ -521,7 +521,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
                   <div className="absolute right-0 top-12 z-50 w-80 rounded-xl border bg-background p-3 shadow-lg">
                     <div className="mb-3 flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-semibold">{t('notifications.title')}</p>
+                        <p className="text-sm font-semibold">{t("notifications.title")}</p>
                         <p className="text-xs text-muted-foreground">
                           {unreadCount > 0 ? t('notifications.newMessages', { count: unreadCount }) : t('notifications.noNewMessages')}
                         </p>
@@ -617,6 +617,4 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
       </div>
     </div>
   );
-}
-
-
+} 

@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
 import { Card, CardContent, CardDescription, CardHeader } from '../../components/ui/Card';
+import { t } from 'i18next';
 
 export function ForgotPasswordPage() {
   const { t } = useTranslation();
@@ -24,7 +25,7 @@ export function ForgotPasswordPage() {
       toast.success(t('messages.resetLinkSent'));
       setEmail('');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'So‘rov yuborilmadi';
+      const message = error instanceof Error ? error.message : t('errors.requestFailed');
       toast.error(message);
     } finally {
       setSubmitting(false);
