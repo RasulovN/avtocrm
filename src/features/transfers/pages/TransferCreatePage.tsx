@@ -151,10 +151,11 @@ export function TransferCreatePage() {
                       <Input
                         type="number"
                         min="1"
-                        value={item.quantity}
+                        value={item.quantity || ''}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => {
                           const newItems = [...items];
-                          newItems[index].quantity = Number(e.target.value);
+                          const val = e.target.value;
+                          newItems[index].quantity = val === '' ? 0 : Number(val);
                           setItems(newItems);
                         }}
                       />

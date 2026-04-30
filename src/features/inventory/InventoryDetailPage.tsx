@@ -558,7 +558,7 @@ function MobileProductCard({
             <Input
               type="number"
               min={0}
-              value={product.scanned}
+              value={product.scanned || ''}
               onChange={(e) => onChange(e.target.value)}
               disabled={isScanning}
               className="h-9 w-20 text-center text-base font-bold"
@@ -640,9 +640,8 @@ function DesktopProductRow({
       <td className="px-2 py-3">
         <div className="flex items-center justify-center gap-1">
           <Input
-            type="string"
-            // min={0}
-            value={product.scanned}
+            type="text"
+            value={product.scanned || ''}
             onChange={(e) => onChange(e.target.value)}
             disabled={isScanning}
             className="h-8 w-full text-center text-sm font-bold px-1"

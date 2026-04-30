@@ -451,7 +451,7 @@ export function SalesPage() {
   };
 
   const updateQuantity = (index: number, quantity: number) => {
-    if (!Number.isFinite(quantity) || quantity < 1) return;
+    if (!Number.isFinite(quantity) || quantity < 0) return;
     const newItems = [...items];
     newItems[index].quantity = quantity;
     newItems[index].total = newItems[index].selling_price * quantity;
@@ -503,6 +503,12 @@ export function SalesPage() {
 
   const handleFinishSale = async () => {
     if (items.length === 0) return;
+
+    // Check for zero quantities
+    if (items.some(item => item.quantity <= 0)) {
+      toast.error(t('messages.invalidQuantity'));
+      return;
+    }
 
     try {
       setSaving(true);
@@ -847,8 +853,13 @@ export function SalesPage() {
                             <Input
                               type="text"
                               min="1"
-                              value={item.quantity}
-                              onChange={(e: ChangeEvent<HTMLInputElement>) => updateQuantity(index, Number(e.target.value))}
+                              value={item.quantity || ''}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                                const val = e.target.value;
+                                if (val === '' || /^\d*$/.test(val)) {
+                                  updateQuantity(index, val === '' ? 0 : Number(val));
+                                }
+                              }}
                               className="h-7 w-12 text-center text-xs dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                             />
                             <Button
@@ -868,7 +879,10 @@ export function SalesPage() {
                             type="number"
                             min="0"
                             value={item.selling_price || ''}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => updatePrice(index, Number(e.target.value))}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                              const val = e.target.value;
+                              updatePrice(index, val === '' ? 0 : Number(val));
+                            }}
                             className="h-7 text-center text-xs dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                           />
                         </div>
@@ -976,7 +990,10 @@ export function SalesPage() {
                       min="0"
                       placeholder="0"
                       value={cashAmount || ''}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => setCashAmount(Number(e.target.value))}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                        const val = e.target.value;
+                        setCashAmount(val === '' ? 0 : Number(val));
+                      }}
                       className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white"
                     />
                   </div>
@@ -987,7 +1004,10 @@ export function SalesPage() {
                       min="0"
                       placeholder="0"
                       value={cardAmount || ''}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => setCardAmount(Number(e.target.value))}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                        const val = e.target.value;
+                        setCardAmount(val === '' ? 0 : Number(val));
+                      }}
                       className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white"
                     />
                   </div>
@@ -1008,7 +1028,10 @@ export function SalesPage() {
                         min="0"
                         placeholder="0"
                         value={discount || ''}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => setDiscount(Number(e.target.value))}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                          const val = e.target.value;
+                          setDiscount(val === '' ? 0 : Number(val));
+                        }}
                         className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white flex-1"
                       />
                     </div>
