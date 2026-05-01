@@ -29,7 +29,6 @@ export function InventorySessionsListPage({
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedStore, setSelectedStore] = useState('');
   const [stores, setStores] = useState<Store[]>([]);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const { sessions, loading, fetchSessions, startSession } = useInventoryStore();
 
@@ -75,19 +74,20 @@ export function InventorySessionsListPage({
 
   const getStatusConfig = (status: string) => {
     switch (status) {
-      case 'draft':
-      case 'd':
-        return {
-          icon: CircleDot,
-          label: t('inventory.statusDraft'),
-          className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-        };
+      case 'active':
       case 'in_progress':
       case 'p':
         return {
           icon: Clock,
           label: t('inventory.statusInProgress'),
           className: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+        };
+      case 'draft':
+      case 'd':
+        return {
+          icon: CircleDot,
+          label: t('inventory.statusDraft'),
+          className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
         };
       case 'completed':
       case 'e':
@@ -100,7 +100,7 @@ export function InventorySessionsListPage({
       case 'c':
         return {
           icon: XCircle,
-          label: t('common.cancelled'),
+          label: t('common.rejected'),
           className: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
         };
       default:
@@ -155,7 +155,7 @@ export function InventorySessionsListPage({
                     <div className="min-w-0 flex-1">
                       <p className="text-base font-semibold">#{session.id}</p>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        {session.store_name || t('inventory.store')}: {session.store_id}
+                        {t('inventory.store')}: {stores.find(s => parseInt(s.id) === session.store)?.name || session.store}
                       </p>
                     </div>
                     <span
@@ -178,7 +178,7 @@ export function InventorySessionsListPage({
                         {t('inventory.createdAt')}
                       </p>
                       <p className="mt-1 font-semibold">
-                        {formatDate(session.created_at)}
+                        {formatDate(session.started_at)}
                       </p>
                     </div>
                   </div>
@@ -212,14 +212,14 @@ export function InventorySessionsListPage({
                 <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
                   {t('stores.title')}
                 </th>
-                <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground">
+                {/* <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground">
                   {t('inventory.totalItems')}
-                </th>
+                </th> */}
                 <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
                   {t('common.status')}
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                  {t('inventory.createdAt')}
+                  {t('common.createdAt')}
                 </th>
                 <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">
                   {t('common.actions')}
@@ -234,11 +234,11 @@ export function InventorySessionsListPage({
                   <tr key={session.id} className="hover:bg-muted/30">
                     <td className="px-4 py-3 font-medium">#{session.id}</td>
                     <td className="px-4 py-3">
-                      {session.store_name || t('inventory.store')}: {session.store_id}
+                      {stores.find(s => parseInt(s.id) === session.store)?.name || session.store}
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    {/* <td className="px-4 py-3 text-center">
                       {session.total_items || 0}
-                    </td>
+                    </td> */}
                     <td className="px-4 py-3">
                       <span
                         className={`flex w-fit items-center gap-1 rounded-full px-2 py-1 text-xs ${statusConfig.className}`}
@@ -248,7 +248,7 @@ export function InventorySessionsListPage({
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm">
-                      {formatDate(session.created_at)}
+                      {formatDate(session.started_at)}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Link to={`/${lang}/inventory-session/${session.id}`}>

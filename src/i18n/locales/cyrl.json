@@ -31,9 +31,10 @@
     "create": "Яратиш",
     "email": "Емаил",
     "date": "Сана",
-    "completed": "Бажарилди",
+    "completed": "Бажарилган",
     "pending": "Кутилмоқда",
     "accepted": "Қабул қилинган",
+    "rejected": "Рад этилган",
     "showing": "Кўрсатиляпти",
     "to": "дан",
     "of": "жами",
@@ -81,7 +82,12 @@
     "forgotPassword": "Паролни унутдингизми?",
     "forgotPasswordDescription": "Паролни тиклаш учун емаилингизни киритинг. Сизга тиклаш ҳаволаси юборилади.",
     "sendResetLink": "Ҳавола юбориш",
-    "emailRequired": "Емаил киритиш мажбурий"
+    "emailRequired": "Емаил киритиш мажбурий",
+    "backToLogin": "Киришга қайтиш",
+    "setNewPasswordDesc": "Ҳисобингиз учун янги парол ўрнатинг",
+    "sending": "Юборилмоқда...",
+    "resetPasswordTitle": "Паролни тиклаш",
+    "resetPasswordDesc": "Емаил манзилингизга тиклаш ҳаволасини юборамиз"
   },
   "dashboard": {
     "title": "Бош саҳифа",
@@ -699,7 +705,6 @@
     "resetLinkSent": "Парол тиклаш ҳаволаси емаилга юборилди",
     "productNotFound": "Маҳсулот топилмади",
     "productFound": "Маҳсулот топилди",
-    "productIdNotFound": "Маҳсулот ID топилмади. Илтимос, скан қилиб ёки каталогдaн танлаб кўринг.",
     "productAddError": "Маҳсулот қўшишда хатолик юз берди"
   },
   "placeholders": {
@@ -724,34 +729,6 @@
     "clickToView": "Кўриш учун босинг",
     "printAllBarcodes": "Барча штрихкодларни чоп етиш",
     "printBarcode": "Штрихкодни чоп етиш"
-  },
-  "auth": {
-    "login": "Кириш",
-    "logout": "Чиқиш",
-    "username": "Фойдаланувчи номи",
-    "password": "Парол",
-    "loginButton": "Кириш",
-    "loginError": "Логин ёки парол нотўғри",
-    "profile": "Профил",
-    "profileDescription": "Ҳисобингиз ма'лумотларини янгиланг",
-    "changePassword": "Паролни ўзгартириш",
-    "changePasswordDescription": "Хавфсизлик учун паролни тез-тез ўзгартиринг",
-    "currentPassword": "Жорий парол",
-    "newPassword": "Янги парол",
-    "confirmPassword": "Паролни тасдиқланг",
-    "updatePassword": "Паролни янгилаш",
-    "email": "Емаил",
-    "loginHistory": "Киришлар тарихи",
-    "loginHistoryDescription": "Ҳисобингизга охирги киришлар рўйхати",
-    "forgotPassword": "Паролни унутдингизми?",
-    "forgotPasswordDescription": "Паролни тиклаш учун емаилингизни киритинг. Сизга тиклаш ҳаволаси юборилади.",
-    "sendResetLink": "Ҳавола юбориш",
-    "emailRequired": "Емаил киритиш мажбурий",
-    "backToLogin": "Киришга қайтиш",
-    "setNewPasswordDesc": "Ҳисобингиз учун янги парол ўрнатинг",
-    "sending": "Юборилмоқда...",
-    "resetPasswordTitle": "Паролни тиклаш",
-    "resetPasswordDesc": "Емаил манзилингизга тиклаш ҳаволасини юборамиз"
   },
   "seo": {
     "defaultTitle": "АвтоCРМ - Авто еҳтиёт қисмлар бошқарув тизими",

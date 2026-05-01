@@ -2,16 +2,16 @@ import { apiClient } from './api';
 
 export interface InventorySession {
   id: number;
-  store_id: number;
-  store_name?: string;
-  status: 'draft' | 'in_progress' | 'completed' | 'cancelled';
-  created_at: string;
-  completed_at?: string;
-  created_by?: number;
+  store: number;
+  started_by: number;
+  started_at: string;
+  status: 'active' | 'cancelled' | 'completed' | string;
+  snapshot_taken: boolean;
   total_items?: number;
   matched_items?: number;
   mismatched_items?: number;
 }
+
 
 export interface InventoryProduct {
   product_id: number;
@@ -60,12 +60,12 @@ export interface CancelInventoryRequest {
 const INVENTORY_ENDPOINT = '/inventory';
 
 export const inventoryApi = {
-  /** GET /api/inventory/inventory/list/ — all sessions */
+  /** GET /api/inventory/list/ — all sessions */
   getSessions: async (): Promise<InventorySession[]> => {
-    const response = await apiClient.get<{ data: InventorySession[] }>(
+    const response = await apiClient.get<InventorySession[]>(
       `${INVENTORY_ENDPOINT}/list/`
     );
-    return response.data.data;
+    return response.data;
   },
 
   /** POST /api/inventory/inventory/start/ — start new session */

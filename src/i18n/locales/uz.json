@@ -84,7 +84,11 @@
     "forgotPasswordDescription": "Parolni tiklash uchun emailingizni kiriting. Sizga tiklash havolasi yuboriladi.",
     "sendResetLink": "Havola yuborish",
     "emailRequired": "Email kiritish majburiy",
-    "backToLogin": "Kirishga qaytish"
+    "backToLogin": "Kirishga qaytish",
+    "setNewPasswordDesc": "Hisobingiz uchun yangi parol o'rnating",
+    "sending": "Yuborilmoqda...",
+    "resetPasswordTitle": "Parolni tiklash",
+    "resetPasswordDesc": "Email manzilingizga tiklash havolasini yuboramiz"
   },
 
   "dashboard": {
@@ -706,34 +710,6 @@
     "clickToView": "Ko'rish uchun bosing",
     "printAllBarcodes": "Barcha shtrixkodlarni chop etish",
     "printBarcode": "Shtrixkodni chop etish"
-  },
-  "auth": {
-    "login": "Kirish",
-    "logout": "Chiqish",
-    "username": "Foydalanuvchi nomi",
-    "password": "Parol",
-    "loginButton": "Kirish",
-    "loginError": "Login yoki parol noto'g'ri",
-    "profile": "Profil",
-    "profileDescription": "Hisobingiz ma'lumotlarini yangilang",
-    "changePassword": "Parolni o'zgartirish",
-    "changePasswordDescription": "Xavfsizlik uchun parolni tez-tez o'zgartiring",
-    "currentPassword": "Joriy parol",
-    "newPassword": "Yangi parol",
-    "confirmPassword": "Parolni tasdiqlang",
-    "updatePassword": "Parolni yangilash",
-    "email": "Email",
-    "loginHistory": "Kirishlar tarixi",
-    "loginHistoryDescription": "Hisobingizga oxirgi kirishlar ro'yxati",
-    "forgotPassword": "Parolni unutdingizmi?",
-    "forgotPasswordDescription": "Parolni tiklash uchun emailingizni kiriting. Sizga tiklash havolasi yuboriladi.",
-    "sendResetLink": "Havola yuborish",
-    "emailRequired": "Email kiritish majburiy",
-    "backToLogin": "Kirishga qaytish",
-    "setNewPasswordDesc": "Hisobingiz uchun yangi parol o'rnating",
-    "sending": "Yuborilmoqda...",
-    "resetPasswordTitle": "Parolni tiklash",
-    "resetPasswordDesc": "Email manzilingizga tiklash havolasini yuboramiz"
   },
   "seo": {
     "defaultTitle": "AvtoCRM - Avto ehtiyot qismlar boshqaruv tizimi",

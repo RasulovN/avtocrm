@@ -48,10 +48,10 @@ export function InventoryShortagesPage() {
                 <div className="space-y-1">
                   <p className="text-base font-semibold">#{session.id}</p>
                   <p className="text-sm text-muted-foreground">
-                    {session.store_name || `${t('inventory.store')}: ${session.store_id}`}
+                    {`${t('inventory.store')}: ${session.store}`}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {formatDate(session.created_at)}
+                    {formatDate(session.started_at)}
                   </p>
                 </div>
 
