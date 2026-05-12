@@ -40,7 +40,13 @@ const getProductImages = (product?: Product | null): string[] => {
 
   if (product.images) {
     if (Array.isArray(product.images)) {
-      images.push(...product.images.filter((image): image is string => typeof image === 'string' && Boolean(image)));
+      const mappedImages = product.images.map((img: any) => {
+        if (typeof img === 'string') return img;
+        if (typeof img === 'object' && img !== null && typeof img.image === 'string') return img.image;
+        return null;
+      }).filter(Boolean) as string[];
+      
+      images.push(...mappedImages);
     } else if (typeof product.images === 'string') {
       images.push(product.images);
     }
@@ -645,7 +651,32 @@ export function SalesPage() {
     try {
       setProductLoading(true);
       const fullProduct = await productService.getById(String(hydratedProduct.id));
-      setSelectedProduct(fullProduct);
+      
+      // Merge loaded data over existing hydrated data to ensure we don't lose existing context
+      setSelectedProduct({
+        ...hydratedProduct,
+        ...fullProduct,
+        // Final safety guarantee for critical identification tokens
+        id: fullProduct.id && fullProduct.id.trim() !== "" ? fullProduct.id : String(hydratedProduct.id),
+        // Preserve fields if backend didn't return them properly
+        sku: fullProduct.sku || hydratedProduct.sku,
+        barcode: fullProduct.barcode || hydratedProduct.barcode,
+        shtrix_code: fullProduct.shtrix_code || hydratedProduct.shtrix_code,
+        category_name: fullProduct.category_name && fullProduct.category_name !== String(fullProduct.category) 
+          ? fullProduct.category_name 
+          : hydratedProduct.category_name,
+        inventory_by_store: fullProduct.inventory_by_store?.length 
+          ? fullProduct.inventory_by_store 
+          : hydratedProduct.inventory_by_store,
+        quantity: fullProduct.quantity ?? hydratedProduct.quantity,
+        total_count: fullProduct.total_count ?? hydratedProduct.total_count,
+        selling_price: fullProduct.selling_price || hydratedProduct.selling_price,
+        purchase_price: fullProduct.purchase_price || hydratedProduct.purchase_price,
+        image: fullProduct.image || hydratedProduct.image,
+        images: (fullProduct.images && fullProduct.images.length > 0) 
+          ? fullProduct.images 
+          : hydratedProduct.images,
+      });
       // Productdan location ma'lumotlarini olish
       if (fullProduct.location_id) {
         setProductLocation({
@@ -1265,7 +1296,7 @@ export function SalesPage() {
       </Dialog>
 
       <Dialog open={showProductDialog} onOpenChange={handleProductDialogChange}>
-        <DialogContent className="max-w-3xl pb-6">
+        <DialogContent className="max-w-3xl pb-6 max-h-[95vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t('sales.productDetails')}</DialogTitle>
           </DialogHeader>
@@ -1338,16 +1369,8 @@ export function SalesPage() {
                         <span className="font-medium">{selectedProduct?.id || '-'}</span>
                       </div>
                       <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">{t('sales.category')}</span>
+                        <span className="text-muted-foreground">{t('products.category', 'Kategoriya')}</span>
                         <span className="font-medium text-right">{selectedProduct?.category_name || "-"}</span>
-                      </div>
-                      <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">{t('sales.quantity')}</span>
-                        <span className="font-medium">{selectedProduct?.quantity ?? selectedProduct?.total_count ?? 0}</span>
-                      </div>
-                      <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">{t('sales.store')}</span>
-                        <span className="font-medium text-right">{selectedProduct?.store_name || '-'}</span>
                       </div>
                     </div>
                   </div>
@@ -1358,14 +1381,7 @@ export function SalesPage() {
                       <span className="text-sm">{t('sales.codesAndPrices')}</span>
                     </div>
                     <div className="space-y-2 text-sm">
-                      <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">SKU</span>
-                        <span className="font-medium">{selectedProduct?.sku || '-'}</span>
-                      </div>
-                      <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">Barcode</span>
-                        <span className="font-medium">{selectedProduct?.barcode || selectedProduct?.shtrix_code || '-'}</span>
-                      </div>
+
                       <div className="flex justify-between gap-4">
                         <span className="text-muted-foreground">{t('sales.sellingPrice')}</span>
                         <span className="font-medium">{formatCurrency(selectedProduct?.selling_price ?? 0)}</span>
@@ -1395,6 +1411,48 @@ export function SalesPage() {
                   )}
                 </div>
                 
+                {/* Stock in other stores */}
+                {selectedProduct?.inventory_by_store && selectedProduct.inventory_by_store.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Package className="h-4 w-4 text-blue-500" />
+                      <h5 className="font-semibold text-sm dark:text-white">
+                        {t('sales.storeStock', 'Boshqa do\'konlardagi qoldiqlar')}
+                      </h5>
+                    </div>
+                    <div className="grid gap-2">
+                      {selectedProduct.inventory_by_store.map((inv) => (
+                        <div 
+                          key={inv.store_id} 
+                          className="flex items-center justify-between rounded-xl border bg-background p-3 text-sm"
+                        >
+                          <div className="flex flex-col">
+                            <span className="font-medium">{inv.store_name}</span>
+                            {inv.location_name && (
+                              <span className="text-xs text-muted-foreground">{inv.location_name}</span>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            <span 
+                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                                inv.quantity > 0 
+                                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' 
+                                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                              }`}
+                            >
+                              {inv.quantity} {t('common.pcs', 'dona')}
+                            </span>
+                            {inv.selling_price && inv.selling_price > 0 && (
+                              <span className="text-xs font-medium text-muted-foreground">
+                                {formatCurrency(inv.selling_price)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

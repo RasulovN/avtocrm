@@ -50,10 +50,11 @@ const buildCategoryFormData = (data: Partial<CategoryFormData>): FormData => {
 };
 
 export const categoryService = {
-  getAll: async (params?: { page?: number; limit?: number }): Promise<PaginatedResponse<Category>> => {
+  getAll: async (params?: { page?: number; limit?: number; search?: string }): Promise<PaginatedResponse<Category>> => {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.append('page', params.page.toString());
     if (params?.limit) searchParams.append('limit', params.limit.toString());
+    if (params?.search) searchParams.append('search', params.search);
 
     const queryString = searchParams.toString();
     const url = queryString ? `/products/categories/?${queryString}` : '/products/categories/';

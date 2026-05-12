@@ -26,7 +26,8 @@ interface InventoryFormItem {
 }
 
 export function StockEntryCreatePage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language || 'uz';
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const isAdmin = Boolean(user?.is_superuser);
@@ -155,7 +156,7 @@ export function StockEntryCreatePage() {
         })),
         paid_amount: paid === '' ? 0 : paid,
       });
-      navigate('/inventory');
+      navigate(`/${lang}/stockentry`);
     } catch (error) {
       console.error('Failed to create inventory:', error);
     } finally {
@@ -169,7 +170,7 @@ export function StockEntryCreatePage() {
         title={t('inventory.createIncomingStock')}
         description={t('inventory.addFromSupplier')}
         breadcrumbs={[
-          { label: t('inventory.title'), href: '/inventory' },
+          { label: t('nav.stockentry'), href: `/${lang}/stockentry` },
           { label: t('common.create') },
         ]}
       />

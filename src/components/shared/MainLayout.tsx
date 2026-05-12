@@ -77,7 +77,6 @@ const subNavs: Record<string, SubNavItem[]> = {
   ],
   '/inventory': [
     { titleKey: 'inventory.inventoryList', href: '/inventory', icon: List },
-    { titleKey: 'inventory.inventoryIncoming', href: '/inventory/kirimlar', icon: ArrowDownToLine },
     { titleKey: 'inventory.shortages', href: '/inventory/kamomat', icon: TriangleAlert },
     { titleKey: 'inventory.newInventory', href: '/inventory/new', icon: Plus },
   ],

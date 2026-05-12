@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../../app/store';
 import { PageHeader } from '../../components/shared/PageHeader';
@@ -28,6 +28,10 @@ export function ProductLocationPage() {
   const [locations, setLocations] = useState<ProductLocation[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const limit = 10;
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<ProductLocation | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -44,15 +48,32 @@ export function ProductLocationPage() {
   const fetchLocations = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await productLocationService.getAll();
-      setLocations(data);
+      const response = await productLocationService.getAll({
+        page,
+        limit,
+        search: debouncedSearch,
+      });
+      setLocations(response.data || []);
+      setTotal(response.total || 0);
      } catch (error) {
        console.error('Failed to fetch locations:', error);
        toast.error(t('errors.generic'));
      } finally {
        setLoading(false);
      }
-   }, [t]);
+   }, [page, limit, debouncedSearch, t]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    // Reset to page 1 when search changes
+    setPage(1);
+  }, [debouncedSearch]);
 
   useEffect(() => {
     fetchLocations();
@@ -148,9 +169,8 @@ export function ProductLocationPage() {
       }
     };
 
-  const filteredLocations = locations.filter((location) =>
-    location.location_uz.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+   // Removed local filtering
+  const currentLocations = locations;
 
   const columns: EnhancedColumn<ProductLocation>[] = [
     {
@@ -233,14 +253,14 @@ export function ProductLocationPage() {
           <div className="rounded-lg border p-8 text-center text-sm text-muted-foreground">
             {t('common.loading')}
           </div>
-        ) : filteredLocations.length === 0 ? (
+        ) : currentLocations.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center text-sm text-muted-foreground">
               {t('productLocations.noLocations')}
             </CardContent>
           </Card>
         ) : (
-          filteredLocations.map((location) => (
+          currentLocations.map((location) => (
             <Card key={location.id}>
               <CardContent className="p-4 space-y-3">
                 <div className="font-semibold">{location.location_uz}</div>
@@ -274,17 +294,49 @@ export function ProductLocationPage() {
             </Card>
           ))
         )}
+
+        {!loading && total > limit && (
+          <div className="flex items-center justify-between mt-4 pt-2 border-t">
+            <div className="text-sm text-muted-foreground">
+              {page} / {Math.ceil(total / limit)}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === 1}
+                onClick={() => setPage(page - 1)}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page * limit >= total}
+                onClick={() => setPage(page + 1)}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Desktop View */}
       <div className="hidden md:block">
         <DataTable<ProductLocation>
-          data={filteredLocations}
+          data={currentLocations}
           columns={columns}
           loading={loading}
           emptyMessage={t('productLocations.noLocations')}
           loadingMessage={t('common.loading')}
           onRowClick={isSuperUser ? (item: ProductLocation) => handleOpenDialog(item) : undefined}
+          pagination={{
+            page,
+            limit,
+            total,
+            onPageChange: setPage,
+          }}
         />
       </div>
 

@@ -1,6 +1,6 @@
 import { useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../../app/store';
 import { PageHeader } from '../../components/shared/PageHeader';
@@ -17,6 +17,7 @@ import {
   DialogFooter,
 } from '../../components/ui/Dialog';
 import { Label } from '../../components/ui/Label';
+import { useEffect, useCallback } from 'react';
 import { categoryService } from '../../services/categoryService';
 import { useCategories } from '../../context/CategoryContext';
 import { latinToCyrillic } from '../../utils/transliteration';
@@ -26,9 +27,15 @@ export function CategoryListPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const isSuperUser = Boolean(user?.is_superuser);
-  const { categories, refreshCategories } = useCategories();
+  const { refreshCategories } = useCategories();
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+  const [total, setTotal] = useState(0);
   const [localLoadingCategory, setLocalLoadingCategory] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -43,6 +50,39 @@ export function CategoryListPage() {
   });
   const [saving, setSaving] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>('');
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await categoryService.getAll({
+        page,
+        limit,
+        search: debouncedSearch,
+      });
+      setCategories(response.data || []);
+      setTotal(response.total || 0);
+    } catch (error) {
+      console.error('Failed to load categories:', error);
+      toast.error(t('errors.generic') || 'Xatolik yuz berdi');
+    } finally {
+      setLoading(false);
+    }
+  }, [page, limit, debouncedSearch, t]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
+
+  useEffect(() => {
+    void fetchCategories();
+  }, [fetchCategories]);
 
   const handleNameChange = (value: string) => {
     setFormData((prev) => ({
@@ -160,6 +200,7 @@ export function CategoryListPage() {
         toast.success(t('categories.categoryAdded'));
       }
       await refreshCategories();
+      await fetchCategories();
       handleCloseDialog();
     } catch (error) {
       console.error('Failed to save category:', error);
@@ -175,6 +216,7 @@ export function CategoryListPage() {
       await categoryService.delete(id);
       toast.success(t('categories.categoryDeleted'));
       refreshCategories();
+      fetchCategories();
     } catch (error) {
       console.error('Failed to delete category:', error);
     } finally {
@@ -183,10 +225,8 @@ export function CategoryListPage() {
     }
   };
 
-  const filteredCategories = categories.filter((category) => {
-    const nameValue = category.name_uz ?? category.name ?? '';
-    return nameValue.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  // Removed local filtering
+  const currentCategories = categories;
 
   const columns: Column<Category>[] = [
     {
@@ -272,18 +312,17 @@ export function CategoryListPage() {
         </div>
       </div>
 
-      {/* Mobile View */}
       <div className="space-y-3 md:hidden">
-        {false ? (
+        {loading ? (
           <div className="rounded-lg border bg-card px-4 py-10 text-center text-sm text-muted-foreground">
-            {t('common.localLoading')}
+            {t('common.loading')}
           </div>
-        ) : filteredCategories.length === 0 ? (
+        ) : currentCategories.length === 0 ? (
           <div className="rounded-lg border bg-card px-4 py-10 text-center text-sm text-muted-foreground">
             {t('categories.noCategories')}
           </div>
         ) : (
-          filteredCategories.map((category) => (
+          currentCategories.map((category) => (
             <Card key={category.id}>
               <CardContent className="space-y-4 p-4">
                 <div className="flex items-start gap-3">
@@ -332,17 +371,49 @@ export function CategoryListPage() {
             </Card>
           ))
         )}
+
+        {!loading && total > limit && (
+          <div className="flex items-center justify-between mt-4 pt-2 border-t">
+            <div className="text-sm text-muted-foreground">
+              {page} / {Math.ceil(total / limit)}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === 1}
+                onClick={() => setPage(page - 1)}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page * limit >= total}
+                onClick={() => setPage(page + 1)}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Desktop View */}
       <div className="hidden md:block">
         <DataTable
-          data={filteredCategories}
+          data={currentCategories}
           columns={columns}
-          loading={false}
+          loading={loading}
           emptyMessage={t('categories.noCategories')}
-          loadingMessage={t('common.localLoading')}
+          loadingMessage={t('common.loading')}
           onRowClick={isSuperUser ? (item: Category) => handleOpenDialog(item) : undefined}
+          pagination={{
+            page,
+            limit,
+            total,
+            onPageChange: setPage,
+          }}
         />
       </div>
 

@@ -16,10 +16,9 @@ import {
   SelectValue,
 } from '../../components/ui/Select';
 import { productService } from '../../services/productService';
-import { storeService } from '../../services/storeService';
 import { useAuthStore } from '../../app/store';
 import { useCategories } from '../../context/CategoryContext';
-import type { Product, ProductFilters, Store } from '../../types';
+import type { Product, ProductFilters } from '../../types';
 import { formatCurrency } from '../../utils';
 
 export function ProductListPage() {
@@ -41,7 +40,6 @@ export function ProductListPage() {
   const [deleting, setDeleting] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [deactivating, setDeactivating] = useState(false);
-  const [stores, setStores] = useState<Store[]>([]);
 
   const loadProducts = useCallback(async () => {
     try {
@@ -58,14 +56,6 @@ export function ProductListPage() {
     }
   }, [filters, page, isAdmin, userStoreId]);
 
-  const loadStores = useCallback(async () => {
-    try {
-      const storesRes = await storeService.getAll();
-      setStores(Array.isArray(storesRes.data) ? storesRes.data : []);
-    } catch (error) {
-      console.error('Failed to load stores:', error);
-    }
-  }, []);
 
   useEffect(() => {
     void loadProducts();
@@ -76,12 +66,6 @@ export function ProductListPage() {
       void refreshCategories();
     }
   }, [categories.length, refreshCategories]);
-
-  useEffect(() => {
-    if (isAdmin) {
-      void loadStores();
-    }
-  }, [isAdmin, loadStores]);
 
   const handleSearch = (value: string) => {
     setSearchQuery(value);
@@ -368,23 +352,6 @@ export function ProductListPage() {
             ))}
           </SelectContent>
         </Select>
-
-        {isAdmin && <Select
-          value={filters.store_id || 'all'}
-          onValueChange={(value) => handleFilterChange('store_id', value === 'all' ? '' : value)}
-        >
-          <SelectTrigger className="w-full sm:w-45">
-            <SelectValue placeholder={t('products.filterByStore')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('common.all')}</SelectItem>
-            {stores.map((store) => (
-              <SelectItem key={store.id} value={store.id}>
-                {store.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>}
       </div>
 
       {selectedProducts.length > 0 && (

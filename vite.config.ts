@@ -28,6 +28,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: true,
       },
+      '/media': {
+        target: 'https://api.avtoyon.uz',
+        changeOrigin: true,
+        secure: true,
+      },
     },
   },
   test: {

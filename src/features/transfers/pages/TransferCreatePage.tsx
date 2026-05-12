@@ -21,7 +21,8 @@ interface TransferItemForm {
 }
 
 export function TransferCreatePage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language || 'uz';
   const navigate = useNavigate();
   const [stores, setStores] = useState<Store[]>([]);
   const [saving, setSaving] = useState(false);
@@ -91,7 +92,7 @@ export function TransferCreatePage() {
         to_store: toStoreId,
         items: validItems,
       });
-      navigate('/transfers');
+      navigate(`/${lang}/transfers`);
     } catch (error) {
       console.error('Failed to create transfer:', error);
     } finally {
@@ -105,7 +106,7 @@ export function TransferCreatePage() {
         title={t('transfers.createTransfer')}
         description={t('transfers.title')}
         breadcrumbs={[
-          { label: t('nav.transfers'), href: '/transfers' },
+          { label: t('nav.transfers'), href: `/${lang}/transfers` },
           { label: t('common.add') },
         ]}
       />

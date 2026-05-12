@@ -470,7 +470,7 @@ export function StockEntryListPage() {
           title={t('inventory.title')}
           description={t('inventory.listDescription')}
         />
-        <Link to={`/${lang}/inventory/new`}>
+        <Link to={`/${lang}/stockentry/new`}>
           <Button className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             {t('inventory.createIncomingStock')}
