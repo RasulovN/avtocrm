@@ -16,9 +16,10 @@ import {
   SelectValue,
 } from '../../components/ui/Select';
 import { productService } from '../../services/productService';
+import { storeService } from '../../services/storeService';
 import { useAuthStore } from '../../app/store';
 import { useCategories } from '../../context/CategoryContext';
-import type { Product, ProductFilters } from '../../types';
+import type { Product, ProductFilters, Store } from '../../types';
 import { formatCurrency } from '../../utils';
 
 export function ProductListPage() {
@@ -40,6 +41,7 @@ export function ProductListPage() {
   const [deleting, setDeleting] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [deactivating, setDeactivating] = useState(false);
+  const [stores, setStores] = useState<Store[]>([]);
 
   const loadProducts = useCallback(async () => {
     try {
@@ -51,73 +53,19 @@ export function ProductListPage() {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
       console.error('Failed to load products:', error);
-      setProducts([
-        {
-          id: '1',
-          name: 'Oil Filter',
-          description: 'Premium oil filter for cars',
-          purchase_price: 15000,
-          selling_price: 25000,
-          category: 1,
-          supplier_id: '1',
-          supplier_name: 'AutoParts Co',
-          store_id: '1',
-          store_name: 'Main Store',
-          sku: 'SKU-001',
-          quantity: 100,
-          inventory_by_store: [
-            { store_id: '1', store_name: 'Main Store', quantity: 60, purchase_price: 15000, selling_price: 25000 },
-            { store_id: '2', store_name: 'Warehouse', quantity: 40, purchase_price: 15000, selling_price: 25000 },
-          ],
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        {
-          id: '2',
-          name: 'Brake Pads',
-          description: 'Ceramic brake pads',
-          purchase_price: 45000,
-          selling_price: 75000,
-          category: 2,
-          supplier_id: '1',
-          supplier_name: 'AutoParts Co',
-          store_id: '1',
-          store_name: 'Main Store',
-          sku: 'SKU-002',
-          quantity: 50,
-          inventory_by_store: [
-            { store_id: '1', store_name: 'Main Store', quantity: 30, purchase_price: 45000, selling_price: 75000 },
-            { store_id: '2', store_name: 'Warehouse', quantity: 20, purchase_price: 45000, selling_price: 75000 },
-          ],
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        {
-          id: '3',
-          name: 'Spark Plug',
-          description: 'IRidium spark plug',
-          purchase_price: 8000,
-          selling_price: 15000,
-          category: 3,
-          supplier_id: '1',
-          supplier_name: 'AutoParts Co',
-          store_id: '1',
-          store_name: 'Main Store',
-          sku: 'SKU-003',
-          quantity: 200,
-          inventory_by_store: [
-            { store_id: '1', store_name: 'Main Store', quantity: 100, purchase_price: 8000, selling_price: 15000 },
-            { store_id: '2', store_name: 'Warehouse', quantity: 100, purchase_price: 8000, selling_price: 15000 },
-          ],
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-      ]);
-      setTotal(3);
     } finally {
       setLoading(false);
     }
   }, [filters, page, isAdmin, userStoreId]);
+
+  const loadStores = useCallback(async () => {
+    try {
+      const storesRes = await storeService.getAll();
+      setStores(Array.isArray(storesRes.data) ? storesRes.data : []);
+    } catch (error) {
+      console.error('Failed to load stores:', error);
+    }
+  }, []);
 
   useEffect(() => {
     void loadProducts();
@@ -128,6 +76,12 @@ export function ProductListPage() {
       void refreshCategories();
     }
   }, [categories.length, refreshCategories]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      void loadStores();
+    }
+  }, [isAdmin, loadStores]);
 
   const handleSearch = (value: string) => {
     setSearchQuery(value);
@@ -424,8 +378,11 @@ export function ProductListPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t('common.all')}</SelectItem>
-            <SelectItem value="1">Асосий дўкон</SelectItem>
-            <SelectItem value="2">Омбор</SelectItem>
+            {stores.map((store) => (
+              <SelectItem key={store.id} value={store.id}>
+                {store.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>}
       </div>

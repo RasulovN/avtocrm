@@ -26,6 +26,10 @@ export function TransferCreatePage() {
   const [stores, setStores] = useState<Store[]>([]);
   const [saving, setSaving] = useState(false);
   const { products: allProducts, loading: productsLoading } = useProducts();
+  const [fromStoreId, setFromStoreId] = useState('');
+  const [toStoreId, setToStoreId] = useState('');
+  const [items, setItems] = useState<TransferItemForm[]>([]);
+  
   const safeStores = useMemo(() => (Array.isArray(stores) ? stores : []), [stores]);
   const safeProducts = useMemo(() => {
     if (productsLoading) return [];
@@ -44,10 +48,6 @@ export function TransferCreatePage() {
     const inv = p.inventory_by_store?.find(i => String(i.store_id) === String(fromStoreId));
     return inv ? inv.quantity : 0;
   };
-
-  const [fromStoreId, setFromStoreId] = useState('');
-  const [toStoreId, setToStoreId] = useState('');
-  const [items, setItems] = useState<TransferItemForm[]>([]);
 
   const loadData = useCallback(async () => {
     try {
