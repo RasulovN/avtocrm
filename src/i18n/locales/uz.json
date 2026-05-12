@@ -41,7 +41,9 @@
     "of": "jami",
     "print": "Chop etish",
     "export": "Eksport",
-    "progress": "Jarayon"
+    "progress": "Jarayon",
+    "dateFrom": "Sana boshi",
+    "dateTo": "Sana oxiri"
   },
   "nav": {
     "dashboard": "Bosh sahifa",
@@ -192,6 +194,9 @@
     "createIncomingStock": "Kirim yaratish",
     "addFromSupplier": "Ta'minotchidan qo'shish",
     "basicInfo": "Asosiy ma'lumotlar",
+    "detailsTitle": "Kirim tafsilotlari",
+    "barcodeDescription": "Ushbu kirim uchun mahsulot shtrixkodlari",
+    "payDebtDescription": "Ta'minotchiga qarzni to'lash",
     "supplier": "Ta'minotchi",
     "store": "Do'kon",
     "items": "Mahsulotlar",
@@ -704,7 +709,9 @@
     "chartType": "Chart turi",
     "period": "Davr",
     "branch": "Filial",
-    "scanBarcode": "Shtrixkodni skanerlang yoki kiriting..."
+    "scanBarcode": "Shtrixkodni skanerlang yoki kiriting...",
+    "search": "Qidirish...",
+    "selectSupplier": "Ta'minotchini tanlang"
   },
   "titles": {
     "clickToView": "Ko'rish uchun bosing",

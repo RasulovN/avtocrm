@@ -46,7 +46,9 @@
     "cancelled": "Бекор қилинган",
     "found": "Топилди",
     "myBranch": "Менинг филиалим",
-    "unknown": "Номаълум"
+    "unknown": "Номаълум",
+    "dateFrom": "Сана боши",
+    "dateTo": "Сана охири"
   },
   "nav": {
     "dashboard": "Бош саҳифа",
@@ -213,6 +215,9 @@
     "createIncomingStock": "Кирим яратиш",
     "addFromSupplier": "Та'минотчидан қўшиш",
     "basicInfo": "Асосий ма'лумотлар",
+    "detailsTitle": "Кирим тафсилотлари",
+    "barcodeDescription": "Ушбу кирим учун маҳсулот штрихкодлари",
+    "payDebtDescription": "Таъминотчига қарзни тўлаш",
     "supplier": "Та'минотчи",
     "store": "Дўкон",
     "items": "Маҳсулотлар",
@@ -781,7 +786,9 @@
     "chartType": "Чарт тури",
     "period": "Давр",
     "branch": "Филиал",
-    "scanBarcode": "Штрихкодни сканерланг ёки киритинг..."
+    "scanBarcode": "Штрихкодни сканерланг ёки киритинг...",
+    "search": "Қидириш...",
+    "selectSupplier": "Таъминотчини танланг"
   },
   "titles": {
     "clickToView": "Кўриш учун босинг",
