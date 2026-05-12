@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, type ChangeEvent } from 'rea
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, Plus, X } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { PageHeader } from '../../../components/shared/PageHeader';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
@@ -16,6 +17,7 @@ import type { Store } from '../../../types';
 interface TransferItemForm {
   product: string;
   quantity: number;
+  availableQuantity?: number;
 }
 
 export function TransferCreatePage() {
@@ -27,8 +29,21 @@ export function TransferCreatePage() {
   const safeStores = useMemo(() => (Array.isArray(stores) ? stores : []), [stores]);
   const safeProducts = useMemo(() => {
     if (productsLoading) return [];
-    return allProducts;
-  }, [allProducts, productsLoading]);
+    if (!fromStoreId) return allProducts;
+    // Better to show products that actually have inventory in that store
+    return allProducts.filter(p => {
+      const inv = p.inventory_by_store?.find(i => String(i.store_id) === String(fromStoreId));
+      return inv && inv.quantity > 0;
+    });
+  }, [allProducts, productsLoading, fromStoreId]);
+
+  const getProductStock = (productId: string) => {
+    if (!fromStoreId || !productId) return 0;
+    const p = allProducts.find(prod => String(prod.id) === String(productId));
+    if (!p) return 0;
+    const inv = p.inventory_by_store?.find(i => String(i.store_id) === String(fromStoreId));
+    return inv ? inv.quantity : 0;
+  };
 
   const [fromStoreId, setFromStoreId] = useState('');
   const [toStoreId, setToStoreId] = useState('');
@@ -55,6 +70,18 @@ export function TransferCreatePage() {
 
   const handleSubmit = async (e: ChangeEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (saving) return;
+    
+    const invalidItems = items.filter(item => {
+      const currentStock = getProductStock(item.product);
+      return item.quantity > currentStock;
+    });
+
+    if (invalidItems.length > 0) {
+      toast.error(t('messages.insufficientStock', 'Omborda yetarli tovar yo\'q!'));
+      return;
+    }
+
     const validItems = items.filter(item => item.product && item.quantity > 0);
     if (validItems.length === 0) return;
     try {
@@ -133,7 +160,12 @@ export function TransferCreatePage() {
                         value={item.product} 
                         onValueChange={(value) => {
                           const newItems = [...items];
+                          const availableQty = getProductStock(value);
                           newItems[index].product = value;
+                          newItems[index].availableQuantity = availableQty;
+                          if (newItems[index].quantity > availableQty) {
+                             newItems[index].quantity = availableQty;
+                          }
                           setItems(newItems);
                         }}
                       >
@@ -141,9 +173,13 @@ export function TransferCreatePage() {
                           <SelectValue placeholder={t('transfers.selectProduct')} />
                         </SelectTrigger>
                         <SelectContent>
-                          {safeProducts.map(p => (
-                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                          ))}
+                          {safeProducts.map(p => {
+                             const inv = p.inventory_by_store?.find(i => String(i.store_id) === String(fromStoreId));
+                             const q = inv ? inv.quantity : 0;
+                             return (
+                               <SelectItem key={p.id} value={p.id}>{p.name} ({q})</SelectItem>
+                             )
+                          })}
                         </SelectContent>
                       </Select>
                     </div>
@@ -155,7 +191,15 @@ export function TransferCreatePage() {
                         onChange={(e: ChangeEvent<HTMLInputElement>) => {
                           const newItems = [...items];
                           const val = e.target.value;
-                          newItems[index].quantity = val === '' ? 0 : Number(val);
+                          const numVal = val === '' ? 0 : Number(val);
+                          const availableQty = newItems[index].availableQuantity ?? getProductStock(newItems[index].product);
+                          
+                          if (numVal > availableQty) {
+                             toast.error(`${t('messages.insufficientStock', 'Maksimal qoldiq')}: ${availableQty}`);
+                             newItems[index].quantity = availableQty;
+                          } else {
+                             newItems[index].quantity = numVal;
+                          }
                           setItems(newItems);
                         }}
                       />

@@ -141,6 +141,7 @@ export function StockEntryCreatePage() {
 
   const handleSubmit = async (e: ChangeEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (saving) return;
     try {
       setSaving(true);
       await inventoryService.create({

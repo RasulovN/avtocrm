@@ -28,6 +28,7 @@ interface CartItem {
   purchase_price: number;
   selling_price: number;
   total: number;
+  available_stock: number;
 }
 
 const getProductImages = (product?: Product | null): string[] => {
@@ -116,7 +117,20 @@ export function SalesPage() {
 
   const [storeId, setStoreId] = useState(userStoreId);
   const [categoryFilter, setCategoryFilter] = useState('');
-  const [items, setItems] = useState<CartItem[]>([]);
+  
+  const [items, setItems] = useState<CartItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(`crm_cart_${user?.id || 'guest'}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Persist cart whenever items change
+  useEffect(() => {
+    localStorage.setItem(`crm_cart_${user?.id || 'guest'}`, JSON.stringify(items));
+  }, [items, user?.id]);
 
   const [cashAmount, setCashAmount] = useState(0);
   const [cardAmount, setCardAmount] = useState(0);
@@ -177,29 +191,53 @@ export function SalesPage() {
       return;
     }
 
+    // Determine available stock for this specific store
+    let availableStock = 0;
+    if (product.quantity !== undefined) {
+      availableStock = product.quantity;
+    } else if (product.inventory_by_store && storeId) {
+      const storeInv = product.inventory_by_store.find(inv => String(inv.store_id) === String(storeId));
+      availableStock = storeInv ? storeInv.quantity : 0;
+    } else {
+      availableStock = product.total_count ?? 0;
+    }
+
     setItems((prevItems) => {
       const existingIndex = prevItems.findIndex((item) => String(item.product_id) === productId);
       if (existingIndex >= 0) {
         const newItems = [...prevItems];
         const existingItem = newItems[existingIndex];
+        
+        if (existingItem.quantity + 1 > availableStock) {
+          toast.error(t('messages.insufficientStock', 'Omborda mahsulot yetarli emas!') + ` (${availableStock})`);
+          return prevItems;
+        }
+
         existingItem.quantity += 1;
         existingItem.total = existingItem.selling_price * existingItem.quantity;
         return newItems;
       } 
+      
+      if (availableStock < 1) {
+         toast.error(t('messages.insufficientStock', 'Omborda mahsulot yetarli emas!') + ' (0)');
+         return prevItems;
+      }
+
       return [
         ...prevItems,
         {
           product_id: productId,
           product_name: product.name || product.sku || 'Noma\'lum',
-          store_id: product.store_id || userStoreId || '1',
+          store_id: product.store_id || storeId || userStoreId || '1',
           quantity: 1,
           purchase_price: product.purchase_price ?? 0,
           selling_price: product.selling_price ?? 0,
           total: product.selling_price ?? 0,
+          available_stock: availableStock,
         },
       ];
     });
-  }, [userStoreId]);
+  }, [storeId, userStoreId, t]);
 
   const findProductByBarcode = useCallback(async (barcode: string, isFromScan: boolean = true): Promise<Product | null> => {
     const normalizedBarcode = barcode.trim();
@@ -453,8 +491,16 @@ export function SalesPage() {
   const updateQuantity = (index: number, quantity: number) => {
     if (!Number.isFinite(quantity) || quantity < 0) return;
     const newItems = [...items];
-    newItems[index].quantity = quantity;
-    newItems[index].total = newItems[index].selling_price * quantity;
+    const item = newItems[index];
+
+    if (quantity > item.available_stock) {
+      toast.error(t('messages.insufficientStock', 'Omborda mahsulot yetarli emas!') + ` (${item.available_stock})`);
+      item.quantity = item.available_stock;
+    } else {
+      item.quantity = quantity;
+    }
+    
+    item.total = item.selling_price * item.quantity;
     setItems(newItems);
   };
 
@@ -502,6 +548,7 @@ export function SalesPage() {
   };
 
   const handleFinishSale = async () => {
+    if (saving) return;
     if (items.length === 0) return;
 
     // Check for zero quantities
@@ -926,7 +973,7 @@ export function SalesPage() {
           <div className="flex flex-col space-y-2 xl:col-span-3">
             <div className="bg-card border border-gray-900 rounded-lg flex min-h-80 flex-col xl:flex-1">
               <div className="p-3 pb-2">
-                <h4 className="text-base font-semibold dark:text-white">{'Тўлов'}</h4>
+                <h4 className="text-base font-semibold dark:text-white">{t('sales.payment', 'Тўлов')}</h4>
               </div>
               <div className="px-3 flex-1 space-y-3">
                 <div className="space-y-2">

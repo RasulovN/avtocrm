@@ -247,8 +247,12 @@ export function DataTable<T extends { id: string }>({
                 >
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{String(item['name' as keyof T] ?? '')}</p>
-                      <p className="text-sm text-muted-foreground font-mono">{String(item['sku' as keyof T] ?? '')}</p>
+                      <p className="font-medium truncate">
+                         {itemNameKey ? String(item[itemNameKey] ?? '') : String(item['name' as keyof T] ?? '')}
+                      </p>
+                      {item['sku' as keyof T] && (
+                         <p className="text-sm text-muted-foreground font-mono">{String(item['sku' as keyof T])}</p>
+                      )}
                     </div>
                     {selectableRows && (
                       <input

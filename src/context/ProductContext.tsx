@@ -30,7 +30,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
     // logger.info('refreshProducts called, isAdmin:', isAdmin, 'userStoreId:', userStoreId);
     try {
       setLoading(true);
-      const filters: { limit?: number; store_id?: string } = { limit: 500 };
+      const filters: { limit?: number; store_id?: string } = { limit: 2000 };
       if (!isAdmin && userStoreId) {
         filters.store_id = userStoreId;
       }
