@@ -1123,7 +1123,7 @@ export function SalesPage() {
                   {discount > 0 && (
                     <div className="flex justify-between text-xs">
                       <span className="text-muted-foreground dark:text-gray-400">
-                        Chegirma ({discountType === 'p' ? `${discount}%` : ''}):
+                        {t('sales.discount')} ({discountType === 'p' ? `${discount}%` : ''}):
                       </span>
                       <span className="font-bold dark:text-white">-{formatCurrency(calculatedDiscount)}</span>
                     </div>
@@ -1164,7 +1164,7 @@ export function SalesPage() {
         <div className="receipt-modal fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="receipt-content receipt-print bg-white dark:bg-gray-800 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-4 border-b dark:border-gray-600 flex justify-between items-center print:hidden ">
-              <h3 className="text-lg font-bold dark:text-white">Chek</h3>
+              <h3 className="text-lg font-bold dark:text-white">{t('sales.receipt')}</h3>
               <Button variant="ghost" size="icon" onClick={() => setShowReceipt(false)}>
                 <X className="h-4 w-4" />
               </Button>
@@ -1369,7 +1369,7 @@ export function SalesPage() {
                         <span className="font-medium">{selectedProduct?.id || '-'}</span>
                       </div>
                       <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">{t('products.category', 'Kategoriya')}</span>
+                        <span className="text-muted-foreground">{t('products.category')}</span>
                         <span className="font-medium text-right">{selectedProduct?.category_name || "-"}</span>
                       </div>
                     </div>
@@ -1417,7 +1417,7 @@ export function SalesPage() {
                     <div className="flex items-center gap-2">
                       <Package className="h-4 w-4 text-blue-500" />
                       <h5 className="font-semibold text-sm dark:text-white">
-                        {t('sales.storeStock', 'Boshqa do\'konlardagi qoldiqlar')}
+                        {t('sales.storeStock', 'Бошқа дўконлардаги қолдиқлар')}
                       </h5>
                     </div>
                     <div className="grid gap-2">
@@ -1440,7 +1440,7 @@ export function SalesPage() {
                                   : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                               }`}
                             >
-                              {inv.quantity} {t('common.pcs', 'dona')}
+                              {inv.quantity} {t('common.pcs', 'дона')}
                             </span>
                             {inv.selling_price && inv.selling_price > 0 && (
                               <span className="text-xs font-medium text-muted-foreground">

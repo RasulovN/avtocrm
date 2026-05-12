@@ -371,7 +371,7 @@ export function ProductListPage() {
                 disabled={deactivating}
               >
                 <Power className="mr-2 h-4 w-4" />
-                {deactivating ? 'Faolsizlantirilmoqda...' : 'Faolsizlantirish'}
+                {deactivating ? t('common.loading') : t('products.deactivate', 'Фаолсизлантириш')}
               </Button>
             )}
           </div>

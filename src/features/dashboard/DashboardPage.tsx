@@ -125,7 +125,7 @@ export function DashboardPage() {
     dateRange: getPresetRange('monthly'),
     storeId: userStoreId || 'all',
   });
-  const [availableBranches, setAvailableBranches] = useState<BranchOption[]>([{ id: 'all', name: 'Barchasi' }]);
+  const [availableBranches, setAvailableBranches] = useState<BranchOption[]>([{ id: 'all', name: t('common.all') }]);
   const [stats, setStats] = useState<ReportData | null>(null);
   const [detailedData, setDetailedData] = useState<DetailedReportsResponse | null>(null);
   const [topProducts, setTopProducts] = useState<DashboardTopProduct[]>([]);
@@ -133,7 +133,7 @@ export function DashboardPage() {
 
   useEffect(() => {
     if (!user) {
-      setAvailableBranches([{ id: 'all', name: 'Barchasi' }]);
+      setAvailableBranches([{ id: 'all', name: t('common.all') }]);
       return;
     }
 
@@ -142,7 +142,7 @@ export function DashboardPage() {
         setAvailableBranches([
           {
             id: userStoreId || 'all',
-            name: user?.store_name || "Mening filalim",
+            name: user?.store_name || t('common.myBranch', "Менинг филиалим"),
           },
         ]);
         return;
@@ -151,7 +151,7 @@ export function DashboardPage() {
       try {
         const stores = await storeService.getAll({ limit: 100 });
         const next: BranchOption[] = [
-          { id: 'all', name: 'Barchasi' },
+          { id: 'all', name: t('common.all') },
           ...stores.data.map((store) => ({
             id: String(store.id),
             name: store.name || store.name_uz || `#${store.id}`,
@@ -159,7 +159,7 @@ export function DashboardPage() {
         ];
         setAvailableBranches(next);
       } catch {
-        setAvailableBranches([{ id: 'all', name: 'Barchasi' }]);
+        setAvailableBranches([{ id: 'all', name: t('common.all') }]);
       }
     };
 
@@ -268,7 +268,7 @@ export function DashboardPage() {
   const maxSold = useMemo(() => Math.max(...topProducts.map((item) => item.sold), 0), [topProducts]);
   const selectedBranchLabel = useMemo(() => {
     const branch = availableBranches.find((item) => item.id === filters.storeId);
-    return branch?.name ?? "Noma'lum filial";
+    return branch?.name ?? t('common.unknown', "Номаълум филиал");
   }, [availableBranches, filters.storeId]);
 
   const profitChartData = detailedData?.charts?.profitTrend?.data || [];
@@ -308,7 +308,7 @@ export function DashboardPage() {
       <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
         <PageHeader
           title={t('dashboard.title')}
-          description={isAdmin ? 'Filiallar kesimida umumiy ko‘rsatkichlar va tahlil' : 'Filialingiz bo‘yicha tezkor statistika'}
+          description={isAdmin ? t('dashboard.subtitleAdmin', 'Филиаллар кесимида умумий кўрсаткичлар ва таҳлил') : t('dashboard.subtitleUser', 'Филиалингиз бўйича тезкор статистика')}
         />
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <Select value={statType} onValueChange={(value) => handleStatTypeChange(value as ReportsFilter)}>
@@ -360,7 +360,7 @@ export function DashboardPage() {
           </div>
           <div className="mt-4 flex items-center text-sm">
             <TrendingUp className="mr-1 h-4 w-4 text-emerald-600" />
-            <span className="font-medium text-emerald-600">Active flow</span>
+            <span className="font-medium text-emerald-600">{t('dashboard.activeFlow')}</span>
           </div>
         </div>
 
@@ -369,7 +369,7 @@ export function DashboardPage() {
           <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-violet-500/10 blur-2xl transition-all group-hover:bg-violet-500/20" />
           <div className="relative flex items-start justify-between">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">{t('reports.stats.netProfit', 'Sof foyda')}</p>
+              <p className="text-sm font-medium text-muted-foreground">{t('reports.stats.netProfit', 'Соф фойда')}</p>
               {loading ? (
                 <div className="mt-2 h-8 w-32 animate-pulse rounded-md bg-muted" />
               ) : (
@@ -382,7 +382,7 @@ export function DashboardPage() {
           </div>
           <div className="mt-4 flex items-center text-sm">
             <TrendingUp className="mr-1 h-4 w-4 text-violet-600" />
-            <span className="font-medium text-violet-600">Estimation</span>
+            <span className="font-medium text-violet-600">{t('dashboard.estimation')}</span>
           </div>
         </div>
 
@@ -404,7 +404,7 @@ export function DashboardPage() {
           </div>
           <div className="mt-4 flex items-center text-sm">
             <TrendingDown className="mr-1 h-4 w-4 text-rose-600" />
-            <span className="font-medium text-rose-600">Payables</span>
+            <span className="font-medium text-rose-600">{t('dashboard.payables')}</span>
           </div>
         </div>
 
@@ -426,7 +426,7 @@ export function DashboardPage() {
           </div>
           <div className="mt-4 flex items-center text-sm">
             <Store className="mr-1 h-4 w-4 text-amber-600" />
-            <span className="font-medium text-amber-600">In inventory</span>
+            <span className="font-medium text-amber-600">{t('dashboard.inInventory')}</span>
           </div>
         </div>
       </div>
@@ -437,8 +437,8 @@ export function DashboardPage() {
           <CardHeader className="pb-2 border-b bg-muted/5">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-xl font-bold">{t('reports.performanceTrend', 'Faoliyat tendensiyasi')}</CardTitle>
-                <CardDescription className="mt-1">{t('reports.profitProgression', 'Profit progression dynamics')}</CardDescription>
+                <CardTitle className="text-xl font-bold">{t('reports.performanceTrend', 'Фаолият тенденцияси')}</CardTitle>
+                <CardDescription className="mt-1">{t('reports.profitProgression')}</CardDescription>
               </div>
               <div className="hidden md:flex items-center gap-2">
                 <Input
@@ -593,7 +593,7 @@ export function DashboardPage() {
                       <div className="absolute w-full h-[2px] bg-emerald-500" />
                       <div className="relative h-2.5 w-2.5 rounded-full border-2 border-emerald-600 bg-white" />
                     </div>
-                    <span>{t('reports.stats.netProfit', 'Sof foyda')} ($)</span>
+                    <span>{t('reports.stats.netProfit', 'Соф фойда')} ($)</span>
                   </div>
                 </div>
               </div>
@@ -601,7 +601,7 @@ export function DashboardPage() {
               <div className="flex h-[260px] items-center justify-center rounded-xl border-2 border-dashed bg-muted/20">
                 <div className="text-center">
                   <TrendingUp className="mx-auto h-10 w-10 text-muted-foreground opacity-30" />
-                  <p className="mt-2 text-sm text-muted-foreground font-medium">Ma&apos;lumotlar to&apos;planmoqda...</p>
+                  <p className="mt-2 text-sm text-muted-foreground font-medium">{t('common.loading')}</p>
                 </div>
               </div>
             )}
@@ -618,7 +618,7 @@ export function DashboardPage() {
                   <ShoppingCart className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground">{t('customers.totalOrders', 'Buyurtmalar soni')}</p>
+                  <p className="text-xs font-medium text-muted-foreground">{t('customers.totalOrders')}</p>
                   <p className="text-lg font-bold leading-none">{toNumber(summary.totalOrders)}</p>
                 </div>
               </div>
@@ -629,7 +629,7 @@ export function DashboardPage() {
                   <TrendingUp className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground">{t('reports.stats.avgOrder', 'O&apos;rtacha chek')}</p>
+                  <p className="text-xs font-medium text-muted-foreground">{t('reports.stats.avgOrder')}</p>
                   <p className="text-lg font-bold leading-none">{formatCurrency(summary.averageOrderValue || 0)}</p>
                 </div>
               </div>
@@ -640,7 +640,7 @@ export function DashboardPage() {
                   <Users className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground">{t('reports.stats.totalCustomers', 'Mijozlar')}</p>
+                  <p className="text-xs font-medium text-muted-foreground">{t('reports.stats.totalCustomers')}</p>
                   <p className="text-lg font-bold leading-none">{toNumber(summary.totalCustomers)}</p>
                 </div>
               </div>
@@ -650,7 +650,7 @@ export function DashboardPage() {
           {/* Summary Context */}
           <Card className="flex flex-col justify-between">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg">{t('dashboard.activeParameters', 'Faol parametrlar')}</CardTitle>
+              <CardTitle className="text-lg">{t('dashboard.activeParameters')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 pb-6">
               <div className="flex items-center gap-3 rounded-xl bg-muted/30 p-3">
@@ -661,7 +661,7 @@ export function DashboardPage() {
                   <p className="font-medium text-foreground">
                     {filters.dateRange.from || '-'} &mdash; {filters.dateRange.to || '-'}
                   </p>
-                  <p className="text-muted-foreground">Tahlil davri ({rangeMode})</p>
+                  <p className="text-muted-foreground">{t('reports.analysisPeriod', 'Таҳлил даври')} ({rangeMode})</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 rounded-xl bg-muted/30 p-3">
@@ -686,7 +686,7 @@ export function DashboardPage() {
               <Trophy className="h-5 w-5 text-amber-500 fill-amber-500/20" />
               <div>
                 <CardTitle className="text-lg">{t('dashboard.topProducts')}</CardTitle>
-                <CardDescription>{t('reports.topProductsDescription', 'Ko‘p sotilgan mahsulotlar')}</CardDescription>
+                <CardDescription>{t('reports.topProductsDescription', 'Кўп сотилган маҳсулотлар')}</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -723,7 +723,7 @@ export function DashboardPage() {
                           <div className="min-w-0">
                             <p className="truncate font-semibold tracking-tight text-sm sm:text-base group-hover:text-primary transition-colors">{product.name}</p>
                             <p className="text-xs text-muted-foreground flex items-center gap-1">
-                              <ShoppingCart className="h-3 w-3" /> {product.sold} {t('common.pcs', 'dona')}
+                              <ShoppingCart className="h-3 w-3" /> {product.sold} {t('common.pcs', 'дона')}
                             </p>
                           </div>
                         </div>
@@ -752,7 +752,7 @@ export function DashboardPage() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Truck className="h-5 w-5 text-amber-500" />
-                  {t('dashboard.supplierDebt', 'Yetkazib beruvchi qarzlari')}
+                  {t('dashboard.supplierDebt', 'Етказиб берувчи қарзлари')}
                 </CardTitle>
               </div>
             </CardHeader>
@@ -765,16 +765,16 @@ export function DashboardPage() {
               ) : toNumber(stats?.total_supplier_debt) === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
                   <Truck className="mb-2 h-8 w-8 opacity-20" />
-                  <p className="text-xs font-medium">Qarzlar mavjud emas</p>
+                  <p className="text-xs font-medium">{t('dashboard.noDebts')}</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between rounded-xl bg-amber-50 dark:bg-amber-950/30 p-4 text-amber-900 dark:text-amber-200">
-                    <span className="text-sm font-medium">Jami balans:</span>
+                    <span className="text-sm font-medium">{t('reports.stats.totalBalance', 'Жами баланс')}:</span>
                     <span className="text-lg font-bold">{formatCurrency(toNumber(stats?.total_supplier_debt))}</span>
                   </div>
                   <div className="p-4 border-2 border-dashed rounded-xl text-center">
-                    <p className="text-xs text-muted-foreground">Batafsil tahlilni "Hisobotlar" sahifasida ko'ring</p>
+                    <p className="text-xs text-muted-foreground">{t('reports.checkDetails', 'Батафсил таҳлилни "Ҳисоботлар" саҳифасида кўринг')}</p>
                   </div>
                 </div>
               )}

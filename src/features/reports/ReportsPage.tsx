@@ -129,7 +129,7 @@ export function ReportsPage() {
     branchId: 'all',
   });
   const [availableBranches, setAvailableBranches] = useState<BranchOption[]>([
-    { id: 'all', name: 'Barchasi' },
+    { id: 'all', name: t('common.all') },
   ]);
   const [data, setData] = useState<DetailedReportsResponse>(EMPTY_REPORT_DATA);
   const [loading, setLoading] = useState(false);
@@ -140,7 +140,7 @@ export function ReportsPage() {
       try {
         const stores = await storeService.getAll({ limit: 100 });
         const next: BranchOption[] = [
-          { id: 'all', name: 'Barchasi' },
+          { id: 'all', name: t('common.all') },
           ...stores.data.map((store) => ({
             id: String(store.id),
             name: store.name || store.name_uz || `#${store.id}`,
@@ -148,7 +148,7 @@ export function ReportsPage() {
         ];
         setAvailableBranches(next);
       } catch {
-        setAvailableBranches([{ id: 'all', name: 'Barchasi' }]);
+        setAvailableBranches([{ id: 'all', name: t('common.all') }]);
       }
     };
 
@@ -386,13 +386,13 @@ export function ReportsPage() {
                   onClick={() => setTrendChartType('line')}
                   className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${trendChartType === 'line' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                 >
-                  Chiziqli
+                  Чизиқли
                 </button>
                 <button
                   onClick={() => setTrendChartType('bar')}
                   className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${trendChartType === 'bar' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                 >
-                  Ustunli
+                  Устунли
                 </button>
               </div>
             </div>
@@ -511,7 +511,7 @@ export function ReportsPage() {
                 </div>
               ) : (
                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground border-2 border-dashed rounded-xl ml-14">
-                  Grafik ma&apos;lumoti mavjud emas
+                  {t('common.noData')}
                 </div>
               )}
             </div>
@@ -555,8 +555,8 @@ export function ReportsPage() {
                         <div className="min-w-0">
                           <h4 className="font-bold text-sm truncate group-hover:text-emerald-600 transition-colors">{branch.store__name || `#${branch.store_id}`}</h4>
                           <div className="flex gap-3 mt-0.5 text-[10px] text-muted-foreground">
-                            <span className="flex items-center gap-1"><ShoppingCart className="h-3 w-3" /> {branch.orders} orders</span>
-                            <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {branch.customers} customers</span>
+                            <span className="flex items-center gap-1"><ShoppingCart className="h-3 w-3" /> {branch.orders}</span>
+                            <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {branch.customers}</span>
                           </div>
                         </div>
                         <div className="text-right shrink-0">
@@ -609,7 +609,7 @@ export function ReportsPage() {
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm truncate leading-none mb-1">{product.name}</p>
                       <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <span className="text-foreground font-medium">{product.totalSold}</span> dona sotildi
+                        <span className="text-foreground font-medium">{product.totalSold}</span> {t('common.pcs')}
                       </p>
                     </div>
                     <div className="text-right font-bold text-sm tracking-tight text-emerald-600">
@@ -632,13 +632,13 @@ export function ReportsPage() {
                   <Users className="h-4 w-4 text-rose-500" />
                   {t('dashboard.totalDebt')}
                 </CardTitle>
-                <span className="text-xs text-muted-foreground font-medium uppercase">Mijozlar</span>
+                <span className="text-xs text-muted-foreground font-medium uppercase">{t('reports.customers')}</span>
               </div>
             </CardHeader>
             <CardContent className="pt-4">
               {data.debts.customerDebts.length === 0 ? (
                 <div className="text-center py-6 text-xs text-muted-foreground font-medium bg-muted/20 rounded-xl border border-dashed">
-                  Ayni paytda qarzlar mavjud emas
+                  {t('dashboard.noDebts')}
                 </div>
               ) : (
                 <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
@@ -664,13 +664,13 @@ export function ReportsPage() {
                   <CreditCard className="h-4 w-4 text-amber-500" />
                   {t("reports.supplierDebts")}
                 </CardTitle>
-                <span className="text-xs text-muted-foreground font-medium uppercase">Yetkazib beruvchilar</span>
+                <span className="text-xs text-muted-foreground font-medium uppercase">{t('reports.suppliers')}</span>
               </div>
             </CardHeader>
             <CardContent className="pt-4">
               {data.debts.supplierDebts.length === 0 ? (
                 <div className="text-center py-6 text-xs text-muted-foreground font-medium bg-muted/20 rounded-xl border border-dashed">
-                  {t("reports.noSupplierDebts", "Qarzlar mavjud emas")}
+                  {t("reports.noSupplierDebts", "Қарзлар мавжуд эмас")}
                 </div>
               ) : (
                 <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
@@ -692,7 +692,7 @@ export function ReportsPage() {
 
       {loading && (
         <div className="fixed bottom-6 right-6 bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm shadow-lg animate-bounce font-medium">
-          Yangilanmoqda...
+          {t('common.loading')}
         </div>
       )}
     </div>
