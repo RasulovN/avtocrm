@@ -130,7 +130,7 @@ export function InventorySessionsListPage({
           <Package className="h-12 w-12 mx-auto mb-4 opacity-50 animate-pulse" />
           <p>{t('common.loading')}</p>
         </div>
-      ) : sessions.length === 0 ? (
+      ) : (sessions?.length || 0) === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
           <p>{t('inventory.noSessions')}</p>
@@ -201,7 +201,7 @@ export function InventorySessionsListPage({
         </div>
       )}
 
-      {!loading && sessions.length > 0 && (
+      {!loading && (sessions?.length || 0) > 0 && (
         <div className="hidden rounded-md border md:block">
           <table className="w-full">
             <thead>

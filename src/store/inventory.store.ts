@@ -35,7 +35,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const sessions = await inventoryApi.getSessions();
-      set({ sessions, loading: false });
+      set({ sessions: sessions || [], loading: false });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to fetch sessions';
       set({ error: message, loading: false });
