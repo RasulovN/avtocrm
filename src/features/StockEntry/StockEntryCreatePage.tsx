@@ -140,6 +140,12 @@ export function StockEntryCreatePage() {
   const paidAmount = paid === '' ? 0 : paid;
   const debt = total - paidAmount;
 
+  useEffect(() => {
+    if (paid !== '' && paid > total) {
+      setPaid(total === 0 ? '' : total);
+    }
+  }, [total, paid]);
+
   const handleSubmit = async (e: ChangeEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (saving) return;
@@ -218,8 +224,17 @@ export function StockEntryCreatePage() {
                 <Label>{t('inventory.paidAmount')}</Label>
                 <Input
                   type="number"
+                  min="0"
+                  max={total}
                   value={paid}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => setPaid(e.target.value === '' ? '' : Number(e.target.value))}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                    const val = e.target.value === '' ? '' : Number(e.target.value);
+                    if (val !== '' && val > total) {
+                      setPaid(total);
+                    } else {
+                      setPaid(val);
+                    }
+                  }}
                 />
               </div>
             </CardContent>

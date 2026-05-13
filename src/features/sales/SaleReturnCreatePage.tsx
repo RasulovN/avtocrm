@@ -1,13 +1,13 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Undo2, ShoppingCart, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Undo2, ShoppingCart, AlertCircle, Search, Check, ChevronDown } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
 import { salesService, saleReturnService } from '../../services/salesService';
-import { formatCurrency } from '../../utils';
+import { formatCurrency, cn } from '../../utils';
 import type { Sale, SaleItem, SaleReturnFormItem } from '../../types';
 import {
   Select,
@@ -34,6 +34,13 @@ export function SaleReturnCreatePage() {
   const [loadingSale, setLoadingSale] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  const saleOptions = useMemo(() => {
+    return sales.map((sale) => ({
+      id: String(sale.id),
+      label: `#${sale.id} - ${sale.store_name || String(sale.store)} - ${formatCurrency(parseFloat(sale.total_amount))}`,
+    }));
+  }, [sales]);
 
   useEffect(() => {
     loadSales();
@@ -149,18 +156,13 @@ export function SaleReturnCreatePage() {
           {loadingSales ? (
             <div className="text-sm text-muted-foreground">{t('common.loading')}</div>
           ) : (
-            <Select value={selectedSaleId} onValueChange={handleSaleChange}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder={t('saleReturns.selectSale')} />
-              </SelectTrigger>
-              <SelectContent>
-                {sales.map((sale) => (
-                  <SelectItem key={sale.id} value={String(sale.id)}>
-                    #{sale.id} - {sale.store_name || String(sale.store)} - {formatCurrency(parseFloat(sale.total_amount))}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SaleSearchSelect
+              value={selectedSaleId}
+              onChange={handleSaleChange}
+              options={saleOptions}
+              placeholder={t('saleReturns.selectSale')}
+              t={t}
+            />
           )}
         </div>
 
@@ -296,6 +298,109 @@ function SaleItemRow({
       </div>
       {isInvalid && (
         <p className="text-xs text-red-600 sm:ml-2">{t('saleReturns.invalidQuantity')}</p>
+      )}
+    </div>
+  );
+}
+
+function SaleSearchSelect({
+  value,
+  onChange,
+  options,
+  placeholder,
+  t,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  options: Array<{ id: string; label: string }>;
+  placeholder: string;
+  t: (key: string) => string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const selectedOption = options.find((opt) => opt.id === value);
+
+  const filteredOptions = useMemo(() => {
+    if (!searchQuery.trim()) return options;
+    const q = searchQuery.trim().toLowerCase();
+    return options.filter((opt) => opt.label.toLowerCase().includes(q));
+  }, [options, searchQuery]);
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-left"
+      >
+        <span className="line-clamp-1">
+          {selectedOption ? selectedOption.label : placeholder}
+        </span>
+        <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 top-full left-0 mt-1 w-full max-h-[300px] flex flex-col rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-80 zoom-in-95 overflow-hidden">
+          {/* Search Area */}
+          <div className="p-2 border-b flex items-center bg-muted/20 shrink-0">
+            <Search className="h-4 w-4 text-muted-foreground mr-2 shrink-0" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t('common.search') + '...'}
+              className="flex h-8 w-full rounded-sm bg-transparent text-sm outline-none placeholder:text-muted-foreground border-0 focus:ring-0 focus:outline-none focus:border-0 p-0"
+              autoFocus
+            />
+          </div>
+
+          {/* Scrollable Options */}
+          <div className="overflow-y-auto flex-1 py-1 max-h-[240px]">
+            {filteredOptions.length === 0 ? (
+              <div className="py-3 text-center text-sm text-muted-foreground">
+                {t('common.noData')}
+              </div>
+            ) : (
+              filteredOptions.map((opt) => {
+                const isSelected = opt.id === value;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => {
+                      onChange(opt.id);
+                      setIsOpen(false);
+                      setSearchQuery('');
+                    }}
+                    className={cn(
+                      "relative flex w-full cursor-default select-none items-center py-2 px-3 text-sm outline-none hover:bg-accent hover:text-accent-foreground text-left transition-colors",
+                      isSelected && "bg-accent/50 font-semibold text-primary"
+                    )}
+                  >
+                    <div className="flex items-center w-full">
+                      <div className="w-6 shrink-0 flex items-center justify-center">
+                        {isSelected && <Check className="h-4 w-4 text-primary" />}
+                      </div>
+                      <span className="line-clamp-1">{opt.label}</span>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

@@ -73,10 +73,6 @@ export function UserListPage() {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
       console.error('Failed to load stores:', error);
-      setStores([
-        { id: '1', name: 'Main Store', address: 'Tashkent', phone: '+998901234567', is_warehouse: false, created_at: new Date().toISOString() },
-        { id: '2', name: 'Warehouse', address: 'Tashkent', phone: '+998901234568', is_warehouse: true, created_at: new Date().toISOString() },
-      ]);
     }
   }, []);
 
@@ -184,10 +180,12 @@ export function UserListPage() {
       render: (item: User) => (
         <span className={`px-2 py-1 rounded-full text-xs ${
           item.role === 'admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+          item.role === 'm' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' :
+          item.role === 's' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
           item.role === 'store_admin' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
           'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
         }`}>
-          {item.role === 's' ? t('users.seller') : item.role === 'su' ? t('users.superUser') : item.role === 'admin' ? t('users.admin') : item.role === 'store_admin' ? t('users.storeAdmin') : t('users.storeUser')}
+          {item.role === 's' ? t('users.seller') : item.role === 'm' ? t('users.manager') : item.role === 'su' ? t('users.superUser') : item.role === 'admin' ? t('users.admin') : item.role === 'store_admin' ? t('users.storeAdmin') : t('users.storeUser')}
         </span>
       ),
     },
@@ -257,10 +255,12 @@ export function UserListPage() {
                   </div>
                   <span className={`shrink-0 rounded-full px-2 py-1 text-xs ${
                     item.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                    item.role === 'm' ? 'bg-indigo-100 text-indigo-800' :
+                    item.role === 's' ? 'bg-emerald-100 text-emerald-800' :
                     item.role === 'store_admin' ? 'bg-blue-100 text-blue-800' :
                     'bg-gray-100 text-gray-800'
                   }`}>
-                    {item.role === 's' ? t('users.seller') : item.role === 'su' ? t('users.superUser') : item.role === 'admin' ? t('users.admin') : item.role === 'store_admin' ? t('users.storeAdmin') : t('users.storeUser')}
+                    {item.role === 's' ? t('users.seller') : item.role === 'm' ? t('users.manager') : item.role === 'su' ? t('users.superUser') : item.role === 'admin' ? t('users.admin') : item.role === 'store_admin' ? t('users.storeAdmin') : t('users.storeUser')}
                   </span>
                 </div>
 
@@ -366,6 +366,18 @@ export function UserListPage() {
                     {safeStores.map((store) => (
                       <option key={store.id} value={store.id}>{store.name}</option>
                     ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('users.role')}</Label>
+                  <select
+                    className="w-full px-3 py-2 border rounded-md bg-background"
+                    value={formData.role || 's'}
+                    onChange={(e: ChangeEvent<HTMLSelectElement>) => setFormData({ ...formData, role: e.target.value as UserRole })}
+                    required
+                  >
+                    <option value="s">{t('users.seller')}</option>
+                    <option value="m">{t('users.manager')}</option>
                   </select>
                 </div>
                 <div className="space-y-2">

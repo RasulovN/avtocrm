@@ -43,7 +43,10 @@
     "export": "Eksport",
     "progress": "Jarayon",
     "dateFrom": "Sana boshi",
-    "dateTo": "Sana oxiri"
+    "dateTo": "Sana oxiri",
+    "pcs": "dona",
+    "myBranch": "Mening filialim",
+    "unknown": "Noma'lum"
   },
   "nav": {
     "dashboard": "Bosh sahifa",
@@ -100,11 +103,20 @@
     "totalRevenue": "Jami daromad",
     "totalDebt": "Jami qarzdorlik",
     "supplierDebt": "Ta'minotchi qarzi",
+    "totalSuppliers": "Ta'minotchilar soni",
     "recentSales": "So'nggi sotuvlar",
     "recentTransfers": "So'nggi o'tkazmalar",
     "topProducts": "Eng ko'p sotilgan mahsulotlar",
     "storePerformance": "Do'kon ko'rsatkichlari",
-    "noRecentActivity": "Yaqin vaqtda faollik yo'q"
+    "noRecentActivity": "Yaqin vaqtda faollik yo'q",
+    "activeParameters": "Faol ko'rsatkichlar",
+    "activeFlow": "Faol oqim",
+    "estimation": "Baholash",
+    "payables": "To'lanishi kerak bo'lganlar",
+    "inInventory": "Zaxirada",
+    "noDebts": "Qarzlar mavjud emas",
+    "subtitleAdmin": "Filiallar kesimida umumiy ko'rsatkichlar va tahlil",
+    "subtitleUser": "Filialingiz bo'yicha tezkor statistika"
   },
   "products": {
     "title": "Mahsulotlar",
@@ -572,6 +584,7 @@
     "noLogs": "Loglar yo'q",
     "admin": "Admin",
     "seller": "Sotuvchi",
+    "manager": "Menejer",
     "superUser": "Super foydalanuvchi",
     "storeAdmin": "Do'kon Admin",
     "storeUser": "Do'kon Foydalanuvchi",
@@ -614,7 +627,10 @@
       "totalSales": "Jami sotuvlar",
       "totalPurchases": "Jami xaridlar",
       "netProfit": "Sof foyda",
-      "totalDebt": "Jami qarzdorlik"
+      "totalDebt": "Jami qarzdorlik",
+      "avgOrder": "O'rtacha buyurtma",
+      "totalCustomers": "Jami mijozlar",
+      "totalBalance": "Jami balans"
     },
     "filters": "Filtrlar",
     "allTypes": "Barcha turlar",
@@ -665,7 +681,12 @@
       "transfer": "O'tkazmalar monitoringi"
     },
     "ready": "Tayyor",
-    "processing": "Qayta ishlanmoqda"
+    "processing": "Qayta ishlanmoqda",
+    "profitProgression": "Foyda o'sish dinamikasi",
+    "customers": "Mijozlar",
+    "suppliers": "Yetkazib beruvchilar",
+    "analysisPeriod": "Tahlil davri",
+    "checkDetails": "Batafsil tahlilni 'Hisobotlar' sahifasida ko'ring"
   },
   "notifications": {
     "title": "Bildirishnomalar",
