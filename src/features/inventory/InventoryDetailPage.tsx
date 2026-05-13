@@ -40,25 +40,47 @@ export function InventoryDetailPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showChecked, setShowChecked] = useState(true);
   const [showScanner, setShowScanner] = useState(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'shortage' | 'excess'>('all');
 
   const {
+    sessions,
     currentSessionProducts,
     currentSessionChecked,
+    currentSessionShorts,
+    currentSessionOvers,
     itemsLoading,
     scanningProductId,
     error,
+    fetchSessions,
     fetchSessionProducts,
+    fetchSessionShorts,
+    fetchSessionOvers,
     scanProduct,
     finalizeSession,
     cancelSession,
     clearError,
   } = useInventoryStore();
 
+  const currentSession = useMemo(() => 
+    sessions.find((s) => s.id === sessionId),
+    [sessions, sessionId]
+  );
+
+  const isCompleted = currentSession?.status === 'completed' || currentSession?.status === 'e';
+
+  useEffect(() => {
+    if (sessions.length === 0) {
+      fetchSessions();
+    }
+  }, [sessions.length, fetchSessions]);
+
   useEffect(() => {
     if (sessionId) {
       fetchSessionProducts(sessionId);
+      fetchSessionShorts(sessionId);
+      fetchSessionOvers(sessionId);
     }
-  }, [sessionId, fetchSessionProducts]);
+  }, [sessionId, fetchSessionProducts, fetchSessionShorts, fetchSessionOvers]);
 
   useEffect(() => {
     if (error) {
@@ -142,6 +164,24 @@ export function InventoryDetailPage() {
     }
     return list;
   }, [allProducts, showChecked, searchQuery]);
+
+  const filteredShorts = useMemo(() => {
+    let list = currentSessionShorts;
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      list = list.filter((p) => p.product_name.toLowerCase().includes(q));
+    }
+    return list;
+  }, [currentSessionShorts, searchQuery]);
+
+  const filteredOvers = useMemo(() => {
+    let list = currentSessionOvers;
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      list = list.filter((p) => p.product_name.toLowerCase().includes(q));
+    }
+    return list;
+  }, [currentSessionOvers, searchQuery]);
 
   const stats = useMemo(() => {
     const total = allProducts.length;
@@ -252,6 +292,51 @@ export function InventoryDetailPage() {
         </Card>
       </div>
 
+      {/* Main Tabs (All, Shortage, Excess) */}
+      <div className="border-b border-border/60">
+        <div className="flex gap-6">
+          <button
+            onClick={() => setActiveTab('all')}
+            className={cn(
+              'pb-3 text-sm font-semibold border-b-2 transition-colors',
+              activeTab === 'all'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            )}
+          >
+            {t('inventory.allProducts')}
+          </button>
+          <button
+            onClick={() => setActiveTab('shortage')}
+            className={cn(
+              'pb-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2',
+              activeTab === 'shortage'
+                ? 'border-rose-500 text-rose-600'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            )}
+          >
+            {t('inventory.shortages')}
+            <span className="bg-rose-50 text-rose-700 text-xs px-2 py-0.5 rounded-full dark:bg-rose-950/40">
+              {currentSessionShorts.length}
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab('excess')}
+            className={cn(
+              'pb-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2',
+              activeTab === 'excess'
+                ? 'border-emerald-500 text-emerald-600'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            )}
+          >
+            {t('inventory.excesses')}
+            <span className="bg-emerald-50 text-emerald-700 text-xs px-2 py-0.5 rounded-full dark:bg-emerald-950/40">
+              {currentSessionOvers.length}
+            </span>
+          </button>
+        </div>
+      </div>
+
       {/* Actions Bar */}
       <Card>
         <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
@@ -263,68 +348,74 @@ export function InventoryDetailPage() {
               placeholder={t('inventory.searchPlaceholder')}
               className="h-11 pl-9 pr-12 text-base"
             />
-            <button
-              type="button"
-              onClick={() => setShowScanner(true)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2 text-muted-foreground transition hover:bg-accent hover:text-foreground"
-              title={t('inventory.barcodeScanner')}
-            >
-              <Camera className="h-4 w-4" />
-            </button>
+            {!isCompleted && activeTab === 'all' && (
+              <button
+                type="button"
+                onClick={() => setShowScanner(true)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2 text-muted-foreground transition hover:bg-accent hover:text-foreground"
+                title={t('inventory.barcodeScanner')}
+              >
+                <Camera className="h-4 w-4" />
+              </button>
+            )}
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowChecked((v) => !v)}
-            >
-              {showChecked
-                ? t('inventory.hideChecked')
-                : t('inventory.showChecked')}
-            </Button>
-            <Button variant="destructive" size="sm" onClick={handleCancel}>
-              <XCircle className="mr-2 h-4 w-4" />
-              {t('inventory.cancelInventory')}
-            </Button>
-            <Button size="sm" onClick={handleFinalize}>
-              <CheckCircle2 className="mr-2 h-4 w-4" />
-              {t('inventory.finalizeInventory')}
-            </Button>
-          </div>
+          {!isCompleted && activeTab === 'all' && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowChecked((v) => !v)}
+              >
+                {showChecked
+                  ? t('inventory.hideChecked')
+                  : t('inventory.showChecked')}
+              </Button>
+              <Button variant="destructive" size="sm" onClick={handleCancel}>
+                <XCircle className="mr-2 h-4 w-4" />
+                {t('inventory.cancelInventory')}
+              </Button>
+              <Button size="sm" onClick={handleFinalize}>
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+                {t('inventory.finalizeInventory')}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Filter Tabs */}
-      <div className="-mx-1 flex gap-2 px-1 pb-1">
-        <button
-          type="button"
-          onClick={() => setShowChecked(true)}
-          className={cn(
-            'shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-colors',
-            showChecked
-              ? 'border-primary bg-primary text-primary-foreground'
-              : 'border-border bg-background text-foreground hover:bg-accent'
-          )}
-        >
-          {t('inventory.allProducts')} ({stats.total})
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowChecked(false)}
-          className={cn(
-            'shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-colors',
-            !showChecked
-              ? 'border-primary bg-primary text-primary-foreground'
-              : 'border-border bg-background text-foreground hover:bg-accent'
-          )}
-        >
-          {t('inventory.uncheckedOnly')} ({stats.pending})
-        </button>
-      </div>
+      {/* Filter Tabs (only for "all" tab and not completed) */}
+      {activeTab === 'all' && !isCompleted && (
+        <div className="-mx-1 flex gap-2 px-1 pb-1">
+          <button
+            type="button"
+            onClick={() => setShowChecked(true)}
+            className={cn(
+              'shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+              showChecked
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border bg-background text-foreground hover:bg-accent'
+            )}
+          >
+            {t('inventory.allProducts')} ({stats.total})
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowChecked(false)}
+            className={cn(
+              'shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+              !showChecked
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border bg-background text-foreground hover:bg-accent'
+            )}
+          >
+            {t('inventory.uncheckedOnly')} ({stats.pending})
+          </button>
+        </div>
+      )}
 
       {/* Mobile Cards */}
       <div className="space-y-3 lg:hidden">
-        {filteredProducts.map((product) => (
+        {activeTab === 'all' && filteredProducts.map((product) => (
           <MobileProductCard
             key={product.product_id}
             product={product}
@@ -333,9 +424,29 @@ export function InventoryDetailPage() {
             onDec={() => handleDecrement(product.product_id, product.scanned)}
             isScanning={scanningProductId === product.product_id}
             t={t}
+            readOnly={isCompleted}
           />
         ))}
-        {filteredProducts.length === 0 && !itemsLoading && (
+        
+        {activeTab === 'shortage' && filteredShorts.map((item) => (
+          <ShortageExcessMobileCard
+            key={item.id}
+            item={item}
+            t={t}
+          />
+        ))}
+
+        {activeTab === 'excess' && filteredOvers.map((item) => (
+          <ShortageExcessMobileCard
+            key={item.id}
+            item={item}
+            t={t}
+          />
+        ))}
+
+        {((activeTab === 'all' && filteredProducts.length === 0) ||
+          (activeTab === 'shortage' && filteredShorts.length === 0) ||
+          (activeTab === 'excess' && filteredOvers.length === 0)) && !itemsLoading && (
           <div className="text-center py-8 text-muted-foreground">
             {searchQuery
               ? t('inventory.noSearchResults')
@@ -361,63 +472,74 @@ export function InventoryDetailPage() {
         <div>
           <table className="w-full table-fixed">
             <thead className="bg-muted/50">
-              <tr className="border-b text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                <th className="px-4 py-3">{t('inventory.productName')}</th>
-                <th className="px-2 py-3 text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    <Tag className="h-3 w-3" />
-                    {t('inventory.declared')}
-                  </div>
-                </th>
-                <th className="px-2 py-3 text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    <Scan className="h-3 w-3" />
-                    {t('inventory.scanned')}
-                  </div>
-                </th>
-                <th className="px-2 py-3 text-center">
-                  {t('inventory.difference')}
-                </th>
-                <th className="px-2 py-3 text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    <ShoppingCart className="h-3 w-3" />
-                    {t('inventory.soldOut')}
-                  </div>
-                </th>
-                <th className="px-2 py-3 text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    <CornerUpLeft className="h-3 w-3" />
-                    {t('inventory.returned')}
-                  </div>
-                </th>
-                <th className="px-2 py-3 text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    <ArrowUpToLine className="h-3 w-3" />
-                    {t('inventory.transferOut')}
-                  </div>
-                </th>
-                <th className="px-2 py-3 text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    <ArrowDownToLine className="h-3 w-3" />
-                    {t('inventory.transferIn')}
-                  </div>
-                </th>
-                <th className="px-2 py-3 text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    <Box className="h-3 w-3" />
-                    {t('inventory.entry')}
-                  </div>
-                </th>
-                <th className="px-2 py-3 text-center">
-                  {t('inventory.final')}
-                </th>
-                <th className="px-2 py-3 text-center">
-                  {t('inventory.status')}
-                </th>
-              </tr>
+              {activeTab === 'all' ? (
+                <tr className="border-b text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <th className="px-4 py-3">{t('inventory.productName')}</th>
+                  <th className="px-2 py-3 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <Tag className="h-3 w-3" />
+                      {t('inventory.declared')}
+                    </div>
+                  </th>
+                  <th className="px-2 py-3 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <Scan className="h-3 w-3" />
+                      {t('inventory.scanned')}
+                    </div>
+                  </th>
+                  <th className="px-2 py-3 text-center">
+                    {t('inventory.difference')}
+                  </th>
+                  <th className="px-2 py-3 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <ShoppingCart className="h-3 w-3" />
+                      {t('inventory.soldOut')}
+                    </div>
+                  </th>
+                  <th className="px-2 py-3 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <CornerUpLeft className="h-3 w-3" />
+                      {t('inventory.returned')}
+                    </div>
+                  </th>
+                  <th className="px-2 py-3 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <ArrowUpToLine className="h-3 w-3" />
+                      {t('inventory.transferOut')}
+                    </div>
+                  </th>
+                  <th className="px-2 py-3 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <ArrowDownToLine className="h-3 w-3" />
+                      {t('inventory.transferIn')}
+                    </div>
+                  </th>
+                  <th className="px-2 py-3 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <Box className="h-3 w-3" />
+                      {t('inventory.entry')}
+                    </div>
+                  </th>
+                  <th className="px-2 py-3 text-center">
+                    {t('inventory.final')}
+                  </th>
+                  <th className="px-2 py-3 text-center">
+                    {t('inventory.status')}
+                  </th>
+                </tr>
+              ) : (
+                <tr className="border-b text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <th className="px-4 py-3">{t('inventory.productName')}</th>
+                  <th className="px-4 py-3">{t('products.category')}</th>
+                  <th className="px-4 py-3 text-center">{t('inventory.expectedQty')}</th>
+                  <th className="px-4 py-3 text-center">{t('inventory.countedQty')}</th>
+                  <th className="px-4 py-3 text-center">{t('inventory.difference')}</th>
+                  <th className="px-4 py-3 text-right">{t('common.status')}</th>
+                </tr>
+              )}
             </thead>
             <tbody className="divide-y">
-              {filteredProducts.map((product) => (
+              {activeTab === 'all' && filteredProducts.map((product) => (
                 <DesktopProductRow
                   key={product.product_id}
                   product={product}
@@ -432,12 +554,31 @@ export function InventoryDetailPage() {
                   }
                   isScanning={scanningProductId === product.product_id}
                   t={t}
+                  readOnly={isCompleted}
+                />
+              ))}
+              
+              {activeTab === 'shortage' && filteredShorts.map((item) => (
+                <ShortageExcessDesktopRow
+                  key={item.id}
+                  item={item}
+                  t={t}
+                />
+              ))}
+
+              {activeTab === 'excess' && filteredOvers.map((item) => (
+                <ShortageExcessDesktopRow
+                  key={item.id}
+                  item={item}
+                  t={t}
                 />
               ))}
             </tbody>
           </table>
         </div>
-        {filteredProducts.length === 0 && !itemsLoading && (
+        {((activeTab === 'all' && filteredProducts.length === 0) ||
+          (activeTab === 'shortage' && filteredShorts.length === 0) ||
+          (activeTab === 'excess' && filteredOvers.length === 0)) && !itemsLoading && (
           <div className="text-center py-8 text-muted-foreground">
             {searchQuery
               ? t('inventory.noSearchResults')
@@ -475,6 +616,7 @@ interface MobileProductCardProps {
   onDec: () => void;
   isScanning: boolean;
   t: (key: string) => string;
+  readOnly?: boolean;
 }
 
 function MobileProductCard({
@@ -484,6 +626,7 @@ function MobileProductCard({
   onDec,
   isScanning,
   t,
+  readOnly = false,
 }: MobileProductCardProps) {
   return (
     <Card
@@ -545,34 +688,41 @@ function MobileProductCard({
 
         {/* Scanned Input + Final/Diff */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9 rounded-full"
-              onClick={onDec}
-              disabled={isScanning || product.scanned <= 0}
-            >
-              <Minus className="h-4 w-4" />
-            </Button>
-            <Input
-              type="number"
-              min={0}
-              value={product.scanned || ''}
-              onChange={(e) => onChange(e.target.value)}
-              disabled={isScanning}
-              className="h-9 w-20 text-center text-base font-bold"
-            />
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9 rounded-full"
-              onClick={onInc}
-              disabled={isScanning}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
+          {!readOnly ? (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 rounded-full"
+                onClick={onDec}
+                disabled={isScanning || product.scanned <= 0}
+              >
+                <Minus className="h-4 w-4" />
+              </Button>
+              <Input
+                type="number"
+                min={0}
+                value={product.scanned || ''}
+                onChange={(e) => onChange(e.target.value)}
+                disabled={isScanning}
+                className="h-9 w-20 text-center text-base font-bold"
+              />
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 rounded-full"
+                onClick={onInc}
+                disabled={isScanning}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="rounded-lg bg-muted/50 px-3 py-1.5 text-center">
+              <p className="text-xs text-muted-foreground">{t('inventory.scanned')}</p>
+              <p className="text-sm font-bold text-primary">{product.scanned}</p>
+            </div>
+          )}
           <div className="flex-1 flex items-center justify-end gap-3 text-sm">
             <div className="text-center">
               <p className="text-xs text-muted-foreground">{t('inventory.final')}</p>
@@ -610,6 +760,7 @@ interface DesktopProductRowProps {
   onDec: () => void;
   isScanning: boolean;
   t: (key: string) => string;
+  readOnly?: boolean;
 }
 
 function DesktopProductRow({
@@ -617,6 +768,7 @@ function DesktopProductRow({
   onChange,
   isScanning,
   t,
+  readOnly = false,
 }: DesktopProductRowProps) {
   return (
     <tr
@@ -639,13 +791,17 @@ function DesktopProductRow({
       </td>
       <td className="px-2 py-3">
         <div className="flex items-center justify-center gap-1">
-          <Input
-            type="text"
-            value={product.scanned || ''}
-            onChange={(e) => onChange(e.target.value)}
-            disabled={isScanning}
-            className="h-8 w-full text-center text-sm font-bold px-1"
-          />
+          {!readOnly ? (
+            <Input
+              type="text"
+              value={product.scanned || ''}
+              onChange={(e) => onChange(e.target.value)}
+              disabled={isScanning}
+              className="h-8 w-full text-center text-sm font-bold px-1"
+            />
+          ) : (
+            <span className="text-sm font-bold text-primary">{product.scanned}</span>
+          )}
         </div>
       </td>
       <td className="px-2 py-3 text-center text-sm font-semibold">
@@ -752,6 +908,77 @@ function StatusBadge({
     <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2.5 py-1 text-xs font-medium text-rose-700 dark:bg-rose-900 dark:text-rose-300">
       <AlertTriangle className="h-3 w-3" />
     </span>
+  );
+}
+
+interface ShortageExcessCardRowProps {
+  item: import('../../services/inventory.api').ShortageExcessProduct;
+  t: (key: string) => string;
+}
+
+function ShortageExcessMobileCard({ item, t }: ShortageExcessCardRowProps) {
+  const isShortage = item.status === 'l';
+  return (
+    <Card className={cn(
+      'overflow-hidden border',
+      isShortage ? 'border-rose-200 bg-rose-50/20' : 'border-emerald-200 bg-emerald-50/20'
+    )}>
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold truncate">{item.product_name}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {item.category_name || '-'}
+            </p>
+          </div>
+          <span className={cn(
+            "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+            isShortage ? "bg-rose-100 text-rose-800" : "bg-emerald-100 text-emerald-800"
+          )}>
+            {isShortage ? t('inventory.shortages') : t('inventory.excesses')}
+          </span>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <StatPill
+            icon={<Tag className="h-3 w-3" />}
+            label={t('inventory.expectedQty')}
+            value={item.system_quantity}
+          />
+          <StatPill
+            icon={<Scan className="h-3 w-3 text-blue-500" />}
+            label={t('inventory.countedQty')}
+            value={item.counted_quantity}
+          />
+          <div className="rounded-lg bg-muted/50 p-2 text-center flex flex-col justify-center">
+            <span className="text-xs text-muted-foreground mb-0.5">{t('inventory.difference')}</span>
+            <DifferenceValue value={item.diff} />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ShortageExcessDesktopRow({ item, t }: ShortageExcessCardRowProps) {
+  const isShortage = item.status === 'l';
+  return (
+    <tr className="hover:bg-muted/30 border-b transition-colors">
+      <td className="px-4 py-3 font-medium text-sm">{item.product_name}</td>
+      <td className="px-4 py-3 text-sm text-muted-foreground">{item.category_name || '-'}</td>
+      <td className="px-4 py-3 text-center text-sm font-semibold">{item.system_quantity}</td>
+      <td className="px-4 py-3 text-center text-sm font-semibold">{item.counted_quantity}</td>
+      <td className="px-4 py-3 text-center text-sm font-bold">
+        <DifferenceValue value={item.diff} />
+      </td>
+      <td className="px-4 py-3 text-right">
+        <span className={cn(
+          "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap",
+          isShortage ? "bg-rose-100 text-rose-800" : "bg-emerald-100 text-emerald-800"
+        )}>
+          {isShortage ? t('inventory.shortages') : t('inventory.excesses')}
+        </span>
+      </td>
+    </tr>
   );
 }
 

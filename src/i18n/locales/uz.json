@@ -274,7 +274,9 @@
     "confirmCancel": "Inventarizatsiyani bekor qilishni tasdiqlaysizmi?",
     "hideChecked": "Tekshirilganlarni yashirish",
     "showChecked": "Tekshirilganlarni ko'rsatish",
-    "noSearchResults": "Qidiruv natijalari yo'q" 
+    "noSearchResults": "Qidiruv natijalari yo'q",
+    "excesses": "Ortiqcha",
+    "allProducts": "Barcha mahsulotlar"
   },
   "stockentry": {
     "title": "Kirim",

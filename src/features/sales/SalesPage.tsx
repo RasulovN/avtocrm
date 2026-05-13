@@ -360,11 +360,11 @@ export function SalesPage() {
     try {
       const [storesRes, customersRes] = await Promise.all([
         storeService.getAll(),
-        customerApiService.getAll(),
+        customerApiService.getAll({ limit: 1000 }),
       ]);
       const loadedStores = Array.isArray(storesRes.data) ? storesRes.data : [];
       setStores(isAdmin ? loadedStores : loadedStores.filter((store) => store.id === userStoreId));
-      setCustomers(customersRes || []);
+      setCustomers(customersRes.data || []);
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;

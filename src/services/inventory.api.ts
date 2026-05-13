@@ -35,6 +35,29 @@ export interface InventorySessionDetail {
   checked: InventoryProduct[];
 }
 
+export interface ShortageExcessProduct {
+  id: number;
+  product: number;
+  product_name: string;
+  category_name: string;
+  unit_measurement: string | null;
+  counted_quantity: number;
+  system_quantity: number;
+  diff: number;
+  status: 'l' | 'm' | string; // l = shortage, m = excess
+  is_check: boolean;
+  created_at: string;
+}
+
+export interface PaginatedInventoryResult<T> {
+  count: number;
+  total_pages: number;
+  current_page: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
 export interface StartInventoryRequest {
   store_id: number;
 }
@@ -81,6 +104,22 @@ export const inventoryApi = {
   getSessionProducts: async (sessionId: number): Promise<InventorySessionDetail> => {
     const response = await apiClient.get<InventorySessionDetail>(
       `${INVENTORY_ENDPOINT}/list/${sessionId}/`
+    );
+    return response.data;
+  },
+
+  /** GET /api/inventory/sessions/{session_id}/short/ — session shortages */
+  getSessionShorts: async (sessionId: number): Promise<PaginatedInventoryResult<ShortageExcessProduct>> => {
+    const response = await apiClient.get<PaginatedInventoryResult<ShortageExcessProduct>>(
+      `${INVENTORY_ENDPOINT}/sessions/${sessionId}/short/`
+    );
+    return response.data;
+  },
+
+  /** GET /api/inventory/sessions/{session_id}/over/ — session excess products */
+  getSessionOvers: async (sessionId: number): Promise<PaginatedInventoryResult<ShortageExcessProduct>> => {
+    const response = await apiClient.get<PaginatedInventoryResult<ShortageExcessProduct>>(
+      `${INVENTORY_ENDPOINT}/sessions/${sessionId}/over/`
     );
     return response.data;
   },

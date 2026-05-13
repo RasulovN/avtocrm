@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pencil, Phone, Plus, Search, Trash2 } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
@@ -40,42 +40,49 @@ export function CustomerListPage() {
 
   const [customers, setCustomers] = useState<CustomerFromApi[]>([]);
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const limit = 10;
   const [loading, setLoading] = useState(true);
   const [dialogMode, setDialogMode] = useState<DialogMode>('closed');
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerFromApi | null>(null);
   const [formData, setFormData] = useState({ full_name: '', phone_number: '' });
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    void loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const customersData = await customerApiService.getAll();
-      setCustomers(customersData);
+      const response = await customerApiService.getAll({ page, limit, search: search.trim() });
+      setCustomers(response.data || []);
+      setTotal(response.total || 0);
     } catch (error) {
       console.error('Error loading customers:', error);
     } finally {
       setLoading(false);
     }
+  }, [page, search]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void loadData();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [loadData]);
+
+  const handleSearch = (val: string) => {
+    setSearch(val);
+    setPage(1);
   };
 
   const filteredCustomers = useMemo(() => {
-    const normalizedQuery = search.trim().toLowerCase();
-    if (!normalizedQuery) return customers;
-    return customers.filter((customer) =>
-      customer.full_name.toLowerCase().includes(normalizedQuery) ||
-      customer.phone_number.toString().includes(normalizedQuery)
-    );
-  }, [customers, search]);
+    return customers;
+  }, [customers]);
 
   const stats = useMemo(() => {
-    const totalCustomers = customers.length;
+    const totalCustomers = total;
     const totalDebt = customers.reduce((sum, c) => sum + (Number(c.debt) || Number(c.total_debt) || 0), 0);
     return { totalCustomers, totalDebt };
-  }, [customers]);
+  }, [customers, total]);
 
   const tableData = useMemo<CustomerRow[]>(
     () =>
@@ -227,7 +234,7 @@ export function CustomerListPage() {
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => handleSearch(event.target.value)}
               placeholder={t('customers.searchPlaceholder')}
               className="pl-9"
             />
@@ -287,6 +294,12 @@ export function CustomerListPage() {
                   emptyMessage={t('customers.noCustomers')}
                   loadingMessage={t('common.loading')}
                   onRowClick={(item: CustomerRow) => openViewDialog({ ...item, id: item.rawId })}
+                  pagination={{
+                    page,
+                    limit,
+                    total,
+                    onPageChange: setPage,
+                  }}
                 />
               </div>
             </>
