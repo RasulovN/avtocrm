@@ -41,7 +41,12 @@
     "of": "jami",
     "print": "Chop etish",
     "export": "Eksport",
-    "progress": "Jarayon"
+    "progress": "Jarayon",
+    "dateFrom": "Sana boshi",
+    "dateTo": "Sana oxiri",
+    "pcs": "dona",
+    "myBranch": "Mening filialim",
+    "unknown": "Noma'lum"
   },
   "nav": {
     "dashboard": "Bosh sahifa",
@@ -84,7 +89,11 @@
     "forgotPasswordDescription": "Parolni tiklash uchun emailingizni kiriting. Sizga tiklash havolasi yuboriladi.",
     "sendResetLink": "Havola yuborish",
     "emailRequired": "Email kiritish majburiy",
-    "backToLogin": "Kirishga qaytish"
+    "backToLogin": "Kirishga qaytish",
+    "setNewPasswordDesc": "Hisobingiz uchun yangi parol o'rnating",
+    "sending": "Yuborilmoqda...",
+    "resetPasswordTitle": "Parolni tiklash",
+    "resetPasswordDesc": "Email manzilingizga tiklash havolasini yuboramiz"
   },
 
   "dashboard": {
@@ -94,11 +103,20 @@
     "totalRevenue": "Jami daromad",
     "totalDebt": "Jami qarzdorlik",
     "supplierDebt": "Ta'minotchi qarzi",
+    "totalSuppliers": "Ta'minotchilar soni",
     "recentSales": "So'nggi sotuvlar",
     "recentTransfers": "So'nggi o'tkazmalar",
     "topProducts": "Eng ko'p sotilgan mahsulotlar",
     "storePerformance": "Do'kon ko'rsatkichlari",
-    "noRecentActivity": "Yaqin vaqtda faollik yo'q"
+    "noRecentActivity": "Yaqin vaqtda faollik yo'q",
+    "activeParameters": "Faol ko'rsatkichlar",
+    "activeFlow": "Faol oqim",
+    "estimation": "Baholash",
+    "payables": "To'lanishi kerak bo'lganlar",
+    "inInventory": "Zaxirada",
+    "noDebts": "Qarzlar mavjud emas",
+    "subtitleAdmin": "Filiallar kesimida umumiy ko'rsatkichlar va tahlil",
+    "subtitleUser": "Filialingiz bo'yicha tezkor statistika"
   },
   "products": {
     "title": "Mahsulotlar",
@@ -188,6 +206,9 @@
     "createIncomingStock": "Kirim yaratish",
     "addFromSupplier": "Ta'minotchidan qo'shish",
     "basicInfo": "Asosiy ma'lumotlar",
+    "detailsTitle": "Kirim tafsilotlari",
+    "barcodeDescription": "Ushbu kirim uchun mahsulot shtrixkodlari",
+    "payDebtDescription": "Ta'minotchiga qarzni to'lash",
     "supplier": "Ta'minotchi",
     "store": "Do'kon",
     "items": "Mahsulotlar",
@@ -265,7 +286,9 @@
     "confirmCancel": "Inventarizatsiyani bekor qilishni tasdiqlaysizmi?",
     "hideChecked": "Tekshirilganlarni yashirish",
     "showChecked": "Tekshirilganlarni ko'rsatish",
-    "noSearchResults": "Qidiruv natijalari yo'q" 
+    "noSearchResults": "Qidiruv natijalari yo'q",
+    "excesses": "Ortiqcha",
+    "allProducts": "Barcha mahsulotlar"
   },
   "stockentry": {
     "title": "Kirim",
@@ -561,6 +584,7 @@
     "noLogs": "Loglar yo'q",
     "admin": "Admin",
     "seller": "Sotuvchi",
+    "manager": "Menejer",
     "superUser": "Super foydalanuvchi",
     "storeAdmin": "Do'kon Admin",
     "storeUser": "Do'kon Foydalanuvchi",
@@ -603,7 +627,10 @@
       "totalSales": "Jami sotuvlar",
       "totalPurchases": "Jami xaridlar",
       "netProfit": "Sof foyda",
-      "totalDebt": "Jami qarzdorlik"
+      "totalDebt": "Jami qarzdorlik",
+      "avgOrder": "O'rtacha buyurtma",
+      "totalCustomers": "Jami mijozlar",
+      "totalBalance": "Jami balans"
     },
     "filters": "Filtrlar",
     "allTypes": "Barcha turlar",
@@ -654,7 +681,12 @@
       "transfer": "O'tkazmalar monitoringi"
     },
     "ready": "Tayyor",
-    "processing": "Qayta ishlanmoqda"
+    "processing": "Qayta ishlanmoqda",
+    "profitProgression": "Foyda o'sish dinamikasi",
+    "customers": "Mijozlar",
+    "suppliers": "Yetkazib beruvchilar",
+    "analysisPeriod": "Tahlil davri",
+    "checkDetails": "Batafsil tahlilni 'Hisobotlar' sahifasida ko'ring"
   },
   "notifications": {
     "title": "Bildirishnomalar",
@@ -700,40 +732,14 @@
     "chartType": "Chart turi",
     "period": "Davr",
     "branch": "Filial",
-    "scanBarcode": "Shtrixkodni skanerlang yoki kiriting..."
+    "scanBarcode": "Shtrixkodni skanerlang yoki kiriting...",
+    "search": "Qidirish...",
+    "selectSupplier": "Ta'minotchini tanlang"
   },
   "titles": {
     "clickToView": "Ko'rish uchun bosing",
     "printAllBarcodes": "Barcha shtrixkodlarni chop etish",
     "printBarcode": "Shtrixkodni chop etish"
-  },
-  "auth": {
-    "login": "Kirish",
-    "logout": "Chiqish",
-    "username": "Foydalanuvchi nomi",
-    "password": "Parol",
-    "loginButton": "Kirish",
-    "loginError": "Login yoki parol noto'g'ri",
-    "profile": "Profil",
-    "profileDescription": "Hisobingiz ma'lumotlarini yangilang",
-    "changePassword": "Parolni o'zgartirish",
-    "changePasswordDescription": "Xavfsizlik uchun parolni tez-tez o'zgartiring",
-    "currentPassword": "Joriy parol",
-    "newPassword": "Yangi parol",
-    "confirmPassword": "Parolni tasdiqlang",
-    "updatePassword": "Parolni yangilash",
-    "email": "Email",
-    "loginHistory": "Kirishlar tarixi",
-    "loginHistoryDescription": "Hisobingizga oxirgi kirishlar ro'yxati",
-    "forgotPassword": "Parolni unutdingizmi?",
-    "forgotPasswordDescription": "Parolni tiklash uchun emailingizni kiriting. Sizga tiklash havolasi yuboriladi.",
-    "sendResetLink": "Havola yuborish",
-    "emailRequired": "Email kiritish majburiy",
-    "backToLogin": "Kirishga qaytish",
-    "setNewPasswordDesc": "Hisobingiz uchun yangi parol o'rnating",
-    "sending": "Yuborilmoqda...",
-    "resetPasswordTitle": "Parolni tiklash",
-    "resetPasswordDesc": "Email manzilingizga tiklash havolasini yuboramiz"
   },
   "seo": {
     "defaultTitle": "AvtoCRM - Avto ehtiyot qismlar boshqaruv tizimi",

@@ -4,6 +4,7 @@ import { BarcodeFormat, type Result } from '@zxing/library';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/Dialog';
 import { CheckCircle, AlertCircle, Loader2, ScanBarcode } from 'lucide-react';
 import { cn } from '../utils';
+import { useTranslation } from 'react-i18next';
 
 interface ScannerModalProps {
   open: boolean;
@@ -31,8 +32,9 @@ const normalizeBarcodeValue = (value: string): string => {
 };
 
 export function ScannerModal({ open, onOpenChange, onScan }: ScannerModalProps) {
+  const { t } = useTranslation();
   const [status, setStatus] = useState<ScannerStatus>('idle');
-  const [message, setMessage] = useState("Kamerani shtrixkodga to'g'ri qaratib turing.");
+  const [message, setMessage] = useState("Камерани штрихкодга тўғри қаратиб туринг.");
   const [stopStream, setStopStream] = useState(false);
   const [lastScannedCode, setLastScannedCode] = useState('');
 
@@ -42,15 +44,15 @@ export function ScannerModal({ open, onOpenChange, onScan }: ScannerModalProps) 
     }
 
     setStatus('scanning');
-    setMessage("Kamerani shtrixkodga to'g'ri qaratib turing.");
+    setMessage(t('scanner.scanning', 'Камерани штрихкодга тўғри қаратиб туринг.'));
     setStopStream(false);
     setLastScannedCode('');
 
     const unreadTimeout = setTimeout(() => {
       setStatus((current) => (current === 'scanning' ? 'error' : current));
       setMessage((current) =>
-        current === "Kamerani shtrixkodga to'g'ri qaratib turing."
-          ? "Shtrix kodni o'qib bo'lmadi. Kamerani yaqinroq tutib, qayta urinib ko'ring."
+        current === t('scanner.scanning', 'Камерани штрихкодга тўғри қаратиб туринг.')
+          ? t('scanner.failed', "Штрих кодни ўқиб бўлмади. Камерани яқинроқ тутиб, қайта уриниб кўринг.")
           : current
       );
     }, 8000);
@@ -68,13 +70,13 @@ export function ScannerModal({ open, onOpenChange, onScan }: ScannerModalProps) 
 
     setLastScannedCode(normalizedBarcode);
     setStatus('searching');
-    setMessage(`Kod o'qildi: ${normalizedBarcode}. Mahsulot qidirilmoqda...`);
+    setMessage(`${t('scanner.codeRead', 'Код ўқилди')}: ${normalizedBarcode}. ${t('common.loading', 'Қидирилмоқда')}...`);
 
     try {
       await onScan(normalizedBarcode);
       
       setStatus('success');
-      setMessage(`Topildi: ${normalizedBarcode}`);
+      setMessage(`${t('common.found', 'Топилди')}: ${normalizedBarcode}`);
       
       setStopStream(true);
       
@@ -83,7 +85,7 @@ export function ScannerModal({ open, onOpenChange, onScan }: ScannerModalProps) 
       }, 800);
     } catch {
       setStatus('not_found');
-      setMessage(`Mahsulot topilmadi: ${normalizedBarcode}`);
+      setMessage(`${t('messages.productNotFound', 'Маҳсулот топилмади')}: ${normalizedBarcode}`);
       setLastScannedCode('');
     }
   }, [lastScannedCode, onScan, onOpenChange]);
@@ -122,7 +124,7 @@ export function ScannerModal({ open, onOpenChange, onScan }: ScannerModalProps) 
         }
       }}>
         <DialogHeader>
-          <DialogTitle>Shtrixkod skaner</DialogTitle>
+          <DialogTitle>{t('scanner.title', 'Штрихкод сканери')}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div className="overflow-hidden rounded-xl border bg-black">
@@ -152,7 +154,7 @@ export function ScannerModal({ open, onOpenChange, onScan }: ScannerModalProps) 
               onError={(error) => {
                 console.error('Scanner error:', error);
                 setStatus('error');
-                setMessage("Kameraga ulanishda muammo bo'ldi yoki kodni o'qib bo'lmadi.");
+                setMessage(t('scanner.connectionError', "Камерага уланишда муаммо бўлди ёки кодни ўқиб бўлмади."));
               }}
             />
           </div>

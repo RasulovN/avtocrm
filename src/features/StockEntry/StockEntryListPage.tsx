@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { Plus, FileText, Eye, Printer } from 'lucide-react';
+import { Plus, FileText, Eye, Printer, Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
 import { Button } from '../../components/ui/Button';
@@ -9,12 +9,16 @@ import { Input } from '../../components/ui/Input';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/Table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../components/ui/Dialog';
-import { inventoryService } from '../../services/inventoryService';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
+import { Label } from '../../components/ui/Label';
+import { inventoryService, type InventoryFilters } from '../../services/inventoryService';
 import { productService } from '../../services/productService';
 import { supplierService } from '../../services/supplierService';
+import { storeService } from '../../services/storeService';
 import { formatCurrency, formatDate } from '../../utils';
-import type { InventoryItem } from '../../types';
+import type { InventoryItem, Store, Supplier } from '../../types';
 import { BarcodePrintAll } from '../../components/ui/BarcodePrint';
+
 export interface SupplierPayment {
   id: number;
   supplier: number;
@@ -45,8 +49,26 @@ export function StockEntryListPage() {
   const { t } = useTranslation();
   const params = useParams();
   const lang = params.lang || 'uz';
+  
   const [inventory, setInventory] = useState<DisplayInventory[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Pagination states
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
+  
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [storeFilter, setStoreFilter] = useState<string>('');
+  const [supplierFilter, setSupplierFilter] = useState<string>('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  
+  // Reference lists
+  const [stores, setStores] = useState<Store[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+
   const [selectedInventory, setSelectedInventory] = useState<DisplayInventory | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showBarcodeDialog, setShowBarcodeDialog] = useState(false);
@@ -57,10 +79,41 @@ export function StockEntryListPage() {
   const [paymentHistory, setPaymentHistory] = useState<SupplierPayment[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
 
+  // Load initial reference data
+  useEffect(() => {
+    const loadReferences = async () => {
+      try {
+        const [storesRes, suppliersRes] = await Promise.all([
+          storeService.getAll(),
+          supplierService.getAll()
+        ]);
+        setStores(storesRes.data || []);
+        setSuppliers(Array.isArray(suppliersRes) ? suppliersRes : []);
+      } catch (err) {
+        console.error('Failed to load filter data', err);
+      }
+    };
+    loadReferences();
+  }, []);
+
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const entries = await inventoryService.getEntries();
+      
+      const filterParams: InventoryFilters = {
+        page,
+        limit,
+        search: searchTerm || undefined,
+        store: (storeFilter && storeFilter !== 'all') ? storeFilter : undefined,
+        supplier: (supplierFilter && supplierFilter !== 'all') ? supplierFilter : undefined,
+        date_from: dateFrom || undefined,
+        date_to: dateTo || undefined,
+        ordering: '-id' // default newest first
+      };
+
+      const response = await inventoryService.getEntries(filterParams);
+      const entries = response.data;
+      setTotalCount(response.total);
 
       const productCache = new Map<string, { name: string; sku: string; barcode: string; shtrix_code: string }>();
 
@@ -128,14 +181,24 @@ export function StockEntryListPage() {
       if (axiosErr.response?.status === 401) return;
       console.error('Failed to load inventory:', error);
       setInventory([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, limit, searchTerm, storeFilter, supplierFilter, dateFrom, dateTo]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setStoreFilter('');
+    setSupplierFilter('');
+    setDateFrom('');
+    setDateTo('');
+    setPage(1);
+  };
 
   const handleShowDetails = async (item: DisplayInventory) => {
     setSelectedInventory(item);
@@ -470,13 +533,85 @@ export function StockEntryListPage() {
           title={t('inventory.title')}
           description={t('inventory.listDescription')}
         />
-        <Link to={`/${lang}/inventory/new`}>
+        <Link to={`/${lang}/stockentry/new`}>
           <Button className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             {t('inventory.createIncomingStock')}
           </Button>
         </Link>
       </div>
+
+      {/* Filters Section */}
+      <Card className='border-none'>
+        <CardContent className='p-0'>
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 items-end">
+            <div className="space-y-2">
+              <Label>{t('common.search')}</Label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder={t('placeholders.search')}
+                  value={searchTerm}
+                  onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>{t('stores.title')}</Label>
+              <Select value={storeFilter} onValueChange={(val) => { setStoreFilter(val); setPage(1); }}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t('placeholders.selectStore')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('common.all')}</SelectItem>
+                  {stores.map(store => (
+                    <SelectItem key={store.id} value={String(store.id)}>{store.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>{t('suppliers.title')}</Label>
+              <Select value={supplierFilter} onValueChange={(val) => { setSupplierFilter(val); setPage(1); }}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t('placeholders.selectSupplier')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('common.all')}</SelectItem>
+                  {suppliers.map(sup => (
+                    <SelectItem key={sup.id} value={String(sup.id)}>{sup.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>{t('common.dateFrom')}</Label>
+              <Input 
+                type="date" 
+                value={dateFrom} 
+                onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('common.dateTo')}</Label>
+              <div className="flex gap-2">
+                <Input 
+                  type="date" 
+                  value={dateTo} 
+                  onChange={(e) => { setDateTo(e.target.value); setPage(1); }} 
+                  className="flex-1"
+                />
+                {(searchTerm || storeFilter || supplierFilter || dateFrom || dateTo) && (
+                  <Button variant="outline" size="icon" onClick={handleClearFilters} title={t('common.clear')}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div>
         <h2 className="text-base font-semibold">{t('inventory.history')}</h2>
@@ -544,6 +679,29 @@ export function StockEntryListPage() {
                 </CardContent>
               </Card>
             ))}
+            {totalCount > limit && (
+              <div className="flex items-center justify-between mt-4 p-2 bg-card border rounded-lg">
+                 <Button 
+                  variant="outline" 
+                  size="sm" 
+                  disabled={page <= 1} 
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                 >
+                    <ChevronLeft className="h-4 w-4 mr-1" /> {t('common.previous')}
+                 </Button>
+                 <span className="text-sm font-medium">
+                    {page} / {Math.ceil(totalCount / limit)}
+                 </span>
+                 <Button 
+                  variant="outline" 
+                  size="sm" 
+                  disabled={page * limit >= totalCount} 
+                  onClick={() => setPage(p => p + 1)}
+                 >
+                    {t('common.next')} <ChevronRight className="h-4 w-4 ml-1" />
+                 </Button>
+              </div>
+            )}
           </div>
 
           <div className="hidden md:block">
@@ -554,6 +712,12 @@ export function StockEntryListPage() {
               emptyMessage={t('inventory.noData')}
               loadingMessage={t('common.loading')}
               minWidth="980px"
+              pagination={{
+                page,
+                limit,
+                total: totalCount,
+                onPageChange: setPage
+              }}
             />
           </div>
         </>
@@ -563,7 +727,7 @@ export function StockEntryListPage() {
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
         <DialogContent className="max-w-2xl pb-6">
           <DialogHeader>
-            <DialogTitle>{t('stockEntry.detailsTitle')}</DialogTitle>
+            <DialogTitle>{t('inventory.detailsTitle')}</DialogTitle>
             <DialogDescription>
               {formatDate(selectedInventory?.created_at || '')}
             </DialogDescription>
@@ -572,31 +736,31 @@ export function StockEntryListPage() {
             <div className="space-y-4 px-1 pb-1">
               <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
                 <div>
-                  <span className="text-muted-foreground">Supplier:</span>
+                  <span className="text-muted-foreground">{t('inventory.supplier')}:</span>
                   <span className="ml-2 font-medium">{selectedInventory.supplier_name || selectedInventory.supplier_id}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Store:</span>
+                  <span className="text-muted-foreground">{t('inventory.store')}:</span>
                   <span className="ml-2 font-medium">{selectedInventory.store_name || selectedInventory.store_id}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Status:</span>
+                  <span className="text-muted-foreground">{t('common.status')}:</span>
                   <span className="ml-2 font-medium">{selectedInventory.status}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Total:</span>
+                  <span className="text-muted-foreground">{t('common.total')}:</span>
                   <span className="ml-2 font-medium">{formatCurrency(selectedInventory.total)}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Paid:</span>
+                  <span className="text-muted-foreground">{t('inventory.paidAmount')}:</span>
                   <span className="ml-2 font-medium">{formatCurrency(selectedInventory.paid)}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Debt:</span>
+                  <span className="text-muted-foreground">{t('suppliers.debt')}:</span>
                   <span className="ml-2 font-medium text-red-500">{formatCurrency(selectedInventory.debt)}</span>
                   {selectedInventory.debt > 0 && (
                     <Button variant="outline" size="sm" className="ml-3" onClick={handlePayDebt}>
-                      To'lash
+                      {t('customers.payNow')}
                     </Button>
                   )}
                 </div>
@@ -638,7 +802,7 @@ export function StockEntryListPage() {
                           </div>
                           <div className="grid grid-cols-2 gap-3 text-sm">
                             <div className="rounded-lg bg-muted/30 p-3">
-                              <p className="text-xs text-muted-foreground">Barcode</p>
+                              <p className="text-xs text-muted-foreground">{t('products.barcode')}</p>
                               <p className="mt-1 break-all font-mono text-xs">{item.product_barcode || '-'}</p>
                             </div>
                             <div className="rounded-lg bg-muted/30 p-3">
@@ -663,8 +827,8 @@ export function StockEntryListPage() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>{t('products.title')}</TableHead>
-                          <TableHead>SKU</TableHead>
-                          <TableHead>Barcode</TableHead>
+                          <TableHead>{t('products.sku')}</TableHead>
+                          <TableHead>{t('products.barcode')}</TableHead>
                           <TableHead>{t('sales.quantity')}</TableHead>
                           <TableHead>{t('sales.price')}</TableHead>
                           <TableHead>{t('sales.total')}</TableHead>
@@ -741,7 +905,7 @@ export function StockEntryListPage() {
           <DialogHeader>
             <DialogTitle>{t('products.printBarcodes')}</DialogTitle>
             <DialogDescription>
-              Product barcodes for this inventory
+              {t('inventory.barcodeDescription')}
             </DialogDescription>
           </DialogHeader>
           <BarcodePrintAll items={barcodeItems} />
@@ -753,7 +917,7 @@ export function StockEntryListPage() {
           <DialogHeader>
             <DialogTitle>{t('customers.debtPaymentTitle')}</DialogTitle>
             <DialogDescription>
-              Taminotchiga qarz to'lash
+              {t('inventory.payDebtDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">

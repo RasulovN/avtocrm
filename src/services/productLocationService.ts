@@ -1,5 +1,6 @@
 import { apiClient } from './api';
 import { latinToCyrillic } from '../utils/transliteration';
+import type { PaginatedResponse } from '../types';
 
 export interface ProductLocation {
   id: string;
@@ -50,9 +51,46 @@ const parseLocations = (payload: unknown): ProductLocation[] => {
 };
 
 export const productLocationService = {
-  getAll: async (): Promise<ProductLocation[]> => {
-    const response = await apiClient.get('/products/store-product/locations/');
-    return parseLocations(response.data);
+  getAll: async (params?: { page?: number; limit?: number; search?: string }): Promise<PaginatedResponse<ProductLocation>> => {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append('page', params.page.toString());
+    if (params?.limit) searchParams.append('limit', params.limit.toString());
+    if (params?.search) searchParams.append('search', params.search);
+    
+    const queryString = searchParams.toString();
+    const url = queryString ? `/products/store-product/locations/?${queryString}` : '/products/store-product/locations/';
+    
+    const response = await apiClient.get(url);
+    const payload = response.data as unknown;
+    
+    if (Array.isArray(payload)) {
+      const data = payload.map(normalizeLocation);
+      return {
+        data,
+        total: data.length,
+        page: params?.page ?? 1,
+        limit: params?.limit ?? data.length
+      };
+    }
+    
+    if (payload && typeof payload === 'object') {
+      const p = payload as any;
+      // Handle common backend variations (data.results, results, etc)
+      const target = p.data && typeof p.data === 'object' ? p.data : p;
+      const dataArray = Array.isArray(target.results) ? target.results : (Array.isArray(target.data) ? target.data : (Array.isArray(target) ? target : []));
+      
+      const data = dataArray.map(normalizeLocation);
+      const total = typeof target.count === 'number' ? target.count : (typeof target.total === 'number' ? target.total : data.length);
+      
+      return {
+        data,
+        total,
+        page: params?.page ?? 1,
+        limit: params?.limit ?? data.length
+      };
+    }
+    
+    return { data: [], total: 0, page: 1, limit: 10 };
   },
 
   getById: async (id: string): Promise<ProductLocation> => {

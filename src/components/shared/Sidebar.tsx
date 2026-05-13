@@ -44,8 +44,7 @@ const navItems: NavItem[] = [
     icon: ClipboardCheck,
     children: [
       { titleKey: 'inventory.inventoryList', href: '/inventory', icon: List },
-      { titleKey: 'inventory.inventoryIncoming', href: '/inventory/kirimlar', icon: ArrowDownToLine },
-      { titleKey: 'inventory.shortages', href: '/inventory/kamomat', icon: TriangleAlert },
+      // { titleKey: 'inventory.shortages', href: '/inventory/kamomat', icon: TriangleAlert },
       { titleKey: 'inventory.newInventory', href: '/inventory/new', icon: Plus },
     ],
   },
@@ -127,7 +126,7 @@ export function Sidebar({ className }: SidebarProps) {
         <div className="flex flex-col h-full">
           <div className="p-6 border-b">
             <h1 className="text-xl font-bold">AvtoCRM</h1>
-            <p className="text-sm text-muted-foreground">Auto Spare Parts</p>
+            <p className="text-sm text-muted-foreground">{t('sales.autoSpareParts', 'Авто эҳтиёт қисмлар')}</p>
           </div>
 
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto">

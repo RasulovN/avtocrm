@@ -242,7 +242,7 @@ export function SalesDetailPage() {
         actions={
           <Button variant="outline" onClick={handlePrint}>
             <Printer className="mr-2 h-4 w-4" />
-            Chop etish
+            {t('sales.print')}
           </Button>
         }
       />
@@ -311,7 +311,7 @@ export function SalesDetailPage() {
               </div>
               {sale.discount_amount && parseFloat(sale.discount_amount) > 0 && (
                 <div className="flex justify-between text-red-500">
-                  <span>Chegirma ({sale.discount_type === 'p' ? `${sale.discount_value}%` : ''})</span>
+                  <span>{t('sales.discount')} ({sale.discount_type === 'p' ? `${sale.discount_value}%` : ''})</span>
                   <span>-{formatCurrency(parseFloat(sale.discount_amount))}</span>
                 </div>
               )}
@@ -325,7 +325,7 @@ export function SalesDetailPage() {
           <div className="bg-card dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
             <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
               <CreditCard className="h-5 w-5" />
-              To'lovlar
+              {t('sales.payment')}
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20">
@@ -344,7 +344,7 @@ export function SalesDetailPage() {
             {sale.debt && sale.debt > 0 && (
               <Button className="w-full mt-4" onClick={openPaymentDialog}>
                 <Wallet className="mr-2 h-4 w-4" />
-                Qarzni to'lash
+                {t('customers.payDebt')}
               </Button>
             )}
           </div>
@@ -354,7 +354,7 @@ export function SalesDetailPage() {
           <div className="bg-card dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
             <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
               <User className="h-5 w-5" />
-              Mijoz
+              {t('sales.customer')}
             </h3>
             <div className="space-y-4">
               <div className="flex items-center gap-3">
@@ -372,7 +372,7 @@ export function SalesDetailPage() {
           <div className="bg-card dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
             <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
               <Tag className="h-5 w-5" />
-              Sotuvchi
+              {t('users.seller')}
             </h3>
             <div className="space-y-4">
               <div className="flex items-center gap-3">
@@ -390,7 +390,7 @@ export function SalesDetailPage() {
           <div className="bg-card dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
             <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
               <DollarSign className="h-5 w-5" />
-              Chegirma
+              {t('sales.discount')}
             </h3>
             {sale.discount_amount && parseFloat(sale.discount_amount) > 0 ? (
               <div className="space-y-3">
@@ -415,7 +415,7 @@ export function SalesDetailPage() {
           <div className="bg-card dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
             <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
               <Calendar className="h-5 w-5" />
-              Sana
+              {t('common.date')}
             </h3>
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
@@ -552,7 +552,7 @@ export function SalesDetailPage() {
                       </div>
                       <div className="flex justify-between gap-4">
                         <span className="text-muted-foreground">{t('sales.category')}</span>
-                        <span className="font-medium text-right">{selectedProduct?.category_name || "Ko'rsatilmagan"}</span>
+                        <span className="font-medium text-right">{selectedProduct?.category_name || t('common.noData')}</span>
                       </div>
                       <div className="flex justify-between gap-4">
                         <span className="text-muted-foreground">{t('sales.quantity')}</span>
@@ -587,7 +587,7 @@ export function SalesDetailPage() {
                 <div className="rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4">
                   <div className="mb-3 flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-primary" />
-                    <h5 className="font-semibold">Joylashuvi</h5>
+                    <h5 className="font-semibold">{t('sales.location')}</h5>
                   </div>
                   {productLocation ? (
                     <div>
@@ -607,7 +607,7 @@ export function SalesDetailPage() {
                   <div className="grid gap-3 sm:grid-cols-3 text-sm">
                     <div>
                       <p className="text-muted-foreground">{t('sales.quantity')}</p>
-                      <p className="mt-1 font-medium">{selectedSaleItem?.quantity ?? 0} dona</p>
+                      <p className="mt-1 font-medium">{selectedSaleItem?.quantity ?? 0} {t('common.pcs')}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">{t('sales.price')}</p>
@@ -624,7 +624,7 @@ export function SalesDetailPage() {
                 <div className="rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4">
                   <div className="mb-3 flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-primary" />
-                    <h5 className="font-semibold">Joylashuvi</h5>
+                    <h5 className="font-semibold">{t('sales.location')}</h5>
                   </div>
                   {productLocation && productLocation.name ? (
                     <div>
@@ -650,7 +650,7 @@ export function SalesDetailPage() {
           <div className="receipt-content receipt-print bg-white dark:bg-gray-800 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto p-4" onClick={e => e.stopPropagation()}>
             <div className="text-center border-b dark:border-gray-600 pb-3 mb-3 ">
               <h4 className="text-xl font-bold dark:text-white print:text-black">AvtoCRM</h4>
-              <p className="text-sm dark:text-gray-300 print:text-black">Sotuv cheki #{sale.id}</p>
+              <p className="text-sm dark:text-gray-300 print:text-black">{t('sales.receipt')} #{sale.id}</p>
               <p className="text-xs dark:text-gray-400 print:text-black">{formatDate(sale.created_at)}</p>
             </div>
             <div className="text-xs border-b dark:border-gray-600 pb-2 mb-2 dark:text-gray-300">

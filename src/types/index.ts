@@ -1,5 +1,5 @@
 // User and Auth Types
-export type UserRole = 'admin' | 'store_user' | 'store_admin' | 's' | 'su';
+export type UserRole = 'admin' | 'store_user' | 'store_admin' | 's' | 'su' | 'm';
 
 export interface UserLog {
   id: string;

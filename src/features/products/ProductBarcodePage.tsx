@@ -13,7 +13,8 @@ import { formatCurrency } from '../../utils';
 import { BarcodePrint } from '../../components/ui/BarcodePrint';
 
 export function ProductBarcodePage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language || 'uz';
   const navigate = useNavigate();
   const { id } = useParams();
   const { user } = useAuthStore();
@@ -285,7 +286,7 @@ export function ProductBarcodePage() {
         title={t('products.barcode')}
         description={t('products.barcode')}
         breadcrumbs={[
-          { label: t('nav.products'), href: '/products' },
+          { label: t('nav.products'), href: `/${lang}/products` },
           { label: t('products.barcode') },
         ]}
         actions={
@@ -296,7 +297,7 @@ export function ProductBarcodePage() {
                 {t('products.printAllBarcodes')}
               </Button>
             )}
-            <Button variant="outline" onClick={() => navigate('/products')}>
+            <Button variant="outline" onClick={() => navigate(`/${lang}/products`)}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               {t('common.back')}
             </Button>

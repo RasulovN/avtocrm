@@ -28,6 +28,7 @@ interface CartItem {
   purchase_price: number;
   selling_price: number;
   total: number;
+  available_stock: number;
 }
 
 const getProductImages = (product?: Product | null): string[] => {
@@ -39,7 +40,13 @@ const getProductImages = (product?: Product | null): string[] => {
 
   if (product.images) {
     if (Array.isArray(product.images)) {
-      images.push(...product.images.filter((image): image is string => typeof image === 'string' && Boolean(image)));
+      const mappedImages = product.images.map((img: any) => {
+        if (typeof img === 'string') return img;
+        if (typeof img === 'object' && img !== null && typeof img.image === 'string') return img.image;
+        return null;
+      }).filter(Boolean) as string[];
+      
+      images.push(...mappedImages);
     } else if (typeof product.images === 'string') {
       images.push(product.images);
     }
@@ -116,7 +123,20 @@ export function SalesPage() {
 
   const [storeId, setStoreId] = useState(userStoreId);
   const [categoryFilter, setCategoryFilter] = useState('');
-  const [items, setItems] = useState<CartItem[]>([]);
+  
+  const [items, setItems] = useState<CartItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(`crm_cart_${user?.id || 'guest'}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Persist cart whenever items change
+  useEffect(() => {
+    localStorage.setItem(`crm_cart_${user?.id || 'guest'}`, JSON.stringify(items));
+  }, [items, user?.id]);
 
   const [cashAmount, setCashAmount] = useState(0);
   const [cardAmount, setCardAmount] = useState(0);
@@ -177,29 +197,53 @@ export function SalesPage() {
       return;
     }
 
+    // Determine available stock for this specific store
+    let availableStock = 0;
+    if (product.quantity !== undefined) {
+      availableStock = product.quantity;
+    } else if (product.inventory_by_store && storeId) {
+      const storeInv = product.inventory_by_store.find(inv => String(inv.store_id) === String(storeId));
+      availableStock = storeInv ? storeInv.quantity : 0;
+    } else {
+      availableStock = product.total_count ?? 0;
+    }
+
     setItems((prevItems) => {
       const existingIndex = prevItems.findIndex((item) => String(item.product_id) === productId);
       if (existingIndex >= 0) {
         const newItems = [...prevItems];
         const existingItem = newItems[existingIndex];
+        
+        if (existingItem.quantity + 1 > availableStock) {
+          toast.error(t('messages.insufficientStock', 'Omborda mahsulot yetarli emas!') + ` (${availableStock})`);
+          return prevItems;
+        }
+
         existingItem.quantity += 1;
         existingItem.total = existingItem.selling_price * existingItem.quantity;
         return newItems;
       } 
+      
+      if (availableStock < 1) {
+         toast.error(t('messages.insufficientStock', 'Omborda mahsulot yetarli emas!') + ' (0)');
+         return prevItems;
+      }
+
       return [
         ...prevItems,
         {
           product_id: productId,
           product_name: product.name || product.sku || 'Noma\'lum',
-          store_id: product.store_id || userStoreId || '1',
+          store_id: product.store_id || storeId || userStoreId || '1',
           quantity: 1,
           purchase_price: product.purchase_price ?? 0,
           selling_price: product.selling_price ?? 0,
           total: product.selling_price ?? 0,
+          available_stock: availableStock,
         },
       ];
     });
-  }, [userStoreId]);
+  }, [storeId, userStoreId, t]);
 
   const findProductByBarcode = useCallback(async (barcode: string, isFromScan: boolean = true): Promise<Product | null> => {
     const normalizedBarcode = barcode.trim();
@@ -316,11 +360,11 @@ export function SalesPage() {
     try {
       const [storesRes, customersRes] = await Promise.all([
         storeService.getAll(),
-        customerApiService.getAll(),
+        customerApiService.getAll({ limit: 1000 }),
       ]);
       const loadedStores = Array.isArray(storesRes.data) ? storesRes.data : [];
       setStores(isAdmin ? loadedStores : loadedStores.filter((store) => store.id === userStoreId));
-      setCustomers(customersRes || []);
+      setCustomers(customersRes.data || []);
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
@@ -451,10 +495,18 @@ export function SalesPage() {
   };
 
   const updateQuantity = (index: number, quantity: number) => {
-    if (!Number.isFinite(quantity) || quantity < 1) return;
+    if (!Number.isFinite(quantity) || quantity < 0) return;
     const newItems = [...items];
-    newItems[index].quantity = quantity;
-    newItems[index].total = newItems[index].selling_price * quantity;
+    const item = newItems[index];
+
+    if (quantity > item.available_stock) {
+      toast.error(t('messages.insufficientStock', 'Omborda mahsulot yetarli emas!') + ` (${item.available_stock})`);
+      item.quantity = item.available_stock;
+    } else {
+      item.quantity = quantity;
+    }
+    
+    item.total = item.selling_price * item.quantity;
     setItems(newItems);
   };
 
@@ -502,7 +554,14 @@ export function SalesPage() {
   };
 
   const handleFinishSale = async () => {
+    if (saving) return;
     if (items.length === 0) return;
+
+    // Check for zero quantities
+    if (items.some(item => item.quantity <= 0)) {
+      toast.error(t('messages.invalidQuantity'));
+      return;
+    }
 
     try {
       setSaving(true);
@@ -592,7 +651,32 @@ export function SalesPage() {
     try {
       setProductLoading(true);
       const fullProduct = await productService.getById(String(hydratedProduct.id));
-      setSelectedProduct(fullProduct);
+      
+      // Merge loaded data over existing hydrated data to ensure we don't lose existing context
+      setSelectedProduct({
+        ...hydratedProduct,
+        ...fullProduct,
+        // Final safety guarantee for critical identification tokens
+        id: fullProduct.id && fullProduct.id.trim() !== "" ? fullProduct.id : String(hydratedProduct.id),
+        // Preserve fields if backend didn't return them properly
+        sku: fullProduct.sku || hydratedProduct.sku,
+        barcode: fullProduct.barcode || hydratedProduct.barcode,
+        shtrix_code: fullProduct.shtrix_code || hydratedProduct.shtrix_code,
+        category_name: fullProduct.category_name && fullProduct.category_name !== String(fullProduct.category) 
+          ? fullProduct.category_name 
+          : hydratedProduct.category_name,
+        inventory_by_store: fullProduct.inventory_by_store?.length 
+          ? fullProduct.inventory_by_store 
+          : hydratedProduct.inventory_by_store,
+        quantity: fullProduct.quantity ?? hydratedProduct.quantity,
+        total_count: fullProduct.total_count ?? hydratedProduct.total_count,
+        selling_price: fullProduct.selling_price || hydratedProduct.selling_price,
+        purchase_price: fullProduct.purchase_price || hydratedProduct.purchase_price,
+        image: fullProduct.image || hydratedProduct.image,
+        images: (fullProduct.images && fullProduct.images.length > 0) 
+          ? fullProduct.images 
+          : hydratedProduct.images,
+      });
       // Productdan location ma'lumotlarini olish
       if (fullProduct.location_id) {
         setProductLocation({
@@ -847,8 +931,13 @@ export function SalesPage() {
                             <Input
                               type="text"
                               min="1"
-                              value={item.quantity}
-                              onChange={(e: ChangeEvent<HTMLInputElement>) => updateQuantity(index, Number(e.target.value))}
+                              value={item.quantity || ''}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                                const val = e.target.value;
+                                if (val === '' || /^\d*$/.test(val)) {
+                                  updateQuantity(index, val === '' ? 0 : Number(val));
+                                }
+                              }}
                               className="h-7 w-12 text-center text-xs dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                             />
                             <Button
@@ -868,7 +957,10 @@ export function SalesPage() {
                             type="number"
                             min="0"
                             value={item.selling_price || ''}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => updatePrice(index, Number(e.target.value))}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                              const val = e.target.value;
+                              updatePrice(index, val === '' ? 0 : Number(val));
+                            }}
                             className="h-7 text-center text-xs dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                           />
                         </div>
@@ -912,7 +1004,7 @@ export function SalesPage() {
           <div className="flex flex-col space-y-2 xl:col-span-3">
             <div className="bg-card border border-gray-900 rounded-lg flex min-h-80 flex-col xl:flex-1">
               <div className="p-3 pb-2">
-                <h4 className="text-base font-semibold dark:text-white">{'Тўлов'}</h4>
+                <h4 className="text-base font-semibold dark:text-white">{t('sales.payment', 'Тўлов')}</h4>
               </div>
               <div className="px-3 flex-1 space-y-3">
                 <div className="space-y-2">
@@ -976,7 +1068,10 @@ export function SalesPage() {
                       min="0"
                       placeholder="0"
                       value={cashAmount || ''}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => setCashAmount(Number(e.target.value))}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                        const val = e.target.value;
+                        setCashAmount(val === '' ? 0 : Number(val));
+                      }}
                       className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white"
                     />
                   </div>
@@ -987,7 +1082,10 @@ export function SalesPage() {
                       min="0"
                       placeholder="0"
                       value={cardAmount || ''}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => setCardAmount(Number(e.target.value))}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                        const val = e.target.value;
+                        setCardAmount(val === '' ? 0 : Number(val));
+                      }}
                       className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white"
                     />
                   </div>
@@ -1008,7 +1106,10 @@ export function SalesPage() {
                         min="0"
                         placeholder="0"
                         value={discount || ''}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => setDiscount(Number(e.target.value))}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                          const val = e.target.value;
+                          setDiscount(val === '' ? 0 : Number(val));
+                        }}
                         className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white flex-1"
                       />
                     </div>
@@ -1022,7 +1123,7 @@ export function SalesPage() {
                   {discount > 0 && (
                     <div className="flex justify-between text-xs">
                       <span className="text-muted-foreground dark:text-gray-400">
-                        Chegirma ({discountType === 'p' ? `${discount}%` : ''}):
+                        {t('sales.discount')} ({discountType === 'p' ? `${discount}%` : ''}):
                       </span>
                       <span className="font-bold dark:text-white">-{formatCurrency(calculatedDiscount)}</span>
                     </div>
@@ -1063,7 +1164,7 @@ export function SalesPage() {
         <div className="receipt-modal fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="receipt-content receipt-print bg-white dark:bg-gray-800 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-4 border-b dark:border-gray-600 flex justify-between items-center print:hidden ">
-              <h3 className="text-lg font-bold dark:text-white">Chek</h3>
+              <h3 className="text-lg font-bold dark:text-white">{t('sales.receipt')}</h3>
               <Button variant="ghost" size="icon" onClick={() => setShowReceipt(false)}>
                 <X className="h-4 w-4" />
               </Button>
@@ -1195,7 +1296,7 @@ export function SalesPage() {
       </Dialog>
 
       <Dialog open={showProductDialog} onOpenChange={handleProductDialogChange}>
-        <DialogContent className="max-w-3xl pb-6">
+        <DialogContent className="max-w-3xl pb-6 max-h-[95vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t('sales.productDetails')}</DialogTitle>
           </DialogHeader>
@@ -1268,16 +1369,8 @@ export function SalesPage() {
                         <span className="font-medium">{selectedProduct?.id || '-'}</span>
                       </div>
                       <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">{t('sales.category')}</span>
+                        <span className="text-muted-foreground">{t('products.category')}</span>
                         <span className="font-medium text-right">{selectedProduct?.category_name || "-"}</span>
-                      </div>
-                      <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">{t('sales.quantity')}</span>
-                        <span className="font-medium">{selectedProduct?.quantity ?? selectedProduct?.total_count ?? 0}</span>
-                      </div>
-                      <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">{t('sales.store')}</span>
-                        <span className="font-medium text-right">{selectedProduct?.store_name || '-'}</span>
                       </div>
                     </div>
                   </div>
@@ -1288,14 +1381,7 @@ export function SalesPage() {
                       <span className="text-sm">{t('sales.codesAndPrices')}</span>
                     </div>
                     <div className="space-y-2 text-sm">
-                      <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">SKU</span>
-                        <span className="font-medium">{selectedProduct?.sku || '-'}</span>
-                      </div>
-                      <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">Barcode</span>
-                        <span className="font-medium">{selectedProduct?.barcode || selectedProduct?.shtrix_code || '-'}</span>
-                      </div>
+
                       <div className="flex justify-between gap-4">
                         <span className="text-muted-foreground">{t('sales.sellingPrice')}</span>
                         <span className="font-medium">{formatCurrency(selectedProduct?.selling_price ?? 0)}</span>
@@ -1325,6 +1411,48 @@ export function SalesPage() {
                   )}
                 </div>
                 
+                {/* Stock in other stores */}
+                {selectedProduct?.inventory_by_store && selectedProduct.inventory_by_store.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Package className="h-4 w-4 text-blue-500" />
+                      <h5 className="font-semibold text-sm dark:text-white">
+                        {t('sales.storeStock', 'Бошқа дўконлардаги қолдиқлар')}
+                      </h5>
+                    </div>
+                    <div className="grid gap-2">
+                      {selectedProduct.inventory_by_store.map((inv) => (
+                        <div 
+                          key={inv.store_id} 
+                          className="flex items-center justify-between rounded-xl border bg-background p-3 text-sm"
+                        >
+                          <div className="flex flex-col">
+                            <span className="font-medium">{inv.store_name}</span>
+                            {inv.location_name && (
+                              <span className="text-xs text-muted-foreground">{inv.location_name}</span>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            <span 
+                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                                inv.quantity > 0 
+                                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' 
+                                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                              }`}
+                            >
+                              {inv.quantity} {t('common.pcs', 'дона')}
+                            </span>
+                            {inv.selling_price && inv.selling_price > 0 && (
+                              <span className="text-xs font-medium text-muted-foreground">
+                                {formatCurrency(inv.selling_price)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

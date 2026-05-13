@@ -2,11 +2,19 @@ import { apiClient, API_ORIGIN } from './api';
 import { latinToCyrillic } from '../utils/transliteration';
 import type { Product, ProductFormData, ProductFilters, PaginatedResponse, ApiResponse, ProductStoreInventory } from '../types';
 
+const BACKEND_FALLBACK_URL = 'https://api.avtoyon.uz';
+
 const resolveImageUrl = (image?: string | unknown) => {
   if (typeof image !== 'string' || !image) return '';
   if (image.startsWith('http://') || image.startsWith('https://')) return image;
-  if (image.startsWith('/')) return `${API_ORIGIN}${image}`;
-  return image;
+  
+  // If we are running locally and API_ORIGIN is empty, fallback to actual server host
+  const origin = API_ORIGIN && API_ORIGIN.trim() !== "" ? API_ORIGIN : BACKEND_FALLBACK_URL;
+  
+  if (image.startsWith('/')) {
+    return `${origin}${image}`;
+  }
+  return `${origin}/${image}`;
 };
 
 const normalizeNumber = (value: unknown): number | undefined => {

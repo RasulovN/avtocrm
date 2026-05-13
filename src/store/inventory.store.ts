@@ -1,11 +1,13 @@
 import { create } from 'zustand';
-import type { InventorySession, InventoryProduct } from '../services/inventory.api';
+import type { InventorySession, InventoryProduct, ShortageExcessProduct } from '../services/inventory.api';
 import { inventoryApi } from '../services/inventory.api';
 
 interface InventoryState {
   sessions: InventorySession[];
   currentSessionProducts: InventoryProduct[];
   currentSessionChecked: InventoryProduct[];
+  currentSessionShorts: ShortageExcessProduct[];
+  currentSessionOvers: ShortageExcessProduct[];
   loading: boolean;
   itemsLoading: boolean;
   scanningProductId: number | null;
@@ -14,6 +16,8 @@ interface InventoryState {
   fetchSessions: () => Promise<void>;
   startSession: (storeId: number) => Promise<number>;
   fetchSessionProducts: (sessionId: number) => Promise<void>;
+  fetchSessionShorts: (sessionId: number) => Promise<void>;
+  fetchSessionOvers: (sessionId: number) => Promise<void>;
   scanProduct: (sessionId: number, productId: number, quantity: number) => Promise<void>;
   finalizeSession: (sessionId: number) => Promise<void>;
   cancelSession: (sessionId: number) => Promise<void>;
@@ -26,6 +30,8 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   sessions: [],
   currentSessionProducts: [],
   currentSessionChecked: [],
+  currentSessionShorts: [],
+  currentSessionOvers: [],
   loading: false,
   itemsLoading: false,
   scanningProductId: null,
@@ -35,7 +41,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const sessions = await inventoryApi.getSessions();
-      set({ sessions, loading: false });
+      set({ sessions: sessions || [], loading: false });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to fetch sessions';
       set({ error: message, loading: false });
@@ -66,6 +72,34 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to fetch session products';
+      set({ error: message, itemsLoading: false });
+    }
+  },
+
+  fetchSessionShorts: async (sessionId) => {
+    set({ itemsLoading: true, error: null });
+    try {
+      const response = await inventoryApi.getSessionShorts(sessionId);
+      set({
+        currentSessionShorts: response.results || [],
+        itemsLoading: false,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to fetch shortages';
+      set({ error: message, itemsLoading: false });
+    }
+  },
+
+  fetchSessionOvers: async (sessionId) => {
+    set({ itemsLoading: true, error: null });
+    try {
+      const response = await inventoryApi.getSessionOvers(sessionId);
+      set({
+        currentSessionOvers: response.results || [],
+        itemsLoading: false,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to fetch excess products';
       set({ error: message, itemsLoading: false });
     }
   },

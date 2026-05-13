@@ -91,7 +91,7 @@ export function ProductFormPage() {
         productLocationService.getAll(),
       ]);
       setUnits(unitList);
-      setLocations(locationList);
+      setLocations(locationList?.data || []);
     } catch (error) {
       console.error('Failed to load product form options:', error);
     }
