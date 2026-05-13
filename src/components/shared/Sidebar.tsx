@@ -62,7 +62,7 @@ const navItems: NavItem[] = [
       { titleKey: 'nav.users', href: '/users', icon: Users },
     ]
   },
-  { titleKey: 'nav.reports', href: '/reports', icon: FileText },
+  { titleKey: 'nav.reports', href: '/reports', icon: FileText, roles: ['admin'] },
   { titleKey: 'nav.settings', href: '/settings', icon: Settings },
 ];
 
