@@ -65,7 +65,7 @@ const navItems: NavItem[] = [
   { titleKey: 'nav.suppliers', href: '/suppliers', icon: Truck, access: 'superuser' },
   { titleKey: 'nav.stores', href: '/stores', icon: Store, access: 'superuser' },
   { titleKey: 'nav.storeInfo', href: '/stores', icon: Store, access: 'store' },
-  { titleKey: 'nav.reports', href: '/reports', icon: BarChart3, access: 'all' },
+  { titleKey: 'nav.reports', href: '/reports', icon: BarChart3, access: 'superuser' },
   { titleKey: 'nav.settings', href: '/settings', icon: Settings, access: 'all' },
 ];
 

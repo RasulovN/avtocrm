@@ -445,14 +445,16 @@ export function DashboardPage() {
                   type="date"
                   value={filters.dateRange.from}
                   onChange={(e) => handleDateChange('from', e.target.value)}
-                  className="h-8 w-32 text-xs"
+                  onClick={(e) => e.currentTarget.showPicker?.()}
+                  className="h-8 w-32 text-xs cursor-pointer"
                 />
                 <span className="text-muted-foreground">-</span>
                 <Input
                   type="date"
                   value={filters.dateRange.to}
                   onChange={(e) => handleDateChange('to', e.target.value)}
-                  className="h-8 w-32 text-xs"
+                  onClick={(e) => e.currentTarget.showPicker?.()}
+                  className="h-8 w-32 text-xs cursor-pointer"
                 />
               </div>
             </div>

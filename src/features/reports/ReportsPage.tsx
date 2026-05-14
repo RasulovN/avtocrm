@@ -263,14 +263,16 @@ export function ReportsPage() {
               type="date"
               value={filters.dateRange.from}
               onChange={(e) => handleDateChange('from', e.target.value)}
-              className="h-8 w-36 border-none focus-visible:ring-0 shadow-none text-sm"
+              onClick={(e) => e.currentTarget.showPicker?.()}
+              className="h-8 w-36 border-none focus-visible:ring-0 shadow-none text-sm cursor-pointer"
             />
             <span className="text-muted-foreground text-xs">-</span>
             <Input
               type="date"
               value={filters.dateRange.to}
               onChange={(e) => handleDateChange('to', e.target.value)}
-              className="h-8 w-36 border-none focus-visible:ring-0 shadow-none text-sm"
+              onClick={(e) => e.currentTarget.showPicker?.()}
+              className="h-8 w-36 border-none focus-visible:ring-0 shadow-none text-sm cursor-pointer"
             />
           </div>
 
