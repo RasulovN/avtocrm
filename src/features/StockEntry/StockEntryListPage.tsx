@@ -18,7 +18,7 @@ import { storeService } from '../../services/storeService';
 import { formatCurrency, formatDate } from '../../utils';
 import type { InventoryItem, Store, Supplier } from '../../types';
 import { BarcodePrintAll } from '../../components/ui/BarcodePrint';
-
+import { generateBarcodePrintHtml, generateMultipleBarcodesPrintHtml } from '../../utils/xss';
 export interface SupplierPayment {
   id: number;
   supplier: number;
@@ -49,22 +49,22 @@ export function StockEntryListPage() {
   const { t } = useTranslation();
   const params = useParams();
   const lang = params.lang || 'uz';
-  
+
   const [inventory, setInventory] = useState<DisplayInventory[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Pagination states
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
-  
+
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [storeFilter, setStoreFilter] = useState<string>('');
   const [supplierFilter, setSupplierFilter] = useState<string>('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  
+
   // Reference lists
   const [stores, setStores] = useState<Store[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -99,7 +99,7 @@ export function StockEntryListPage() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       const filterParams: InventoryFilters = {
         page,
         limit,
@@ -218,7 +218,7 @@ export function StockEntryListPage() {
     setBarcodeItems(item.items || []);
     setShowBarcodeDialog(true);
   };
- 
+
   const handlePrintInventoryBarcode = (item: DisplayInventory, itemIndex: number) => {
     const invItem = item.items?.[itemIndex];
     if (!invItem) return;
@@ -227,98 +227,14 @@ export function StockEntryListPage() {
     const productBarcode = invItem.product_barcode || '';
     // Always use product_barcode for JsBarcode generation (more reliable)
     const barcodeValue = productBarcode || shtrixCode.replace(/.*\//, '').replace(/\..*/, '') || shtrixCode;
-    
+
     if (!barcodeValue) return;
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-     printWindow.document.write(`
-      <html>
-        <head>
-          <title>Print Barcode</title>
-          <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-          <style>
-            @page {
-              size: 28mm 16mm;
-              margin: 0;
-            }
-            body { 
-              font-family: 'Consolas', 'Courier New', monospace; 
-              margin: 0; 
-              padding: 0;
-              text-align: center;
-              font-size: 6px;
-              width: 28mm;
-              height: 16mm;
-              box-sizing: border-box;
-            }
-            .barcode-card { 
-              border: none; 
-              padding: 0;
-              margin: 0;
-              text-align: center;
-              width: 28mm;
-              height: 16mm;
-              box-sizing: border-box;
-              display: flex;
-              flex-direction: column;
-              justify-content: center;
-              align-items: center;
-            }
-            .barcode-section { 
-              margin: 0; 
-            }
-            .barcode-value { 
-              font-family: 'Consolas', monospace; 
-              font-size: 8px; 
-              font-weight: bold;
-              margin-top: 1px;
-              letter-spacing: 1px;
-            }
-            svg { 
-              width: auto;
-              max-width: 26mm; 
-              height: 12mm; 
-              display: block;
-              margin: 0 auto;
-            }
-            @media print {
-              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="barcode-card">
-            <div class="barcode-section">
-              ${barcodeValue ? `
-                <svg id="barcode-svg"></svg>
-                <div class="barcode-value">${barcodeValue}</div>
-              ` : ''}
-            </div>
-          </div>
-          <script>
-            window.onload = function() {
-              ${barcodeValue ? `
-                try {
-                  JsBarcode('#barcode-svg', '${barcodeValue}', {
-                    format: 'CODE128',
-                    width: 1.5,
-                    height: 90,
-                    displayValue: false,
-                    margin: 0,
-                    textMargin: 0,
-                  });
-                } catch(e) {
-                  console.error('Barcode error:', e);
-                }
-              ` : ''}
-              setTimeout(function() { window.print(); }, 300);
-            };
-          </script>
-        </body>
-      </html>
-    `);
+    const html = generateBarcodePrintHtml(barcodeValue);
+    printWindow.document.write(html);
     printWindow.document.close();
   };
 
@@ -326,101 +242,20 @@ export function StockEntryListPage() {
     const items = item.items || [];
     if (items.length === 0) return;
 
+    const barcodeValues = items.map((invItem) => {
+      const shtrixCode = invItem.shtrix_code || '';
+      const productBarcode = invItem.product_barcode || '';
+      const value = productBarcode || shtrixCode.replace(/.*\//, '').replace(/\..*/, '') || shtrixCode;
+      return { value, productName: invItem.product_name };
+    }).filter(item => item.value);
+
+    if (barcodeValues.length === 0) return;
+
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    const barcodeCards = items.map((invItem, index) => {
-      const shtrixCode = invItem.shtrix_code || '';
-      const productBarcode = invItem.product_barcode || '';
-      const barcodeValue = productBarcode || shtrixCode.replace(/.*\//, '').replace(/\..*/, '') || shtrixCode;
-      if (!barcodeValue) return '';
-
-      return `
-        <div class="barcode-card">
-          <div class="barcode-section">
-            ${barcodeValue ? `
-              <svg id="barcode-svg-${index}"></svg>
-              <div class="barcode-value">${barcodeValue}</div>
-            ` : ''}
-          </div>
-        </div>
-        ${index < items.length - 1 ? '<div style="page-break-after: always;"></div>' : ''}
-      `;
-    }).join('');
-
-   printWindow.document.write(`
-      <html>
-        <head>
-          <title>Print All Barcodes</title>
-          <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-          <style>
-            @page {
-              size: 28mm 16mm;
-              margin: 0;
-            }
-            body {
-              font-family: 'Consolas', 'Courier New', monospace;
-              margin: 0;
-              padding: 0;
-              text-align: center;
-              font-size: 6px;
-              width: 28mm;
-              height: 16mm;
-              box-sizing: border-box;
-            }
-            .barcode-card { 
-              width: 28mm;
-              height: 16mm;
-              display: grid;
-              justify-content: center;
-              align-items: center;
-            }
-            .barcode-section { 
-              margin: 0; 
-            }
-            .barcode-value { 
-              font-family: 'Consolas', monospace; 
-              font-size: 10px; 
-              font-weight: normal;
-              margin-top: 1px;
-              letter-spacing: 1px;
-            }
-            svg { 
-              width: 26mm; 
-              height: 12mm; 
-              display: flex;
-            }
-          </style>
-        </head>
-        <body>
-          ${barcodeCards}
-          <script>
-            window.onload = function() {
-              ${items.map((invItem, index) => {
-                const shtrixCode = invItem.shtrix_code || '';
-                const productBarcode = invItem.product_barcode || '';
-                const barcodeValue = productBarcode || shtrixCode.replace(/.*\//, '').replace(/\..*/, '') || shtrixCode;
-                return barcodeValue ? `
-                  try {
-                    JsBarcode('#barcode-svg-${index}', '${barcodeValue}', {
-                      format: 'CODE128',
-                      width: 1.5,
-                      height: 90,
-                      displayValue: false,
-                      margin: 0,
-                      textMargin: 0,
-                    });
-                  } catch (error) {
-                    console.error('Failed to generate barcode ${index}:', error);
-                  }
-                ` : '';
-              }).join('')}
-              setTimeout(function() { window.print(); }, 500);
-            };
-          </script>
-        </body>
-      </html>
-    `);
+    const html = generateMultipleBarcodesPrintHtml(barcodeValues);
+    printWindow.document.write(html);
     printWindow.document.close();
   };
 
@@ -500,7 +335,7 @@ export function StockEntryListPage() {
       header: t('common.status'),
       render: (item) => (
         <span className={`px-2 py-1 rounded-full text-xs ${item.status === 'completed' ? 'bg-green-100 text-green-800' :
-            item.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+          item.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
           }`}>
           {item.status === 'completed' ? t('common.completed') :
             item.status === 'pending' ? t('common.pending') : t('common.cancelled')}
@@ -587,10 +422,10 @@ export function StockEntryListPage() {
             </div>
             <div className="space-y-2">
               <Label>{t('common.dateFrom')}</Label>
-              <Input 
-                type="date" 
-                value={dateFrom} 
-                onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} 
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
                 onClick={(e) => e.currentTarget.showPicker?.()}
                 className="cursor-pointer"
               />
@@ -598,10 +433,10 @@ export function StockEntryListPage() {
             <div className="space-y-2">
               <Label>{t('common.dateTo')}</Label>
               <div className="flex gap-2">
-                <Input 
-                  type="date" 
-                  value={dateTo} 
-                  onChange={(e) => { setDateTo(e.target.value); setPage(1); }} 
+                <Input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
                   onClick={(e) => e.currentTarget.showPicker?.()}
                   className="flex-1 cursor-pointer"
                 />
@@ -641,7 +476,7 @@ export function StockEntryListPage() {
                       <p className="mt-1 text-sm text-muted-foreground">{item.store_name || item.store_id}</p>
                     </div>
                     <span className={`rounded-full px-2 py-1 text-xs ${item.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        item.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                      item.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
                       }`}>
                       {item.status === 'completed' ? t('common.completed') :
                         item.status === 'pending' ? t('common.pending') : t('common.cancelled')}
@@ -684,25 +519,25 @@ export function StockEntryListPage() {
             ))}
             {totalCount > limit && (
               <div className="flex items-center justify-between mt-4 p-2 bg-card border rounded-lg">
-                 <Button 
-                  variant="outline" 
-                  size="sm" 
-                  disabled={page <= 1} 
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
                   onClick={() => setPage(p => Math.max(1, p - 1))}
-                 >
-                    <ChevronLeft className="h-4 w-4 mr-1" /> {t('common.previous')}
-                 </Button>
-                 <span className="text-sm font-medium">
-                    {page} / {Math.ceil(totalCount / limit)}
-                 </span>
-                 <Button 
-                  variant="outline" 
-                  size="sm" 
-                  disabled={page * limit >= totalCount} 
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" /> {t('common.previous')}
+                </Button>
+                <span className="text-sm font-medium">
+                  {page} / {Math.ceil(totalCount / limit)}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page * limit >= totalCount}
                   onClick={() => setPage(p => p + 1)}
-                 >
-                    {t('common.next')} <ChevronRight className="h-4 w-4 ml-1" />
-                 </Button>
+                >
+                  {t('common.next')} <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
               </div>
             )}
           </div>

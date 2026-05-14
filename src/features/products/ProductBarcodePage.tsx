@@ -11,6 +11,7 @@ import { productService } from '../../services/productService';
 import type { Product } from '../../types';
 import { formatCurrency } from '../../utils';
 import { BarcodePrint } from '../../components/ui/BarcodePrint';
+import { generateBarcodePrintHtml, escapeHtml, escapeJsString } from '../../utils/xss';
 
 export function ProductBarcodePage() {
   const { t, i18n } = useTranslation();
@@ -55,96 +56,13 @@ export function ProductBarcodePage() {
 
     const batch = displayBatches.find(b => `barcode-card-${b.store}-${b.id}` === batchKey);
     const barcodeValue = batch?.barcode || batch?.shtrix_code || '';
+    if (!barcodeValue) return;
     
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Print Barcode</title>
-          <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-          <style>
-            @page {
-              size: 28mm 16mm;
-              margin: 0;
-            }
-            body { 
-              font-family: 'Consolas', 'Courier New', monospace; 
-              margin: 0; 
-              padding: 0;
-              text-align: center;
-              font-size: 6px;
-              width: 28mm;
-              height: 16mm;
-              box-sizing: border-box;
-            }
-            .barcode-card { 
-              border: none; 
-              padding: 0;
-              margin: 0;
-              text-align: center;
-              width: 28mm;
-              height: 16mm;
-              box-sizing: border-box;
-              display: flex;
-              flex-direction: column;
-              justify-content: center;
-              align-items: center;
-            }
-            .barcode-section { 
-              margin: 0; 
-            }
-            .barcode-value { 
-              font-family: 'Consolas', monospace; 
-              font-size: 8px; 
-              font-weight: normal;
-              margin-top: 1px;
-              letter-spacing: 1px;
-            }
-            svg { 
-              width: auto;
-              max-width: 26mm; 
-              height: 12mm; 
-              display: block;
-              margin: 0 auto;
-            }
-            @media print {
-              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="barcode-card">
-            <div class="barcode-section">
-              ${barcodeValue ? `
-                <svg id="barcode-svg"></svg>
-                <div class="barcode-value">${barcodeValue}</div>
-              ` : ''}
-            </div>
-          </div>
-          <script>
-            window.onload = function() {
-              ${barcodeValue ? `
-                try {
-                  JsBarcode('#barcode-svg', '${barcodeValue}', {
-                    format: 'CODE128',
-                    width: 1.5,
-                    height: 90,
-                    displayValue: false,
-                    margin: 0,
-                    textMargin: 0,
-                  });
-                } catch(e) {
-                  console.error('Barcode error:', e);
-                }
-              ` : ''}
-              setTimeout(function() { window.print(); }, 300);
-            };
-          </script>
-        </body>
-      </html>
-    `);
+    const html = generateBarcodePrintHtml(barcodeValue);
+    printWindow.document.write(html);
     printWindow.document.close();
   };
 
@@ -154,10 +72,12 @@ export function ProductBarcodePage() {
 
     const barcodeCards = displayBatches.map((batch, index) => {
       const barcodeValue = batch.barcode || batch.shtrix_code || '';
+      if (!barcodeValue) return '';
+      const escapedValue = escapeHtml(barcodeValue);
       return `
         <div class="barcode-card">
           <svg id="barcode-svg-${index}"></svg>
-          <div class="barcode-value">${barcodeValue}</div>
+          <div class="barcode-value">${escapedValue}</div>
         </div>
       `;
     }).join('');
@@ -213,9 +133,10 @@ export function ProductBarcodePage() {
             window.onload = function() {
               ${displayBatches.map((batch, index) => {
                 const barcodeValue = batch.barcode || batch.shtrix_code || '';
+                const jsEscaped = escapeJsString(barcodeValue);
                 return barcodeValue ? `
                   try {
-                    JsBarcode('#barcode-svg-${index}', '${barcodeValue}', {
+                    JsBarcode('#barcode-svg-${index}', ${JSON.stringify(jsEscaped)}, {
                       format: 'CODE128',
                       width: 1,
                       height: 30,

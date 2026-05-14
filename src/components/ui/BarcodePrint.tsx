@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, memo, useMemo, useCallback } from 'react';
 import JsBarcode from 'jsbarcode';
+import { cloneDomSafely } from '../../utils/xss';
 
 interface BarcodePrintProps {
   value: string;
@@ -159,7 +160,7 @@ export const BarcodePrintAll = memo(function BarcodePrintAll({ items }: BarcodeP
           </style>
         </head>
         <body>
-          ${printContentRef.current.innerHTML}
+          ${cloneDomSafely(printContentRef.current)}
         </body>
       </html>
     `);

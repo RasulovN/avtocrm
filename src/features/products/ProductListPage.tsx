@@ -20,6 +20,7 @@ import { useAuthStore } from '../../app/store';
 import { useCategories } from '../../context/CategoryContext';
 import type { Product, ProductFilters } from '../../types';
 import { formatCurrency } from '../../utils';
+import { cloneDomSafely } from '../../utils/xss';
 
 export function ProductListPage() {
   const { t, i18n } = useTranslation();
@@ -172,7 +173,7 @@ export function ProductListPage() {
            </style>
          </head>
          <body>
-           <div class="barcode-sheet">${printContent.innerHTML}</div>
+           ${cloneDomSafely(printContent)}
          </body>
        </html>
      `);

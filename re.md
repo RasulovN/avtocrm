@@ -1,168 +1,103 @@
-Mening keng qamrovli tahlilimga asoslanib, bu erda loyihada topilgan xavfsizlik kamchiliklari va muammolari:
+# AvtoCRM Xavfsizlik va Kamchiliklar Tahlili
 
-🔴 MUHIM masalalar
-1. Shtrixli chop etish orqali aks ettirilgan XSS (Bir nechta fayllar)
-Fayllar: StockEntryListPage.tsx, ProductBarcodePage.tsx, ProductListPage.tsx
+Mening keng qamrovli tahlilimga asoslanib, bu erda loyihada topilgan xavfsizlik kamchiliklari va dastur mantig'iga oid muammolar keltirilgan:
 
-Ma'lumotlar bazasidagi shtrix-kod qiymatlari to'g'ridan-to'g'ri HTML/JavaScript shablonlariga qochmasdan interpolyatsiya qilinadi:
+## 🔴 MUHIM (Critical) Masalalar
 
+### 1. Shtrixli chop etish (Barcode Print) orqali aks ettirilgan XSS (Bir nechta fayllar)
+**Fayllar:** `StockEntryListPage.tsx`, `ProductBarcodePage.tsx`, `ProductListPage.tsx`, `BarcodePrint.tsx`
+
+**Tavsif:** Ma'lumotlar bazasidagi shtrix-kod qiymatlari (yoki mahsulot nomlari) to'g'ridan-to'g'ri HTML/JavaScript shablonlariga hech qanday qochmasdan (escaping) interpolyatsiya qilinmoqda yoki `innerHTML` orqali to'g'ridan-to'g'ri `document.write` ichiga joylashtirilmoqda:
+
+```javascript
 printWindow.document.write(`
   ...
   <div class="barcode-value">${barcodeValue}</div>
-  <skript>
+  <script>
     JsBarcode('#barcode-svg', '${barcodeValue}', ...);
   </script>
 `);
-Agar tajovuzkor ' "><script>alert(1)</script> yoki shunga o'xshash shtrix-kodni kirita olsa, u chop etish oynasi kontekstida o'zboshimchalik bilan JavaScript-ni ishga tushiradi (u asosiy oynaning cookie fayllari va xotirasiga kirish huquqiga ega).
+```
+Agar tajovuzkor `"><script>alert(1)</script>` kabi qiymatga ega mahsulot nomi yoki shtrix-kodni ishlatsa, u chop etish oynasida zararli kodni ishga tushirishi mumkin. Bu sessiya va tokenlarning o'g'irlanishiga (XSS) olib keladi.
 
-Ta'sir: seansni o'g'irlash, hisob ma'lumotlarini o'g'irlash, hisobni egallash.
+**Tuzatish:** 
+- String interpolyatsiyasi o'rniga `document.createElement` va `textContent` usullaridan foydalaning.
+- React'da tayyorlangan maxsus `xss.ts` faylidagi qochish funksiyalaridan to'g'ri va doimiy foydalaning (masalan: `escapeHtml`, `escapeJsString`).
 
-Tuzatish: o‘rnatishdan oldin shtrix kod qiymatini sanitizatsiya qiling:
+## 🟠 YUQORI (High) Masalalar
 
-String interpolyatsiyasi o'rniga DOM usullari orqali textContent dan foydalaning
-Yoki tegishli qochish funksiyasidan foydalaning: barcodeValue.replace(/[&<>"']/g, ...)
-Skript ichida JSON.stringify(barcodeValue) dan foydalanishni o'ylab ko'ring
-🟠 Yuqori masalalar
-2. Nozik foydalanuvchi ma'lumotlarini localStorage-da saqlash
-Fayl: authService.ts, app/store.ts
+### 2. Nozik foydalanuvchi ma'lumotlarini `localStorage`-da saqlash
+**Fayl:** `authService.ts`, `app/store.ts`
 
-Butun foydalanuvchi ob'ekti (jumladan, telefon_raqami, email, do'kon_identifikatori, rol, is_superuser) logindan keyin localStorage'da saqlanadi:
+**Tavsif:** Butun foydalanuvchi ob'ekti (jumladan telefon raqami, email, do'kon identifikatori, roli va h.k.) login tizimidan so'ng `localStorage`da ochiq ko'rinishda saqlanadi:
+```javascript
+localStorage.setItem('crm_user', JSON.stringify(user));
+```
+Agar dasturda biron bir XSS zaifligi topilsa, barcha mijoz ma'lumotlari xavf ostida qoladi.
 
-localStorage.setItem('crm_user', JSON.stringify(foydalanuvchi));
-localStorage-ga sahifada ishlaydigan har qanday JavaScript orqali kirish mumkin. Agar XSS zaifligi mavjud bo'lsa, barcha autentifikatsiya ma'lumotlari ochiladi. Maxfiy ma'lumotlar mijoz tomonidan saqlashda saqlanmasligi kerak; sessiyani boshqarish uchun httpOnly cookie-fayllardan foydalaning va xotirada minimal holatni saqlang.
+**Tuzatish:**
+- Sessiyani boshqarish uchun faqat backend tomonidan boshqariladigan `httpOnly` va `Secure` cookie fayllardan foydalaning.
+- `localStorage`-da faqat sezgir bo'lmagan UI sozlamalarini (masalan, mavzu/theme) saqlang.
 
-Tuzatish:
+### 3. Kontent xavfsizligi siyosati (CSP) yo'q
+**Fayl:** `index.html`
 
-crm_userni localStorage dan olib tashlang; faqat xotirada saqlang yoki httpOnly cookie-fayllardan foydalaning
-localStorage-da faqat sezgir bo'lmagan foydalanuvchi sozlamalarini saqlang
-3. Kontent xavfsizligi siyosati (CSP) yo'q
-Fayl: index.html
+**Tavsif:** Dasturda hech qanday Content-Security-Policy (CSP) meta-tegi yoki sarlavhalari sozlangan emas. Bu dasturni hatto oddiy in'ektsiya hujumlaridan ham himoyasiz qiladi.
 
-Hech qanday CSP sarlavhalari o'rnatilmagan, bu dasturni hatto uchinchi tomon bog'liqliklaridan ham XSS hujumlariga to'liq himoyasiz qoldiradi.
+**Tuzatish:** `index.html` faylining `<head>` qismiga quyidagi qatorni qo'shing yoki serverda sozlang:
+`<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">`
 
-Tuzatish: CSP meta tegi yoki server sarlavhalarini qo'shing:
+## 🟡 O'RTA (Medium) Masalalar
 
-<meta http-equiv="Kontent-Xavfsizlik-Siyosat" 
-  content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
-🟡 O'RTA muammolar
-4. Ishonchsiz cookie konfiguratsiyasi
-Fayl: src/utils/cookie.ts
+### 4. Ishonchsiz cookie konfiguratsiyasi
+**Fayl:** `src/utils/cookie.ts`
 
-Cookie fayllari xavfsiz bayroqsiz o'rnatiladi, bu ularni HTTP orqali MITM hujumlariga qarshi himoyasiz qiladi (agar foydalanilgan bo'lsa):
+**Tavsif:** Cookie fayllari `secure` bayrog'isiz (flag) o'rnatilmoqda. Bu ma'lumotlarning HTTP tarmog'i orqali shifrlanmagan holda yuborilishiga imkon beradi (MITM hujumi xavfi).
 
-Cookies.set(USER_KEY, userStr, { muddati: 7, yo'l: '/', sameSite: 'lax' });
-Tuzatish: ishlab chiqarishda xavfsizlikni taʼminlang: rost:
-
+**Tuzatish:** Ishlab chiqarish muhitida `secure: true` qilib sozlang:
+```javascript
 Cookies.set(USER_KEY, userStr, { 
-  muddati tugaydi: 7, 
-  yo'l: '/', 
-  o'sha sayt: 'lax',
-  xavfsiz: import.meta.env.PROD 
+  expires: 7, 
+  path: '/', 
+  sameSite: 'lax',
+  secure: import.meta.env.PROD 
 });
-5. Qattiq kodlangan WebSocket URL manzili
-Fayl: src/context/NotificationProvider.tsx
+```
 
-const WS_URL = 'wss://api.avtoyon.uz/ws/notifications/';
-Ushbu qattiq kodlangan URL ishlab chiqishda sinov bildirishnomalarini oldini oladi va atrof-muhitga xos xatolar yaratadi.
+### 5. Faqat mijoz tomonidan avtorizatsiya va himoyasiz API chaqiruvlar
+**Fayllar:** Barcha sahifa komponentlari (UserListPage, StoreListPage va h.k.)
 
-Tuzatish: muhit oʻzgaruvchilariga oʻtish: import.meta.env.VITE_WS_URL.
-6. Faqat mijoz tomonidan avtorizatsiya
-Quyidagida kuzatilgan namuna: Barcha funksiya sahifalarida (UserListPage.tsx, StoreListPage.tsx, ProductListPage.tsx va boshqalar)
+**Tavsif:** Dasturda UI darajasida avtorizatsiya nazorat qilinadi (masalan: `if (isAdmin)`), lekin frontendda foydalanuvchi do'konlarga oid ma'lumotlarni so'rashda URL parametrlarini o'zgartirishi orqali boshqa do'konlarning ma'lumotlarini olishi ehtimoli mavjud. Agar Backend avtorizatsiyani har bir bosqichda tekshirmasa, IDOR (Insecure Direct Object Reference) xavfi mavjud.
 
-Sahifalar shartli ravishda tugmalar/muloqot oynalarini foydalanuvchi?.is_superuser asosida yaratadi, lekin API chaqiruvlaridan oldin avtorizatsiyani tekshirmaydi. Zararli foydalanuvchi UI cheklovlarini chetlab o'tishi va to'g'ridan-to'g'ri brauzer konsoli yoki Burp Suite orqali API-larga qo'ng'iroq qilishi mumkin.
+### 6. Tashqi skriptni kiritish xavfi (CDN)
+**Fayllar:** Barcha chop etish funksiyalariga ega fayllar
 
-Tuzatish: Server tomoni avtorizatsiyasi har bir oxirgi nuqtada amalga oshirilishi kerak. Mijoz tekshiruvlari faqat UX uchun, hech qachon xavfsizlik uchun emas.
-7. Kirish sanitizatsiyasi va tekshiruvi etishmayotgan
-Fayllar: barcha shakl sahifalari (ProductFormPage, UserListPage, StoreListPage va boshqalar)
+**Tavsif:** Dastur `https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/...` orqali tashqi skriptni yuklab oladi. Agar ushbu CDN buzilsa yoki tarmoqda o'zgartirilsa, tizimga zararli kod tushadi.
 
-Shakllar har qanday kiritishni sanitarizatsiyasiz qabul qiladi (HTML5 talab qilingan atributlardan tashqari)
-Uzunlik tekshiruvi, format tekshiruvi yoki zararli kontentni filtrlash yo'q
-Backend tozalanmasa va keyinchalik ma'lumotlarni ko'rsatsa, saqlangan XSS xavfi
-Tuzatish: mijoz tomonidan tekshirishni amalga oshirish (faqat UX uchun — server hali ham tekshirishi kerak). Har qanday boy matn maydonlari uchun DOMpurify dan foydalaning.
+**Tuzatish:** 
+- Kutubxonani lokal loyihaga o'rnating va paketdan foydalaning yoki HTML'da yuklashda SRI (`integrity="..."`) xeshlaridan foydalaning.
 
-8. BarcodePrint-da o'tkazilmagan innerHTML
-Fayl: src/components/ui/BarcodePrint.tsx
+### 7. Qattiq kodlangan (Hardcoded) WebSocket URL manzili
+**Fayl:** `src/context/NotificationProvider.tsx`
 
-DOMni chop etish oynasiga klonlash uchun printContentRef.current.innerHTML dan foydalanadi. To'g'ridan-to'g'ri foydalanuvchi tomonidan boshqarilmasa ham, bu xavfli naqsh.
+**Tavsif:** `const WS_URL = 'wss://api.avtoyon.uz/ws/notifications/';` o'zgaruvchisi ochiq yozilgan.
+**Tuzatish:** Buni muhit oʻzgaruvchilariga (`import.meta.env.VITE_WS_URL`) koʻchirish kerak.
 
-Tuzatish: React’s createPortal yoki sinchkovlik bilan boshqariladigan textContent yordamida chop etish kontentini yarating.
-9. Tashqi skriptni kiritish xavfi
-Fayllar: Chop etish funksiyalari CDN dan tashqi skriptni yuklaydi:
+## 🔵 KAM (Low) va Sifat Masalalari
 
-<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/..."></script>
-Agar CDN buzilgan yoki MITM hujumi sodir bo'lsa, zararli kod ishlaydi. Versiya ham bir necha yoshda (2021 yildan 3.11.5) va ma'lum zaifliklarga ega bo'lishi mumkin.
+### 8. `innerHTML` yordamida to'g'ridan-to'g'ri chop etish
+`BarcodePrint.tsx` va `ProductListPage.tsx` da `printContentRef.current.innerHTML` dan to'g'ridan-to'g'ri shablonga interpolyatsiya qilinmoqda. React-da himoyalangan kontent bo'lsa-da, chop etish sahifasi uchun xavfsiz bo'lmagan usul hisoblanadi.
 
-Tuzatish:
+### 9. Typelarning yo'qligi (`any` turlaridan foydalanish)
+Ko'pgina xizmat fayllarida (`userService.ts`, `inventoryService.ts` va hokazo) xatolarni qabul qilishda yoki obyektlarni formatlashda TypeScript'ning `any` turlaridan xavfli darajada keng foydalanilgan.
+**Tuzatish:** TypeScript turlarini (Interfeyslar) aniq belgilang.
 
-SRI (Subresource Integrity) xeshlaridan foydalaning
-Kutubxonani mahalliy sotuvchidan foydalaning yoki ishonchli registrdan mahkamlangan versiyadan foydalaning
-Oxirgi versiyaga yangilang
-10. XSS window.open + document.write orqali
-Fayllar: Barcha chop etish moslamalari (StockEntryListPage.tsx, ProductListPage.tsx, ProductBarcodePage.tsx)
+### 10. `window.open` va `document.write` kombinatsiyasidan foydalanish
+Modern dasturlashda `document.write` usulidan foydalanish eskirgan amaliyot hisoblanadi. Buning o'rniga Blob obyektini yaratish va uni URL orqali ochish tavsiya qilinadi:
+```javascript
+const blob = new Blob([htmlContent], { type: 'text/html' });
+window.open(URL.createObjectURL(blob), '_blank');
+```
 
-Naqsh: const printWindow = window.open('', '_blank'); printWindow.document.write(...)
-
-Document.write dan shablon satrlari bilan foydalanish tabiatan xavflidir. №1 masala bilan birgalikda muhim XSS vektorlarini yaratadi.
-
-Tuzatish: Maxsus chop etish uslublar jadvalidan foydalaning yoki Blob yarating va tozalangan kontent bilan window.open(URL.createObjectURL(blob)) bilan oching.
-
-🔵 Kam muammolar
-11. Jurnallardagi nozik ma'lumotlar
-Fayl: src/utils/logger.ts, api.ts
-
-Ro'yxatga oluvchi so'rov ma'lumotlarini o'z ichiga olgan xato ob'ektlarini yozib olishi mumkin, ishlab chiqilayotganda maxfiy ma'lumotlarni (parollar, tokenlar) qayd etishi mumkin.
-
-Tuzatish: jurnalga kirishdan oldin nozik maydonlarni filtrlang. Hisob ma'lumotlarini o'z ichiga olgan so'rov organlarini hech qachon qayd qilmang.
-
-12. Dev server barcha interfeyslarda ochiq
-Fayl: vite.config.ts (allaqachon tuzatilgan)
-
-Ilgari: xost: '0.0.0.0' dev serverni tarmoqqa ochib beradi
-Oldingi bosqichda ✓ allaqachon localhostga tuzatilgan
-13. CSRF himoyasi yo'q
-Ilova autentifikatsiya qilish uchun cookie-fayllardan foydalanadi (server faqat http-ni o'rnatadi), lekin CSRF tokenini amalga oshirish ko'rinmaydi. Agar CSRF tokenlarisiz cookie-fayllarga asoslangan autentifikatsiyadan foydalansangiz, holatni o'zgartiruvchi so'rovlar CSRF hujumlariga qarshi himoyasiz bo'ladi.
-
-Tuzatish: Backend Django'ning CSRF o'rta dasturidan foydalanishiga ishonch hosil qiling yoki SameSite=Lax/Strict cookie fayllari + ikki marta yuborish naqshini qo'llang.
-
-14. Inventarni skanerlashda poyga holati
-Fayl: src/store/inventory.store.ts - scanMahsulotni bekor qilish
-
-Debouncing ikki marta skanerlashning oldini olsa-da, skanerlash tezkor bo'lsa, optimistik yangilanish server holatiga mos kelmasligi mumkin bo'lgan TOCTOU muammosi mavjud.
-
-Tuzatish: allaqachon bekor qilingan; server tomonidagi idempotentlik kalitlarini ko'rib chiqing.
-15. Foydalanuvchi/Telefon raqamlarini qidirish orqali ro'yxatga olish
-Yakuniy nuqtalar: userService.getAll(), customerService.getAll()
-
-Ro'yxat so'nggi nuqtalari to'liq foydalanuvchi/mijoz ma'lumotlarini filtrlashsiz qaytaradi. Tajovuzkor barcha foydalanuvchilarni, mijozlarni, telefon raqamlarini sanab berishi mumkin.
-
-Tuzatish: Tegishli avtorizatsiya filtrlarini qo'llang - har bir foydalanuvchi faqat o'z do'konidan/ko'lamidan ma'lumotlarni ko'rishi kerak.
-
-📋 Kod sifati va eng yaxshi amaliyot masalalari
-Xavfsizlik turi
-Xizmat fayllarida har qanday turdagi (userService.ts, transferService.ts, inventoryService.ts) qattiq foydalanish
-Translatsiyalar (har qanday xato kabi), (har qanday yuk kabi)
-Tuzatish: Tegishli interfeyslarni aniqlang; har qandayidan qoching.
-
-Xato bilan ishlash
-Ovozsiz ushlash bloklari (tutish {}) qimmatli nosozliklarni tuzatish ma'lumotlarini yo'q qiladi
-Foydalanuvchilarga ko'rsatiladigan umumiy xato xabarlari ichki ma'lumotlarni oshkor qilmasdan foydaliroq bo'lishi mumkin
-Atrof-muhit konfiguratsiyasi
-Faqat bitta .env.development aniqlangan; etishmayotgan ishlab chiqarish/staging konfiguratsiyasi
-environment.ts import.meta.env.MODE ni o'qiydi, lekin Vite to'g'ridan-to'g'ri import.meta.env.PROD/DEV dan foydalanadi
-Bog'liqlik versiyalari
-Ma'lum zaifliklarga ega eskirgan paketlarni tekshiring:
-npm outdated
-npm audit
-Kerakli harakatlarning qisqacha mazmuni
-Tuzatish uchun ustuvor muammo fayllari
-Shtrixli chop etishda P0 XSS StockEntryListPage, ProductBarcodePage, ProductListPage
-P1 localStorage foydalanuvchi ma'lumotlari authService.ts, store.ts
-P1 CSP index.html qo'shing
-P2 Xavfsiz cookie-fayllar cookie.ts
-P2 Tashqi skript SRI Barcha chop etish sahifalari
-P3 Server tomoni avtorizatsiyasi Backend (bu repoda emas)
-P3 Kirish sanitarizatsiyasi Barcha shakl sahifalari
-P4 Har qanday turdagi xizmat fayllarini olib tashlang
-P4 NotificationProvider WS URL konfiguratsiyasini markazlashtiring
-P4 npm audit va yangilash package.json
-Eslatma: Backend API (Django) bu faqat frontend baholashning bir qismi sifatida ko‘rib chiqilmagan. Server tomoni xavfsizligi bir xil darajada muhimdir.
+## 📋 QISQACHA XULOSA
+Ushbu kamchiliklarni bartaraf etish tizimning barqarorligini va foydalanuvchilar ma'lumotlari xavfsizligini ta'minlashda juda muhimdir. Birinchi navbatda XSS (P0) va LocalStorage (P1) bilan bog'liq xatolarni tuzatish tavsiya etiladi.
