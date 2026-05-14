@@ -591,6 +591,8 @@ export function StockEntryListPage() {
                 type="date" 
                 value={dateFrom} 
                 onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} 
+                onClick={(e) => e.currentTarget.showPicker?.()}
+                className="cursor-pointer"
               />
             </div>
             <div className="space-y-2">
@@ -600,7 +602,8 @@ export function StockEntryListPage() {
                   type="date" 
                   value={dateTo} 
                   onChange={(e) => { setDateTo(e.target.value); setPage(1); }} 
-                  className="flex-1"
+                  onClick={(e) => e.currentTarget.showPicker?.()}
+                  className="flex-1 cursor-pointer"
                 />
                 {(searchTerm || storeFilter || supplierFilter || dateFrom || dateTo) && (
                   <Button variant="outline" size="icon" onClick={handleClearFilters} title={t('common.clear')}>

@@ -79,3 +79,9 @@ body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
 }
+
+.dark input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
