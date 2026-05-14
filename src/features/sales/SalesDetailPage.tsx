@@ -182,7 +182,7 @@ export function SalesDetailPage() {
       setProductLoading(true);
       const product = await productService.getById(String(item.product));
       setSelectedProduct(product);
-      console.log('Selected product ID:', product.id);
+      // console.log('Selected product ID:', product.id);
 
       // Product`dan location ma'lumotlarini olish
       if (product.location_id) {
