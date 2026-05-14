@@ -15,7 +15,12 @@ export const cookieAuth = {
   },
 
   setAuth: (userStr: string): void => {
-    Cookies.set(USER_KEY, userStr, { expires: 7, path: '/', sameSite: 'lax' });
+    Cookies.set(USER_KEY, userStr, { 
+      expires: 7, 
+      path: '/', 
+      sameSite: 'lax',
+      secure: import.meta.env.PROD 
+    });
   },
 
   removeAuth(): void {

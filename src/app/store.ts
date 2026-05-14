@@ -30,7 +30,7 @@ interface AuthStore {
   error: string | null;
   login: (phone_number: string, password: string) => Promise<void>;
   logout: () => void;
-  checkAuth: () => void;
+  checkAuth: () => Promise<void>;
   isAuthenticated: () => boolean;
   hasRole: (roles: string[]) => boolean;
   isSuperUser: () => boolean;
@@ -38,9 +38,9 @@ interface AuthStore {
 }
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
-  user: authService.getCurrentUser(),
+  user: null,
   token: null,
-  isLoading: false,
+  isLoading: true,
   error: null,
 
   login: async (phone_number: string, password: string) => {
@@ -62,9 +62,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     set({ user: null, token: null });
   },
 
-  checkAuth: () => {
-    const user = authService.getCurrentUser();
-    set({ user, token: user ? 'session' : null });
+  checkAuth: async () => {
+    set({ isLoading: true });
+    const user = await authService.fetchProfile();
+    set({ user, token: user ? 'session' : null, isLoading: false });
   },
 
   isAuthenticated: () => {

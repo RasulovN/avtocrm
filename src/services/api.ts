@@ -17,14 +17,13 @@ export interface ApiRequestConfig extends AxiosRequestConfig {
 }
 
 const removeAuth = async () => {
-  localStorage.removeItem('crm_user');
   localStorage.removeItem('crm_auth_time');
   
   // Update the auth store state and call logout API
   useAuthStore.getState().logout();
 };
 
-const hasStoredAuth = () => Boolean(authService.getCurrentUser());
+const hasStoredAuth = () => Boolean(localStorage.getItem('crm_auth_time'));
 
 // Disable axios XHR debug logging
 // if (typeof window !== 'undefined' && window.XMLHttpRequest) {

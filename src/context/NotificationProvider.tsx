@@ -21,8 +21,7 @@ type NotificationContextType = {
 };
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
-
-const WS_URL = 'wss://api.avtoyon.uz/ws/notifications/';
+const WS_URL = import.meta.env.VITE_WS_URL || 'wss://api.avtoyon.uz/ws/notifications/';
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [notifications, setNotifications] = useState<NotificationData[]>([]);

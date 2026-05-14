@@ -69,7 +69,7 @@ export function generateBarcodePrintHtml(
 <html>
   <head>
     <title>${escapedBarcode}</title>
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js" integrity="sha512-QEAheCz+x/VkKtxeGoDq6nsGyzTx/0LMINTgQjqZ0h3+NjP+79Qk52/P455w2tJ660G9n05p0S/f/86v9y1w==" crossorigin="anonymous"></script>
     <style>
       @page {
         size: 28mm 16mm;
@@ -170,7 +170,7 @@ export function generateMultipleBarcodesPrintHtml(barcodeValues: Array<{ value: 
 <html>
   <head>
     <title>Print Barcodes</title>
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js" integrity="sha512-QEAheCz+x/VkKtxeGoDq6nsGyzTx/0LMINTgQjqZ0h3+NjP+79Qk52/P455w2tJ660G9n05p0S/f/86v9y1w==" crossorigin="anonymous"></script>
     <style>
       @page {
         size: 28mm 16mm;
