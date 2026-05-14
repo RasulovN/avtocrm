@@ -230,12 +230,10 @@ export function StockEntryListPage() {
 
     if (!barcodeValue) return;
 
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
     const html = generateBarcodePrintHtml(barcodeValue);
-    printWindow.document.write(html);
-    printWindow.document.close();
+    const blob = new Blob([html], { type: 'text/html' });
+    const blobUrl = URL.createObjectURL(blob);
+    window.open(blobUrl, '_blank');
   };
 
   const handlePrintAllInventoryBarcodes = (item: DisplayInventory) => {
@@ -251,12 +249,10 @@ export function StockEntryListPage() {
 
     if (barcodeValues.length === 0) return;
 
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
     const html = generateMultipleBarcodesPrintHtml(barcodeValues);
-    printWindow.document.write(html);
-    printWindow.document.close();
+    const blob = new Blob([html], { type: 'text/html' });
+    const blobUrl = URL.createObjectURL(blob);
+    window.open(blobUrl, '_blank');
   };
 
   const handlePayDebt = () => {

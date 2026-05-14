@@ -11,7 +11,7 @@ import { productService } from '../../services/productService';
 import type { Product } from '../../types';
 import { formatCurrency } from '../../utils';
 import { BarcodePrint } from '../../components/ui/BarcodePrint';
-import { generateBarcodePrintHtml, escapeHtml, escapeJsString } from '../../utils/xss';
+import { generateBarcodePrintHtml, generateBarcodeDataUrl, escapeHtml, escapeJsString } from '../../utils/xss';
 
 export function ProductBarcodePage() {
   const { t, i18n } = useTranslation();
@@ -58,35 +58,35 @@ export function ProductBarcodePage() {
     const barcodeValue = batch?.barcode || batch?.shtrix_code || '';
     if (!barcodeValue) return;
     
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
     const html = generateBarcodePrintHtml(barcodeValue);
-    printWindow.document.write(html);
-    printWindow.document.close();
+    const blob = new Blob([html], { type: 'text/html' });
+    const blobUrl = URL.createObjectURL(blob);
+    window.open(blobUrl, '_blank');
   };
 
   const handlePrintAll = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    const barcodeCards = displayBatches.map((batch, index) => {
+    const barcodeCards = displayBatches.map((batch) => {
       const barcodeValue = batch.barcode || batch.shtrix_code || '';
       if (!barcodeValue) return '';
-      const escapedValue = escapeHtml(barcodeValue);
+      
+      const dataUrl = generateBarcodeDataUrl(barcodeValue, {
+        width: 1.5,
+        height: 50,
+        displayValue: false
+      });
+      
       return `
         <div class="barcode-card">
-          <svg id="barcode-svg-${index}"></svg>
-          <div class="barcode-value">${escapedValue}</div>
+          <img src="${dataUrl}" alt="Barcode" />
+          <div class="barcode-value">${escapeHtml(barcodeValue)}</div>
         </div>
       `;
     }).join('');
 
-    printWindow.document.write(`
+    const htmlContent = `
       <html>
         <head>
           <title>Print All Barcodes</title>
-          <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js" integrity="sha512-QEAheCz+x/VkKtxeGoDq6nsGyzTx/0LMINTgQjqZ0h3+NjP+79Qk52/P455w2tJ660G9n05p0S/f/86v9y1w==" crossorigin="anonymous"></script>
           <style>
             @page {
               size: A4;
@@ -118,9 +118,10 @@ export function ProductBarcodePage() {
               font-size: 6px; 
               margin-top: 1px;
             }
-            svg { 
+            img { 
               width: 28mm; 
-              height: 10mm; 
+              height: auto; 
+              max-height: 12mm;
               display: block;
             }
           </style>
@@ -131,31 +132,15 @@ export function ProductBarcodePage() {
           </div>
           <script>
             window.onload = function() {
-              ${displayBatches.map((batch, index) => {
-                const barcodeValue = batch.barcode || batch.shtrix_code || '';
-                const jsEscaped = escapeJsString(barcodeValue);
-                return barcodeValue ? `
-                  try {
-                    JsBarcode('#barcode-svg-${index}', ${JSON.stringify(jsEscaped)}, {
-                      format: 'CODE128',
-                      width: 1,
-                      height: 30,
-                      displayValue: false,
-                      margin: 0,
-                      textMargin: 0,
-                    });
-                  } catch (error) {
-                    console.error('Failed to generate barcode ${index}:', error);
-                  }
-                ` : '';
-              }).join('')}
               setTimeout(function() { window.print(); }, 500);
             };
           </script>
         </body>
       </html>
-    `);
-    printWindow.document.close();
+    `;
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const blobUrl = URL.createObjectURL(blob);
+    window.open(blobUrl, '_blank');
   };
 
   if (loading) {

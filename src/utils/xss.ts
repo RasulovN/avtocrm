@@ -1,3 +1,5 @@
+import JsBarcode from 'jsbarcode';
+
 /**
  * XSS Prevention Utilities
  * Provides escaping for HTML and JavaScript contexts to prevent injection attacks
@@ -43,15 +45,31 @@ export function escapeJsString(text: string | null | undefined): string {
  * This eliminates XSS risk by using textContent and proper DOM APIs
  */
 export function createSafePrintWindow(htmlContent: string): Window | null {
-  const printWindow = window.open('', '_blank', 'width=800,height=600');
-  if (!printWindow) return null;
+  const blob = new Blob([htmlContent], { type: 'text/html' });
+  const blobUrl = URL.createObjectURL(blob);
+  return window.open(blobUrl, '_blank', 'width=800,height=600');
+}
 
-  // Use document.write only with a fully sanitized, static HTML structure
-  // The HTML should not contain any unescaped user data
-  printWindow.document.write(htmlContent);
-  printWindow.document.close();
-
-  return printWindow;
+/**
+ * Generates a barcode data URL using the main thread canvas
+ */
+export function generateBarcodeDataUrl(value: string, options: any = {}): string {
+  if (typeof document === 'undefined') return '';
+  const canvas = document.createElement('canvas');
+  try {
+    JsBarcode(canvas, value, {
+      format: 'CODE128',
+      width: 2,
+      height: 80,
+      displayValue: false,
+      margin: 0,
+      ...options
+    });
+    return canvas.toDataURL('image/png');
+  } catch (e) {
+    console.error('Failed to generate barcode data URL:', e);
+    return '';
+  }
 }
 
 /**
@@ -63,13 +81,12 @@ export function generateBarcodePrintHtml(
   title: string = 'Print Barcode'
 ): string {
   const escapedBarcode = escapeHtml(barcodeValue);
-  const jsEscapedBarcode = escapeJsString(barcodeValue);
+  const dataUrl = generateBarcodeDataUrl(barcodeValue);
 
   return `<!DOCTYPE html>
 <html>
   <head>
     <title>${escapedBarcode}</title>
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js" integrity="sha512-QEAheCz+x/VkKtxeGoDq6nsGyzTx/0LMINTgQjqZ0h3+NjP+79Qk52/P455w2tJ660G9n05p0S/f/86v9y1w==" crossorigin="anonymous"></script>
     <style>
       @page {
         size: 28mm 16mm;
@@ -108,10 +125,10 @@ export function generateBarcodePrintHtml(
         margin-top: 1px;
         letter-spacing: 1px;
       }
-      svg {
+      img {
         width: auto;
         max-width: 26mm;
-        height: 12mm;
+        max-height: 12mm;
         display: block;
         margin: 0 auto;
       }
@@ -123,26 +140,14 @@ export function generateBarcodePrintHtml(
   <body>
     <div class="barcode-card">
       <div class="barcode-section">
-        <svg id="barcode-svg"></svg>
+        <img src="${dataUrl}" alt="Barcode" />
         <div class="barcode-value">${escapedBarcode}</div>
       </div>
     </div>
     <script>
       window.onload = function() {
-        try {
-          JsBarcode('#barcode-svg', ${JSON.stringify(jsEscapedBarcode)}, {
-            format: 'CODE128',
-            width: 1.5,
-            height: 90,
-            displayValue: false,
-            margin: 0,
-            textMargin: 0
-          });
-        } catch(e) {
-          console.error('Barcode error:', e);
-        }
+        setTimeout(function() { window.print(); }, 300);
       };
-      setTimeout(function() { window.print(); }, 300);
     </script>
   </body>
 </html>`;
@@ -156,10 +161,10 @@ export function generateMultipleBarcodesPrintHtml(barcodeValues: Array<{ value: 
     .filter((item) => item.value)
     .map((item) => {
       const escapedValue = escapeHtml(item.value);
-      const escapedName = escapeHtml(item.productName);
+      const dataUrl = generateBarcodeDataUrl(item.value, { height: 90, width: 1.5 });
       return `<div class="barcode-card">
   <div class="barcode-section">
-    <svg id="barcode-svg-${escapedValue}"></svg>
+    <img src="${dataUrl}" alt="Barcode" />
     <div class="barcode-value">${escapedValue}</div>
   </div>
 </div>`;
@@ -170,7 +175,6 @@ export function generateMultipleBarcodesPrintHtml(barcodeValues: Array<{ value: 
 <html>
   <head>
     <title>Print Barcodes</title>
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js" integrity="sha512-QEAheCz+x/VkKtxeGoDq6nsGyzTx/0LMINTgQjqZ0h3+NjP+79Qk52/P455w2tJ660G9n05p0S/f/86v9y1w==" crossorigin="anonymous"></script>
     <style>
       @page {
         size: 28mm 16mm;
@@ -203,10 +207,12 @@ export function generateMultipleBarcodesPrintHtml(barcodeValues: Array<{ value: 
         margin-top: 1px;
         letter-spacing: 1px;
       }
-      svg {
-        width: 26mm;
-        height: 12mm;
-        display: flex;
+      img {
+        width: auto;
+        max-width: 26mm;
+        max-height: 12mm;
+        display: block;
+        margin: 0 auto;
       }
     </style>
   </head>
@@ -214,20 +220,7 @@ export function generateMultipleBarcodesPrintHtml(barcodeValues: Array<{ value: 
     ${barcodeCards}
     <script>
       window.onload = function() {
-        ${barcodeValues
-          .filter((item) => item.value)
-          .map((item) => {
-            const jsEscaped = escapeJsString(item.value);
-            return `try { JsBarcode('#barcode-svg-${escapeHtml(item.value)}', ${JSON.stringify(jsEscaped)}, {
-              format: 'CODE128',
-              width: 1.5,
-              height: 90,
-              displayValue: false,
-              margin: 0,
-              textMargin: 0
-            }); } catch(e) { console.error('Barcode error:', e); }`;
-          })
-          .join('\n')}
+        setTimeout(() => { window.print(); }, 500);
       };
     </script>
   </body>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, useCallback, type MouseEvent } from 'react';
+import JsBarcode from 'jsbarcode';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Plus, Edit, Trash2, Barcode, Search, Printer, Power } from 'lucide-react';
@@ -20,7 +21,7 @@ import { useAuthStore } from '../../app/store';
 import { useCategories } from '../../context/CategoryContext';
 import type { Product, ProductFilters } from '../../types';
 import { formatCurrency } from '../../utils';
-import { cloneDomSafely } from '../../utils/xss';
+import { escapeHtml, escapeJsString } from '../../utils/xss';
 
 export function ProductListPage() {
   const { t, i18n } = useTranslation();
@@ -112,14 +113,38 @@ export function ProductListPage() {
     setSelectedProductIds((prev) => (ids.every((id) => prev.includes(id)) ? prev.filter((id) => !ids.includes(id)) : Array.from(new Set([...prev, ...ids]))));
   };
 
-   const handlePrintSelected = () => {
-     const printContent = document.getElementById('selected-products-barcode-print-area');
-     if (!printContent || selectedProducts.length === 0) return;
+  const handlePrintSelected = () => {
+    if (selectedProducts.length === 0) return;
 
-     const printWindow = window.open('', '_blank');
-     if (!printWindow) return;
+    const canvas = document.createElement('canvas');
+    const barcodeCards = selectedProducts.map((product) => {
+      const barcodeValue = product.barcode || product.sku || '';
+      if (!barcodeValue) return '';
+      
+      let dataUrl = '';
+      try {
+        JsBarcode(canvas, barcodeValue, {
+          format: 'CODE128',
+          width: 2,
+          height: 80,
+          displayValue: true,
+          fontSize: 14,
+          margin: 10
+        });
+        dataUrl = canvas.toDataURL('image/png');
+      } catch (error) {
+        console.error('Failed to generate barcode data URL:', error);
+      }
 
-     printWindow.document.write(`
+      return `
+        <div class="barcode-label">
+          <p class="barcode-label-name">${escapeHtml(product.name)}</p>
+          <img src="${dataUrl}" />
+        </div>
+      `;
+    }).join('');
+
+    const htmlContent = `
        <html>
          <head>
            <title>Print Selected Barcodes</title>
@@ -163,49 +188,56 @@ export function ProductListPage() {
                line-height: 1.2;
                text-align: center;
              }
-             .barcode-label svg {
+             .barcode-label img {
                display: block;
                width: auto !important;
                max-width: 52mm;
-               height: 18mm !important;
-               overflow: visible;
+               height: auto !important;
+               max-height: 25mm;
              }
            </style>
          </head>
          <body>
-           ${cloneDomSafely(printContent)}
+           <div class="barcode-sheet">
+             ${barcodeCards}
+           </div>
+           <script>
+             window.onload = function() {
+               setTimeout(function() { window.print(); }, 500);
+             };
+           </script>
          </body>
        </html>
-     `);
-     printWindow.document.close();
-     printWindow.focus();
-     printWindow.print();
-   };
+     `;
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const blobUrl = URL.createObjectURL(blob);
+    window.open(blobUrl, '_blank');
+  };
 
-   const handleDeactivateSelected = async () => {
-     if (selectedProductIds.length === 0) return;
+  const handleDeactivateSelected = async () => {
+    if (selectedProductIds.length === 0) return;
 
-     const confirmMessage = selectedProductIds.length === 1
-       ? t('products.deactivateOne', '1 та маҳсулотни фаолсизлантиришни хоҳлайсизми?')
-       : `${selectedProductIds.length} ${t('products.deactivateMultiple', 'та маҳсулотни фаолсизлантиришни хоҳлайсизми?')}`;
+    const confirmMessage = selectedProductIds.length === 1
+      ? t('products.deactivateOne', '1 та маҳсулотни фаолсизлантиришни хоҳлайсизми?')
+      : `${selectedProductIds.length} ${t('products.deactivateMultiple', 'та маҳсулотни фаолсизлантиришни хоҳлайсизми?')}`;
 
-     if (!window.confirm(confirmMessage)) {
-       return;
-     }
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
 
-     try {
-       setDeactivating(true);
-       await Promise.all(
-         selectedProductIds.map(id => productService.update(id, { is_active: false }))
-       );
-       setSelectedProductIds([]);
-       await loadProducts();
-     } catch (error) {
-       console.error('Failed to deactivate products:', error);
-     } finally {
-       setDeactivating(false);
-     }
-   };
+    try {
+      setDeactivating(true);
+      await Promise.all(
+        selectedProductIds.map(id => productService.update(id, { is_active: false }))
+      );
+      setSelectedProductIds([]);
+      await loadProducts();
+    } catch (error) {
+      console.error('Failed to deactivate products:', error);
+    } finally {
+      setDeactivating(false);
+    }
+  };
 
   const columns: Column<Product>[] = [
     {
@@ -213,8 +245,8 @@ export function ProductListPage() {
       header: t('products.image') || 'Image',
       className: 'w-20',
       render: (item: Product) => {
-        const imageUrl = Array.isArray(item.images) && item.images.length > 0 
-          ? (item.images[0] as any).image || item.image 
+        const imageUrl = Array.isArray(item.images) && item.images.length > 0
+          ? (item.images[0] as any).image || item.image
           : item.image;
 
         if (!imageUrl) {
@@ -412,21 +444,6 @@ export function ProductListPage() {
         variant="destructive"
         loading={deleting}
       />
-
-      <div className="absolute -left-24999.75 top-0 opacity-0 pointer-events-none">
-        <div id="selected-products-barcode-print-area" className="barcode-sheet">
-          {selectedProducts.map((product) => (
-            <div key={product.id} className="barcode-label">
-              <p className="barcode-label-name">{product.name}</p>
-              <BarcodePrint
-                value={product.barcode || product.sku || ''}
-                productName={product.name}
-                showName={false}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
 
     </div>
   );

@@ -44,7 +44,7 @@ const buildUnitPayload = (data: Partial<ProductUnitFormData>): Partial<ProductUn
 export const productUnitService = {
   getAll: async (): Promise<ProductUnit[]> => {
     const response = await apiClient.get<ApiResponse<ProductUnit[]> | unknown>(PRODUCT_MEASUREMENTS_ENDPOINT);
-    const payload = (response.data as any)?.data ?? response.data;
+    const payload = (response.data as { data?: unknown })?.data ?? response.data;
     return normalizeUnitsPayload(payload);
   },
 
