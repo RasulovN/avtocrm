@@ -225,7 +225,7 @@ export function InventoryDetailPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <Card>
           <CardContent className="flex items-center gap-3 p-4 sm:p-5">
             <div className="rounded-xl bg-primary/10 p-2.5 text-primary sm:p-3">
@@ -294,11 +294,11 @@ export function InventoryDetailPage() {
 
       {/* Main Tabs (All, Shortage, Excess) */}
       <div className="border-b border-border/60">
-        <div className="flex gap-6">
+        <div className="flex gap-4 sm:gap-6 overflow-x-auto no-scrollbar scrollbar-none pb-px">
           <button
             onClick={() => setActiveTab('all')}
             className={cn(
-              'pb-3 text-sm font-semibold border-b-2 transition-colors',
+              'pb-3 text-sm font-semibold border-b-2 transition-colors shrink-0',
               activeTab === 'all'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -309,7 +309,7 @@ export function InventoryDetailPage() {
           <button
             onClick={() => setActiveTab('shortage')}
             className={cn(
-              'pb-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2',
+              'pb-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 shrink-0',
               activeTab === 'shortage'
                 ? 'border-rose-500 text-rose-600'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -323,7 +323,7 @@ export function InventoryDetailPage() {
           <button
             onClick={() => setActiveTab('excess')}
             className={cn(
-              'pb-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2',
+              'pb-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 shrink-0',
               activeTab === 'excess'
                 ? 'border-emerald-500 text-emerald-600'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -360,21 +360,22 @@ export function InventoryDetailPage() {
             )}
           </div>
           {!isCompleted && activeTab === 'all' && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowChecked((v) => !v)}
+                className="w-full sm:w-auto"
               >
                 {showChecked
                   ? t('inventory.hideChecked')
                   : t('inventory.showChecked')}
               </Button>
-              <Button variant="destructive" size="sm" onClick={handleCancel}>
+              <Button variant="destructive" size="sm" onClick={handleCancel} className="w-full sm:w-auto">
                 <XCircle className="mr-2 h-4 w-4" />
                 {t('inventory.cancelInventory')}
               </Button>
-              <Button size="sm" onClick={handleFinalize}>
+              <Button size="sm" onClick={handleFinalize} className="w-full sm:w-auto">
                 <CheckCircle2 className="mr-2 h-4 w-4" />
                 {t('inventory.finalizeInventory')}
               </Button>
@@ -385,7 +386,7 @@ export function InventoryDetailPage() {
 
       {/* Filter Tabs (only for "all" tab and not completed) */}
       {activeTab === 'all' && !isCompleted && (
-        <div className="-mx-1 flex gap-2 px-1 pb-1">
+        <div className="-mx-1 flex gap-2 px-1 pb-1 overflow-x-auto no-scrollbar scrollbar-none">
           <button
             type="button"
             onClick={() => setShowChecked(true)}
@@ -653,7 +654,7 @@ function MobileProductCard({
         </div>
 
         {/* Movement Stats Grid */}
-        <div className="grid grid-cols-3 gap-2 mb-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
           <StatPill
             icon={<Tag className="h-3 w-3" />}
             label={t('inventory.declared')}
@@ -687,13 +688,13 @@ function MobileProductCard({
         </div>
 
         {/* Scanned Input + Final/Diff */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-border/40">
           {!readOnly ? (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center justify-center gap-1.5 self-center sm:self-auto">
               <Button
                 variant="outline"
                 size="icon"
-                className="h-9 w-9 rounded-full"
+                className="h-9 w-9 rounded-full shrink-0"
                 onClick={onDec}
                 disabled={isScanning || product.scanned <= 0}
               >
@@ -705,12 +706,12 @@ function MobileProductCard({
                 value={product.scanned || ''}
                 onChange={(e) => onChange(e.target.value)}
                 disabled={isScanning}
-                className="h-9 w-20 text-center text-base font-bold"
+                className="h-9 w-20 text-center text-base font-bold shrink-0"
               />
               <Button
                 variant="outline"
                 size="icon"
-                className="h-9 w-9 rounded-full"
+                className="h-9 w-9 rounded-full shrink-0"
                 onClick={onInc}
                 disabled={isScanning}
               >
@@ -718,15 +719,15 @@ function MobileProductCard({
               </Button>
             </div>
           ) : (
-            <div className="rounded-lg bg-muted/50 px-3 py-1.5 text-center">
+            <div className="rounded-lg bg-muted/50 px-3 py-1.5 text-center self-center sm:self-auto">
               <p className="text-xs text-muted-foreground">{t('inventory.scanned')}</p>
               <p className="text-sm font-bold text-primary">{product.scanned}</p>
             </div>
           )}
-          <div className="flex-1 flex items-center justify-end gap-3 text-sm">
+          <div className="flex items-center justify-center sm:justify-end gap-6 text-sm pt-2 sm:pt-0 border-t sm:border-t-0 border-dashed border-border/40 sm:border-none">
             <div className="text-center">
               <p className="text-xs text-muted-foreground">{t('inventory.final')}</p>
-              <p className="font-semibold">{product.final}</p>
+              <p className="font-semibold text-sm">{product.final}</p>
             </div>
             <div className="text-center">
               <p className="text-xs text-muted-foreground">{t('inventory.difference')}</p>
@@ -858,12 +859,12 @@ function StatPill({
   value: number;
 }) {
   return (
-    <div className="rounded-lg bg-muted/50 p-2 text-center">
-      <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mb-0.5">
-        {icon}
-        <span>{label}</span>
+    <div className="rounded-lg bg-muted/50 p-1.5 sm:p-2 text-center min-w-0">
+      <div className="flex items-center justify-center gap-1 text-[10px] sm:text-xs text-muted-foreground mb-0.5">
+        <span className="shrink-0">{icon}</span>
+        <span className="truncate" title={label}>{label}</span>
       </div>
-      <p className="text-sm font-semibold">{value}</p>
+      <p className="text-xs sm:text-sm font-semibold truncate">{value}</p>
     </div>
   );
 }

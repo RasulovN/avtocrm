@@ -265,7 +265,7 @@ export function InventorySessionsListPage({
         </div>
       )}
 
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog} clas>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('inventory.startNewSession')}</DialogTitle>
@@ -273,7 +273,7 @@ export function InventorySessionsListPage({
               {t('inventory.startNewSessionDescription')}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 mb-5">
             <div className="space-y-2">
               <Label>{t('stores.title')}</Label>
               <Select value={selectedStore} onValueChange={setSelectedStore}>

@@ -224,22 +224,22 @@ export function CustomerListPage() {
 
   return (
     <div className="space-y-6">
-      <div className='flex justify-between items-center'>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between pb-4">
         <PageHeader
           title={t('customers.title')}
           description={t('customers.description')}
         />
-        <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row">
-          <div className="relative min-w-72">
+        <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
+          <div className="relative flex-1 sm:min-w-[280px]">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={search}
               onChange={(event) => handleSearch(event.target.value)}
               placeholder={t('customers.searchPlaceholder')}
-              className="pl-9"
+              className="pl-9 w-full"
             />
           </div>
-          <Button onClick={openCreateDialog}>
+          <Button onClick={openCreateDialog} className="shrink-0">
             <Plus className="mr-2 h-4 w-4" />
             {t('customers.addCustomer')}
           </Button>
@@ -271,14 +271,43 @@ export function CustomerListPage() {
                 {filteredCustomers.map((customer) => (
                   <div key={customer.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
                     <div className="flex items-start justify-between gap-3">
-                      <div>
+                      <div className="min-w-0 flex-1">
                         <p className="text-xs text-muted-foreground">ID: {customer.id}</p>
-                        <p className="font-semibold text-foreground">{customer.full_name}</p>
-                        <p className="mt-1 text-sm text-muted-foreground">{customer.phone_number}</p>
+                        <p className="font-semibold text-foreground truncate">{customer.full_name}</p>
+                        <p className="mt-1 text-sm text-muted-foreground flex items-center gap-1">
+                          <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <span>{customer.phone_number}</span>
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditDialog(customer);
+                          }}
+                          title={t('common.edit')}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void handleDelete(customer.id);
+                          }}
+                          title={t('common.delete')}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                     <div className="mt-4">
-                      <Button variant="outline" className="w-full" onClick={() => openViewDialog(customer)}>
+                      <Button variant="outline" className="w-full h-9 text-sm" onClick={() => openViewDialog(customer)}>
                         {t('customers.viewDetails')}
                       </Button>
                     </div>
