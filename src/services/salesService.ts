@@ -11,15 +11,18 @@ export const salesService = {
     const payload = response.data;
     
     let data: Sale[] = [];
+    let count: number | undefined;
     if (Array.isArray(payload)) {
       data = payload;
-    } else if (payload && typeof payload === 'object' && 'results' in payload) {
-      data = (payload as any).results || [];
+    } else if (payload && typeof payload === 'object') {
+      const objPayload = payload as { results?: Sale[]; count?: number };
+      data = objPayload.results || [];
+      count = objPayload.count;
     }
     
     return {
       data,
-      total: (payload as any)?.count ?? data.length,
+      total: count ?? data.length,
       page: params?.page ?? 1,
       limit: params?.limit ?? data.length,
     };
@@ -47,7 +50,8 @@ export const saleReturnService = {
     if (Array.isArray(payload)) {
       return payload;
     }
-    return (payload as any)?.results || [];
+    const objPayload = payload as { results?: SaleReturn[] };
+    return objPayload.results || [];
   },
 
   create: async (data: SaleReturnFormData): Promise<SaleReturn> => {
@@ -63,8 +67,9 @@ export const dashboardService = {
         expectedErrorStatuses: [404],
       });
       return response.data.data;
-    } catch (error: any) {
-      if (error?.response?.status === 404) {
+    } catch (error: unknown) {
+      const err = error as { response?: { status?: number } };
+      if (err?.response?.status === 404) {
         return null;
       }
       throw error;

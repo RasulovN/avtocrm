@@ -37,7 +37,7 @@ import { NotificationProvider } from '../../context/NotificationProvider';
 import { NotificationToast } from './NotificationToast';
 import { cn } from '../../utils';
 import { useThemeStore, useAuthStore } from '../../app/store';
-import { Button } from '../ui/Button';
+import { Button } from '../ui';
 import { useNotifications } from '../../context/NotificationProvider';
 
 interface NavItem {

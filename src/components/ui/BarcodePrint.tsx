@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, memo, useMemo, useCallback } from 'react';
 import JsBarcode from 'jsbarcode';
+import { cloneDomSafely } from '../../utils/xss';
 
 interface BarcodePrintProps {
   value: string;
@@ -30,16 +31,14 @@ const barcodeOptions = {
 };
 
 export const BarcodePrint = memo(function BarcodePrint({ value, productName, showName = true, thermalPrinter = false, displayValue = true }: BarcodePrintProps) {
-  const svgRef = useRef<SVGSVGElement>(null);
-  const prevValue = useRef(value);
+  const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
-    if (!svgRef.current || !value || value === prevValue.current) return;
-    prevValue.current = value;
+    if (!imgRef.current || !value) return;
 
     try {
       const options = thermalPrinter ? barcodeOptions.thermal : { ...barcodeOptions.normal, displayValue };
-      JsBarcode(svgRef.current, value, options);
+      JsBarcode(imgRef.current, value, options);
     } catch (error) {
       console.error('Failed to generate barcode:', error);
     }
@@ -50,7 +49,7 @@ export const BarcodePrint = memo(function BarcodePrint({ value, productName, sho
       {showName && productName && (
         <span className="text-xs mb-1">{productName}</span>
       )}
-      <svg ref={svgRef}></svg>
+      <img ref={imgRef} alt="Barcode" />
     </div>
   );
 });
@@ -70,12 +69,10 @@ const isImageUrl = (value: string): boolean => {
 };
 
 const BarcodeDisplay = memo(function BarcodeDisplay({ value, isImage = false, thermalPrinter = false }: { value: string; isImage?: boolean; thermalPrinter?: boolean }) {
-  const svgRef = useRef<SVGSVGElement>(null);
-  const prevValue = useRef(value);
+  const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
-    if (!svgRef.current || !value || isImage || value === prevValue.current) return;
-    prevValue.current = value;
+    if (!imgRef.current || !value || isImage) return;
 
     try {
       const options = thermalPrinter ? {
@@ -96,25 +93,17 @@ const BarcodeDisplay = memo(function BarcodeDisplay({ value, isImage = false, th
         textMargin: 4,
       };
 
-      JsBarcode(svgRef.current, value, options);
+      JsBarcode(imgRef.current, value, options);
     } catch (error) {
       console.error('Failed to generate barcode:', error);
     }
   }, [value, isImage, thermalPrinter]);
 
-  if (isImage && value) {
-    return (
-      <img 
-        src={value} 
-        alt="Barcode" 
-        className="max-w-37.5 h-auto"
-        style={{ maxWidth: '150px' }}
-        loading="lazy"
-      />
-    );
+  if (isImage) {
+    return <img src={value} alt="Barcode" className="max-w-[150px] h-auto" />;
   }
 
-  return <svg ref={svgRef}></svg>;
+  return <img ref={imgRef} alt="Barcode" />;
 });
 
 export const BarcodePrintAll = memo(function BarcodePrintAll({ items }: BarcodePrintAllProps) {
@@ -123,12 +112,8 @@ export const BarcodePrintAll = memo(function BarcodePrintAll({ items }: BarcodeP
 
   const handlePrint = useCallback(() => {
     if (!printContentRef.current) return;
-    
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-    
-    printWindow.document.write(`
-      <!DOCTYPE html>
+
+    const htmlContent = `<!DOCTYPE html>
       <html>
         <head>
           <title>Print Barcodes</title>
@@ -159,12 +144,18 @@ export const BarcodePrintAll = memo(function BarcodePrintAll({ items }: BarcodeP
           </style>
         </head>
         <body>
-          ${printContentRef.current.innerHTML}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    setTimeout(() => printWindow.print(), 500);
+          ${cloneDomSafely(printContentRef.current)}
+           <script>
+             window.onload = function() {
+               setTimeout(function() { window.print(); }, 500);
+             };
+           </script>
+         </body>
+       </html>
+     `;
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const blobUrl = URL.createObjectURL(blob);
+    window.open(blobUrl, '_blank');
   }, []);
 
   const allBarcodes = useMemo(() => items
@@ -192,7 +183,7 @@ export const BarcodePrintAll = memo(function BarcodePrintAll({ items }: BarcodeP
           {printMode ? 'Close' : `Show Barcodes (${allBarcodes.length})`}
         </button>
       )}
-      
+
       {printMode && (
         <div className="space-y-4">
           <div className="flex gap-2">
@@ -209,7 +200,7 @@ export const BarcodePrintAll = memo(function BarcodePrintAll({ items }: BarcodeP
               Close
             </button>
           </div>
-          
+
           <div ref={printContentRef} className="flex flex-wrap gap-2 p-4 bg-gray-50 rounded">
             {allBarcodes.map((item, idx) => (
               <div key={idx} className="barcode-item p-2 bg-white">

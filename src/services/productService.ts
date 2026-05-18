@@ -1,6 +1,7 @@
 import { apiClient, API_ORIGIN } from './api';
 import { latinToCyrillic } from '../utils/transliteration';
 import type { Product, ProductFormData, ProductFilters, PaginatedResponse, ApiResponse, ProductStoreInventory } from '../types';
+import { logger } from '../utils/logger';
 
 const BACKEND_FALLBACK_URL = 'https://api.avtoyon.uz';
 
@@ -100,7 +101,7 @@ const normalizeImages = (images?: unknown[] | string | unknown, image?: unknown)
       }
       return null;
     }).filter((item): item is { image: string; product: number } => item !== null && item.image !== '');
-    console.log('normalizeImages result:', resolved); // Debug
+    logger.info('normalizeImages result:', resolved); // Debug
     return resolved.length > 0 ? resolved : undefined;
   }
   if (typeof images === 'string' && images.trim() !== '') {
@@ -161,8 +162,8 @@ const item = (raw ?? {}) as Partial<Product> & {
   const unitInfo = resolveMeasurement(item.unit_measurement);
   const locationInfo = resolveLocation(item.location ?? item.location_id);
   const images = normalizeImages(item.images, item.image);
-  console.log('normalizeProduct - item.images:', item.images); // Debug
-  console.log('normalizeProduct - images after normalize:', images); // Debug
+  logger.info('normalizeProduct - item.images:', item.images); // Debug
+  logger.info('normalizeProduct - images after normalize:', images); // Debug
   const image = resolveImageUrl(item.image) || (Array.isArray(images) && images.length > 0 ? images[0].image : '');
   
   const batches = item.batches;

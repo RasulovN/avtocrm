@@ -11,6 +11,7 @@ import { productService } from '../../services/productService';
 import type { Product } from '../../types';
 import { formatCurrency } from '../../utils';
 import { BarcodePrint } from '../../components/ui/BarcodePrint';
+import { generateBarcodePrintHtml, generateBarcodeDataUrl, escapeHtml, escapeJsString } from '../../utils/xss';
 
 export function ProductBarcodePage() {
   const { t, i18n } = useTranslation();
@@ -55,118 +56,37 @@ export function ProductBarcodePage() {
 
     const batch = displayBatches.find(b => `barcode-card-${b.store}-${b.id}` === batchKey);
     const barcodeValue = batch?.barcode || batch?.shtrix_code || '';
+    if (!barcodeValue) return;
     
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Print Barcode</title>
-          <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-          <style>
-            @page {
-              size: 28mm 16mm;
-              margin: 0;
-            }
-            body { 
-              font-family: 'Consolas', 'Courier New', monospace; 
-              margin: 0; 
-              padding: 0;
-              text-align: center;
-              font-size: 6px;
-              width: 28mm;
-              height: 16mm;
-              box-sizing: border-box;
-            }
-            .barcode-card { 
-              border: none; 
-              padding: 0;
-              margin: 0;
-              text-align: center;
-              width: 28mm;
-              height: 16mm;
-              box-sizing: border-box;
-              display: flex;
-              flex-direction: column;
-              justify-content: center;
-              align-items: center;
-            }
-            .barcode-section { 
-              margin: 0; 
-            }
-            .barcode-value { 
-              font-family: 'Consolas', monospace; 
-              font-size: 8px; 
-              font-weight: normal;
-              margin-top: 1px;
-              letter-spacing: 1px;
-            }
-            svg { 
-              width: auto;
-              max-width: 26mm; 
-              height: 12mm; 
-              display: block;
-              margin: 0 auto;
-            }
-            @media print {
-              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="barcode-card">
-            <div class="barcode-section">
-              ${barcodeValue ? `
-                <svg id="barcode-svg"></svg>
-                <div class="barcode-value">${barcodeValue}</div>
-              ` : ''}
-            </div>
-          </div>
-          <script>
-            window.onload = function() {
-              ${barcodeValue ? `
-                try {
-                  JsBarcode('#barcode-svg', '${barcodeValue}', {
-                    format: 'CODE128',
-                    width: 1.5,
-                    height: 90,
-                    displayValue: false,
-                    margin: 0,
-                    textMargin: 0,
-                  });
-                } catch(e) {
-                  console.error('Barcode error:', e);
-                }
-              ` : ''}
-              setTimeout(function() { window.print(); }, 300);
-            };
-          </script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
+    const html = generateBarcodePrintHtml(barcodeValue);
+    const blob = new Blob([html], { type: 'text/html' });
+    const blobUrl = URL.createObjectURL(blob);
+    window.open(blobUrl, '_blank');
   };
 
   const handlePrintAll = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    const barcodeCards = displayBatches.map((batch, index) => {
+    const barcodeCards = displayBatches.map((batch) => {
       const barcodeValue = batch.barcode || batch.shtrix_code || '';
+      if (!barcodeValue) return '';
+      
+      const dataUrl = generateBarcodeDataUrl(barcodeValue, {
+        width: 1.5,
+        height: 50,
+        displayValue: false
+      });
+      
       return `
         <div class="barcode-card">
-          <svg id="barcode-svg-${index}"></svg>
-          <div class="barcode-value">${barcodeValue}</div>
+          <img src="${dataUrl}" alt="Barcode" />
+          <div class="barcode-value">${escapeHtml(barcodeValue)}</div>
         </div>
       `;
     }).join('');
 
-    printWindow.document.write(`
+    const htmlContent = `
       <html>
         <head>
           <title>Print All Barcodes</title>
-          <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
           <style>
             @page {
               size: A4;
@@ -198,9 +118,10 @@ export function ProductBarcodePage() {
               font-size: 6px; 
               margin-top: 1px;
             }
-            svg { 
+            img { 
               width: 28mm; 
-              height: 10mm; 
+              height: auto; 
+              max-height: 12mm;
               display: block;
             }
           </style>
@@ -211,30 +132,15 @@ export function ProductBarcodePage() {
           </div>
           <script>
             window.onload = function() {
-              ${displayBatches.map((batch, index) => {
-                const barcodeValue = batch.barcode || batch.shtrix_code || '';
-                return barcodeValue ? `
-                  try {
-                    JsBarcode('#barcode-svg-${index}', '${barcodeValue}', {
-                      format: 'CODE128',
-                      width: 1,
-                      height: 30,
-                      displayValue: false,
-                      margin: 0,
-                      textMargin: 0,
-                    });
-                  } catch (error) {
-                    console.error('Failed to generate barcode ${index}:', error);
-                  }
-                ` : '';
-              }).join('')}
               setTimeout(function() { window.print(); }, 500);
             };
           </script>
         </body>
       </html>
-    `);
-    printWindow.document.close();
+    `;
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const blobUrl = URL.createObjectURL(blob);
+    window.open(blobUrl, '_blank');
   };
 
   if (loading) {

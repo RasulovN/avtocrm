@@ -15,6 +15,7 @@ import { useAuthStore } from '../../app/store';
 import { useProducts } from '../../context/ProductContext';
 import type { Store, Supplier } from '../../types';
 import { formatCurrency } from '../../utils';
+import { logger } from '../../utils/logger';
 
 interface InventoryFormItem {
   product_id: string;
@@ -42,7 +43,7 @@ export function StockEntryCreatePage() {
     if (productsLoading) return [];
     // Apply store filtering like SalesPage does
     const filtered = isAdmin ? allProducts : allProducts.filter((p) => p.store_id === userStoreId);
-    console.log('[InventoryCreatePage] Filtered products:', {
+    logger.info('[InventoryCreatePage] Filtered products:', {
       allProductsCount: allProducts.length,
       filteredCount: filtered.length,
       isAdmin,

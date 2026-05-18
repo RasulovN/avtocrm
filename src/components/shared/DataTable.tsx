@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Search, ChevronLeft, ChevronRight, Package, Loader2, Building2, Eye } from 'lucide-react';
 import { Input } from '../ui/Input';
-import { Button } from '../ui/Button';
+import { Button } from '../ui';
 import { cn } from '../../utils';
 import {
   Dialog,
