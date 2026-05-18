@@ -248,20 +248,33 @@ export function UserListPage() {
             return (
               <div key={userId} className="rounded-xl border border-border bg-card p-4 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <p className="text-xs text-muted-foreground">ID: {userId}</p>
-                    <p className="font-semibold text-foreground">{item.full_name}</p>
+                    <p className="font-semibold text-foreground truncate">{item.full_name}</p>
                     <p className="mt-1 text-sm text-muted-foreground">{item.phone_number}</p>
                   </div>
-                  <span className={`shrink-0 rounded-full px-2 py-1 text-xs ${
-                    item.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                    item.role === 'm' ? 'bg-indigo-100 text-indigo-800' :
-                    item.role === 's' ? 'bg-emerald-100 text-emerald-800' :
-                    item.role === 'store_admin' ? 'bg-blue-100 text-blue-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {item.role === 's' ? t('users.seller') : item.role === 'm' ? t('users.manager') : item.role === 'su' ? t('users.superUser') : item.role === 'admin' ? t('users.admin') : item.role === 'store_admin' ? t('users.storeAdmin') : t('users.storeUser')}
-                  </span>
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ${
+                      item.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                      item.role === 'm' ? 'bg-indigo-100 text-indigo-800' :
+                      item.role === 's' ? 'bg-emerald-100 text-emerald-800' :
+                      item.role === 'store_admin' ? 'bg-blue-100 text-blue-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {item.role === 's' ? t('users.seller') : item.role === 'm' ? t('users.manager') : item.role === 'su' ? t('users.superUser') : item.role === 'admin' ? t('users.admin') : item.role === 'store_admin' ? t('users.storeAdmin') : t('users.storeUser')}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleViewLogs(item)} title={t('users.logs')}>
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleOpenDialog(item)} title={t('common.edit')}>
+                        <Edit className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                      <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => setDeleteId(String(userId))} title={t('common.delete')}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
@@ -277,21 +290,6 @@ export function UserListPage() {
                     <p className="text-xs text-muted-foreground">{t('common.createdAt')}</p>
                     <p className="mt-1 font-medium">{formatDate(item.created_at)}</p>
                   </div>
-                </div>
-
-                <div className="mt-4 flex gap-2">
-                  <Button variant="outline" className="flex-1" onClick={() => handleViewLogs(item)}>
-                    <Eye className="mr-2 h-4 w-4" />
-                    {t('users.logs')}
-                  </Button>
-                  <Button variant="outline" className="flex-1" onClick={() => handleOpenDialog(item)}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    {t('common.edit')}
-                  </Button>
-                  <Button variant="outline" className="flex-1" onClick={() => setDeleteId(String(userId))}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    {t('common.delete')}
-                  </Button>
                 </div>
               </div>
             );

@@ -83,7 +83,7 @@ const subNavs: Record<string, SubNavItem[]> = {
   '/transfers': [
     { titleKey: 'transfers.list', href: '/transfers', icon: List },
     { titleKey: 'transfers.createTransfer', href: '/transfers/new', icon: Plus },
-    { titleKey: 'transfers.requestTransfer', href: '/transfers/requests', icon: Download },
+    // { titleKey: 'transfers.requestTransfer', href: '/transfers/requests', icon: Download },
   ],
   '/sales': [
     { titleKey: 'sales.list', href: '/sales', icon: List },
@@ -492,12 +492,10 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
           <div className="flex h-full items-center justify-end px-4 lg:px-6">
             <button
               onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden p-2 rounded-md hover:bg-accent"
+              className="lg:hidden p-2 rounded-md hover:bg-accent mr-auto"
             >
               <Menu className="h-5 w-5" />
             </button>
-
-            <div className="lg:hidden w-8" />
 
             <div className="flex items-center gap-2">
 
