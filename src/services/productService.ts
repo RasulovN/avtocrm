@@ -226,7 +226,7 @@ const item = (raw ?? {}) as Partial<Product> & {
     store_id: item.store_id !== undefined ? String(item.store_id) : (item.store?.id !== undefined ? String(item.store.id) : undefined),
     store_name: item.store_name ?? item.store?.name ?? item.store?.name_uz ?? item.store?.name_uz_cyrl,
     sku: item.sku ?? '',
-    barcode: item.barcode ?? item.barcode_value ?? item.sku,
+    barcode: item.barcode ?? item.barcode_value ?? (batches && Array.isArray(batches) && batches.length > 0 ? (batches.find(b => b.barcode || b.shtrix_code)?.barcode || batches[0].barcode) : '') ?? item.sku,
     barcode_img: resolveImageUrl(item.barcode_img),
     shtrix_code: item.shtrix_code ?? null,
     image,

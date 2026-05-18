@@ -559,7 +559,7 @@ export function StockEntryListPage() {
 
       {/* Details Dialog */}
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
-        <DialogContent className="max-w-2xl pb-6">
+        <DialogContent className="max-w-3xl pb-6">
           <DialogHeader>
             <DialogTitle>{t('inventory.detailsTitle')}</DialogTitle>
             <DialogDescription>

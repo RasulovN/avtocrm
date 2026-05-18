@@ -492,10 +492,17 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
           <div className="flex h-full items-center justify-end px-4 lg:px-6">
             <button
               onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden p-2 rounded-md hover:bg-accent mr-auto"
+              className="lg:hidden p-2 rounded-md hover:bg-accent mr-2"
             >
               <Menu className="h-5 w-5" />
             </button>
+
+            <div className="mr-auto flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">
+              <Store className="h-4 w-4 text-primary shrink-0" />
+              <span className="font-semibold text-xs sm:text-sm text-primary truncate max-w-[150px] sm:max-w-[250px]">
+                {user?.store_name || (isSuperUser ? t('stores.admin', 'Barcha filiallar') : '')}
+              </span>
+            </div>
 
             <div className="flex items-center gap-2">
 

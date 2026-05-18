@@ -12,6 +12,7 @@ import type { Product } from '../../types';
 import { formatCurrency } from '../../utils';
 import { BarcodePrint } from '../../components/ui/BarcodePrint';
 import { generateBarcodePrintHtml, generateBarcodeDataUrl, escapeHtml, escapeJsString } from '../../utils/xss';
+import { useProducts } from '../../context/ProductContext';
 
 export function ProductBarcodePage() {
   const { t, i18n } = useTranslation();
@@ -19,6 +20,7 @@ export function ProductBarcodePage() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { user } = useAuthStore();
+  const { products } = useProducts();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -35,7 +37,16 @@ export function ProductBarcodePage() {
   const loadProduct = useCallback(async () => {
     if (!id) return;
     try {
-      const data = await productService.getById(id);
+      let data = await productService.getById(id);
+      
+      // Fallback: if data has no barcode and no batches, fetch using getAll to get nested batches
+      if ((!data.batches || data.batches.length === 0) && !data.barcode) {
+        const response = await productService.getAll({ limit: 100 });
+        const matched = response.data.find(p => String(p.id) === String(id));
+        if (matched) {
+          data = matched;
+        }
+      }
       setProduct(data);
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
@@ -45,6 +56,16 @@ export function ProductBarcodePage() {
       setLoading(false);
     }
   }, [id]);
+
+  useEffect(() => {
+    if (id && products && products.length > 0) {
+      const cached = products.find(p => String(p.id) === String(id));
+      if (cached) {
+        setProduct(cached);
+        setLoading(false);
+      }
+    }
+  }, [id, products]);
 
   useEffect(() => {
     void loadProduct();
@@ -152,7 +173,10 @@ export function ProductBarcodePage() {
   }
 
   const batches = product?.batches ?? [];
-  const fallbackBarcode = product?.barcode || product?.shtrix_code || product?.sku || '';
+  const firstBatchBarcode = batches.find(b => b.barcode || b.shtrix_code)?.barcode 
+    || batches.find(b => b.barcode || b.shtrix_code)?.shtrix_code 
+    || '';
+  const fallbackBarcode = product?.barcode || product?.shtrix_code || product?.sku || firstBatchBarcode || '';
   const resolvedUserStoreId = user?.store_id
     ? String(user.store_id)
     : user?.stores?.[0]?.id !== undefined
@@ -166,7 +190,7 @@ export function ProductBarcodePage() {
     ? batches
     : batches.filter((batch) => userStoreId ? String(batch.store) === userStoreId : false);
 
-  const allowFallbackBarcode = canViewAllStores || (userStoreId && String(product?.store_id) === userStoreId);
+  const allowFallbackBarcode = true;
   const displayBatches = visibleBatches.length
     ? visibleBatches.map(batch => ({
         ...batch,
@@ -175,8 +199,8 @@ export function ProductBarcodePage() {
     : (allowFallbackBarcode && fallbackBarcode ? [{
         id: 0,
         product: Number(product?.id || 0),
-        store: Number(product?.store_id || 0),
-        store_name: product?.store_name || t('products.store'),
+        store: Number(userStoreId || product?.store_id || 0),
+        store_name: user?.stores?.[0]?.name || product?.store_name || t('products.store'),
         quantity: product?.quantity ?? 0,
         purchase_price: String(product?.purchase_price ?? 0),
         selling_price: String(product?.selling_price ?? 0),

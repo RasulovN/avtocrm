@@ -18,7 +18,7 @@ export default function InventoryPage() {
   const lang = params.lang || 'uz';
   const { user } = useAuthStore();
   const isAdmin = Boolean(user?.is_superuser);
-  const userStoreId = user?.store_id || '';
+  const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores[0].id) : '');
 
   const [stores, setStores] = useState<Store[]>([]);
   const [storesLoading, setStoresLoading] = useState(false);

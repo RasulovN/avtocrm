@@ -13,7 +13,20 @@ import { storeService } from '../../services/storeService';
 import { supplierService } from '../../services/supplierService';
 import { useAuthStore } from '../../app/store';
 import { useProducts } from '../../context/ProductContext';
-import type { Store, Supplier } from '../../types';
+import type { Store, Supplier, ProductUnit, ProductFormData, Product } from '../../types';
+import { useCategories } from '../../context/CategoryContext';
+import { productUnitService } from '../../services/productUnitService';
+import { productLocationService, type ProductLocation } from '../../services/productLocationService';
+import { productService } from '../../services/productService';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../../components/ui/Dialog';
+import toast from 'react-hot-toast';
+import { latinToCyrillic } from '../../utils/transliteration';
 import { formatCurrency } from '../../utils';
 import { logger } from '../../utils/logger';
 
@@ -32,11 +45,11 @@ export function StockEntryCreatePage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const isAdmin = Boolean(user?.is_superuser);
-  const userStoreId = user?.store_id || '';
+  const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores[0].id) : '');
   const [stores, setStores] = useState<Store[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [saving, setSaving] = useState(false);
-  const { products: allProducts, loading: productsLoading } = useProducts();
+  const { products: allProducts, loading: productsLoading, refreshProducts } = useProducts();
   const safeStores = useMemo(() => (Array.isArray(stores) ? stores : []), [stores]);
   const safeSuppliers = useMemo(() => (Array.isArray(suppliers) ? suppliers : []), [suppliers]);
   const safeProducts = useMemo(() => {
@@ -54,11 +67,104 @@ export function StockEntryCreatePage() {
   }, [allProducts, productsLoading, isAdmin, userStoreId]);
 
   const [supplierId, setSupplierId] = useState('');
-  const [storeId, setStoreId] = useState('');
+  const [storeId, setStoreId] = useState(isAdmin ? '' : userStoreId);
   const [paid, setPaid] = useState<number | ''>('');
+
+  useEffect(() => {
+    if (!isAdmin && userStoreId) {
+      setStoreId(userStoreId);
+    }
+  }, [isAdmin, userStoreId]);
+
   const [items, setItems] = useState<InventoryFormItem[]>([
     { product_id: '', product_name: '', quantity: '', purchase_price: '', selling_price: '', total: 0 }
   ]);
+
+  // Product Dialog States
+  const { categories } = useCategories();
+  const [units, setUnits] = useState<ProductUnit[]>([]);
+  const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
+  const [activeItemIndex, setActiveItemIndex] = useState<number | null>(null);
+  const [productSaving, setProductSaving] = useState(false);
+  const [newProductData, setNewProductData] = useState<ProductFormData>({
+    name: '',
+    category: '',
+    unit_measurement: '',
+    description: '',
+  });
+
+  const loadDialogData = useCallback(async () => {
+    try {
+      const unitsRes = await productUnitService.getAll();
+      setUnits(unitsRes || []);
+    } catch (err) {
+      console.error('Failed to load unit data', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isProductDialogOpen) {
+      void loadDialogData();
+    }
+  }, [isProductDialogOpen, loadDialogData]);
+
+  const handleProductSubmit = async () => {
+    if (!newProductData.name) {
+      toast.error(t('errors.validationError', 'Mahsulot nomini kiriting'));
+      return;
+    }
+    if (!newProductData.category) {
+      toast.error(t('errors.validationError', 'Kategoriyani tanlang'));
+      return;
+    }
+    if (!newProductData.unit_measurement) {
+      toast.error(t('errors.validationError', 'O\'lchov birligini tanlang'));
+      return;
+    }
+
+    try {
+      setProductSaving(true);
+      const payload: ProductFormData = {
+        ...newProductData,
+        store_id: userStoreId || storeId || undefined,
+      };
+
+      const createdProduct = await productService.create(payload);
+      toast.success(t('products.productAdded', 'Mahsulot muvaffaqiyatli qo\'shildi'));
+
+      // Refresh global products list
+      await refreshProducts();
+
+      // Auto-populate the selected item row
+      if (activeItemIndex !== null) {
+        const newItems = [...items];
+        newItems[activeItemIndex] = {
+          ...newItems[activeItemIndex],
+          product_id: String(createdProduct.id),
+          product_name: createdProduct.name,
+          purchase_price: createdProduct.purchase_price ?? '',
+          selling_price: createdProduct.selling_price ?? '',
+          total: (createdProduct.purchase_price || 0) * (newItems[activeItemIndex].quantity || 0),
+        };
+        setItems(newItems);
+      }
+
+      // Reset form and close dialog
+      setNewProductData({
+        name: '',
+        category: '',
+        unit_measurement: '',
+        description: '',
+      });
+      setIsProductDialogOpen(false);
+      setActiveItemIndex(null);
+    } catch (error) {
+      console.error('Failed to create product:', error);
+      toast.error(t('errors.generic', 'Mahsulot qo\'shishda xatolik yuz berdi'));
+    } finally {
+      setProductSaving(false);
+    }
+  };
 
   const loadData = useCallback(async () => {
     try {
@@ -204,7 +310,7 @@ export function StockEntryCreatePage() {
               </div>
               <div className="space-y-2">
                 <Label>{t('stores.title')}</Label>
-                <Select value={storeId} onValueChange={setStoreId}>
+                <Select value={storeId} onValueChange={setStoreId} disabled={!isAdmin}>
                   <SelectTrigger>
                     <SelectValue placeholder={t('inventory.selectLocation')} />
                   </SelectTrigger>
@@ -262,7 +368,20 @@ export function StockEntryCreatePage() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-xs">{t('products.title')}</Label>
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs">{t('products.title')}</Label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveItemIndex(index);
+                            setIsProductDialogOpen(true);
+                          }}
+                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5 font-medium"
+                        >
+                          <Plus className="h-3 w-3" />
+                          {t('common.add', 'Qo\'shish')}
+                        </button>
+                      </div>
                       <Select
                         value={item.product_id}
                         onValueChange={(v: string) => handleItemChange(index, 'product_id', v)}
@@ -333,6 +452,78 @@ export function StockEntryCreatePage() {
           </Card>
         </div>
       </form>
+
+      <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
+        <DialogContent size="lg">
+          <DialogHeader>
+            <DialogTitle>{t('products.addProduct', 'Yangi mahsulot qo\'shish')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>{t('products.name', 'Mahsulot nomi')}</Label>
+              <Input
+                value={newProductData.name}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setNewProductData({
+                    ...newProductData,
+                    name: val,
+                  });
+                }}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>{t('categories.title', 'Kategoriya')}</Label>
+              <select
+                className="w-full px-3 py-2 border rounded-md bg-background text-sm"
+                value={newProductData.category}
+                onChange={(e) => setNewProductData({ ...newProductData, category: e.target.value })}
+              >
+                <option value="">{t('categories.selectCategory', 'Kategoriyani tanlang')}</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t('products.unit', 'O\'lchov birligi')}</Label>
+              <select
+                className="w-full px-3 py-2 border rounded-md bg-background text-sm"
+                value={newProductData.unit_measurement}
+                onChange={(e) => setNewProductData({ ...newProductData, unit_measurement: e.target.value })}
+              >
+                <option value="">{t('products.selectUnit', 'O\'lchov birligini tanlang')}</option>
+                {units.map((unit) => (
+                  <option key={unit.id} value={unit.id}>
+                    {unit.measurement_uz}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t('products.description', 'Tavsif')}</Label>
+              <Input
+                value={newProductData.description || ''}
+                onChange={(e) => setNewProductData({ ...newProductData, description: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsProductDialogOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleProductSubmit} disabled={productSaving}>
+              {productSaving ? t('common.loading') : t('common.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

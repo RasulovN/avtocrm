@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { Plus, FileText, Eye } from 'lucide-react';
+import { Plus, FileText, Eye, EyeOff } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
 import { Button } from '../../components/ui/Button';
@@ -21,6 +21,7 @@ export function SalesListPage() {
   const lang = params.lang || 'uz';
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showStats, setShowStats] = useState(() => localStorage.getItem('sales_list_show_stats') !== 'false');
 
   useEffect(() => {
     loadData();
@@ -131,33 +132,59 @@ export function SalesListPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-start">
         <PageHeader
           title={t('sales.title')}
           description={t('sales.listDescription')}
         />
-        <Link to={`/${lang}/sales/new`} className="w-full sm:w-auto">
-          <Button className="w-full sm:w-auto">
-            <Plus className="h-4 w-4 mr-2" />
-            {t('sales.newSale')}
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setShowStats(prev => {
+                const newVal = !prev;
+                localStorage.setItem('sales_list_show_stats', String(newVal));
+                return newVal;
+              });
+            }}
+          >
+            {showStats ? (
+              <>
+                <EyeOff className="h-4 w-4 mr-2" />
+                {t('common.hideStats', 'Statistikani yashirish')}
+              </>
+            ) : (
+              <>
+                <Eye className="h-4 w-4 mr-2" />
+                {t('common.showStats', 'Statistikani ko\'rsatish')}
+              </>
+            )}
           </Button>
-        </Link>
+          <Link to={`/${lang}/sales/new`} className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto">
+              <Plus className="h-4 w-4 mr-2" />
+              {t('sales.newSale')}
+            </Button>
+          </Link>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-lg border bg-card p-4 shadow-sm">
-          <p className="text-sm text-muted-foreground">{t('dashboard.totalSales')}</p>
-          <p className="text-2xl font-bold">{stats.totalSales}</p>
+      {showStats && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 transition-all duration-300 ease-in-out">
+          <div className="rounded-lg border bg-card p-4 shadow-sm">
+            <p className="text-sm text-muted-foreground">{t('dashboard.totalSales')}</p>
+            <p className="text-2xl font-bold">{stats.totalSales}</p>
+          </div>
+          <div className="rounded-lg border bg-card p-4 shadow-sm">
+            <p className="text-sm text-muted-foreground">{t('dashboard.totalRevenue')}</p>
+            <p className="text-2xl font-bold text-green-600">{formatCurrency(stats.totalAmount)}</p>
+          </div>
+          <div className="rounded-lg border bg-card p-4 shadow-sm">
+            <p className="text-sm text-muted-foreground">{t('dashboard.totalDebt')}</p>
+            <p className="text-2xl font-bold text-red-500">{formatCurrency(stats.totalDebt)}</p>
+          </div>
         </div>
-        <div className="rounded-lg border bg-card p-4 shadow-sm">
-          <p className="text-sm text-muted-foreground">{t('dashboard.totalRevenue')}</p>
-          <p className="text-2xl font-bold text-green-600">{formatCurrency(stats.totalAmount)}</p>
-        </div>
-        <div className="rounded-lg border bg-card p-4 shadow-sm">
-          <p className="text-sm text-muted-foreground">{t('dashboard.totalDebt')}</p>
-          <p className="text-2xl font-bold text-red-500">{formatCurrency(stats.totalDebt)}</p>
-        </div>
-      </div>
+      )}
 
       <div>
         <h2 className="text-base font-semibold">{t('sales.history')}</h2>

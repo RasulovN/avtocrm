@@ -241,6 +241,12 @@ export function ProductListPage() {
 
   const columns: Column<Product>[] = [
     {
+      key: 'id',
+      header: 'ID',
+      className: 'w-16 font-mono text-xs text-muted-foreground',
+      render: (item: Product) => `#${item.id}`,
+    },
+    {
       key: 'image',
       header: t('products.image') || 'Image',
       className: 'w-20',
@@ -271,9 +277,13 @@ export function ProductListPage() {
       }
     },
     {
-      key: 'sku',
-      header: t('products.sku'),
-      className: 'font-mono text-sm',
+      key: 'barcode',
+      header: t('products.barcode') || 'Barcode',
+      className: 'font-mono text-xs',
+      render: (item: Product) => {
+        const barcode = item.barcode || (item.batches && item.batches.length > 0 ? item.batches.find(b => b.barcode)?.barcode || item.batches[0].barcode : '');
+        return barcode || '—';
+      }
     },
     {
       key: 'name',
