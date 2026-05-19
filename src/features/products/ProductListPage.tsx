@@ -1,17 +1,20 @@
-import { useEffect, useMemo, useState, useCallback, useRef, type MouseEvent } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef, type MouseEvent, type ChangeEvent, type FormEvent } from 'react';
 import JsBarcode from 'jsbarcode';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Edit, Trash2, Barcode, Search, Printer, Power, Eye, Package, Loader2, ChevronLeft, ChevronRight, X, Warehouse, Store as StoreIcon, Calendar, Tag, Hash, Layers } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { Plus, Edit, Trash2, Barcode, Search, Printer, Power, Eye, Package, Loader2, ChevronLeft, ChevronRight, X, Warehouse, Store as StoreIcon, Calendar, Tag, Hash, Layers, Upload, MapPin, DollarSign, Ruler, ImageIcon } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { Label } from '../../components/ui/Label';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '../../components/ui/Dialog';
 import {
   Select,
@@ -22,11 +25,15 @@ import {
 } from '../../components/ui/Select';
 import { productService } from '../../services/productService';
 import { storeService } from '../../services/storeService';
+import { productUnitService } from '../../services/productUnitService';
+import { productLocationService, type ProductLocation } from '../../services/productLocationService';
+import { categoryService } from '../../services/categoryService';
 import { useAuthStore } from '../../app/store';
 import { useCategories } from '../../context/CategoryContext';
-import type { Product, ProductFilters, Store } from '../../types';
+import type { Product, ProductFormData, ProductFilters, ProductUnit, CategoryFormData, ProductUnitFormData, Store } from '../../types';
 import { formatCurrency, cn } from '../../utils';
 import { escapeHtml } from '../../utils/xss';
+import { latinToCyrillic } from '../../utils/transliteration';
 
 export function ProductListPage() {
   const { t, i18n } = useTranslation();
@@ -49,6 +56,7 @@ export function ProductListPage() {
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [deactivating, setDeactivating] = useState(false);
   const [viewProduct, setViewProduct] = useState<Product | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // Load stores list for dynamic column headers
   useEffect(() => {
@@ -88,6 +96,15 @@ export function ProductListPage() {
       void refreshCategories();
     }
   }, [categories.length, refreshCategories]);
+
+  // Handle auto-open via search params (for navigation redirection)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('add') === 'true') {
+      setIsAddModalOpen(true);
+      navigate(window.location.pathname, { replace: true });
+    }
+  }, [navigate]);
 
   const handleSearch = (value: string) => {
     setSearchQuery(value);
@@ -334,7 +351,7 @@ export function ProductListPage() {
         title={t('products.title')}
         description={t('products.productList')}
         actions={isAdmin ? (
-          <Button onClick={() => navigate(`/${lang}/products/new`)}>
+          <Button onClick={() => setIsAddModalOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             {t('products.addProduct')}
           </Button>
@@ -661,6 +678,19 @@ export function ProductListPage() {
         t={t}
       />
 
+      {/* ═══════ Add Product Modal ═══════ */}
+      <AddProductModal
+        open={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={() => {
+          setIsAddModalOpen(false);
+          void loadProducts();
+        }}
+        categories={categories}
+        refreshCategories={refreshCategories}
+        t={t}
+      />
+
     </div>
   );
 }
@@ -931,6 +961,534 @@ function ProductDetailModal({ product, onClose, onEdit, stores, warehouseStore, 
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/* ════════════════════════════════════════════════
+   Add Product Modal Component
+   ════════════════════════════════════════════════ */
+
+interface AddProductModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  categories: { id: string; name: string }[];
+  refreshCategories: () => Promise<void>;
+  t: (key: string, fallback?: string) => string;
+}
+
+const addProductInitialForm: ProductFormData = {
+  name: '',
+  name_uz_cyrl: '',
+  description: '',
+  description_uz_cyrl: '',
+  category: '',
+  unit_measurement: '',
+  location: '',
+  purchase_price: '',
+  selling_price: '',
+  images: [],
+  is_active: true,
+};
+
+function AddProductModal({ open, onClose, onSuccess, categories, refreshCategories, t }: AddProductModalProps) {
+  const [formData, setFormData] = useState<ProductFormData>(addProductInitialForm);
+  const [saving, setSaving] = useState(false);
+  const [units, setUnits] = useState<ProductUnit[]>([]);
+  const [locations, setLocations] = useState<ProductLocation[]>([]);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+
+  // Sub-dialog states: Category
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [savingCategory, setSavingCategory] = useState(false);
+  const [categoryFormData, setCategoryFormData] = useState<CategoryFormData>({
+    name_uz: '',
+    name_uz_cyrl: '',
+    description_uz: '',
+    description_uz_cyrl: '',
+    image: '',
+  });
+
+  // Sub-dialog states: Unit
+  const [isUnitDialogOpen, setIsUnitDialogOpen] = useState(false);
+  const [savingUnit, setSavingUnit] = useState(false);
+  const [unitFormData, setUnitFormData] = useState<ProductUnitFormData>({
+    measurement_uz: '',
+    measurement_uz_cyrl: '',
+  });
+
+  // Load options when modal opens
+  useEffect(() => {
+    if (!open) return;
+    const loadOptions = async () => {
+      try {
+        const [unitList, locationList] = await Promise.all([
+          productUnitService.getAll(),
+          productLocationService.getAll(),
+        ]);
+        setUnits(unitList);
+        setLocations(locationList?.data || []);
+      } catch (error) {
+        console.error('Failed to load product form options:', error);
+      }
+    };
+    void loadOptions();
+  }, [open]);
+
+  // Reset form when modal opens
+  useEffect(() => {
+    if (open) {
+      setFormData(addProductInitialForm);
+      setImageFiles([]);
+      setImagePreviews([]);
+    }
+  }, [open]);
+
+  // Clean up previews on unmount
+  useEffect(() => {
+    return () => {
+      imagePreviews.forEach((p) => {
+        if (p.startsWith('blob:')) URL.revokeObjectURL(p);
+      });
+    };
+  }, [imagePreviews]);
+
+  const handleChange = (field: keyof ProductFormData, value: string | boolean) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleNameChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      name: value,
+      name_uz_cyrl: latinToCyrillic(value),
+    }));
+  };
+
+  const handleDescriptionChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      description: value,
+      description_uz_cyrl: latinToCyrillic(value),
+    }));
+  };
+
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    imagePreviews.forEach((p) => {
+      if (p.startsWith('blob:')) URL.revokeObjectURL(p);
+    });
+    const previews = files.map((file) => URL.createObjectURL(file));
+    setImageFiles(files);
+    setImagePreviews(previews);
+  };
+
+  const handleRemoveImage = (index: number) => {
+    const preview = imagePreviews[index];
+    if (preview?.startsWith('blob:')) URL.revokeObjectURL(preview);
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    try {
+      setSaving(true);
+      const payload: ProductFormData = {
+        ...formData,
+        images: imageFiles,
+      };
+      await productService.create(payload);
+      toast.success(t('products.productAdded'));
+      onSuccess();
+    } catch (error) {
+      console.error('Failed to create product:', error);
+      toast.error(t('errors.generic'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Category sub-dialog handlers
+  const handleOpenCategoryDialog = () => {
+    setIsCategoryDialogOpen(true);
+    setCategoryFormData({ name_uz: '', name_uz_cyrl: '', description_uz: '', description_uz_cyrl: '', image: '' });
+  };
+
+  const handleCategorySubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      setSavingCategory(true);
+      const created = await categoryService.create(categoryFormData);
+      toast.success(t('categories.categoryAdded'));
+      await refreshCategories();
+      handleChange('category', created.id);
+      setIsCategoryDialogOpen(false);
+    } catch (error) {
+      console.error('Failed to save category:', error);
+      toast.error(t('errors.generic'));
+    } finally {
+      setSavingCategory(false);
+    }
+  };
+
+  // Unit sub-dialog handlers
+  const handleOpenUnitDialog = () => {
+    setIsUnitDialogOpen(true);
+    setUnitFormData({ measurement_uz: '', measurement_uz_cyrl: '' });
+  };
+
+  const handleUnitSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      setSavingUnit(true);
+      const created = await productUnitService.create(unitFormData);
+      toast.success(t('products.unitAdded'));
+      const unitList = await productUnitService.getAll();
+      setUnits(unitList);
+      handleChange('unit_measurement', created.id);
+      setIsUnitDialogOpen(false);
+    } catch (error) {
+      console.error('Failed to save unit:', error);
+      toast.error(t('errors.generic'));
+    } finally {
+      setSavingUnit(false);
+    }
+  };
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <DialogContent size="lg" className="max-h-[90vh] overflow-y-auto p-0">
+          {/* Header */}
+          <div className="sticky top-0 z-10 border-b border-border/60 bg-card px-6 py-5">
+            <DialogHeader className="p-0">
+              <DialogTitle className="text-lg flex items-center gap-2">
+                <Package className="h-5 w-5 text-primary" />
+                {t('products.addProduct')}
+              </DialogTitle>
+            </DialogHeader>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            <div className="px-6 py-5 space-y-5">
+              {/* ── Row 1: Name ── */}
+              <div className="space-y-2">
+                <Label htmlFor="add-name" className="flex items-center gap-1.5">
+                  <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+                  {t('products.productName')} <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="add-name"
+                  placeholder="Tovar nomini kiriting..."
+                  value={formData.name}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleNameChange(e.target.value)}
+                  required
+                />
+              </div>
+
+              {/* ── Row 2: Category + Unit ── */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Category */}
+                <div className="space-y-2">
+                  <Label htmlFor="add-category" className="flex items-center gap-1.5">
+                    <Layers className="h-3.5 w-3.5 text-muted-foreground" />
+                    {t('products.category')}
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <Select
+                        value={formData.category || ''}
+                        onValueChange={(value) => handleChange('category', value)}
+                      >
+                        <SelectTrigger id="add-category">
+                          <SelectValue placeholder={t('products.category')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button type="button" variant="outline" size="sm" onClick={handleOpenCategoryDialog} className="shrink-0">
+                      <Plus className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Unit of Measurement */}
+                <div className="space-y-2">
+                  <Label htmlFor="add-unit" className="flex items-center gap-1.5">
+                    <Ruler className="h-3.5 w-3.5 text-muted-foreground" />
+                    {t('products.unitMeasurement')}
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <Select
+                        value={formData.unit_measurement || ''}
+                        onValueChange={(value) => handleChange('unit_measurement', value)}
+                      >
+                        <SelectTrigger id="add-unit">
+                          <SelectValue placeholder={t('products.selectUnitMeasurement')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {units.map((unit) => (
+                            <SelectItem key={unit.id} value={unit.id}>{unit.measurement_uz}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button type="button" variant="outline" size="sm" onClick={handleOpenUnitDialog} className="shrink-0">
+                      <Plus className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Row 3: Purchase Price + Selling Price ── */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="add-purchase-price" className="flex items-center gap-1.5">
+                    <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+                    {t('products.purchasePrice', 'Kelish narxi')}
+                  </Label>
+                  <Input
+                    id="add-purchase-price"
+                    type="number"
+                    min="0"
+                    step="any"
+                    placeholder="0"
+                    value={formData.purchase_price ?? ''}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('purchase_price', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="add-selling-price" className="flex items-center gap-1.5">
+                    <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+                    {t('products.sellingPrice', 'Sotuv narxi')}
+                  </Label>
+                  <Input
+                    id="add-selling-price"
+                    type="number"
+                    min="0"
+                    step="any"
+                    placeholder="0"
+                    value={formData.selling_price ?? ''}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('selling_price', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* ── Row 4: Description ── */}
+              <div className="space-y-2">
+                <Label htmlFor="add-description" className="flex items-center gap-1.5">
+                  <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+                  {t('common.description')}
+                </Label>
+                <textarea
+                  id="add-description"
+                  rows={3}
+                  placeholder="Tovar tavsifini kiriting..."
+                  value={formData.description}
+                  onChange={(e) => handleDescriptionChange(e.target.value)}
+                  className="flex w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm ring-offset-background placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-primary/50 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 resize-none"
+                />
+              </div>
+
+              {/* ── Row 5: Location ── */}
+              <div className="space-y-2">
+                <Label htmlFor="add-location" className="flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                  {t('products.productLocation', 'Tovar joylashuvi')}
+                </Label>
+                <Select
+                  value={formData.location || ''}
+                  onValueChange={(value) => handleChange('location', value)}
+                >
+                  <SelectTrigger id="add-location">
+                    <SelectValue placeholder={t('products.selectLocation')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations.map((loc) => (
+                      <SelectItem key={loc.id} value={loc.id}>{loc.location_uz}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* ── Row 6: Images ── */}
+              <div className="space-y-2">
+                <Label htmlFor="add-image" className="flex items-center gap-1.5">
+                  <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                  {t('products.image', 'Rasm')}
+                </Label>
+                <div className="relative">
+                  <label
+                    htmlFor="add-image"
+                    className={cn(
+                      'flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/60 bg-muted/20 px-4 py-6 cursor-pointer transition-all duration-200 hover:border-primary/40 hover:bg-primary/5',
+                      imagePreviews.length > 0 && 'py-3'
+                    )}
+                  >
+                    <Upload className="h-6 w-6 text-muted-foreground/50" />
+                    <span className="text-sm text-muted-foreground">
+                      {t('products.image', 'Rasm yuklash uchun bosing')}
+                    </span>
+                    <input
+                      id="add-image"
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageChange}
+                      className="sr-only"
+                    />
+                  </label>
+                </div>
+
+                {imagePreviews.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {imagePreviews.map((src, idx) => (
+                      <div key={idx} className="relative group">
+                        <img
+                          src={src}
+                          alt={`Preview ${idx + 1}`}
+                          className="h-20 w-20 rounded-lg object-cover border border-border/40"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage(idx)}
+                          className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+                          title={t('common.delete')}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="sticky bottom-0 z-10 border-t border-border/60 bg-card px-6 py-4 flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+                {t('common.cancel')}
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {t('common.loading')}
+                  </>
+                ) : (
+                  <>
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t('products.addProduct')}
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Category Sub-Dialog ── */}
+      <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('categories.addCategory')}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCategorySubmit}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="modal_cat_name">{t('categories.categoryName')}</Label>
+                <Input
+                  id="modal_cat_name"
+                  value={categoryFormData.name_uz}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    setCategoryFormData((prev) => ({
+                      ...prev,
+                      name_uz: e.target.value,
+                      name_uz_cyrl: latinToCyrillic(e.target.value),
+                    }))
+                  }
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="modal_cat_name_cyrl">{t('categories.categoryName')} (Cyrillic)</Label>
+                <Input
+                  id="modal_cat_name_cyrl"
+                  value={categoryFormData.name_uz_cyrl}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    setCategoryFormData((prev) => ({ ...prev, name_uz_cyrl: e.target.value }))
+                  }
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsCategoryDialogOpen(false)}>
+                {t('common.cancel')}
+              </Button>
+              <Button type="submit" disabled={savingCategory}>
+                {savingCategory ? t('common.loading') : t('common.save')}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Unit Sub-Dialog ── */}
+      <Dialog open={isUnitDialogOpen} onOpenChange={setIsUnitDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('products.addUnit')}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUnitSubmit}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="modal_unit_name">{t('products.unitName')}</Label>
+                <Input
+                  id="modal_unit_name"
+                  value={unitFormData.measurement_uz}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    setUnitFormData((prev) => ({
+                      ...prev,
+                      measurement_uz: e.target.value,
+                      measurement_uz_cyrl: latinToCyrillic(e.target.value),
+                    }))
+                  }
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="modal_unit_name_cyrl">{t('products.unitName')} (Cyrillic)</Label>
+                <Input
+                  id="modal_unit_name_cyrl"
+                  value={unitFormData.measurement_uz_cyrl}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    setUnitFormData((prev) => ({ ...prev, measurement_uz_cyrl: e.target.value }))
+                  }
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsUnitDialogOpen(false)}>
+                {t('common.cancel')}
+              </Button>
+              <Button type="submit" disabled={savingUnit}>
+                {savingUnit ? t('common.loading') : t('common.save')}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

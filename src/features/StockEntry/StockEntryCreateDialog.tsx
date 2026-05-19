@@ -1,22 +1,18 @@
 import { useState, useEffect, useCallback, useMemo, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, Save } from 'lucide-react';
-import { PageHeader } from '../../components/shared/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../../components/ui/Card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
 import { inventoryService } from '../../services/inventoryService';
 import { storeService } from '../../services/storeService';
 import { supplierService } from '../../services/supplierService';
 import { useAuthStore } from '../../app/store';
 import { useProducts } from '../../context/ProductContext';
-import type { Store, Supplier, ProductUnit, ProductFormData, Product } from '../../types';
+import type { Store, Supplier, ProductUnit, ProductFormData } from '../../types';
 import { useCategories } from '../../context/CategoryContext';
 import { productUnitService } from '../../services/productUnitService';
-import { productLocationService, type ProductLocation } from '../../services/productLocationService';
 import { productService } from '../../services/productService';
 import {
   Dialog,
@@ -26,9 +22,7 @@ import {
   DialogFooter,
 } from '../../components/ui/Dialog';
 import toast from 'react-hot-toast';
-import { latinToCyrillic } from '../../utils/transliteration';
 import { formatCurrency } from '../../utils';
-import { logger } from '../../utils/logger';
 
 interface InventoryFormItem {
   product_id: string;
@@ -39,36 +33,36 @@ interface InventoryFormItem {
   total: number;
 }
 
-export function StockEntryCreatePage() {
-  const { t, i18n } = useTranslation();
-  const lang = i18n.language || 'uz';
-  const navigate = useNavigate();
+export function StockEntryCreateDialog({
+  open,
+  onOpenChange,
+  onSuccess
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
+}) {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const isAdmin = Boolean(user?.is_superuser);
   const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores[0].id) : '');
+  
   const [stores, setStores] = useState<Store[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [saving, setSaving] = useState(false);
   const { products: allProducts, loading: productsLoading, refreshProducts } = useProducts();
+  
   const safeStores = useMemo(() => (Array.isArray(stores) ? stores : []), [stores]);
   const safeSuppliers = useMemo(() => (Array.isArray(suppliers) ? suppliers : []), [suppliers]);
   const safeProducts = useMemo(() => {
     if (productsLoading) return [];
-    // Apply store filtering like SalesPage does
-    const filtered = isAdmin ? allProducts : allProducts.filter((p) => p.store_id === userStoreId);
-    logger.info('[InventoryCreatePage] Filtered products:', {
-      allProductsCount: allProducts.length,
-      filteredCount: filtered.length,
-      isAdmin,
-      userStoreId,
-      productsLoading,
-    });
-    return filtered;
+    return isAdmin ? allProducts : allProducts.filter((p) => p.store_id === userStoreId);
   }, [allProducts, productsLoading, isAdmin, userStoreId]);
 
   const [supplierId, setSupplierId] = useState('');
   const [storeId, setStoreId] = useState(isAdmin ? '' : userStoreId);
   const [paid, setPaid] = useState<number | ''>('');
+  const [paymentType, setPaymentType] = useState('cash'); // 'cash', 'card', 'debt'
 
   useEffect(() => {
     if (!isAdmin && userStoreId) {
@@ -109,16 +103,8 @@ export function StockEntryCreatePage() {
   }, [isProductDialogOpen, loadDialogData]);
 
   const handleProductSubmit = async () => {
-    if (!newProductData.name) {
-      toast.error(t('errors.validationError', 'Mahsulot nomini kiriting'));
-      return;
-    }
-    if (!newProductData.category) {
-      toast.error(t('errors.validationError', 'Kategoriyani tanlang'));
-      return;
-    }
-    if (!newProductData.unit_measurement) {
-      toast.error(t('errors.validationError', 'O\'lchov birligini tanlang'));
+    if (!newProductData.name || !newProductData.category || !newProductData.unit_measurement) {
+      toast.error(t('errors.validationError', 'Barcha maydonlarni to\'ldiring'));
       return;
     }
 
@@ -131,11 +117,8 @@ export function StockEntryCreatePage() {
 
       const createdProduct = await productService.create(payload);
       toast.success(t('products.productAdded', 'Mahsulot muvaffaqiyatli qo\'shildi'));
-
-      // Refresh global products list
       await refreshProducts();
 
-      // Auto-populate the selected item row
       if (activeItemIndex !== null) {
         const newItems = [...items];
         newItems[activeItemIndex] = {
@@ -149,13 +132,7 @@ export function StockEntryCreatePage() {
         setItems(newItems);
       }
 
-      // Reset form and close dialog
-      setNewProductData({
-        name: '',
-        category: '',
-        unit_measurement: '',
-        description: '',
-      });
+      setNewProductData({ name: '', category: '', unit_measurement: '', description: '' });
       setIsProductDialogOpen(false);
       setActiveItemIndex(null);
     } catch (error) {
@@ -175,22 +152,20 @@ export function StockEntryCreatePage() {
       setStores(Array.isArray(storesRes.data) ? storesRes.data : []);
       setSuppliers(Array.isArray(suppliersRes.data) ? suppliersRes.data : []);
     } catch (error) {
-      const axiosErr = error as { response?: { status?: number } };
-      if (axiosErr.response?.status === 401) return;
       console.error('Failed to load data:', error);
-      setStores([
-        { id: '1', name: 'Асосий дўкон', is_warehouse: false, created_at: '' },
-        { id: '2', name: 'Омбор', is_warehouse: true, created_at: '' },
-      ]);
-      setSuppliers([
-        { id: '1', name: 'AutoParts Co', debt: 0, created_at: '' },
-      ]);
     }
   }, []);
 
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    if (open) {
+      void loadData();
+      setSupplierId('');
+      setStoreId(isAdmin ? '' : userStoreId);
+      setPaid('');
+      setPaymentType('cash');
+      setItems([{ product_id: '', product_name: '', quantity: '', purchase_price: '', selling_price: '', total: 0 }]);
+    }
+  }, [open, loadData, isAdmin, userStoreId]);
 
   const handleItemChange = (index: number, field: keyof InventoryFormItem, value: string | number) => {
     const newItems = [...items];
@@ -244,14 +219,16 @@ export function StockEntryCreatePage() {
     const price = item.purchase_price === '' ? 0 : item.purchase_price;
     return sum + (qty as number) * (price as number);
   }, 0);
-  const paidAmount = paid === '' ? 0 : paid;
-  const debt = total - paidAmount;
+  
+  // If payment is debt, paid amount is 0 automatically
+  const actualPaidAmount = paymentType === 'debt' ? 0 : (paid === '' ? 0 : paid);
+  const debt = total - actualPaidAmount;
 
   useEffect(() => {
-    if (paid !== '' && paid > total) {
+    if (paymentType !== 'debt' && paid !== '' && paid > total) {
       setPaid(total === 0 ? '' : total);
     }
-  }, [total, paid]);
+  }, [total, paid, paymentType]);
 
   const handleSubmit = async (e: ChangeEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -267,39 +244,36 @@ export function StockEntryCreatePage() {
           purchase_price: (item.purchase_price === '' ? '0' : String(item.purchase_price)),
           selling_price: (item.selling_price === '' ? '0' : String(item.selling_price)),
         })),
-        paid_amount: paid === '' ? 0 : paid,
+        paid_amount: actualPaidAmount,
+        // payment_type: paymentType // Send it if backend accepts it in the future
+        ...( { payment_type: paymentType } as any )
       });
-      navigate(`/${lang}/stockentry`);
+      toast.success(t('inventory.inventoryCreated', 'Kirim muvaffaqiyatli yaratildi'));
+      onSuccess?.();
+      onOpenChange(false);
     } catch (error) {
       console.error('Failed to create inventory:', error);
+      toast.error(t('errors.generic', 'Xatolik yuz berdi'));
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title={t('inventory.createIncomingStock')}
-        description={t('inventory.addFromSupplier')}
-        breadcrumbs={[
-          { label: t('nav.stockentry'), href: `/${lang}/stockentry` },
-          { label: t('common.create') },
-        ]}
-      />
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t('inventory.createIncomingStock', 'Kirim yaratish')}</DialogTitle>
+          </DialogHeader>
 
-      <form onSubmit={handleSubmit}>
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('inventory.basicInfo')}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <div className="space-y-2">
-                <Label>{t('suppliers.title')}</Label>
-                <Select value={supplierId} onValueChange={setSupplierId}>
+                <Label>{t('suppliers.title', 'Ta\'minotchi')}</Label>
+                <Select value={supplierId} onValueChange={setSupplierId} required>
                   <SelectTrigger>
-                    <SelectValue placeholder={t('inventory.selectSupplier')} />
+                    <SelectValue placeholder={t('inventory.selectSupplier', 'Tanlang')} />
                   </SelectTrigger>
                   <SelectContent>
                     {safeSuppliers.map(s => (
@@ -309,18 +283,14 @@ export function StockEntryCreatePage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>{t('stores.title')}</Label>
-                <Select value={storeId} onValueChange={setStoreId} disabled={!isAdmin}>
+                <Label>{t('stores.title', 'Do\'kon')}</Label>
+                <Select value={storeId} onValueChange={setStoreId} disabled={!isAdmin} required>
                   <SelectTrigger>
-                    <SelectValue placeholder={t('inventory.selectLocation')} />
+                    <SelectValue placeholder={t('inventory.selectLocation', 'Tanlang')} />
                   </SelectTrigger>
                   <SelectContent>
                     {safeStores.map(s => (
-                      <SelectItem
-                        key={s.id}
-                        value={s.id}
-                        disabled={s.type === 's'}
-                      >
+                      <SelectItem key={s.id} value={s.id} disabled={s.type === 's'}>
                         {s.name} {s.type === 's' ? ' ( дўкон )' : ''}
                       </SelectItem>
                     ))}
@@ -328,12 +298,26 @@ export function StockEntryCreatePage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>{t('inventory.paidAmount')}</Label>
+                <Label>{t('sales.paymentType', 'To\'lov turi')}</Label>
+                <Select value={paymentType} onValueChange={setPaymentType}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">{t('payment.cash', 'Naqd')}</SelectItem>
+                    <SelectItem value="card">{t('payment.card', 'Karta')}</SelectItem>
+                    <SelectItem value="debt">{t('payment.debt', 'Qarz')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>{t('inventory.paidAmount', 'To\'langan summa')}</Label>
                 <Input
                   type="number"
                   min="0"
                   max={total}
-                  value={paid}
+                  value={paymentType === 'debt' ? 0 : paid}
+                  disabled={paymentType === 'debt'}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => {
                     const val = e.target.value === '' ? '' : Number(e.target.value);
                     if (val !== '' && val > total) {
@@ -344,115 +328,117 @@ export function StockEntryCreatePage() {
                   }}
                 />
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>{t('products.title')}</CardTitle>
-              <Button type="button" variant="outline" size="sm" onClick={addItem}>
-                <Plus className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">{t('inventory.addProduct')}</span>
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {items.map((item, index) => (
-                <div key={index} className="rounded-lg border p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">#{index + 1}</span>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium">{t('products.title', 'Mahsulotlar')}</h3>
+                <Button type="button" variant="outline" size="sm" onClick={addItem}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('inventory.addProduct', 'Qo\'shish')}
+                </Button>
+              </div>
+              
+              <div className="space-y-3">
+                {items.map((item, index) => (
+                  <div key={index} className="rounded-lg border p-4 bg-muted/20 relative">
                     {items.length > 1 && (
-                      <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(index)}>
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="icon" 
+                        className="absolute right-2 top-2 h-8 w-8"
+                        onClick={() => removeItem(index)}
+                      >
                         <Trash2 className="h-4 w-4 text-red-500" />
                       </Button>
                     )}
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-xs">{t('products.title')}</Label>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActiveItemIndex(index);
-                            setIsProductDialogOpen(true);
-                          }}
-                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5 font-medium"
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                      <div className="space-y-2 lg:col-span-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs">{t('products.title', 'Mahsulot')}</Label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveItemIndex(index);
+                              setIsProductDialogOpen(true);
+                            }}
+                            className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5 font-medium"
+                          >
+                            <Plus className="h-3 w-3" />
+                            {t('common.add', 'Yangi')}
+                          </button>
+                        </div>
+                        <Select
+                          value={item.product_id}
+                          onValueChange={(v: string) => handleItemChange(index, 'product_id', v)}
+                          required
                         >
-                          <Plus className="h-3 w-3" />
-                          {t('common.add', 'Qo\'shish')}
-                        </button>
+                          <SelectTrigger>
+                            <SelectValue placeholder={t('inventory.selectProduct', 'Tanlang')} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {safeProducts.map(p => (
+                              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
-                      <Select
-                        value={item.product_id}
-                        onValueChange={(v: string) => handleItemChange(index, 'product_id', v)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder={t('inventory.selectProduct')} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {safeProducts.length === 0 && !productsLoading && (
-                            <div className="p-2 text-xs text-muted-foreground">
-                              {t('common.noData')}
-                            </div>
-                          )}
-                          {productsLoading && (
-                            <div className="p-2 text-xs text-muted-foreground">
-                              {t('common.loading')}...
-                            </div>
-                          )}
-                          {safeProducts.map(p => (
-                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs">{t('inventory.quantity')}</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleItemChange(index, 'quantity', e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs">{t('inventory.purchasePrice')}</Label>
-                      <Input
-                        type="number"
-                        value={item.purchase_price}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleItemChange(index, 'purchase_price', e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs">{t('products.sellingPrice')}</Label>
-                      <Input
-                        type="number"
-                        value={item.selling_price}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleItemChange(index, 'selling_price', e.target.value)}
-                      />
+                      <div className="space-y-2">
+                        <Label className="text-xs">{t('inventory.quantity', 'Miqdor')}</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          required
+                          value={item.quantity}
+                          onChange={(e: ChangeEvent<HTMLInputElement>) => handleItemChange(index, 'quantity', e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs">{t('inventory.purchasePrice', 'Xarid narxi')}</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          required
+                          value={item.purchase_price}
+                          onChange={(e: ChangeEvent<HTMLInputElement>) => handleItemChange(index, 'purchase_price', e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs">{t('products.sellingPrice', 'Sotuv narxi')}</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={item.selling_price}
+                          onChange={(e: ChangeEvent<HTMLInputElement>) => handleItemChange(index, 'selling_price', e.target.value)}
+                        />
+                      </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-sm text-muted-foreground">{t('common.total')}: </span>
-                    <span className="font-medium">{formatCurrency(item.total)}</span>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-            <CardFooter className="flex flex-col gap-4">
-              <div className="space-y-1 text-center sm:text-left">
-                <p className="text-lg font-medium">{t('common.total')}: {formatCurrency(total)}</p>
-                <p className="text-sm text-muted-foreground">{t('suppliers.debt')}: {formatCurrency(debt)}</p>
+                ))}
               </div>
-              <Button type="submit" disabled={saving} className="w-full">
-                <Save className="h-4 w-4 mr-2" />
-                {saving ? t('common.loading') : t('inventory.createIncomingStock')}
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
-      </form>
+            </div>
 
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-muted/30 rounded-lg">
+              <div className="space-y-1">
+                <p className="text-lg font-bold">{t('common.total', 'Jami')}: {formatCurrency(total)}</p>
+                <p className="text-sm font-medium text-red-500">{t('suppliers.debt', 'Qarz')}: {formatCurrency(debt)}</p>
+              </div>
+              <div className="mt-4 sm:mt-0 flex gap-2">
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                  {t('common.cancel', 'Bekor qilish')}
+                </Button>
+                <Button type="submit" disabled={saving}>
+                  <Save className="h-4 w-4 mr-2" />
+                  {saving ? t('common.loading', 'Yuklanmoqda...') : t('common.save', 'Saqlash')}
+                </Button>
+              </div>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Nested Product Dialog */}
       <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
         <DialogContent size="lg">
           <DialogHeader>
@@ -463,17 +449,10 @@ export function StockEntryCreatePage() {
               <Label>{t('products.name', 'Mahsulot nomi')}</Label>
               <Input
                 value={newProductData.name}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setNewProductData({
-                    ...newProductData,
-                    name: val,
-                  });
-                }}
+                onChange={(e) => setNewProductData({ ...newProductData, name: e.target.value })}
                 required
               />
             </div>
-            
             <div className="space-y-2">
               <Label>{t('categories.title', 'Kategoriya')}</Label>
               <select
@@ -483,13 +462,10 @@ export function StockEntryCreatePage() {
               >
                 <option value="">{t('categories.selectCategory', 'Kategoriyani tanlang')}</option>
                 {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
                 ))}
               </select>
             </div>
-
             <div className="space-y-2">
               <Label>{t('products.unit', 'O\'lchov birligi')}</Label>
               <select
@@ -499,13 +475,10 @@ export function StockEntryCreatePage() {
               >
                 <option value="">{t('products.selectUnit', 'O\'lchov birligini tanlang')}</option>
                 {units.map((unit) => (
-                  <option key={unit.id} value={unit.id}>
-                    {unit.measurement_uz}
-                  </option>
+                  <option key={unit.id} value={unit.id}>{unit.measurement_uz}</option>
                 ))}
               </select>
             </div>
-
             <div className="space-y-2">
               <Label>{t('products.description', 'Tavsif')}</Label>
               <Input
@@ -524,6 +497,6 @@ export function StockEntryCreatePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pencil, Phone, Plus, Search, Trash2 } from 'lucide-react';
+import { Pencil, Phone, Plus, Search, Trash2, User, CheckCircle2, Info } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
@@ -96,62 +96,112 @@ export function CustomerListPage() {
 
   const columns: Column<CustomerRow>[] = [
     {
-      key: 'rawId',
-      header: t('customers.customerId'),
-      className: 'font-medium',
-      render: (item) => item.rawId,
-    },
-    {
       key: 'full_name',
-      header: t('customers.fullName'),
-      render: (item) => item.full_name,
+      header: t('customers.fullName', 'Mijoz'),
+      render: (item) => {
+        const initial = item.full_name ? item.full_name.charAt(0).toUpperCase() : '?';
+        return (
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-500 text-xs font-medium text-white">
+              {initial}
+            </div>
+            <span className="font-medium text-foreground">{item.full_name}</span>
+          </div>
+        );
+      },
     },
     {
       key: 'phone_number',
-      header: t('customers.phone'),
+      header: t('customers.phone', 'Telefon'),
       render: (item) => item.phone_number,
     },
     {
-      key: 'created_at',
-      header: t('customers.createdAt'),
-      render: (item) => formatDate(item.created_at),
+      key: 'total_purchases',
+      header: t('customers.totalPurchases', 'Jami xaridlar'),
+      render: (item) => {
+        // Fallback to random or 0 if not from API yet. We will format 0 as '—'
+        const total = (item as any).total_purchases || 0;
+        if (total === 0) return <span className="text-muted-foreground">—</span>;
+        return formatCurrency(total);
+      },
+    },
+    {
+      key: 'debt',
+      header: t('customers.debt', 'Qarz'),
+      render: (item) => {
+        const debt = Number(item.debt) || Number(item.total_debt) || 0;
+        if (debt === 0) return <span className="text-muted-foreground">—</span>;
+        return <span className="font-medium text-[#ff6b00]">{formatCurrency(debt)}</span>;
+      },
+    },
+    {
+      key: 'status',
+      header: t('customers.status', 'Holat'),
+      render: (item) => {
+        const debt = Number(item.debt) || Number(item.total_debt) || 0;
+        if (debt === 0) {
+          return (
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-2.5 py-0.5 text-xs font-medium text-white">
+              <CheckCircle2 className="h-3 w-3" />
+              Qarz yo'q
+            </div>
+          );
+        } else if (debt > 100000) {
+          return (
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-rose-500 px-2.5 py-0.5 text-xs font-medium text-white">
+              <Info className="h-3 w-3" />
+              Katta qarz
+            </div>
+          );
+        } else {
+          return (
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+              <Info className="h-3 w-3" />
+              Kichik qarz
+            </div>
+          );
+        }
+      },
     },
     {
       key: 'actions',
-      header: t('common.actions'),
-      className: 'text-right',
+      header: '',
+      className: 'text-right w-24',
       render: (item) => (
         <div className="flex items-center justify-end gap-1">
           <Button
-            variant="outline"
+            variant="ghost"
             size="icon"
             onClick={(e) => {
               e.stopPropagation();
               openViewDialog({ ...item, id: item.rawId });
             }}
             title={t('customers.viewDetails')}
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
           >
-            <Search className="h-4 w-4" />
+            <User className="h-4 w-4" />
           </Button>
           <Button
-            variant="outline"
+            variant="ghost"
             size="icon"
             onClick={(e) => {
               e.stopPropagation();
               openEditDialog({ ...item, id: item.rawId });
             }}
             title={t('common.edit')}
+            className="h-8 w-8 text-muted-foreground hover:text-blue-500"
           >
             <Pencil className="h-4 w-4" />
           </Button>
           <Button
-            variant="destructive"
+            variant="ghost"
             size="icon"
             onClick={(e) => {
               e.stopPropagation();
               void handleDelete(item.rawId);
             }}
             title={t('common.delete')}
+            className="h-8 w-8 text-muted-foreground hover:text-red-500"
           >
             <Trash2 className="h-4 w-4" />
           </Button>

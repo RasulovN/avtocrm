@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowRight, Plus, X } from 'lucide-react';
+import { Plus, X, Trash2, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { PageHeader } from '../../../components/shared/PageHeader';
 import { Button } from '../../../components/ui/Button';
@@ -103,60 +103,75 @@ export function TransferCreatePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t('transfers.createTransfer')}
-        description={t('transfers.title')}
+        title={t('transfers.createTransfer', "Tovarlarni ko'chirish")}
+        description={t('transfers.title', "Omborlar o'rtasida tovar jo'natish")}
         breadcrumbs={[
-          { label: t('nav.transfers'), href: `/${lang}/transfers` },
-          { label: t('common.add') },
+          { label: t('nav.transfers', "O'tkazmalar"), href: `/${lang}/transfers` },
+          { label: t('common.add', "Qo'shish") },
         ]}
       />
 
       <form onSubmit={handleSubmit}>
-        <div className="grid gap-6">
-          <Card className='border-none'>
-            <CardContent className='p-0'>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>{t('transfers.fromStore')}</Label>
-                  <Select value={fromStoreId} onValueChange={setFromStoreId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={t('transfers.selectProduct')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {safeStores.map(s => (
-                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('transfers.toStore')}</Label>
-                  <Select value={toStoreId} onValueChange={setToStoreId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={t('transfers.selectProduct')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {safeStores.filter(s => s.id !== fromStoreId).map(s => (
-                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+        <Card className="border border-gray-200 shadow-sm rounded-xl overflow-hidden">
+          <CardContent className="p-6 space-y-8">
+            
+            {/* Top section: From and To Stores */}
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-800">{t('transfers.fromStore', 'Qayerdan')}</Label>
+                <Select value={fromStoreId} onValueChange={setFromStoreId}>
+                  <SelectTrigger className="bg-gray-50 border-gray-100 h-11 shadow-none">
+                    <SelectValue placeholder={t('transfers.selectProduct', 'Tanlang')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {safeStores.map(s => (
+                      <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-800">{t('transfers.toStore', 'Qayerga')}</Label>
+                <Select value={toStoreId} onValueChange={setToStoreId}>
+                  <SelectTrigger className="bg-gray-50 border-gray-100 h-11 shadow-none">
+                    <SelectValue placeholder={t('transfers.selectProduct', 'Tanlang')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {safeStores.filter(s => String(s.id) !== String(fromStoreId)).map(s => (
+                      <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Middle section: Items List */}
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <h3 className="text-sm font-bold text-gray-900">{t('transfers.itemsToTransfer', "Jo'natiladigan tovarlar")}</h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-lg bg-white border-gray-200 text-gray-700 hover:bg-gray-50 flex items-center shrink-0 shadow-sm px-4 h-9"
+                  onClick={() => setItems([...items, { product: '', quantity: 1 }])}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('transfers.addProduct', "Tovar qo'shish")}
+                </Button>
               </div>
 
-              <div className="space-y-2 mt-4 border p-4">
-                <div className="flex items-center gap-2">
-                  <div className="flex-1">
-                    <Label>{t('products.title')}</Label>
+              <div className="space-y-3">
+                {items.length === 0 && (
+                  <div className="text-center p-8 border border-dashed rounded-xl bg-gray-50/50">
+                     <p className="text-sm text-gray-500">{t('transfers.noItems', "Hech qanday tovar qo'shilmagan")}</p>
                   </div>
-                  <div className="w-24">
-                    <Label>{t('products.quantity')}</Label>
-                  </div>
-                  <div className="w-10"></div>
-                </div>
+                )}
+                
                 {items.map((item, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <div className="flex-1">
+                  <div key={index} className="flex flex-col sm:flex-row items-start sm:items-end gap-4 p-4 rounded-xl bg-[#F9FAFB] border border-gray-100">
+                    <div className="flex-1 w-full space-y-2">
+                      <Label className="text-xs font-semibold text-gray-700">{t('products.title', 'Tovar')}</Label>
                       <Select 
                         value={item.product} 
                         onValueChange={(value) => {
@@ -170,24 +185,27 @@ export function TransferCreatePage() {
                           setItems(newItems);
                         }}
                       >
-                        <SelectTrigger>
-                          <SelectValue placeholder={t('transfers.selectProduct')} />
+                        <SelectTrigger className="bg-white border-gray-100 h-10 shadow-none">
+                          <SelectValue placeholder={t('transfers.selectProduct', 'Tovarni tanlang')} />
                         </SelectTrigger>
                         <SelectContent>
                           {safeProducts.map(p => {
                              const inv = p.inventory_by_store?.find(i => String(i.store_id) === String(fromStoreId));
                              const q = inv ? inv.quantity : 0;
                              return (
-                               <SelectItem key={p.id} value={p.id}>{p.name} ({q})</SelectItem>
+                               <SelectItem key={p.id} value={String(p.id)}>{p.name} (Omborda: {q})</SelectItem>
                              )
                           })}
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="w-24">
+
+                    <div className="w-full sm:w-32 space-y-2 shrink-0">
+                      <Label className="text-xs font-semibold text-gray-700">{t('products.quantity', 'Soni')}</Label>
                       <Input
                         type="number"
                         min="1"
+                        className="bg-white border-gray-100 h-10 shadow-none text-center sm:text-left"
                         value={item.quantity || ''}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => {
                           const newItems = [...items];
@@ -205,35 +223,41 @@ export function TransferCreatePage() {
                         }}
                       />
                     </div>
+
                     <Button
                       type="button"
                       variant="ghost"
-                      size="sm"
+                      size="icon"
+                      className="h-10 w-10 shrink-0 text-red-500 hover:text-red-600 hover:bg-red-50 sm:mb-0 mt-2 sm:mt-0 ml-auto sm:ml-0"
                       onClick={() => handleRemoveItem(index)}
                     >
-                      <X className="h-4 w-4 text-red-500" />
+                      <Trash2 className="h-5 w-5" />
                     </Button>
                   </div>
                 ))}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setItems([...items, { product: '', quantity: 1 }])}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  {t('common.add')}
-                </Button>
               </div>
-            </CardContent>
-            <CardFooter className="flex justify-end">
-              <Button type="submit" disabled={saving || !fromStoreId || !toStoreId || items.length === 0}>
-                <ArrowRight className="h-4 w-4 mr-2" />
-                {saving ? t('common.loading') : t('transfers.createTransfer')}
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
+            </div>
+
+          </CardContent>
+          <CardFooter className="p-6 pt-0 flex flex-col sm:flex-row gap-4">
+             <Button 
+               type="button" 
+               variant="outline" 
+               onClick={() => navigate(`/${lang}/transfers`)}
+               className="w-full sm:flex-1 h-11 bg-white border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50"
+             >
+               {t('common.cancel', 'Bekor qilish')}
+             </Button>
+             <Button 
+               type="submit" 
+               className="w-full sm:flex-[2] bg-slate-950 hover:bg-slate-900 text-white h-11 rounded-lg" 
+               disabled={saving || !fromStoreId || !toStoreId || items.length === 0}
+             >
+               <Send className="h-4 w-4 mr-2" />
+               {saving ? t('common.loading', 'Yuklanmoqda...') : t('transfers.createTransfer', "Tovarni jo'natish")}
+             </Button>
+          </CardFooter>
+        </Card>
       </form>
     </div>
   );

@@ -72,20 +72,20 @@ const navItems: NavItem[] = [
 
 // Sub-navigation for modules that have both list and create pages
 const subNavs: Record<string, SubNavItem[]> = {
-  '/stockentry': [
-    { titleKey: 'stockentry.list', href: '/stockentry', icon: List },
-    { titleKey: 'stockentry.createIncomingStock', href: '/stockentry/new', icon: Plus },
-  ],
-  '/inventory': [
-    { titleKey: 'inventory.inventoryList', href: '/inventory', icon: List },
+  // '/stockentry': [
+    // { titleKey: 'stockentry.list', href: '/stockentry', icon: List },
+    // { titleKey: 'stockentry.createIncomingStock', href: '/stockentry/new', icon: Plus },
+  // ],
+  // '/inventory': [
+    // { titleKey: 'inventory.inventoryList', href: '/inventory', icon: List },
     // { titleKey: 'inventory.shortages', href: '/inventory/kamomat', icon: TriangleAlert },
-    { titleKey: 'inventory.newInventory', href: '/inventory/new', icon: Plus },
-  ],
-  '/transfers': [
-    { titleKey: 'transfers.list', href: '/transfers', icon: List },
-    { titleKey: 'transfers.createTransfer', href: '/transfers/new', icon: Plus },
-    // { titleKey: 'transfers.requestTransfer', href: '/transfers/requests', icon: Download },
-  ],
+    // { titleKey: 'inventory.newInventory', href: '/inventory/new', icon: Plus },
+  // ],
+  // '/transfers': [
+  //   { titleKey: 'transfers.list', href: '/transfers', icon: List },
+  //   { titleKey: 'transfers.createTransfer', href: '/transfers/new', icon: Plus },
+  //   // { titleKey: 'transfers.requestTransfer', href: '/transfers/requests', icon: Download },
+  // ],
   '/sales': [
     { titleKey: 'sales.list', href: '/sales', icon: List },
     { titleKey: 'nav.saleReturns', href: '/sales-returns', icon: Undo2 },

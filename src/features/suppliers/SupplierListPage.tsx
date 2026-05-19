@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, type ChangeEvent, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Edit, Trash2, User, DollarSign, FileText } from 'lucide-react';
+import { Plus, Edit, Trash2, User, DollarSign, FileText, Phone, Mail, MapPin, CheckCircle2 } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
@@ -191,46 +191,98 @@ export function SupplierListPage() {
   };
 
   const columns: Column<Supplier>[] = [
-    { key: 'name', header: t('suppliers.supplierName') },
-    { key: 'inn', header: t('suppliers.inn') },
     {
-      key: 'phone',
-      header: t('suppliers.phone'),
-      render: (item: Supplier) => item.phone_number || item.phone || '-',
-    },
-    { key: 'address', header: t('suppliers.address') },
-    {
-      key: 'debt',
-      header: t('suppliers.debt'),
+      key: 'name_inn',
+      header: t('suppliers.supplierName', 'Yetkazib beruvchi'),
       render: (item: Supplier) => (
-        <span className={(typeof item.debt === 'number' && item.debt > 0) ? 'text-red-500 font-semibold' : ''}>
-          {formatCurrency(typeof item.debt === 'number' ? item.debt : 0)}
-        </span>
+        <div>
+          <div className="font-semibold text-foreground">{item.name_uz || item.name || '-'}</div>
+          <div className="text-xs text-muted-foreground mt-0.5">INN: {item.inn || '-'}</div>
+        </div>
       ),
     },
     {
-      key: 'description',
-      header: t('common.description'),
-      render: (item: Supplier) => item.description ?? item.description_uz ?? '-',
+      key: 'contact',
+      header: t('suppliers.contact', 'Aloqa'),
+      render: (item: Supplier) => (
+        <div className="space-y-1.5 text-sm">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Phone className="h-3.5 w-3.5 shrink-0" />
+            <span>{item.phone_number || item.phone || '-'}</span>
+          </div>
+          {item.email && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Mail className="h-3.5 w-3.5 shrink-0" />
+              <span>{item.email}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <MapPin className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate max-w-[200px]">{item.address_uz || item.address || '-'}</span>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'total_purchases',
+      header: t('suppliers.totalPurchases', 'Jami xaridlar'),
+      render: (item: Supplier) => {
+        // Fallback since total purchases might not be directly available on the model yet
+        const total = (item as any).total_purchases || 0;
+        if (total === 0) return <span className="text-muted-foreground">—</span>;
+        return <span className="font-semibold">{formatCurrency(total)}</span>;
+      },
+    },
+    {
+      key: 'debt',
+      header: t('suppliers.debt', 'Qarz'),
+      render: (item: Supplier) => {
+        const debt = typeof item.debt === 'number' ? item.debt : Number(item.debt) || 0;
+        if (debt <= 0) {
+          return (
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-600 dark:border-green-900/30 dark:bg-green-900/20">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              To'landi
+            </div>
+          );
+        }
+        return (
+          <div className="inline-flex items-center rounded bg-[#ff6b00] px-2.5 py-1 text-xs font-semibold text-white shadow-sm">
+            {formatCurrency(debt)}
+          </div>
+        );
+      },
     },
     {
       key: 'actions',
-      header: t('common.actions'),
+      header: t('common.actions', 'Amallar'),
       className: 'text-right',
       render: (item: Supplier) => (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-end gap-1">
           <Button 
-            variant="ghost" 
+            variant="outline" 
             size="sm"
             onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleOpenDetail(item); }}
-            title={t('suppliers.debt')}
+            title={t('common.history', 'Tarix')}
+            className="h-8 gap-1.5"
           >
-            <DollarSign className="h-4 w-4" />
+            <FileText className="h-3.5 w-3.5" />
+            Tarix
           </Button>
-          <Button variant="ghost" size="icon" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleOpenDialog(item); }}>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8 text-muted-foreground hover:text-blue-500" 
+            onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleOpenDialog(item); }}
+          >
             <Edit className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); setDeleteId(item.id); }}>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8 text-muted-foreground hover:text-red-500" 
+            onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); setDeleteId(item.id); }}
+          >
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -251,10 +303,14 @@ export function SupplierListPage() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-lg border bg-card p-4 shadow-sm">
           <p className="text-sm text-muted-foreground">{t('dashboard.totalSuppliers', 'Таъминотчилар сони')}</p>
           <p className="text-2xl font-bold">{suppliers.length}</p>
+        </div>
+        <div className="rounded-lg border bg-card p-4 shadow-sm">
+          <p className="text-sm text-muted-foreground">{t('suppliers.totalPurchases', 'Jami xaridlar')}</p>
+          <p className="text-2xl font-bold">{formatCurrency(suppliers.reduce((sum, s) => sum + (Number((s as any).total_purchases) || 0), 0))}</p>
         </div>
         <div className="rounded-lg border bg-card p-4 shadow-sm">
           <p className="text-sm text-muted-foreground">{t('dashboard.totalDebt', 'Жами қарздорлик')}</p>
