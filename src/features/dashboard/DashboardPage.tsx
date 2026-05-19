@@ -343,7 +343,7 @@ export function DashboardPage() {
       {/* Metric Cards */}
       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
         {/* Total Revenue */}
-        <div className="group relative overflow-hidden rounded-2xl border bg-card p-6 transition-all hover:-translate-y-1 hover:shadow-xl duration-300">
+        <div className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card p-6 card-hover-lift">
           <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-emerald-500/10 blur-2xl transition-all group-hover:bg-emerald-500/20" />
           <div className="relative flex items-start justify-between">
             <div>
@@ -365,7 +365,7 @@ export function DashboardPage() {
         </div>
 
         {/* Net Profit or Expenses */}
-        <div className="group relative overflow-hidden rounded-2xl border bg-card p-6 transition-all hover:-translate-y-1 hover:shadow-xl duration-300">
+        <div className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card p-6 card-hover-lift">
           <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-violet-500/10 blur-2xl transition-all group-hover:bg-violet-500/20" />
           <div className="relative flex items-start justify-between">
             <div>
@@ -387,7 +387,7 @@ export function DashboardPage() {
         </div>
 
         {/* Total Customer Debt */}
-        <div className="group relative overflow-hidden rounded-2xl border bg-card p-6 transition-all hover:-translate-y-1 hover:shadow-xl duration-300">
+        <div className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card p-6 card-hover-lift">
           <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-rose-500/10 blur-2xl transition-all group-hover:bg-rose-500/20" />
           <div className="relative flex items-start justify-between">
             <div>
@@ -409,7 +409,7 @@ export function DashboardPage() {
         </div>
 
         {/* Stock Status */}
-        <div className="group relative overflow-hidden rounded-2xl border bg-card p-6 transition-all hover:-translate-y-1 hover:shadow-xl duration-300">
+        <div className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card p-6 card-hover-lift">
           <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-amber-500/10 blur-2xl transition-all group-hover:bg-amber-500/20" />
           <div className="relative flex items-start justify-between">
             <div>
@@ -433,7 +433,7 @@ export function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-7">
         {/* Primary Content: Sales/Profit Chart */}
-        <Card className="lg:col-span-4 xl:col-span-5 overflow-hidden rounded-2xl border shadow-sm hover:shadow-md transition-shadow duration-300">
+        <Card className="lg:col-span-4 xl:col-span-5 overflow-hidden rounded-2xl border border-border/60 shadow-sm hover:shadow-md transition-shadow duration-300">
           <CardHeader className="pb-2 border-b bg-muted/5">
             <div className="flex items-center justify-between">
               <div>

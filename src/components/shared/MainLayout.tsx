@@ -32,6 +32,7 @@ import {
   LocationEdit,
   Ruler,
   Undo2,
+  X,
 } from 'lucide-react';
 import { NotificationProvider } from '../../context/NotificationProvider';
 import { NotificationToast } from './NotificationToast';
@@ -247,285 +248,302 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="flex min-h-screen">
+    <div className="app-shell flex min-h-screen">
       <a
         href="#main-content"
         className="sr-only fixed left-4 top-4 z-100 rounded-md bg-background px-4 py-2 text-sm font-medium text-foreground shadow focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-primary"
       >
         Skip to main content
       </a>
+
+      {/* Mobile overlay */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm lg:hidden transition-opacity duration-300"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
+      {/* ═══════ Sidebar ═══════ */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 bg-card border-r transition-all duration-300',
-          isCollapsed ? 'w-16' : 'w-64',
+          'fixed inset-y-0 left-0 z-40 bg-sidebar border-r border-border/60 transition-all duration-300 flex flex-col',
+          isCollapsed ? 'w-[68px]' : 'w-[260px]',
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
       >
-        <div className="flex flex-col h-full">
-          <div className={cn(
-            'p-4 border-b flex items-center justify-between',
-            isCollapsed ? 'justify-center' : ''
-          )}>
-            {!isCollapsed && (
+        {/* Logo Section */}
+        <div className={cn(
+          'h-16 flex items-center border-b border-border/60 shrink-0',
+          isCollapsed ? 'justify-center px-2' : 'px-5 justify-between'
+        )}>
+          {!isCollapsed ? (
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold text-sm">
+                A
+              </div>
               <div>
-                <h1 className="text-xl font-bold text-primary">AvtoCRM</h1>
-                <p className="text-xs text-muted-foreground">Auto Spare Parts</p>
+                <h1 className="text-base font-bold text-foreground tracking-tight">AvtoCRM</h1>
+                <p className="text-[11px] text-muted-foreground leading-tight">Auto Spare Parts</p>
               </div>
+            </div>
+          ) : (
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold text-sm">
+              A
+            </div>
+          )}
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className={cn(
+              'p-1.5 rounded-lg hover:bg-muted hidden lg:flex items-center justify-center transition-colors',
+              isCollapsed && 'absolute -right-3 top-5 z-50 bg-card border shadow-sm'
             )}
-            {isCollapsed && (
-              <span className="text-xl font-bold text-primary">A</span>
-            )}
-            <button
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className={cn(
-                'p-1 rounded hover:bg-accent hidden lg:flex',
-                isCollapsed ? 'absolute right-0 translate-x-1/2' : ''
+          >
+            <ChevronLeft className={cn('h-3.5 w-3.5 transition-transform text-muted-foreground', isCollapsed && 'rotate-180')} />
+          </button>
+          {/* Mobile close button */}
+          <button
+            onClick={() => setIsSidebarOpen(false)}
+            className="lg:hidden p-1.5 rounded-lg hover:bg-muted"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 py-3 px-3 space-y-0.5 overflow-y-auto">
+          {shouldShowSubNav && activeSubNav ? (
+            <>
+              <button
+                onClick={goBackToMainNav}
+                className={cn(
+                  'sidebar-nav-item w-full',
+                  isCollapsed && 'justify-center px-2'
+                )}
+                title={isCollapsed ? t('common.back') : undefined}
+              >
+                <ArrowLeft className="h-[18px] w-[18px] shrink-0" />
+                {!isCollapsed && <span>{t('common.back')}</span>}
+              </button>
+
+              <div className="my-2 mx-2 border-t border-border/60" />
+
+              {parentNavItem && !isCollapsed && (
+                <div className="px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  {t(parentNavItem.titleKey)}
+                </div>
               )}
-            >
-              <ChevronLeft className={cn('h-4 w-4 transition-transform', isCollapsed && 'rotate-180')} />
-            </button>
-          </div>
 
-          <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
-            {shouldShowSubNav && activeSubNav ? (
-              <>
-                <button
-                  onClick={goBackToMainNav}
-                  className={cn(
-                    'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors w-full text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                    isCollapsed && 'justify-center px-2'
-                  )}
-                  title={isCollapsed ? t('common.back') : undefined}
-                >
-                  <ArrowLeft className="h-5 w-5 shrink-0" />
-                  {!isCollapsed && <span>{t('common.back')}</span>}
-                </button>
+              {activeSubNav.map((subItem) => {
+                const href = `/${lang}${subItem.href}`;
+                const isActive = location.pathname === href;
+                return (
+                  <Link
+                    key={subItem.href}
+                    to={href}
+                    onClick={() => setIsSidebarOpen(false)}
+                    className={cn(
+                      'sidebar-nav-item',
+                      isActive && 'active',
+                      isCollapsed && 'justify-center px-2'
+                    )}
+                    title={isCollapsed ? t(subItem.titleKey) : undefined}
+                  >
+                    <subItem.icon className="h-[18px] w-[18px] shrink-0" />
+                    {!isCollapsed && <span>{t(subItem.titleKey)}</span>}
+                  </Link>
+                );
+              })}
+            </>
+          ) : (
+            navItems
+              .filter((item) => {
+                if (!item.access || item.access === 'all') return true;
+                if (item.access === 'superuser') return isSuperUser;
+                return !isSuperUser;
+              })
+              .map((item) => {
+                const href = `/${lang}${item.href}`;
+                const isActive = location.pathname.startsWith(`/${lang}${item.href}`) ||
+                  (item.href === '/dashboard' && location.pathname === `/${lang}`);
 
-                <div className="my-2 border-t" />
+                const hasSubNav = !!filteredSubNavs[item.href];
 
-                {parentNavItem && !isCollapsed && (
-                  <div className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase">
-                    {t(parentNavItem.titleKey)}
-                  </div>
-                )}
+                return (
+                  <Link
+                    key={item.href}
+                    to={href}
+                    onClick={() => handleMainNavClick(item)}
+                    className={cn(
+                      'sidebar-nav-item',
+                      isActive && !shouldShowSubNav && 'active',
+                      isCollapsed && 'justify-center px-2'
+                    )}
+                    title={isCollapsed ? t(item.titleKey) : undefined}
+                  >
+                    <item.icon className="h-[18px] w-[18px] shrink-0" />
+                    {!isCollapsed && (
+                      <span className="flex-1">{t(item.titleKey)}</span>
+                    )}
+                    {!isCollapsed && hasSubNav && (
+                      <ChevronRight className="h-3.5 w-3.5 opacity-40" />
+                    )}
+                  </Link>
+                );
+              })
+          )}
+        </nav>
 
-                {activeSubNav.map((subItem) => {
-                  const href = `/${lang}${subItem.href}`;
-                  const isActive = location.pathname === href;
-                  return (
-                    <Link
-                      key={subItem.href}
-                      to={href}
-                      onClick={() => setIsSidebarOpen(false)}
-                      className={cn(
-                        'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
-                        isActive
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                        isCollapsed && 'justify-center px-2'
-                      )}
-                      title={isCollapsed ? t(subItem.titleKey) : undefined}
-                    >
-                      <subItem.icon className="h-5 w-5 shrink-0" />
-                      {!isCollapsed && <span>{t(subItem.titleKey)}</span>}
-                    </Link>
-                  );
-                })}
-              </>
-            ) : (
-              navItems
-                .filter((item) => {
-                  if (!item.access || item.access === 'all') return true;
-                  if (item.access === 'superuser') return isSuperUser;
-                  return !isSuperUser;
-                })
-                .map((item) => {
-                  const href = `/${lang}${item.href}`;
-                  const isActive = location.pathname.startsWith(`/${lang}${item.href}`) ||
-                    (item.href === '/dashboard' && location.pathname === `/${lang}`);
-
-                  const hasSubNav = !!filteredSubNavs[item.href];
-
-                  return (
-                    <Link
-                      key={item.href}
-                      to={href}
-                      onClick={() => handleMainNavClick(item)}
-                      className={cn(
-                        'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
-                        isActive && !shouldShowSubNav
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                        isCollapsed && 'justify-center px-2'
-                      )}
-                      title={isCollapsed ? t(item.titleKey) : undefined}
-                    >
-                      <item.icon className="h-5 w-5 shrink-0" />
-                      {!isCollapsed && (
-                        <span className="flex-1">{t(item.titleKey)}</span>
-                      )}
-                      {!isCollapsed && hasSubNav && (
-                        <ChevronRight className="h-4 w-4 opacity-50" />
-                      )}
-                    </Link>
-                  );
-                })
-            )}
-          </nav>
-
-          <div className={cn(
-            'p-4 border-t',
-            isCollapsed ? 'flex justify-center' : ''
-          )}>
-            {!isCollapsed ? (
-              <div className="relative" ref={profileRef}>
-                <div
-                  className="flex items-center justify-between mb-3 cursor-pointer"
-                  onClick={() => setShowProfileMenu(!showProfileMenu)}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center shrink-0">
-                      <User className="h-4 w-4 text-primary-foreground" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{currentUser.full_name || currentUser.phone_number}</p>
-                      <p className="text-xs text-muted-foreground capitalize">{currentUser.role}</p>
-                    </div>
-                  </div>
-                  <ChevronDown className={cn('h-4 w-4 transition-transform', showProfileMenu && 'rotate-180')} />
+        {/* User Profile Section */}
+        <div className={cn(
+          'border-t border-border/60 p-3',
+          isCollapsed ? 'flex justify-center' : ''
+        )}>
+          {!isCollapsed ? (
+            <div className="relative" ref={profileRef}>
+              <div
+                className="flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-colors hover:bg-muted"
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+              >
+                <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <User className="h-4 w-4 text-primary" />
                 </div>
-
-                {showProfileMenu && (
-                  <div className="absolute bottom-full left-0 right-0 mb-2 bg-card border rounded-lg shadow-lg p-3 space-y-3">
-                    <div className="text-center">
-                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
-                        <User className="h-6 w-6 text-primary" />
-                      </div>
-                      <p className="font-medium">{currentUser.full_name}</p>
-                      <p className="text-xs text-muted-foreground capitalize">{currentUser.role}</p>
-                    </div>
-                    <div className="space-y-1 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">{t('stores.phone')}:</span>
-                        <span>{currentUser.phone_number || '+998901234567'}</span>
-                      </div>
-                    </div>
-                    <div className="pt-2 border-t space-y-2">
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start"
-                        onClick={() => navigate(`/${lang}/settings`)}
-                      >
-                        <Settings className="h-4 w-4 mr-2" />
-                        {t('nav.settings')}
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        className="w-full justify-start"
-                        onClick={handleLogout}
-                      >
-                        <LogOut className="h-4 w-4 mr-2" />
-                        {t('auth.logout')}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="relative" ref={profileRef}>
-                <div
-                  className="h-8 w-8 rounded-full bg-primary flex items-center justify-center cursor-pointer"
-                  onClick={() => setShowProfileMenu(!showProfileMenu)}
-                >
-                  <User className="h-4 w-4 text-primary-foreground" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold truncate text-foreground">{currentUser.full_name || currentUser.phone_number}</p>
+                  <p className="text-[11px] text-muted-foreground capitalize">{currentUser.role}</p>
                 </div>
+                <ChevronDown className={cn('h-3.5 w-3.5 text-muted-foreground transition-transform', showProfileMenu && 'rotate-180')} />
+              </div>
 
-                {showProfileMenu && (
-                  <div className="absolute bottom-full left-0 mb-2 w-48 bg-card border rounded-lg shadow-lg p-3 space-y-3 z-50">
-                    <div className="text-center">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
-                        <User className="h-5 w-5 text-primary" />
-                      </div>
-                      <p className="font-medium text-sm">{currentUser.full_name}</p>
-                      <p className="text-xs text-muted-foreground capitalize">{currentUser.role}</p>
+              {showProfileMenu && (
+                <div className="absolute bottom-full left-0 right-0 mb-2 bg-card border border-border/60 rounded-xl shadow-xl p-4 space-y-3 animate-fade-in-up">
+                  <div className="text-center pb-3 border-b border-border/60">
+                    <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-2">
+                      <User className="h-7 w-7 text-primary" />
                     </div>
-                    <div className="pt-2 border-t space-y-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full justify-start"
-                        onClick={() => navigate(`/${lang}/settings`)}
-                      >
-                        <Settings className="h-4 w-4 mr-2" />
-                        {t('nav.settings')}
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className="w-full justify-start"
-                        onClick={handleLogout}
-                      >
-                        <LogOut className="h-4 w-4 mr-2" />
-                        {t('auth.logout')}
-                      </Button>
+                    <p className="font-semibold text-foreground">{currentUser.full_name}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{currentUser.role}</p>
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between px-1">
+                      <span className="text-muted-foreground">{t('stores.phone')}:</span>
+                      <span className="font-medium">{currentUser.phone_number || '+998901234567'}</span>
                     </div>
                   </div>
-                )}
+                  <div className="pt-2 border-t border-border/60 space-y-1.5">
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start rounded-lg h-9 text-sm"
+                      onClick={() => navigate(`/${lang}/settings`)}
+                    >
+                      <Settings className="h-4 w-4 mr-2" />
+                      {t('nav.settings')}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start rounded-lg h-9 text-sm text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      {t('auth.logout')}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="relative" ref={profileRef}>
+              <div
+                className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center cursor-pointer hover:bg-primary/15 transition-colors"
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+              >
+                <User className="h-4 w-4 text-primary" />
               </div>
-            )}
-          </div>
+
+              {showProfileMenu && (
+                <div className="absolute bottom-full left-0 mb-2 w-52 bg-card border border-border/60 rounded-xl shadow-xl p-4 space-y-3 z-50 animate-fade-in-up">
+                  <div className="text-center pb-3 border-b border-border/60">
+                    <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-2">
+                      <User className="h-5 w-5 text-primary" />
+                    </div>
+                    <p className="font-semibold text-sm">{currentUser.full_name}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{currentUser.role}</p>
+                  </div>
+                  <div className="pt-1 space-y-1.5">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start rounded-lg"
+                      onClick={() => navigate(`/${lang}/settings`)}
+                    >
+                      <Settings className="h-4 w-4 mr-2" />
+                      {t('nav.settings')}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      {t('auth.logout')}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </aside>
 
+      {/* ═══════ Main Content Area ═══════ */}
       <div className={cn(
         'flex-1 flex flex-col transition-all duration-300',
-        isCollapsed ? 'lg:ml-16' : 'lg:ml-64'
+        isCollapsed ? 'lg:ml-[68px]' : 'lg:ml-[260px]'
       )}>
-        <header className="sticky top-0 z-20 h-16 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
-          <div className="flex h-full items-center justify-end px-4 lg:px-6">
-            <button
-              onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden p-2 rounded-md hover:bg-accent mr-2"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
+        {/* ═══════ Top Header Bar ═══════ */}
+        <header className="sticky top-0 z-20 h-16 border-b border-border/60 bg-background/80 backdrop-blur-xl">
+          <div className="flex h-full items-center justify-between px-4 lg:px-6">
+            {/* Left: Mobile menu + Store badge */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="lg:hidden p-2 rounded-xl hover:bg-muted transition-colors"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
 
-            <div className="mr-auto flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">
-              <Store className="h-4 w-4 text-primary shrink-0" />
-              <span className="font-semibold text-xs sm:text-sm text-primary truncate max-w-[150px] sm:max-w-[250px]">
-                {user?.store_name || (isSuperUser ? t('stores.admin', 'Barcha filiallar') : '')}
-              </span>
+              <div className="flex items-center gap-2 bg-primary/5 px-3.5 py-2 rounded-xl border border-primary/10">
+                <Store className="h-4 w-4 text-primary shrink-0" />
+                <span className="font-semibold text-xs sm:text-sm text-primary truncate max-w-[150px] sm:max-w-[250px]">
+                  {user?.store_name || (isSuperUser ? t('stores.admin', 'Barcha filiallar') : '')}
+                </span>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2">
-
+            {/* Right: Actions */}
+            <div className="flex items-center gap-1.5">
+              {/* Notifications */}
               <div className="relative" ref={notificationRef}>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="relative"
+                  className="relative rounded-xl h-9 w-9"
                   onClick={() => setShowNotifications((prev) => !prev)}
                 >
-                  <Bell className="h-5 w-5" />
+                  <Bell className="h-[18px] w-[18px]" />
                   {unreadCount > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-white">
+                    <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-white">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
                 </Button>
 
                 {showNotifications && (
-                  <div className="absolute right-0 top-12 z-50 w-80 rounded-xl border bg-background p-3 shadow-lg">
+                  <div className="absolute right-0 top-12 z-50 w-80 rounded-2xl border border-border/60 bg-card p-4 shadow-xl animate-fade-in-up">
                     <div className="mb-3 flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-semibold">{t("notifications.title")}</p>
+                        <p className="text-sm font-bold">{t("notifications.title")}</p>
                         <p className="text-xs text-muted-foreground">
                           {unreadCount > 0 ? t('notifications.newMessages', { count: unreadCount }) : t('notifications.noNewMessages')}
                         </p>
@@ -534,6 +552,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="rounded-lg text-xs"
                           onClick={() => notifications.forEach(n => markAsRead(n.id))}
                         >
                           {t('notifications.markAsRead')}
@@ -542,7 +561,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
                     </div>
                     <div className="max-h-96 space-y-2 overflow-y-auto">
                       {notifications.length === 0 ? (
-                        <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                        <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
                           {t('notifications.notFound')}
                         </div>
                       ) : (
@@ -552,12 +571,12 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
                             type="button"
                             onClick={() => markAsRead(item.id)}
                             className={cn(
-                              'w-full rounded-lg border p-3 text-left transition-colors hover:bg-accent/50',
-                              !item.read && 'border-primary/30 bg-primary/5'
+                              'w-full rounded-xl border p-3 text-left transition-all hover:bg-accent/50',
+                              !item.read && 'border-primary/20 bg-primary/5'
                             )}
                           >
                             <div className="mb-1 flex items-start justify-between gap-3">
-                              <p className="text-sm font-medium">{item.title}</p>
+                              <p className="text-sm font-semibold">{item.title}</p>
                               {!item.read && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-destructive" />}
                             </div>
                             <p className="text-xs text-muted-foreground">{item.message}</p>
@@ -572,51 +591,56 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
                 )}
               </div>
 
-              <div className="flex items-center border rounded-md">
-                <Button
-                  variant="ghost"
-                  size="sm"
+              {/* Language Switcher */}
+              <div className="flex items-center bg-muted/50 rounded-xl p-0.5">
+                <button
                   className={cn(
-                    'h-8 px-2 rounded-r-none',
-                    i18n.language === 'uz' && 'bg-accent'
+                    'flex items-center gap-1 h-8 px-2.5 rounded-lg text-xs font-medium transition-all',
+                    i18n.language === 'uz'
+                      ? 'bg-card text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
                   )}
                   onClick={() => switchLanguage('uz')}
                 >
-                  <Globe className="h-4 w-4 mr-1" />
+                  <Globe className="h-3.5 w-3.5" />
                   Uz
-                </Button>
-                <div className="w-px h-4 bg-border" />
-                <Button
-                  variant="ghost"
-                  size="sm"
+                </button>
+                <button
                   className={cn(
-                    'h-8 px-2 rounded-l-none',
-                    i18n.language === 'cyrl' && 'bg-accent'
+                    'h-8 px-2.5 rounded-lg text-xs font-medium transition-all',
+                    i18n.language === 'cyrl'
+                      ? 'bg-card text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
                   )}
                   onClick={() => switchLanguage('cyrl')}
                 >
                   Кир
-                </Button>
+                </button>
               </div>
 
+              {/* Theme Toggle */}
               <Button
                 variant="ghost"
                 size="icon"
+                className="rounded-xl h-9 w-9"
                 onClick={toggleTheme}
                 title={theme === 'dark' ? t('theme.lightMode') : t('theme.darkMode')}
               >
                 {theme === 'dark' ? (
-                  <Sun className="h-5 w-5" />
+                  <Sun className="h-[18px] w-[18px]" />
                 ) : (
-                  <Moon className="h-5 w-5" />
+                  <Moon className="h-[18px] w-[18px]" />
                 )}
               </Button>
             </div>
           </div>
         </header>
 
+        {/* ═══════ Page Content ═══════ */}
         <main id="main-content" className="flex-1 p-4 lg:p-6" tabIndex={-1}>
-          {children}
+          <div className="animate-fade-in-up">
+            {children}
+          </div>
         </main>
       </div>
     </div>

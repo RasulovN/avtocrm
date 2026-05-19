@@ -1,14 +1,18 @@
-import { useEffect, useMemo, useState, useCallback, type MouseEvent } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef, type MouseEvent } from 'react';
 import JsBarcode from 'jsbarcode';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Edit, Trash2, Barcode, Search, Printer, Power } from 'lucide-react';
+import { Plus, Edit, Trash2, Barcode, Search, Printer, Power, Eye, Package, Loader2, ChevronLeft, ChevronRight, X, Warehouse, Store as StoreIcon, Calendar, Tag, Hash, Layers } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
-import { DataTable, type Column, type StoreInventory } from '../../components/shared/DataTable';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { BarcodePrint } from '../../components/ui/BarcodePrint';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '../../components/ui/Dialog';
 import {
   Select,
   SelectContent,
@@ -17,11 +21,12 @@ import {
   SelectValue,
 } from '../../components/ui/Select';
 import { productService } from '../../services/productService';
+import { storeService } from '../../services/storeService';
 import { useAuthStore } from '../../app/store';
 import { useCategories } from '../../context/CategoryContext';
-import type { Product, ProductFilters } from '../../types';
-import { formatCurrency } from '../../utils';
-import { escapeHtml, escapeJsString } from '../../utils/xss';
+import type { Product, ProductFilters, Store } from '../../types';
+import { formatCurrency, cn } from '../../utils';
+import { escapeHtml } from '../../utils/xss';
 
 export function ProductListPage() {
   const { t, i18n } = useTranslation();
@@ -32,6 +37,7 @@ export function ProductListPage() {
   const userStoreId = user?.store_id;
   const { categories, refreshCategories } = useCategories();
   const [products, setProducts] = useState<Product[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ProductFilters>({});
   const [page, setPage] = useState(1);
@@ -42,6 +48,20 @@ export function ProductListPage() {
   const [deleting, setDeleting] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [deactivating, setDeactivating] = useState(false);
+  const [viewProduct, setViewProduct] = useState<Product | null>(null);
+
+  // Load stores list for dynamic column headers
+  useEffect(() => {
+    const loadStores = async () => {
+      try {
+        const res = await storeService.getAll({ limit: 100 });
+        setStores(res.data);
+      } catch {
+        setStores([]);
+      }
+    };
+    void loadStores();
+  }, []);
 
   const loadProducts = useCallback(async () => {
     try {
@@ -94,10 +114,6 @@ export function ProductListPage() {
     }
   };
 
-  const getInventoryByStore = (item: Product): StoreInventory[] => {
-    return item.inventory_by_store || [];
-  };
-
   const selectedProducts = useMemo(
     () => products.filter((product) => selectedProductIds.includes(product.id)),
     [products, selectedProductIds]
@@ -109,8 +125,14 @@ export function ProductListPage() {
     );
   };
 
-  const handleToggleAllProducts = (ids: string[]) => {
-    setSelectedProductIds((prev) => (ids.every((id) => prev.includes(id)) ? prev.filter((id) => !ids.includes(id)) : Array.from(new Set([...prev, ...ids]))));
+  const handleToggleAllProducts = () => {
+    const allIds = products.map((p) => p.id);
+    const allSelected = allIds.every((id) => selectedProductIds.includes(id));
+    if (allSelected) {
+      setSelectedProductIds((prev) => prev.filter((id) => !allIds.includes(id)));
+    } else {
+      setSelectedProductIds((prev) => Array.from(new Set([...prev, ...allIds])));
+    }
   };
 
   const handlePrintSelected = () => {
@@ -239,121 +261,72 @@ export function ProductListPage() {
     }
   };
 
-  const columns: Column<Product>[] = [
-    {
-      key: 'id',
-      header: 'ID',
-      className: 'w-16 font-mono text-xs text-muted-foreground',
-      render: (item: Product) => `#${item.id}`,
-    },
-    {
-      key: 'image',
-      header: t('products.image') || 'Image',
-      className: 'w-20',
-      render: (item: Product) => {
-        const imageUrl = Array.isArray(item.images) && item.images.length > 0
-          ? (item.images[0] as any).image || item.image
-          : item.image;
+  // Helper: get image URL from product
+  const getImageUrl = (item: Product): string | null => {
+    if (Array.isArray(item.images) && item.images.length > 0) {
+      const first = item.images[0];
+      if (typeof first === 'string') return first;
+      if (typeof first === 'object' && first !== null && 'image' in first) return (first as { image: string }).image;
+    }
+    return item.image || null;
+  };
 
-        if (!imageUrl) {
-          return (
-            <div className="h-10 w-10 rounded border border-dashed bg-muted flex items-center justify-center">
-              <span className="text-xs text-muted-foreground">—</span>
-            </div>
-          );
+  // Helper: get barcode/sku from product
+  const getArticle = (item: Product): string => {
+    return item.sku || item.barcode || (item.batches && item.batches.length > 0 ? item.batches[0].barcode : '') || '—';
+  };
+
+  // Compute total quantity for a product
+  const getTotalQuantity = (item: Product): number => {
+    if (item.inventory_by_store && item.inventory_by_store.length > 0) {
+      return item.inventory_by_store.reduce((sum, inv) => sum + inv.quantity, 0);
+    }
+    return item.total_quantity ?? item.quantity ?? 0;
+  };
+
+  // Get quantity for a specific store
+  const getStoreQuantity = (item: Product, storeId: string): number => {
+    if (!item.inventory_by_store) return 0;
+    const inv = item.inventory_by_store.find(i => String(i.store_id) === String(storeId));
+    return inv?.quantity ?? 0;
+  };
+
+  // Pagination
+  const totalPages = Math.ceil(total / limit);
+  const allCurrentSelected = products.length > 0 && products.every((p) => selectedProductIds.includes(p.id));
+
+  // Determine which stores have inventory data in any product (for dynamic columns)
+  const storeColumns = useMemo(() => {
+    // Collect all unique store ids from product inventory data
+    const storeMap = new Map<string, string>();
+    products.forEach((product) => {
+      product.inventory_by_store?.forEach((inv) => {
+        if (!storeMap.has(String(inv.store_id))) {
+          storeMap.set(String(inv.store_id), inv.store_name);
         }
+      });
+    });
+    // If no inventory data, fall back to loaded stores
+    if (storeMap.size === 0 && stores.length > 0) {
+      stores.forEach((s) => storeMap.set(s.id, s.name));
+    }
+    return Array.from(storeMap.entries()).map(([id, name]) => ({ id, name }));
+  }, [products, stores]);
 
-        return (
-          <img
-            src={imageUrl}
-            alt={item.name}
-            className="h-10 w-10 rounded object-cover border"
-            onError={(e) => {
-              const img = e.target as HTMLImageElement;
-              img.style.display = 'none';
-            }}
-          />
-        );
-      }
-    },
-    {
-      key: 'barcode',
-      header: t('products.barcode') || 'Barcode',
-      className: 'font-mono text-xs',
-      render: (item: Product) => {
-        const barcode = item.barcode || (item.batches && item.batches.length > 0 ? item.batches.find(b => b.barcode)?.barcode || item.batches[0].barcode : '');
-        return barcode || '—';
-      }
-    },
-    {
-      key: 'name',
-      header: t('products.productName'),
-    },
-    {
-      key: 'category',
-      header: t('products.category'),
-      render: (item: Product) => item.category_name ?? item.category,
-    },
-    {
-      key: 'quantity',
-      header: t('products.quantity'),
-      className: 'min-w-[180px]',
-    },
-    {
-      key: 'purchase_price',
-      header: t('products.purchasePrice'),
-      className: 'text-right',
-      render: (item: Product) => formatCurrency(item.purchase_price ?? 0),
-    },
-    {
-      key: 'selling_price',
-      header: t('products.sellingPrice'),
-      className: 'text-right',
-      render: (item: Product) => formatCurrency(item.selling_price ?? 0),
-    },
-    {
-      key: 'actions',
-      header: t('common.actions'),
-      className: 'text-right',
-      render: (item: Product) => (
-        <div className="flex items-center justify-end gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e: MouseEvent<HTMLButtonElement>) => {
-              e.stopPropagation();
-              navigate(`/${lang}/products/${item.id}/barcode`);
-            }}
-            title={t('products.printBarcode')}
-          >
-            <Barcode className="h-4 w-4" />
-          </Button>
-          {isAdmin && <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e: MouseEvent<HTMLButtonElement>) => {
-              e.stopPropagation();
-              navigate(`/${lang}/products/${item.id}/edit`);
-            }}
-            title={t('common.edit')}
-          >
-            <Edit className="h-4 w-4" />
-          </Button>}
-          {isAdmin && <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e: MouseEvent<HTMLButtonElement>) => {
-              e.stopPropagation();
-              setDeleteId(item.id);
-            }}
-            title={t('common.delete')}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>}
-        </div>
-      ),
-    },
-  ];
+  // Split stores into warehouse (Ombor) and shops (Do'konlar)
+  const warehouseStore = useMemo(() => {
+    return stores.find(s => s.is_warehouse);
+  }, [stores]);
+
+  const shopStores = useMemo(() => {
+    // If stores loaded, use is_warehouse to filter; otherwise just use storeColumns
+    if (stores.length > 0) {
+      const warehouseIds = new Set(stores.filter(s => s.is_warehouse).map(s => s.id));
+      return storeColumns.filter(sc => !warehouseIds.has(sc.id));
+    }
+    // Fallback: first store is warehouse, rest are shops
+    return storeColumns.slice(1);
+  }, [storeColumns, stores]);
 
   return (
     <div className="space-y-6">
@@ -368,9 +341,10 @@ export function ProductListPage() {
         ) : undefined}
       />
 
-      <div className="flex flex-col sm:flex-row gap-4">
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={t('products.searchPlaceholder')}
             value={searchQuery}
@@ -383,7 +357,7 @@ export function ProductListPage() {
           value={filters.category || 'all'}
           onValueChange={(value) => handleFilterChange('category', value === 'all' ? '' : value)}
         >
-          <SelectTrigger className="w-full sm:w-45">
+          <SelectTrigger className="w-full sm:w-48">
             <SelectValue placeholder={t('products.filterByCategory')} />
           </SelectTrigger>
           <SelectContent>
@@ -397,19 +371,21 @@ export function ProductListPage() {
         </Select>
       </div>
 
+      {/* Selected products action bar */}
       {selectedProducts.length > 0 && (
-        <div className="flex items-center justify-between rounded-lg border bg-muted/20 px-4 py-3">
-          <p className="text-sm text-muted-foreground">
+        <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-primary/5 px-5 py-3">
+          <p className="text-sm font-medium text-primary">
             {selectedProducts.length} {t('products.selectedProducts', 'та маҳсулот танланди')}
           </p>
           <div className="flex gap-2">
-            <Button onClick={handlePrintSelected}>
+            <Button size="sm" onClick={handlePrintSelected}>
               <Printer className="mr-2 h-4 w-4" />
               {t('products.printBarcode')}
             </Button>
             {isAdmin && (
               <Button
                 variant="destructive"
+                size="sm"
                 onClick={handleDeactivateSelected}
                 disabled={deactivating}
               >
@@ -421,28 +397,248 @@ export function ProductListPage() {
         </div>
       )}
 
-      <DataTable
-        data={products}
-        columns={columns}
-        loading={loading}
-        onRowClick={(item: Product) => isAdmin ? navigate(`/${lang}/products/${item.id}/edit`) : undefined}
-        pagination={{
-          page,
-          limit,
-          total,
-          onPageChange: setPage,
-        }}
-        inventoryByStore={getInventoryByStore}
-        itemNameKey={'name' as keyof Product}
-        showFooter={true}
-        showStoreStats={true}
-        storeKey={'store_name' as keyof Product}
-        quantityKey={'quantity' as keyof Product}
-        selectableRows={true}
-        selectedRowIds={selectedProductIds}
-        onToggleRowSelection={handleToggleProductSelection}
-        onToggleAllRows={handleToggleAllProducts}
-      />
+      {/* ═══════ Product Table ═══════ */}
+      <div className="w-full overflow-x-auto rounded-2xl border border-border/60 bg-card">
+        <table className="w-full text-sm" style={{ minWidth: '1100px' }}>
+          <thead>
+            <tr className="border-b border-border/50 bg-muted/30">
+              {/* ID */}
+              <th className="w-14 px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                ID
+              </th>
+              {/* Image */}
+              <th className="w-16 px-2 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t('products.image', 'Tovar rasmi')}
+              </th>
+              {/* Name + barcode underneath */}
+              <th className="min-w-[200px] px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t('products.productName', 'Tovar nomi')}
+              </th>
+              {/* Article / SKU */}
+              <th className="w-[130px] px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t('products.sku', 'Artikul')}
+              </th>
+              {/* Category */}
+              <th className="w-[140px] px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t('products.category', 'Kategoriya')}
+              </th>
+              {/* Purchase price */}
+              <th className="w-[110px] px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t('products.purchasePrice', 'Kelish narxi')}
+              </th>
+              {/* Selling price */}
+              <th className="w-[110px] px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t('products.sellingPrice', 'Sotuv narxi')}
+              </th>
+              {/* Ombor (Warehouse) */}
+              <th className="w-[80px] px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t('products.warehouse', 'Ombor')}
+              </th>
+              {/* Dynamic store columns */}
+              {shopStores.map((store, idx) => (
+                <th key={store.id} className="w-[90px] px-2 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {store.name || `${t('stores.title', "Do'kon")} ${idx + 1}`}
+                </th>
+              ))}
+              {/* Status */}
+              <th className="w-[110px] px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t('common.status', 'Holat')}
+              </th>
+              {/* Actions */}
+              <th className="w-10 px-2 py-3"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={9 + shopStores.length} className="h-40 text-center">
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <span className="text-sm">{t('common.loading')}</span>
+                  </div>
+                </td>
+              </tr>
+            ) : products.length === 0 ? (
+              <tr>
+                <td colSpan={9 + shopStores.length} className="h-40 text-center">
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <Package className="h-8 w-8 opacity-40" />
+                    <span className="text-sm">{t('common.noData', "Ma'lumot yo'q")}</span>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              products.map((item) => {
+                const imageUrl = getImageUrl(item);
+                const article = getArticle(item);
+                const totalQty = getTotalQuantity(item);
+                const isSelected = selectedProductIds.includes(item.id);
+                const isActive = item.is_active !== false;
+                const warehouseQty = warehouseStore ? getStoreQuantity(item, warehouseStore.id) : totalQty;
+
+                return (
+                  <tr
+                    key={item.id}
+                    className={cn(
+                      'border-b border-border/40 transition-colors hover:bg-muted/20',
+                      isSelected && 'bg-primary/5',
+                      !isActive && 'opacity-60'
+                    )}
+                  >
+                    {/* ID */}
+                    <td className="px-3 py-3">
+                      <span className="text-xs font-mono text-muted-foreground">#{item.id}</span>
+                    </td>
+
+                    {/* Product Image */}
+                    <td className="px-2 py-2">
+                      {imageUrl ? (
+                        <img
+                          src={imageUrl}
+                          alt={item.name}
+                          className="h-11 w-11 rounded-lg object-cover border border-border/40"
+                          onError={(e) => {
+                            const img = e.target as HTMLImageElement;
+                            img.style.display = 'none';
+                            img.parentElement!.innerHTML = '<div class="h-11 w-11 rounded-lg border border-dashed border-border bg-muted/30 flex items-center justify-center"><span class="text-muted-foreground text-xs">—</span></div>';
+                          }}
+                        />
+                      ) : (
+                        <div className="h-11 w-11 rounded-lg border border-dashed border-border bg-muted/30 flex items-center justify-center">
+                          <Package className="h-4 w-4 text-muted-foreground/40" />
+                        </div>
+                      )}
+                    </td>
+
+                    {/* Product Name + barcode underneath */}
+                    <td
+                      className="px-3 py-2 cursor-pointer"
+                      onClick={() => isAdmin && navigate(`/${lang}/products/${item.id}/edit`)}
+                    >
+                      <div className="min-w-0">
+                        <p className="font-semibold text-foreground truncate max-w-[220px] leading-tight">
+                          {item.name}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground font-mono mt-0.5">
+                          {item.barcode || item.sku || `ID: ${item.id}`}
+                        </p>
+                      </div>
+                    </td>
+
+                    {/* Article / SKU */}
+                    <td className="px-3 py-2">
+                      <code className="text-xs font-mono bg-muted/40 px-2 py-0.5 rounded-md text-muted-foreground">
+                        {article}
+                      </code>
+                    </td>
+
+                    {/* Category */}
+                    <td className="px-3 py-2 text-sm text-muted-foreground">
+                      {item.category_name || String(item.category || '—')}
+                    </td>
+
+                    {/* Purchase Price */}
+                    <td className="px-3 py-2 text-right text-sm tabular-nums">
+                      {formatCurrency(item.purchase_price ?? 0)}
+                    </td>
+
+                    {/* Selling Price */}
+                    <td className="px-3 py-2 text-right text-sm font-semibold tabular-nums">
+                      {formatCurrency(item.selling_price ?? 0)}
+                    </td>
+
+                    {/* Warehouse Quantity */}
+                    <td className="px-3 py-2 text-center">
+                      <span className={cn(
+                        'text-sm font-semibold tabular-nums',
+                        warehouseQty === 0 && 'text-muted-foreground',
+                        warehouseQty > 0 && warehouseQty < 5 && 'text-amber-600',
+                        warehouseQty >= 5 && 'text-foreground'
+                      )}>
+                        {warehouseQty}
+                      </span>
+                    </td>
+
+                    {/* Dynamic Store Columns */}
+                    {shopStores.map((store) => {
+                      const qty = getStoreQuantity(item, store.id);
+                      return (
+                        <td key={store.id} className="px-2 py-2 text-center">
+                          <span className={cn(
+                            'text-sm font-semibold tabular-nums',
+                            qty === 0 && 'text-muted-foreground',
+                            qty > 0 && qty < 5 && 'text-amber-600',
+                            qty >= 5 && 'text-blue-600 dark:text-blue-400'
+                          )}>
+                            {qty}
+                          </span>
+                        </td>
+                      );
+                    })}
+
+                    {/* Status */}
+                    <td className="px-3 py-2 text-center">
+                      {totalQty > 0 ? (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold badge-success whitespace-nowrap">
+                          {t('products.inStock', 'Omborda bor')}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold badge-danger whitespace-nowrap">
+                          {t('products.outOfStock', 'Tugagan')}
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Action: View */}
+                    <td className="px-2 py-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setViewProduct(item);
+                        }}
+                        className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                        title={t('common.view', "Ko'rish")}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-sm text-muted-foreground">
+            {(page - 1) * limit + 1}-{Math.min(page * limit, total)} / {total}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(page - 1)}
+              disabled={page === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm font-medium">
+              {page} / {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(page + 1)}
+              disabled={page === totalPages}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         open={!!deleteId}
@@ -455,7 +651,286 @@ export function ProductListPage() {
         loading={deleting}
       />
 
+      {/* ═══════ Product Detail Modal ═══════ */}
+      <ProductDetailModal
+        product={viewProduct}
+        onClose={() => setViewProduct(null)}
+        onEdit={(id) => navigate(`/${lang}/products/${id}/edit`)}
+        stores={stores}
+        warehouseStore={warehouseStore ?? null}
+        t={t}
+      />
+
     </div>
+  );
+}
+
+/* ════════════════════════════════════════════════
+   Product Detail Modal Component
+   ════════════════════════════════════════════════ */
+
+interface ProductDetailModalProps {
+  product: Product | null;
+  onClose: () => void;
+  onEdit: (id: string) => void;
+  stores: Store[];
+  warehouseStore: Store | null;
+  t: (key: string, fallback?: string) => string;
+}
+
+function ProductDetailModal({ product, onClose, onEdit, stores, warehouseStore, t }: ProductDetailModalProps) {
+  // Use a callback ref to generate the barcode because Dialog portals mount asynchronously,
+  // meaning the SVG element may not be present in the DOM during the first render/useEffect run.
+  const barcodeRef = useCallback((node: SVGSVGElement | null) => {
+    if (!node || !product) return;
+    const barcodeValue = product.barcode || product.sku || '';
+    if (!barcodeValue) return;
+
+    try {
+      JsBarcode(node, barcodeValue, {
+        format: 'CODE128',
+        width: 2.5,
+        height: 70,
+        displayValue: true,
+        fontSize: 13,
+        margin: 8,
+        textMargin: 6,
+        background: 'transparent',
+      });
+    } catch (err) {
+      console.error('Barcode generation failed:', err);
+    }
+  }, [product]);
+
+  if (!product) return null;
+
+  const imageUrl = (() => {
+    if (Array.isArray(product.images) && product.images.length > 0) {
+      const first = product.images[0];
+      if (typeof first === 'string') return first;
+      if (typeof first === 'object' && first !== null && 'image' in first) return (first as { image: string }).image;
+    }
+    return product.image || null;
+  })();
+
+  const barcodeValue = product.barcode || product.sku || '';
+  const totalQty = product.inventory_by_store
+    ? product.inventory_by_store.reduce((s, i) => s + i.quantity, 0)
+    : (product.total_quantity ?? product.quantity ?? 0);
+
+  const warehouseIds = new Set(stores.filter(s => s.is_warehouse).map(s => String(s.id)));
+
+  const handlePrint = () => {
+    if (!barcodeValue) return;
+
+    const canvas = document.createElement('canvas');
+    try {
+      JsBarcode(canvas, barcodeValue, {
+        format: 'CODE128',
+        width: 2,
+        height: 80,
+        displayValue: true,
+        fontSize: 14,
+        margin: 10,
+      });
+    } catch { return; }
+
+    const dataUrl = canvas.toDataURL('image/png');
+    const htmlContent = `<!DOCTYPE html>
+      <html><head><title>${product.name} - Barcode</title>
+      <style>
+        @page { size: auto; margin: 10mm; }
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        .name { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+        .sku { font-size: 12px; color: #666; margin-bottom: 12px; }
+        img { max-width: 280px; }
+      </style></head>
+      <body>
+        <p class="name">${escapeHtml(product.name)}</p>
+        <p class="sku">${escapeHtml(product.sku || '')}</p>
+        <img src="${dataUrl}" />
+        <script>window.onload=function(){setTimeout(function(){window.print()},500)};<\/script>
+      </body></html>`;
+
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    window.open(URL.createObjectURL(blob), '_blank');
+  };
+
+  return (
+    <Dialog open={!!product} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent size="lg" className="max-h-[90vh] overflow-y-auto p-0">
+        {/* Header */}
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/60 bg-card px-6 py-4">
+          <DialogHeader className="p-0">
+            <DialogTitle className="text-lg">{t('products.productDetails', "Mahsulot ma'lumotlari")}</DialogTitle>
+          </DialogHeader>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => onEdit(product.id)}>
+              <Edit className="h-3.5 w-3.5 mr-1.5" />
+              {t('common.edit', 'Tahrirlash')}
+            </Button>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Top: Image + Basic Info */}
+          <div className="flex gap-6">
+            {/* Product Image */}
+            <div className="shrink-0">
+              {imageUrl ? (
+                <img
+                  src={imageUrl}
+                  alt={product.name}
+                  className="h-32 w-32 rounded-2xl object-cover border border-border/40"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              ) : (
+                <div className="h-32 w-32 rounded-2xl border border-dashed border-border bg-muted/30 flex items-center justify-center">
+                  <Package className="h-10 w-10 text-muted-foreground/30" />
+                </div>
+              )}
+            </div>
+
+            {/* Info Grid */}
+            <div className="flex-1 min-w-0">
+              <h2 className="text-xl font-bold text-foreground mb-1 truncate">{product.name}</h2>
+              {product.name_uz_cyrl && (
+                <p className="text-sm text-muted-foreground mb-3">{product.name_uz_cyrl}</p>
+              )}
+
+              <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-muted-foreground">ID:</span>
+                  <span className="font-semibold">#{product.id}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-muted-foreground">{t('products.category', 'Kategoriya')}:</span>
+                  <span className="font-semibold">{product.category_name || String(product.category || '—')}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Barcode className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-muted-foreground">{t('products.sku', 'Artikul')}:</span>
+                  <code className="font-mono text-xs bg-muted/40 px-1.5 py-0.5 rounded">{product.sku || '—'}</code>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Layers className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-muted-foreground">{t('products.unit', 'Birlik')}:</span>
+                  <span className="font-semibold">{product.unit_measurement_name || '—'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Pricing */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+              <p className="text-xs text-muted-foreground mb-1">{t('products.purchasePrice', 'Kelish narxi')}</p>
+              <p className="text-lg font-bold tabular-nums">{formatCurrency(product.purchase_price ?? 0)}</p>
+            </div>
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+              <p className="text-xs text-muted-foreground mb-1">{t('products.sellingPrice', 'Sotuv narxi')}</p>
+              <p className="text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{formatCurrency(product.selling_price ?? 0)}</p>
+            </div>
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+              <p className="text-xs text-muted-foreground mb-1">{t('products.totalQuantity', 'Jami miqdor')}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-lg font-bold tabular-nums">{totalQty}</p>
+                {totalQty > 0 ? (
+                  <span className="badge-success text-[10px] px-2 py-0.5 rounded-md font-semibold">{t('products.inStock', 'Omborda bor')}</span>
+                ) : (
+                  <span className="badge-danger text-[10px] px-2 py-0.5 rounded-md font-semibold">{t('products.outOfStock', 'Tugagan')}</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Store Inventory Breakdown */}
+          {product.inventory_by_store && product.inventory_by_store.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <Warehouse className="h-4 w-4 text-muted-foreground" />
+                {t('products.storeInventory', "Do'konlar bo'yicha qoldiq")}
+              </h3>
+              <div className="space-y-2">
+                {product.inventory_by_store.map((inv) => {
+                  const isWh = warehouseIds.has(String(inv.store_id));
+                  return (
+                    <div
+                      key={inv.store_id}
+                      className="flex items-center justify-between px-4 py-3 rounded-xl border border-border/50 bg-muted/10"
+                    >
+                      <div className="flex items-center gap-3">
+                        {isWh ? (
+                          <Warehouse className="h-4 w-4 text-blue-500" />
+                        ) : (
+                          <StoreIcon className="h-4 w-4 text-violet-500" />
+                        )}
+                        <span className="text-sm font-medium">{inv.store_name}</span>
+                        {isWh && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 font-medium">Ombor</span>
+                        )}
+                      </div>
+                      <span className={cn(
+                        'text-sm font-bold tabular-nums',
+                        inv.quantity === 0 && 'text-muted-foreground',
+                        inv.quantity > 0 && inv.quantity < 5 && 'text-amber-600',
+                        inv.quantity >= 5 && 'text-foreground'
+                      )}>
+                        {inv.quantity} {product.unit_measurement_name || t('products.pcs', 'dona')}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Description */}
+          {product.description && (
+            <div>
+              <h3 className="text-sm font-semibold mb-2">{t('products.description', 'Tavsif')}</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">{product.description}</p>
+            </div>
+          )}
+
+          {/* Barcode / Shtrix code */}
+          {barcodeValue && (
+            <div className="rounded-2xl border border-border/60 bg-muted/10 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <Barcode className="h-4 w-4 text-muted-foreground" />
+                  {t('products.barcode', 'Shtrix kod')}
+                </h3>
+                <Button size="sm" variant="outline" onClick={handlePrint}>
+                  <Printer className="h-3.5 w-3.5 mr-1.5" />
+                  {t('common.print', 'Chop etish')}
+                </Button>
+              </div>
+              <div className="flex justify-center bg-white rounded-xl p-4">
+                <svg ref={barcodeRef} />
+              </div>
+              <p className="text-center text-xs text-muted-foreground mt-2 font-mono">{barcodeValue}</p>
+            </div>
+          )}
+
+          {/* Meta info */}
+          <div className="flex items-center gap-4 text-[11px] text-muted-foreground pt-2 border-t border-border/40">
+            <span className="flex items-center gap-1">
+              <Calendar className="h-3 w-3" />
+              {t('common.createdAt', 'Yaratilgan')}: {product.created_at ? new Date(product.created_at).toLocaleDateString() : '—'}
+            </span>
+            <span className="flex items-center gap-1">
+              <Calendar className="h-3 w-3" />
+              {t('common.updatedAt', 'Yangilangan')}: {product.updated_at ? new Date(product.updated_at).toLocaleDateString() : '—'}
+            </span>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

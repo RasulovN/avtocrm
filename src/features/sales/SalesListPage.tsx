@@ -97,7 +97,7 @@ export function SalesListPage() {
       key: 'status',
       header: t('common.status'),
       render: (item) => (
-        <span className={`px-2 py-1 rounded-full text-xs ${item.status === 'partial' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+        <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${item.status === 'partial' ? 'badge-warning' : 'badge-success'
           }`}>
           {item.status === 'partial' ? t('common.pending') : (item.status === 'paid' ? t('sales.paid') : t('common.completed'))}
         </span>
@@ -171,15 +171,15 @@ export function SalesListPage() {
 
       {showStats && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 transition-all duration-300 ease-in-out">
-          <div className="rounded-lg border bg-card p-4 shadow-sm">
+          <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm card-hover-lift">
             <p className="text-sm text-muted-foreground">{t('dashboard.totalSales')}</p>
             <p className="text-2xl font-bold">{stats.totalSales}</p>
           </div>
-          <div className="rounded-lg border bg-card p-4 shadow-sm">
+          <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm card-hover-lift">
             <p className="text-sm text-muted-foreground">{t('dashboard.totalRevenue')}</p>
             <p className="text-2xl font-bold text-green-600">{formatCurrency(stats.totalAmount)}</p>
           </div>
-          <div className="rounded-lg border bg-card p-4 shadow-sm">
+          <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm card-hover-lift">
             <p className="text-sm text-muted-foreground">{t('dashboard.totalDebt')}</p>
             <p className="text-2xl font-bold text-red-500">{formatCurrency(stats.totalDebt)}</p>
           </div>
@@ -203,7 +203,7 @@ export function SalesListPage() {
         <>
           <div className="space-y-3 md:hidden">
             {sales.map((item, index) => (
-              <div key={item.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+              <div key={item.id} className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-xs text-muted-foreground">#{index + 1}</p>
