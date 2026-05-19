@@ -22,7 +22,7 @@ export function TransferListPage() {
   const { products } = useProducts();
   const { user } = useAuthStore();
   const isAdmin = Boolean(user?.is_superuser);
-  const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores[0].id) : '');
+  const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores.find(s => s.type === 'b')?.id || user.stores[0].id) : '');
   const [stores, setStores] = useState<Store[]>([]);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -182,7 +182,7 @@ export function TransferListPage() {
       key: 'id',
       header: 'Hujjat №',
       render: (item) => (
-        <span className="font-medium text-gray-900">
+        <span className="font-medium text-foreground">
           №{item.id}
         </span>
       ),
@@ -191,7 +191,7 @@ export function TransferListPage() {
       key: 'created_at',
       header: 'Sana',
       render: (item) => (
-        <span className="text-gray-700">
+        <span className="text-muted-foreground">
           {new Date(item.created_at).toLocaleDateString('en-US')}
         </span>
       ),
@@ -200,10 +200,10 @@ export function TransferListPage() {
       key: 'route',
       header: "Yo'nalish",
       render: (item) => (
-        <div className="flex items-center gap-2 text-gray-600">
+        <div className="flex items-center gap-2 text-muted-foreground">
           <span>{fromStoreLabel(item)}</span>
-          <ArrowRight className="h-4 w-4 text-gray-400 shrink-0" />
-          <span className="font-medium text-gray-900">{toStoreLabel(item)}</span>
+          <ArrowRight className="h-4 w-4 text-muted-foreground/60 shrink-0" />
+          <span className="font-medium text-foreground">{toStoreLabel(item)}</span>
         </div>
       ),
     },
@@ -211,7 +211,7 @@ export function TransferListPage() {
       key: 'items_count',
       header: 'Tovarlar',
       render: (item) => (
-        <span className="text-gray-600">
+        <span className="text-muted-foreground">
           {item.items?.length || 0}
         </span>
       ),
@@ -251,7 +251,7 @@ export function TransferListPage() {
                   handleApprove(item.id);
                 }}
                 title={t('transfers.accepted')}
-                className="text-green-600 hover:text-green-700 hover:bg-green-100 h-8 w-8"
+                className="text-green-600 hover:text-green-700 hover:bg-green-100/10 h-8 w-8"
               >
                 <Check className="h-4 w-4" />
               </Button>
@@ -263,7 +263,7 @@ export function TransferListPage() {
                   handleReject(item.id);
                 }}
                 title={t('transfers.rejected')}
-                className="text-red-600 hover:text-red-700 hover:bg-red-100 h-8 w-8"
+                className="text-red-600 hover:text-red-700 hover:bg-red-100/10 h-8 w-8"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -276,7 +276,7 @@ export function TransferListPage() {
               e.stopPropagation();
               handleShowDetails(item);
             }}
-            className="text-gray-700 hover:text-gray-900"
+            className="text-muted-foreground hover:text-foreground"
           >
             <Package className="h-5 w-5" />
           </Button>
@@ -358,7 +358,7 @@ export function TransferListPage() {
                       <>
                         <Button
                           variant="outline"
-                          className="flex-1 text-green-600 border-green-600 hover:bg-green-50"
+                          className="flex-1 text-green-600 border-green-600 dark:hover:bg-green-950/20 hover:bg-green-50"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleApprove(item.id);
@@ -369,7 +369,7 @@ export function TransferListPage() {
                         </Button>
                         <Button
                           variant="outline"
-                          className="flex-1 text-red-600 border-red-600 hover:bg-red-50"
+                          className="flex-1 text-red-600 border-red-600 dark:hover:bg-red-950/20 hover:bg-red-50"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleReject(item.id);

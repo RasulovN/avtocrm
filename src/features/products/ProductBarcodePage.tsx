@@ -179,8 +179,8 @@ export function ProductBarcodePage() {
   const fallbackBarcode = product?.barcode || product?.shtrix_code || product?.sku || firstBatchBarcode || '';
   const resolvedUserStoreId = user?.store_id
     ? String(user.store_id)
-    : user?.stores?.[0]?.id !== undefined
-      ? String(user.stores[0].id)
+    : user?.stores && user.stores.length > 0
+      ? String(user.stores.find(s => s.type === 'b')?.id || user.stores[0].id)
       : (user as any)?.store?.id !== undefined
         ? String((user as any).store.id)
         : undefined;
@@ -200,7 +200,7 @@ export function ProductBarcodePage() {
         id: 0,
         product: Number(product?.id || 0),
         store: Number(userStoreId || product?.store_id || 0),
-        store_name: user?.stores?.[0]?.name || product?.store_name || t('products.store'),
+        store_name: user?.stores?.find(s => s.type === 'b')?.name || user?.stores?.[0]?.name || product?.store_name || t('products.store'),
         quantity: product?.quantity ?? 0,
         purchase_price: String(product?.purchase_price ?? 0),
         selling_price: String(product?.selling_price ?? 0),

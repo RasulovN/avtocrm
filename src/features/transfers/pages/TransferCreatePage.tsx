@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { transferService } from '../../../services/transferService';
 import { storeService } from '../../../services/storeService';
 import { useProducts } from '../../../context/ProductContext';
+import { useAuthStore } from '../../../app/store';
 import type { Store } from '../../../types';
 
 interface TransferItemForm {
@@ -27,7 +28,11 @@ export function TransferCreatePage() {
   const [stores, setStores] = useState<Store[]>([]);
   const [saving, setSaving] = useState(false);
   const { products: allProducts, loading: productsLoading } = useProducts();
-  const [fromStoreId, setFromStoreId] = useState('');
+  const { user } = useAuthStore();
+  const isAdmin = Boolean(user?.is_superuser);
+  const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores.find(s => s.type === 'b')?.id || user.stores[0].id) : '');
+
+  const [fromStoreId, setFromStoreId] = useState(isAdmin ? '' : userStoreId);
   const [toStoreId, setToStoreId] = useState('');
   const [items, setItems] = useState<TransferItemForm[]>([]);
   
@@ -63,7 +68,10 @@ export function TransferCreatePage() {
 
   useEffect(() => {
     void loadData();
-  }, [loadData]);
+    if (!isAdmin && userStoreId) {
+      setFromStoreId(userStoreId);
+    }
+  }, [loadData, isAdmin, userStoreId]);
 
   const handleRemoveItem = (index: number) => {
     setItems(items.filter((_, i) => i !== index));
@@ -112,15 +120,15 @@ export function TransferCreatePage() {
       />
 
       <form onSubmit={handleSubmit}>
-        <Card className="border border-gray-200 shadow-sm rounded-xl overflow-hidden">
+        <Card className="border border-border/60 shadow-sm rounded-xl overflow-hidden bg-card">
           <CardContent className="p-6 space-y-8">
             
             {/* Top section: From and To Stores */}
             <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-2">
-                <Label className="text-sm font-semibold text-gray-800">{t('transfers.fromStore', 'Qayerdan')}</Label>
-                <Select value={fromStoreId} onValueChange={setFromStoreId}>
-                  <SelectTrigger className="bg-gray-50 border-gray-100 h-11 shadow-none">
+                <Label className="text-sm font-semibold text-foreground">{t('transfers.fromStore', 'Qayerdan')}</Label>
+                <Select value={fromStoreId} onValueChange={setFromStoreId} disabled={!isAdmin}>
+                  <SelectTrigger className="bg-muted/40 border-border/60 h-11 shadow-none">
                     <SelectValue placeholder={t('transfers.selectProduct', 'Tanlang')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -131,9 +139,9 @@ export function TransferCreatePage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-semibold text-gray-800">{t('transfers.toStore', 'Qayerga')}</Label>
+                <Label className="text-sm font-semibold text-foreground">{t('transfers.toStore', 'Qayerga')}</Label>
                 <Select value={toStoreId} onValueChange={setToStoreId}>
-                  <SelectTrigger className="bg-gray-50 border-gray-100 h-11 shadow-none">
+                  <SelectTrigger className="bg-muted/40 border-border/60 h-11 shadow-none">
                     <SelectValue placeholder={t('transfers.selectProduct', 'Tanlang')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -148,12 +156,12 @@ export function TransferCreatePage() {
             {/* Middle section: Items List */}
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <h3 className="text-sm font-bold text-gray-900">{t('transfers.itemsToTransfer', "Jo'natiladigan tovarlar")}</h3>
+                <h3 className="text-sm font-bold text-foreground">{t('transfers.itemsToTransfer', "Jo'natiladigan tovarlar")}</h3>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="rounded-lg bg-white border-gray-200 text-gray-700 hover:bg-gray-50 flex items-center shrink-0 shadow-sm px-4 h-9"
+                  className="rounded-lg border border-border bg-card text-foreground hover:bg-muted flex items-center shrink-0 shadow-sm px-4 h-9"
                   onClick={() => setItems([...items, { product: '', quantity: 1 }])}
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -163,15 +171,15 @@ export function TransferCreatePage() {
 
               <div className="space-y-3">
                 {items.length === 0 && (
-                  <div className="text-center p-8 border border-dashed rounded-xl bg-gray-50/50">
-                     <p className="text-sm text-gray-500">{t('transfers.noItems', "Hech qanday tovar qo'shilmagan")}</p>
+                  <div className="text-center p-8 border border-dashed border-border rounded-xl bg-muted/20">
+                     <p className="text-sm text-muted-foreground">{t('transfers.noItems', "Hech qanday tovar qo'shilmagan")}</p>
                   </div>
                 )}
                 
                 {items.map((item, index) => (
-                  <div key={index} className="flex flex-col sm:flex-row items-start sm:items-end gap-4 p-4 rounded-xl bg-[#F9FAFB] border border-gray-100">
+                  <div key={index} className="flex flex-col sm:flex-row items-start sm:items-end gap-4 p-4 rounded-xl bg-muted/40 border border-border/60">
                     <div className="flex-1 w-full space-y-2">
-                      <Label className="text-xs font-semibold text-gray-700">{t('products.title', 'Tovar')}</Label>
+                      <Label className="text-xs font-semibold text-muted-foreground">{t('products.title', 'Tovar')}</Label>
                       <Select 
                         value={item.product} 
                         onValueChange={(value) => {
@@ -185,7 +193,7 @@ export function TransferCreatePage() {
                           setItems(newItems);
                         }}
                       >
-                        <SelectTrigger className="bg-white border-gray-100 h-10 shadow-none">
+                        <SelectTrigger className="bg-background border-border/60 h-10 shadow-none">
                           <SelectValue placeholder={t('transfers.selectProduct', 'Tovarni tanlang')} />
                         </SelectTrigger>
                         <SelectContent>
@@ -201,11 +209,11 @@ export function TransferCreatePage() {
                     </div>
 
                     <div className="w-full sm:w-32 space-y-2 shrink-0">
-                      <Label className="text-xs font-semibold text-gray-700">{t('products.quantity', 'Soni')}</Label>
+                      <Label className="text-xs font-semibold text-muted-foreground">{t('products.quantity', 'Soni')}</Label>
                       <Input
                         type="number"
                         min="1"
-                        className="bg-white border-gray-100 h-10 shadow-none text-center sm:text-left"
+                        className="bg-background border-border/60 h-10 shadow-none text-center sm:text-left"
                         value={item.quantity || ''}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => {
                           const newItems = [...items];
@@ -228,7 +236,7 @@ export function TransferCreatePage() {
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-10 w-10 shrink-0 text-red-500 hover:text-red-600 hover:bg-red-50 sm:mb-0 mt-2 sm:mt-0 ml-auto sm:ml-0"
+                      className="h-10 w-10 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10 sm:mb-0 mt-2 sm:mt-0 ml-auto sm:ml-0"
                       onClick={() => handleRemoveItem(index)}
                     >
                       <Trash2 className="h-5 w-5" />
@@ -244,13 +252,13 @@ export function TransferCreatePage() {
                type="button" 
                variant="outline" 
                onClick={() => navigate(`/${lang}/transfers`)}
-               className="w-full sm:flex-1 h-11 bg-white border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50"
+               className="w-full sm:flex-1 h-11 border border-border bg-card text-foreground rounded-lg hover:bg-muted"
              >
                {t('common.cancel', 'Bekor qilish')}
              </Button>
              <Button 
                type="submit" 
-               className="w-full sm:flex-[2] bg-slate-950 hover:bg-slate-900 text-white h-11 rounded-lg" 
+               className="w-full sm:flex-[2] bg-primary hover:bg-primary/90 text-primary-foreground h-11 rounded-lg" 
                disabled={saving || !fromStoreId || !toStoreId || items.length === 0}
              >
                <Send className="h-4 w-4 mr-2" />

@@ -90,3 +90,21 @@ export function calculateTotalCost(items: { purchase_price: number; quantity: nu
 export function calculateTotalPrice(items: { selling_price: number; quantity: number }[]): number {
   return items.reduce((sum, item) => sum + (item.selling_price * item.quantity), 0);
 }
+
+import type { User, UserStore } from "../types";
+
+export function getPreferredStore(user: User | null | undefined): UserStore | null {
+  if (!user) return null;
+  if (user.stores && user.stores.length > 0) {
+    const warehouseStore = user.stores.find((s) => s.type === 'b');
+    if (warehouseStore) return warehouseStore;
+    return user.stores[0];
+  }
+  if (user.store_id || user.store_name) {
+    return {
+      id: user.store_id ? Number(user.store_id) : 0,
+      name: user.store_name || '',
+    };
+  }
+  return null;
+}

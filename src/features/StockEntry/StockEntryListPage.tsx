@@ -86,7 +86,7 @@ export function StockEntryListPage() {
           supplierService.getAll()
         ]);
         setStores(storesRes.data || []);
-        setSuppliers(Array.isArray(suppliersRes) ? suppliersRes : []);
+        setSuppliers(Array.isArray(suppliersRes.data) ? suppliersRes.data : []);
       } catch (err) {
         console.error('Failed to load filter data', err);
       }

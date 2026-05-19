@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useMemo, type ChangeEvent } from 'react';
+import { useState, useEffect, useCallback, useMemo, type ChangeEvent, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Trash2, Save } from 'lucide-react';
+import { Plus, Trash2, Save, Package, Upload, Image as ImageIcon, Tag, Layers, Ruler, DollarSign, AlignLeft, MapPin } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
@@ -10,10 +10,13 @@ import { storeService } from '../../services/storeService';
 import { supplierService } from '../../services/supplierService';
 import { useAuthStore } from '../../app/store';
 import { useProducts } from '../../context/ProductContext';
-import type { Store, Supplier, ProductUnit, ProductFormData } from '../../types';
+import type { Store, Supplier, ProductUnit, ProductFormData, CategoryFormData, ProductUnitFormData } from '../../types';
 import { useCategories } from '../../context/CategoryContext';
 import { productUnitService } from '../../services/productUnitService';
 import { productService } from '../../services/productService';
+import { productLocationService, type ProductLocation } from '../../services/productLocationService';
+import { categoryService } from '../../services/categoryService';
+import { latinToCyrillic } from '../../utils/transliteration';
 import {
   Dialog,
   DialogContent,
@@ -45,7 +48,7 @@ export function StockEntryCreateDialog({
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const isAdmin = Boolean(user?.is_superuser);
-  const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores[0].id) : '');
+  const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores.find(s => s.type === 'b')?.id || user.stores[0].id) : '');
   
   const [stores, setStores] = useState<Store[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -75,24 +78,55 @@ export function StockEntryCreateDialog({
   ]);
 
   // Product Dialog States
-  const { categories } = useCategories();
+  const { categories, refreshCategories } = useCategories();
   const [units, setUnits] = useState<ProductUnit[]>([]);
+  const [locations, setLocations] = useState<ProductLocation[]>([]);
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [activeItemIndex, setActiveItemIndex] = useState<number | null>(null);
   const [productSaving, setProductSaving] = useState(false);
   const [newProductData, setNewProductData] = useState<ProductFormData>({
     name: '',
+    name_uz_cyrl: '',
     category: '',
     unit_measurement: '',
     description: '',
+    description_uz_cyrl: '',
+    purchase_price: '',
+    selling_price: '',
+    location: '',
+  });
+
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+
+  // Category & Unit Dialog states inside Stock Entry
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [savingCategory, setSavingCategory] = useState(false);
+  const [categoryFormData, setCategoryFormData] = useState<CategoryFormData>({
+    name_uz: '',
+    name_uz_cyrl: '',
+    description_uz: '',
+    description_uz_cyrl: '',
+    image: '',
+  });
+
+  const [isUnitDialogOpen, setIsUnitDialogOpen] = useState(false);
+  const [savingUnit, setSavingUnit] = useState(false);
+  const [unitFormData, setUnitFormData] = useState<ProductUnitFormData>({
+    measurement_uz: '',
+    measurement_uz_cyrl: '',
   });
 
   const loadDialogData = useCallback(async () => {
     try {
-      const unitsRes = await productUnitService.getAll();
+      const [unitsRes, locationsRes] = await Promise.all([
+        productUnitService.getAll(),
+        productLocationService.getAll()
+      ]);
       setUnits(unitsRes || []);
+      setLocations(locationsRes?.data || []);
     } catch (err) {
-      console.error('Failed to load unit data', err);
+      console.error('Failed to load dialog reference data', err);
     }
   }, []);
 
@@ -102,9 +136,19 @@ export function StockEntryCreateDialog({
     }
   }, [isProductDialogOpen, loadDialogData]);
 
+  useEffect(() => {
+    return () => {
+      imagePreviews.forEach((preview) => {
+        if (preview.startsWith('blob:')) {
+          URL.revokeObjectURL(preview);
+        }
+      });
+    };
+  }, [imagePreviews]);
+
   const handleProductSubmit = async () => {
     if (!newProductData.name || !newProductData.category || !newProductData.unit_measurement) {
-      toast.error(t('errors.validationError', 'Barcha maydonlarni to\'ldiring'));
+      toast.error(t('errors.validationError', 'Barcha majdonlarni to\'ldiring'));
       return;
     }
 
@@ -112,6 +156,7 @@ export function StockEntryCreateDialog({
       setProductSaving(true);
       const payload: ProductFormData = {
         ...newProductData,
+        images: imageFiles,
         store_id: userStoreId || storeId || undefined,
       };
 
@@ -125,14 +170,26 @@ export function StockEntryCreateDialog({
           ...newItems[activeItemIndex],
           product_id: String(createdProduct.id),
           product_name: createdProduct.name,
-          purchase_price: createdProduct.purchase_price ?? '',
-          selling_price: createdProduct.selling_price ?? '',
-          total: (createdProduct.purchase_price || 0) * (newItems[activeItemIndex].quantity || 0),
+          purchase_price: createdProduct.purchase_price ?? newProductData.purchase_price ?? '',
+          selling_price: createdProduct.selling_price ?? newProductData.selling_price ?? '',
+          total: (Number(createdProduct.purchase_price ?? newProductData.purchase_price) || 0) * (newItems[activeItemIndex].quantity || 0),
         };
         setItems(newItems);
       }
 
-      setNewProductData({ name: '', category: '', unit_measurement: '', description: '' });
+      setNewProductData({
+        name: '',
+        name_uz_cyrl: '',
+        category: '',
+        unit_measurement: '',
+        description: '',
+        description_uz_cyrl: '',
+        purchase_price: '',
+        selling_price: '',
+        location: '',
+      });
+      setImageFiles([]);
+      setImagePreviews([]);
       setIsProductDialogOpen(false);
       setActiveItemIndex(null);
     } catch (error) {
@@ -140,6 +197,43 @@ export function StockEntryCreateDialog({
       toast.error(t('errors.generic', 'Mahsulot qo\'shishda xatolik yuz berdi'));
     } finally {
       setProductSaving(false);
+    }
+  };
+
+  const handleCategorySubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      setSavingCategory(true);
+      const created = await categoryService.create(categoryFormData);
+      toast.success(t('categories.categoryAdded', 'Kategoriya muvaffaqiyatli qo\'shildi'));
+      await refreshCategories();
+      setNewProductData((prev) => ({ ...prev, category: created.id }));
+      setIsCategoryDialogOpen(false);
+    } catch (error) {
+      console.error('Failed to save category:', error);
+      toast.error(t('errors.generic', 'Xatolik yuz berdi'));
+    } finally {
+      setSavingCategory(false);
+    }
+  };
+
+  const handleUnitSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      setSavingUnit(true);
+      const created = await productUnitService.create(unitFormData);
+      toast.success(t('products.unitAdded', 'O\'lchov birligi muvaffaqiyatli qo\'shildi'));
+      const unitList = await productUnitService.getAll();
+      setUnits(unitList);
+      setNewProductData((prev) => ({ ...prev, unit_measurement: created.id }));
+      setIsUnitDialogOpen(false);
+    } catch (error) {
+      console.error('Failed to save unit:', error);
+      toast.error(t('errors.generic', 'Xatolik yuz berdi'));
+    } finally {
+      setSavingUnit(false);
     }
   };
 
@@ -289,11 +383,13 @@ export function StockEntryCreateDialog({
                     <SelectValue placeholder={t('inventory.selectLocation', 'Tanlang')} />
                   </SelectTrigger>
                   <SelectContent>
-                    {safeStores.map(s => (
-                      <SelectItem key={s.id} value={s.id} disabled={s.type === 's'}>
-                        {s.name} {s.type === 's' ? ' ( дўкон )' : ''}
-                      </SelectItem>
-                    ))}
+                    {safeStores
+                      .filter(s => isAdmin || String(s.id) === String(userStoreId))
+                      .map(s => (
+                        <SelectItem key={s.id} value={s.id} disabled={s.type === 's'}>
+                          {s.name} {s.type === 's' ? ' ( дўкон )' : ''}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -440,61 +536,328 @@ export function StockEntryCreateDialog({
 
       {/* Nested Product Dialog */}
       <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
-        <DialogContent size="lg">
+        <DialogContent size="lg" className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{t('products.addProduct', 'Yangi mahsulot qo\'shish')}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+              <Package className="h-6 w-6 text-primary" />
+              {t('products.addProduct', 'Mahsulot qo\'shish')}
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-6 py-4">
+            {/* Mahsulot nomi */}
             <div className="space-y-2">
-              <Label>{t('products.name', 'Mahsulot nomi')}</Label>
+              <Label className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                <Tag className="h-4 w-4 text-muted-foreground" />
+                {t('products.name', 'Mahsulot nomi')} <span className="text-red-500">*</span>
+              </Label>
               <Input
+                placeholder={t('placeholders.enterProductName', 'Tovar nomini kiriting...')}
                 value={newProductData.name}
-                onChange={(e) => setNewProductData({ ...newProductData, name: e.target.value })}
+                onChange={(e) => setNewProductData({ 
+                  ...newProductData, 
+                  name: e.target.value,
+                  name_uz_cyrl: latinToCyrillic(e.target.value)
+                })}
                 required
               />
             </div>
-            <div className="space-y-2">
-              <Label>{t('categories.title', 'Kategoriya')}</Label>
-              <select
-                className="w-full px-3 py-2 border rounded-md bg-background text-sm"
-                value={newProductData.category}
-                onChange={(e) => setNewProductData({ ...newProductData, category: e.target.value })}
-              >
-                <option value="">{t('categories.selectCategory', 'Kategoriyani tanlang')}</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-              </select>
+
+            {/* Kategoriya & O'lchov birligi */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                  <Layers className="h-4 w-4 text-muted-foreground" />
+                  {t('categories.title', 'Kategoriya')}
+                </Label>
+                <div className="flex gap-2">
+                  <select
+                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    value={newProductData.category}
+                    onChange={(e) => setNewProductData({ ...newProductData, category: e.target.value })}
+                  >
+                    <option value="">{t('categories.selectCategory', 'Kategoriyani tanlang')}</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="icon" 
+                    className="shrink-0"
+                    onClick={() => setIsCategoryDialogOpen(true)}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                  <Ruler className="h-4 w-4 text-muted-foreground" />
+                  {t('products.unit', 'O\'lchov birligi')}
+                </Label>
+                <div className="flex gap-2">
+                  <select
+                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    value={newProductData.unit_measurement}
+                    onChange={(e) => setNewProductData({ ...newProductData, unit_measurement: e.target.value })}
+                  >
+                    <option value="">{t('products.selectUnit', 'O\'lchov birligini tanlang')}</option>
+                    {units.map((unit) => (
+                      <option key={unit.id} value={unit.id}>{unit.measurement_uz}</option>
+                    ))}
+                  </select>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="icon" 
+                    className="shrink-0"
+                    onClick={() => setIsUnitDialogOpen(true)}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>{t('products.unit', 'O\'lchov birligi')}</Label>
-              <select
-                className="w-full px-3 py-2 border rounded-md bg-background text-sm"
-                value={newProductData.unit_measurement}
-                onChange={(e) => setNewProductData({ ...newProductData, unit_measurement: e.target.value })}
-              >
-                <option value="">{t('products.selectUnit', 'O\'lchov birligini tanlang')}</option>
-                {units.map((unit) => (
-                  <option key={unit.id} value={unit.id}>{unit.measurement_uz}</option>
-                ))}
-              </select>
+
+            {/* Xarid narxi & Sotish narxi */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  {t('products.purchasePrice', 'Xarid narxi')}
+                </Label>
+                <Input
+                  type="number"
+                  placeholder="0"
+                  value={newProductData.purchase_price}
+                  onChange={(e) => setNewProductData({ ...newProductData, purchase_price: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  {t('products.sellingPrice', 'Sotish narxi')}
+                </Label>
+                <Input
+                  type="number"
+                  placeholder="0"
+                  value={newProductData.selling_price}
+                  onChange={(e) => setNewProductData({ ...newProductData, selling_price: e.target.value })}
+                />
+              </div>
             </div>
+
+            {/* Tavsif */}
             <div className="space-y-2">
-              <Label>{t('products.description', 'Tavsif')}</Label>
-              <Input
-                value={newProductData.description || ''}
-                onChange={(e) => setNewProductData({ ...newProductData, description: e.target.value })}
+              <Label className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                <AlignLeft className="h-4 w-4 text-muted-foreground" />
+                {t('products.description', 'Tavsif')}
+              </Label>
+              <textarea
+                className="w-full min-h-[80px] px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder={t('placeholders.enterProductDescription', 'Tovar tavsifini kiriting...')}
+                value={newProductData.description}
+                onChange={(e) => setNewProductData({ 
+                  ...newProductData, 
+                  description: e.target.value,
+                  description_uz_cyrl: latinToCyrillic(e.target.value)
+                })}
               />
             </div>
+
+            {/* Mahsulot joylashuvi */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                {t('products.location', 'Mahsulot joylashuvi')}
+              </Label>
+              <select
+                className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                value={newProductData.location}
+                onChange={(e) => setNewProductData({ ...newProductData, location: e.target.value })}
+              >
+                <option value="">{t('products.selectLocation', 'Joylashuvni tanlang')}</option>
+                {locations.map((loc) => (
+                  <option key={loc.id} value={loc.id}>{loc.location_uz}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Rasm */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                {t('products.image', 'Rasm')}
+              </Label>
+              <div className="relative border border-dashed border-border rounded-xl p-4 hover:bg-muted/30 transition-colors cursor-pointer bg-muted/10">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    if (!files.length) return;
+                    imagePreviews.forEach((preview) => {
+                      if (preview.startsWith('blob:')) {
+                        URL.revokeObjectURL(preview);
+                      }
+                    });
+                    const previews = files.map((file) => URL.createObjectURL(file));
+                    setImageFiles(files);
+                    setImagePreviews(previews);
+                  }}
+                />
+                {imagePreviews.length > 0 ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <img
+                      src={imagePreviews[0]}
+                      alt="Preview"
+                      className="h-24 w-auto rounded-lg object-contain border border-border"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:bg-destructive/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setImageFiles([]);
+                        setImagePreviews([]);
+                      }}
+                    >
+                      {t('common.delete', 'Rasm o\'chirish')}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-4 text-center text-muted-foreground">
+                    <Upload className="h-8 w-8 mb-2 text-muted-foreground/60" />
+                    <span className="text-sm font-medium">{t('products.uploadImage', 'Rasm')}</span>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex gap-2">
             <Button variant="outline" onClick={() => setIsProductDialogOpen(false)}>
-              {t('common.cancel')}
+              {t('common.cancel', 'Bekor qilish')}
             </Button>
             <Button onClick={handleProductSubmit} disabled={productSaving}>
-              {productSaving ? t('common.loading') : t('common.save')}
+              {productSaving ? t('common.loading', 'Yuklanmoqda...') : `+ ${t('products.addProduct', 'Mahsulot qo\'shish')}`}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Nested Category Dialog inside Stock Entry */}
+      <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('categories.addCategory', 'Kategoriya qo\'shish')}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCategorySubmit}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="cat_name">{t('categories.categoryName', 'Kategoriya nomi')}</Label>
+                <Input
+                  id="cat_name"
+                  value={categoryFormData.name_uz}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setCategoryFormData({
+                    ...categoryFormData,
+                    name_uz: e.target.value,
+                    name_uz_cyrl: latinToCyrillic(e.target.value)
+                  })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cat_name_cyrl">{t('categories.categoryName', 'Kategoriya nomi')} (Cyrillic)</Label>
+                <Input
+                  id="cat_name_cyrl"
+                  value={categoryFormData.name_uz_cyrl}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    setCategoryFormData((prev) => ({ ...prev, name_uz_cyrl: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cat_description">{t('common.description', 'Tavsif')}</Label>
+                <Input
+                  id="cat_description"
+                  value={categoryFormData.description_uz}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setCategoryFormData({
+                    ...categoryFormData,
+                    description_uz: e.target.value,
+                    description_uz_cyrl: latinToCyrillic(e.target.value)
+                  })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cat_description_cyrl">{t('common.description', 'Tavsif')} (Cyrillic)</Label>
+                <Input
+                  id="cat_description_cyrl"
+                  value={categoryFormData.description_uz_cyrl}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    setCategoryFormData((prev) => ({ ...prev, description_uz_cyrl: e.target.value }))
+                  }
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsCategoryDialogOpen(false)}>
+                {t('common.cancel', 'Bekor qilish')}
+              </Button>
+              <Button type="submit" disabled={savingCategory}>
+                {savingCategory ? t('common.loading', 'Yuklanmoqda...') : t('common.save', 'Saqlash')}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Nested Unit Dialog inside Stock Entry */}
+      <Dialog open={isUnitDialogOpen} onOpenChange={setIsUnitDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('products.addUnit', 'O\'lchov birligi qo\'shish')}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUnitSubmit}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="unit_name">{t('products.unitName', 'Birlik nomi')}</Label>
+                <Input
+                  id="unit_name"
+                  value={unitFormData.measurement_uz}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setUnitFormData({
+                    ...unitFormData,
+                    measurement_uz: e.target.value,
+                    measurement_uz_cyrl: latinToCyrillic(e.target.value)
+                  })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="unit_name_cyrl">{t('products.unitName', 'Birlik nomi')} (Cyrillic)</Label>
+                <Input
+                  id="unit_name_cyrl"
+                  value={unitFormData.measurement_uz_cyrl}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    setUnitFormData((prev) => ({ ...prev, measurement_uz_cyrl: e.target.value }))
+                  }
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsUnitDialogOpen(false)}>
+                {t('common.cancel', 'Bekor qilish')}
+              </Button>
+              <Button type="submit" disabled={savingUnit}>
+                {savingUnit ? t('common.loading', 'Yuklanmoqda...') : t('common.save', 'Saqlash')}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </>

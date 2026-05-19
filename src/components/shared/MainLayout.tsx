@@ -36,7 +36,7 @@ import {
 } from 'lucide-react';
 import { NotificationProvider } from '../../context/NotificationProvider';
 import { NotificationToast } from './NotificationToast';
-import { cn } from '../../utils';
+import { cn, getPreferredStore } from '../../utils';
 import { useThemeStore, useAuthStore } from '../../app/store';
 import { Button } from '../ui';
 import { useNotifications } from '../../context/NotificationProvider';
@@ -96,7 +96,7 @@ const subNavs: Record<string, SubNavItem[]> = {
     { titleKey: 'categories.title', href: '/products/categories', icon: Tags },
     { titleKey: 'products.ProductLocatiion', href: '/products/location', icon: LocationEdit },
     { titleKey: 'products.units', href: '/products/units', icon: Ruler },
-    { titleKey: 'products.addProduct', href: '/products/new', icon: Plus },
+    // { titleKey: 'products.addProduct', href: '/products/new', icon: Plus },
   ],
   '/stores': [
     { titleKey: 'stores.list', href: '/stores', icon: List },
@@ -516,7 +516,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
               <div className="flex items-center gap-2 bg-primary/5 px-3.5 py-2 rounded-xl border border-primary/10">
                 <Store className="h-4 w-4 text-primary shrink-0" />
                 <span className="font-semibold text-xs sm:text-sm text-primary truncate max-w-[150px] sm:max-w-[250px]">
-                  {user?.store_name || (isSuperUser ? t('stores.admin', 'Barcha filiallar') : '')}
+                  {getPreferredStore(user)?.name || (isSuperUser ? t('stores.admin', 'Barcha filiallar') : '')}
                 </span>
               </div>
             </div>
