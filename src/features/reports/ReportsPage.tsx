@@ -4,6 +4,7 @@ import { Download, DollarSign, TrendingUp, ShoppingCart, Users } from 'lucide-re
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent } from '../../components/ui/Card';
+import { useThemeStore } from '../../app/themeStore';
 
 const TABS = [
   { id: 'sotuvlar', label: 'Sotuvlar' },
@@ -54,16 +55,18 @@ const STORE_SALES = [
 export function ReportsPage() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('sotuvlar');
+  const { theme } = useThemeStore();
+  const isDark = theme === 'dark';
 
   return (
     <div className="space-y-6 pb-10">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Hisobotlar va tahlillar</h1>
-          <p className="text-sm text-slate-500 mt-1">Batafsil biznes tahlili</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Hisobotlar va tahlillar</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Batafsil biznes tahlili</p>
         </div>
-        <Button variant="default" className="bg-slate-900 text-white hover:bg-slate-800">
+        <Button variant="default" className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100">
           <Download className="mr-2 h-4 w-4" />
           Excelga eksport qilish
         </Button>
@@ -71,13 +74,13 @@ export function ReportsPage() {
 
       {/* 4 Cards requested by user */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="rounded-2xl border border-slate-200 shadow-sm">
+        <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
           <CardContent className="p-5">
-            <div className="flex items-center gap-2 mb-3 text-slate-900">
+            <div className="flex items-center gap-2 mb-3 text-slate-900 dark:text-slate-100">
               <DollarSign className="h-4 w-4" />
               <p className="text-sm font-semibold">Umumiy tushum</p>
             </div>
-            <h3 className="text-2xl font-bold text-slate-900 mb-1">11 000 RUB</h3>
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">11 000 RUB</h3>
             <p className="text-xs text-emerald-500 flex items-center gap-1">
                <TrendingUp className="h-3 w-3" />
                Marja: -93.3%
@@ -85,50 +88,50 @@ export function ReportsPage() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border border-slate-200 shadow-sm">
+        <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
           <CardContent className="p-5">
-            <div className="flex items-center gap-2 mb-3 text-slate-900">
+            <div className="flex items-center gap-2 mb-3 text-slate-900 dark:text-slate-100">
               <TrendingUp className="h-4 w-4" />
               <p className="text-sm font-semibold">Sof foyda</p>
             </div>
-            <h3 className="text-2xl font-bold text-emerald-600 mb-1">-154 150 RUB</h3>
-            <p className="text-xs text-slate-500">-93.3% marjadorlik</p>
+            <h3 className="text-2xl font-bold text-emerald-600 dark:text-emerald-500 mb-1">-154 150 RUB</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">-93.3% marjadorlik</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border border-slate-200 shadow-sm">
+        <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
           <CardContent className="p-5">
-            <div className="flex items-center gap-2 mb-3 text-slate-900">
+            <div className="flex items-center gap-2 mb-3 text-slate-900 dark:text-slate-100">
               <ShoppingCart className="h-4 w-4" />
               <p className="text-sm font-semibold">Jami buyurtmalar</p>
             </div>
-            <h3 className="text-2xl font-bold text-slate-900 mb-1">324</h3>
-            <p className="text-xs text-slate-500">Ushbu oyda</p>
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">324</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Ushbu oyda</p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border border-slate-200 shadow-sm">
+        <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
           <CardContent className="p-5">
-            <div className="flex items-center gap-2 mb-3 text-slate-900">
+            <div className="flex items-center gap-2 mb-3 text-slate-900 dark:text-slate-100">
               <Users className="h-4 w-4" />
               <p className="text-sm font-semibold">Mijozlar qarzlari</p>
             </div>
-            <h3 className="text-2xl font-bold text-[#ff6b00] mb-1">345 000 RUB</h3>
-            <p className="text-xs text-slate-500">3 mijoz</p>
+            <h3 className="text-2xl font-bold text-[#ff6b00] dark:text-amber-500 mb-1">345 000 RUB</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">3 mijoz</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Tabs */}
-      <div className="flex bg-slate-100 p-1.5 rounded-full overflow-x-auto hide-scrollbar">
+      <div className="flex bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-full overflow-x-auto hide-scrollbar">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`flex-1 min-w-[120px] px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
               activeTab === tab.id
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800/50'
             }`}
           >
             {tab.label}
@@ -141,18 +144,24 @@ export function ReportsPage() {
         {activeTab === 'sotuvlar' && (
           <>
             <div className="grid gap-6 lg:grid-cols-2">
-              <Card className="rounded-2xl border border-slate-200 shadow-sm">
+              <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
                 <CardContent className="p-6">
-                  <h3 className="text-lg font-bold text-slate-900 mb-6">Do'konlar bo'yicha sotuvlar</h3>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Do'konlar bo'yicha sotuvlar</h3>
                   <div className="h-[250px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={STORE_SALES} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} domain={[0, 3800]} ticks={[0, 950, 1900, 2850, 3800]} />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#f1f5f9'} />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: isDark ? '#94a3b8' : '#64748b' }} dy={10} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: isDark ? '#94a3b8' : '#64748b' }} domain={[0, 3800]} ticks={[0, 950, 1900, 2850, 3800]} />
                         <Tooltip
-                          cursor={{ fill: '#f8fafc' }}
-                          contentStyle={{ backgroundColor: '#fff', color: '#0f172a', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                          cursor={{ fill: isDark ? '#1e293b' : '#f8fafc' }}
+                          contentStyle={{
+                            backgroundColor: isDark ? '#1e293b' : '#fff',
+                            color: isDark ? '#f8fafc' : '#0f172a',
+                            borderRadius: '8px',
+                            border: isDark ? '1px solid #334155' : '1px solid #e2e8f0',
+                            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                          }}
                           wrapperStyle={{ zIndex: 100 }}
                         />
                         <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={60} />
@@ -162,9 +171,9 @@ export function ReportsPage() {
                 </CardContent>
               </Card>
 
-              <Card className="rounded-2xl border border-slate-200 shadow-sm">
+              <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
                 <CardContent className="p-6">
-                  <h3 className="text-lg font-bold text-slate-900 mb-6">Kategoriyalar bo'yicha sotuvlar</h3>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Kategoriyalar bo'yicha sotuvlar</h3>
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-8 min-h-[250px] sm:h-[250px] py-4 sm:py-0">
                     <div className="w-48 h-48 shrink-0">
                       <ResponsiveContainer width="100%" height="100%">
@@ -184,7 +193,13 @@ export function ReportsPage() {
                             ))}
                           </Pie>
                           <Tooltip
-                            contentStyle={{ backgroundColor: '#fff', color: '#0f172a', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                            contentStyle={{
+                              backgroundColor: isDark ? '#1e293b' : '#fff',
+                              color: isDark ? '#f8fafc' : '#0f172a',
+                              borderRadius: '8px',
+                              border: isDark ? '1px solid #334155' : '1px solid #e2e8f0',
+                              boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                            }}
                             wrapperStyle={{ zIndex: 100 }}
                             formatter={(value: number) => [`${value}%`, 'Ulushi']}
                           />
@@ -196,9 +211,9 @@ export function ReportsPage() {
                         <div key={i} className="flex items-center justify-between text-xs">
                           <div className="flex items-center gap-2">
                             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color }} />
-                            <span className="text-slate-600">{cat.name}</span>
+                            <span className="text-slate-600 dark:text-slate-400">{cat.name}</span>
                           </div>
-                          <span className="font-medium text-slate-900" style={{ color: cat.color }}>{cat.percent}%</span>
+                          <span className="font-medium" style={{ color: cat.color }}>{cat.percent}%</span>
                         </div>
                       ))}
                     </div>
@@ -207,13 +222,13 @@ export function ReportsPage() {
               </Card>
             </div>
 
-            <Card className="rounded-2xl border border-slate-200 shadow-sm mt-6 overflow-hidden">
-              <div className="p-6 border-b border-slate-100">
-                <h3 className="text-lg font-bold text-slate-900">Sotuvlar bo'yicha Top-10 tovarlar</h3>
+            <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm mt-6 overflow-hidden">
+              <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Sotuvlar bo'yicha Top-10 tovarlar</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
-                  <thead className="bg-slate-50 text-slate-500 font-semibold text-xs uppercase tracking-wider">
+                  <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-semibold text-xs uppercase tracking-wider">
                     <tr>
                       <th className="px-6 py-4 rounded-tl-xl">#</th>
                       <th className="px-6 py-4">Tovar</th>
@@ -221,17 +236,17 @@ export function ReportsPage() {
                       <th className="px-6 py-4 text-right rounded-tr-xl">Sotilgan summa</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
                     {TOP_PRODUCTS.map((prod) => (
-                      <tr key={prod.rank} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4 font-medium text-slate-900">{prod.rank}</td>
-                        <td className="px-6 py-4 font-medium text-slate-900">{prod.name}</td>
+                      <tr key={prod.rank} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                        <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{prod.rank}</td>
+                        <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{prod.name}</td>
                         <td className="px-6 py-4">
-                          <span className="inline-flex px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-md border border-slate-200">
+                          <span className="inline-flex px-2 py-1 bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 text-xs rounded-md border border-slate-200 dark:border-slate-700/80">
                             {prod.category}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-right font-bold text-slate-900 whitespace-nowrap">
+                        <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white whitespace-nowrap">
                           {prod.revenue} RUB
                         </td>
                       </tr>
@@ -244,13 +259,13 @@ export function ReportsPage() {
         )}
 
         {activeTab === 'tolovlar' && (
-          <Card className="rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-             <div className="p-6 border-b border-slate-100">
-                <h3 className="text-lg font-bold text-slate-900">To'lovlar tarkibi</h3>
+          <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+             <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">To'lovlar tarkibi</h3>
              </div>
              <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
-                  <thead className="bg-slate-50 text-slate-500 font-semibold text-xs uppercase tracking-wider">
+                  <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-semibold text-xs uppercase tracking-wider">
                     <tr>
                       <th className="px-6 py-4 rounded-tl-xl">To'lov usuli</th>
                       <th className="px-6 py-4 text-right">Sotuvlar soni</th>
@@ -258,20 +273,20 @@ export function ReportsPage() {
                       <th className="px-6 py-4 text-right rounded-tr-xl">Ulushi</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
                     {PAYMENT_STRUCTURE.map((pay, i) => (
-                      <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4 font-medium text-slate-900">{pay.method}</td>
-                        <td className="px-6 py-4 text-right font-medium text-slate-900">{pay.count}</td>
-                        <td className="px-6 py-4 text-right font-bold text-slate-900">{pay.amount} RUB</td>
-                        <td className="px-6 py-4 text-right font-medium text-slate-900">{pay.percent}</td>
+                      <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                        <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{pay.method}</td>
+                        <td className="px-6 py-4 text-right font-medium text-slate-900 dark:text-white">{pay.count}</td>
+                        <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">{pay.amount} RUB</td>
+                        <td className="px-6 py-4 text-right font-medium text-slate-900 dark:text-white">{pay.percent}</td>
                       </tr>
                     ))}
-                    <tr className="bg-slate-50">
-                       <td className="px-6 py-4 font-bold text-slate-900">Jami</td>
-                       <td className="px-6 py-4 text-right font-bold text-slate-900">5</td>
-                       <td className="px-6 py-4 text-right font-bold text-slate-900">11 000 RUB</td>
-                       <td className="px-6 py-4 text-right font-bold text-slate-900">100%</td>
+                    <tr className="bg-slate-50 dark:bg-slate-800/30">
+                       <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">Jami</td>
+                       <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">5</td>
+                       <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">11 000 RUB</td>
+                       <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">100%</td>
                     </tr>
                   </tbody>
                 </table>
@@ -280,25 +295,25 @@ export function ReportsPage() {
         )}
 
         {activeTab === 'qarzlar' && (
-           <Card className="rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-             <div className="p-6 border-b border-slate-100">
-                <h3 className="text-lg font-bold text-slate-900">Qarzdorligi bor mijozlar</h3>
+           <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+             <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Qarzdorligi bor mijozlar</h3>
              </div>
              <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
-                  <thead className="bg-slate-50 text-slate-500 font-semibold text-xs uppercase tracking-wider">
+                  <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-semibold text-xs uppercase tracking-wider">
                     <tr>
                       <th className="px-6 py-4 rounded-tl-xl">Mijoz</th>
                       <th className="px-6 py-4">Telefon</th>
                       <th className="px-6 py-4 text-right rounded-tr-xl">Qarzdorlik</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
                     {DEBTORS.map((debtor, i) => (
-                      <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4 font-medium text-slate-900">{debtor.name}</td>
-                        <td className="px-6 py-4 text-slate-600">{debtor.phone}</td>
-                        <td className="px-6 py-4 text-right font-bold text-[#ff6b00]">{debtor.debt} RUB</td>
+                      <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                        <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{debtor.name}</td>
+                        <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{debtor.phone}</td>
+                        <td className="px-6 py-4 text-right font-bold text-[#ff6b00] dark:text-amber-500">{debtor.debt} RUB</td>
                       </tr>
                     ))}
                   </tbody>
