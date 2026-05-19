@@ -165,7 +165,7 @@ export function ReportsPage() {
               <Card className="rounded-2xl border border-slate-200 shadow-sm">
                 <CardContent className="p-6">
                   <h3 className="text-lg font-bold text-slate-900 mb-6">Kategoriyalar bo'yicha sotuvlar</h3>
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-8 h-[250px]">
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-8 min-h-[250px] sm:h-[250px] py-4 sm:py-0">
                     <div className="w-48 h-48 shrink-0">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
