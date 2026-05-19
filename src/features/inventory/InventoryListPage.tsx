@@ -265,7 +265,7 @@ export function InventorySessionsListPage({
         </div>
       )}
 
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog} clas>
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('inventory.startNewSession')}</DialogTitle>
