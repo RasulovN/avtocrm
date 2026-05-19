@@ -31,14 +31,14 @@ const barcodeOptions = {
 };
 
 export const BarcodePrint = memo(function BarcodePrint({ value, productName, showName = true, thermalPrinter = false, displayValue = true }: BarcodePrintProps) {
-  const imgRef = useRef<HTMLImageElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
-    if (!imgRef.current || !value) return;
+    if (!svgRef.current || !value) return;
 
     try {
       const options = thermalPrinter ? barcodeOptions.thermal : { ...barcodeOptions.normal, displayValue };
-      JsBarcode(imgRef.current, value, options);
+      JsBarcode(svgRef.current, value, options);
     } catch (error) {
       console.error('Failed to generate barcode:', error);
     }
@@ -49,7 +49,7 @@ export const BarcodePrint = memo(function BarcodePrint({ value, productName, sho
       {showName && productName && (
         <span className="text-xs mb-1">{productName}</span>
       )}
-      <img ref={imgRef} alt="Barcode" />
+      <svg ref={svgRef} />
     </div>
   );
 });
@@ -69,10 +69,10 @@ const isImageUrl = (value: string): boolean => {
 };
 
 const BarcodeDisplay = memo(function BarcodeDisplay({ value, isImage = false, thermalPrinter = false }: { value: string; isImage?: boolean; thermalPrinter?: boolean }) {
-  const imgRef = useRef<HTMLImageElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
-    if (!imgRef.current || !value || isImage) return;
+    if (!svgRef.current || !value || isImage) return;
 
     try {
       const options = thermalPrinter ? {
@@ -93,7 +93,7 @@ const BarcodeDisplay = memo(function BarcodeDisplay({ value, isImage = false, th
         textMargin: 4,
       };
 
-      JsBarcode(imgRef.current, value, options);
+      JsBarcode(svgRef.current, value, options);
     } catch (error) {
       console.error('Failed to generate barcode:', error);
     }
@@ -103,7 +103,7 @@ const BarcodeDisplay = memo(function BarcodeDisplay({ value, isImage = false, th
     return <img src={value} alt="Barcode" className="max-w-[150px] h-auto" />;
   }
 
-  return <img ref={imgRef} alt="Barcode" />;
+  return <svg ref={svgRef} />;
 });
 
 export const BarcodePrintAll = memo(function BarcodePrintAll({ items }: BarcodePrintAllProps) {

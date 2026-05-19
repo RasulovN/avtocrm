@@ -84,6 +84,12 @@ export function ProductFormPage() {
     measurement_uz_cyrl: '',
   });
 
+  useEffect(() => {
+    if (!isEditing) {
+      navigate(`/${lang}/products?add=true`, { replace: true });
+    }
+  }, [isEditing, navigate, lang]);
+
   const loadOptions = useCallback(async () => {
     try {
       const [unitList, locationList] = await Promise.all([

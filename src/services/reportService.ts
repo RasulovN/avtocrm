@@ -281,9 +281,18 @@ export const reportService = {
 
   async getDetailedReport(params: ReportsQueryParams): Promise<DetailedReportsResponse> {
     const requestParams = buildReportQueryParams(params);
-    const response = await apiClient.get<unknown>('/reports/', {
-      params: requestParams,
-    });
-    return normalizeDetailedReportsResponse(response.data);
+    try {
+      const response = await apiClient.get<unknown>('/reports/', {
+        params: requestParams,
+        expectedErrorStatuses: [403, 404],
+      });
+      return normalizeDetailedReportsResponse(response.data);
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { status?: number } };
+      if (axiosError.response?.status === 403 || axiosError.response?.status === 404) {
+        return normalizeDetailedReportsResponse(null);
+      }
+      throw error;
+    }
   },
 };

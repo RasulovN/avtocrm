@@ -12,6 +12,7 @@ import { formatDate } from '../../../utils';
 import { Input } from '../../../components/ui/Input';
 import type { Transfer, Store } from '../../../types';
 import type { ReactElement } from 'react';
+import { useAuthStore } from '../../../app/store';
 
 const formatQuantity = (value: Transfer['quantity']) => {
   if (value === null || value === undefined) return '-';
@@ -21,6 +22,15 @@ const formatQuantity = (value: Transfer['quantity']) => {
 export function TransferRequestsPage(): ReactElement {
   const { t } = useTranslation();
   const { products } = useProducts();
+  const { user } = useAuthStore();
+  const isAdmin = Boolean(user?.is_superuser);
+  const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores.find(s => s.type === 'b')?.id || user.stores[0].id) : '');
+
+  const canApprove = (item: Transfer) => {
+    if (isAdmin) return true;
+    return userStoreId && String(item.to_store) === String(userStoreId);
+  };
+
   const [stores, setStores] = useState<Store[]>([]);
   const [requests, setRequests] = useState<Transfer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -112,30 +122,34 @@ export function TransferRequestsPage(): ReactElement {
       className: 'text-right',
       render: (item) => (
         <div className="flex items-center justify-end gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleApprove(item.id);
-            }}
-            title={t('transfers.accepted')}
-            className="text-green-600 hover:text-green-700 hover:bg-green-100 h-8 w-8"
-          >
-            <Check className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleReject(item.id);
-            }}
-            title={t('transfers.rejected')}
-            className="text-red-600 hover:text-red-700 hover:bg-red-100 h-8 w-8"
-          >
-            <X className="h-4 w-4" />
-          </Button>
+          {canApprove(item) && (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleApprove(item.id);
+                }}
+                title={t('transfers.accepted')}
+                className="text-green-600 hover:text-green-700 hover:bg-green-100 h-8 w-8"
+              >
+                <Check className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleReject(item.id);
+                }}
+                title={t('transfers.rejected')}
+                className="text-red-600 hover:text-red-700 hover:bg-red-100 h-8 w-8"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </>
+          )}
         </div>
       ),
     },
@@ -258,24 +272,26 @@ export function TransferRequestsPage(): ReactElement {
                     </div>
                   </div>
 
-                  <div className="mt-4 flex gap-2">
-                    <Button
-                      variant="outline"
-                      className="flex-1 text-green-600 border-green-600 hover:bg-green-50"
-                      onClick={() => handleApprove(request.id)}
-                    >
-                      <Check className="mr-2 h-4 w-4" />
-                      {t('transfers.accepted')}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="flex-1 text-red-600 border-red-600 hover:bg-red-50"
-                      onClick={() => handleReject(request.id)}
-                    >
-                      <X className="mr-2 h-4 w-4" />
-                      {t('transfers.rejected')}
-                    </Button>
-                  </div>
+                  {canApprove(request) && (
+                    <div className="mt-4 flex gap-2">
+                      <Button
+                        variant="outline"
+                        className="flex-1 text-green-600 border-green-600 hover:bg-green-50"
+                        onClick={() => handleApprove(request.id)}
+                      >
+                        <Check className="mr-2 h-4 w-4" />
+                        {t('transfers.accepted')}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="flex-1 text-red-600 border-red-600 hover:bg-red-50"
+                        onClick={() => handleReject(request.id)}
+                      >
+                        <X className="mr-2 h-4 w-4" />
+                        {t('transfers.rejected')}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))
             )}

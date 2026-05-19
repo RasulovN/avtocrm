@@ -450,7 +450,7 @@
     "receiptDescription": "Tranzaksiya tafsilotlari",
     "paid": "To'langan",
     "change": "Qaytim",
-    "discount": "Chiqim",
+    "discount": "Chegirma",
     "discountAmount": "Chiqim miqdori"
   },
   "saleReturns": {
@@ -714,7 +714,8 @@
     "resetLinkSentSettings": "Parolni tiklash uchun emailingizga havola yuborildi",
     "profileUpdateNotConnected": "Profilni yangilash hali backendga ulanmagan",
     "passwordsNotMatch": "Parollar mos emas",
-    "resetLinkSent": "Parol tiklash havolasi emailga yuborildi"
+    "resetLinkSent": "Parol tiklash havolasi emailga yuborildi",
+    "insufficientStock": "Omborida yetarli mahsulot yo'q "
   },
   "placeholders": {
     "enterAmount": "Summani kiriting",

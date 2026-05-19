@@ -9,13 +9,7 @@ import { Label } from '../../components/ui/Label';
 import { salesService, saleReturnService } from '../../services/salesService';
 import { formatCurrency, cn } from '../../utils';
 import type { Sale, SaleItem, SaleReturnFormItem } from '../../types';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../components/ui/Select';
+
 
 export function SaleReturnCreatePage() {
   const { t } = useTranslation();

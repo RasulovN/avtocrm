@@ -51,6 +51,7 @@ const navItems: NavItem[] = [
   { titleKey: 'nav.transfers', href: '/transfers', icon: ArrowRightLeft },
   // { titleKey: 'nav.transferRequests', href: '/transfer-requests', icon: Send },
   { titleKey: 'nav.sales', href: '/sales', icon: DollarSign },
+  { titleKey: 'nav.customers', href: '/customers', icon: Users },
   { titleKey: 'nav.suppliers', href: '/suppliers', icon: Truck, roles: ['admin'] },
   { 
     titleKey: 'nav.stores', 

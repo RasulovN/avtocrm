@@ -1,14 +1,21 @@
-import { useEffect, useMemo, useState, useCallback, type MouseEvent } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef, type MouseEvent, type ChangeEvent, type FormEvent } from 'react';
 import JsBarcode from 'jsbarcode';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Edit, Trash2, Barcode, Search, Printer, Power } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { Plus, Edit, Trash2, Barcode, Search, Printer, Power, Eye, Package, Loader2, ChevronLeft, ChevronRight, X, Warehouse, Store as StoreIcon, Calendar, Tag, Hash, Layers, Upload, MapPin, DollarSign, Ruler, ImageIcon } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
-import { DataTable, type Column, type StoreInventory } from '../../components/shared/DataTable';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { BarcodePrint } from '../../components/ui/BarcodePrint';
+import { Label } from '../../components/ui/Label';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../../components/ui/Dialog';
 import {
   Select,
   SelectContent,
@@ -17,11 +24,16 @@ import {
   SelectValue,
 } from '../../components/ui/Select';
 import { productService } from '../../services/productService';
+import { storeService } from '../../services/storeService';
+import { productUnitService } from '../../services/productUnitService';
+import { productLocationService, type ProductLocation } from '../../services/productLocationService';
+import { categoryService } from '../../services/categoryService';
 import { useAuthStore } from '../../app/store';
 import { useCategories } from '../../context/CategoryContext';
-import type { Product, ProductFilters } from '../../types';
-import { formatCurrency } from '../../utils';
-import { escapeHtml, escapeJsString } from '../../utils/xss';
+import type { Product, ProductFormData, ProductFilters, ProductUnit, CategoryFormData, ProductUnitFormData, Store } from '../../types';
+import { formatCurrency, cn } from '../../utils';
+import { escapeHtml } from '../../utils/xss';
+import { latinToCyrillic } from '../../utils/transliteration';
 
 export function ProductListPage() {
   const { t, i18n } = useTranslation();
@@ -32,6 +44,7 @@ export function ProductListPage() {
   const userStoreId = user?.store_id;
   const { categories, refreshCategories } = useCategories();
   const [products, setProducts] = useState<Product[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ProductFilters>({});
   const [page, setPage] = useState(1);
@@ -42,6 +55,21 @@ export function ProductListPage() {
   const [deleting, setDeleting] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [deactivating, setDeactivating] = useState(false);
+  const [viewProduct, setViewProduct] = useState<Product | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  // Load stores list for dynamic column headers
+  useEffect(() => {
+    const loadStores = async () => {
+      try {
+        const res = await storeService.getAll({ limit: 100 });
+        setStores(res.data);
+      } catch {
+        setStores([]);
+      }
+    };
+    void loadStores();
+  }, []);
 
   const loadProducts = useCallback(async () => {
     try {
@@ -69,6 +97,15 @@ export function ProductListPage() {
     }
   }, [categories.length, refreshCategories]);
 
+  // Handle auto-open via search params (for navigation redirection)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('add') === 'true') {
+      setIsAddModalOpen(true);
+      navigate(window.location.pathname, { replace: true });
+    }
+  }, [navigate]);
+
   const handleSearch = (value: string) => {
     setSearchQuery(value);
     setFilters((prev) => ({ ...prev, search: value }));
@@ -94,10 +131,6 @@ export function ProductListPage() {
     }
   };
 
-  const getInventoryByStore = (item: Product): StoreInventory[] => {
-    return item.inventory_by_store || [];
-  };
-
   const selectedProducts = useMemo(
     () => products.filter((product) => selectedProductIds.includes(product.id)),
     [products, selectedProductIds]
@@ -109,8 +142,14 @@ export function ProductListPage() {
     );
   };
 
-  const handleToggleAllProducts = (ids: string[]) => {
-    setSelectedProductIds((prev) => (ids.every((id) => prev.includes(id)) ? prev.filter((id) => !ids.includes(id)) : Array.from(new Set([...prev, ...ids]))));
+  const handleToggleAllProducts = () => {
+    const allIds = products.map((p) => p.id);
+    const allSelected = allIds.every((id) => selectedProductIds.includes(id));
+    if (allSelected) {
+      setSelectedProductIds((prev) => prev.filter((id) => !allIds.includes(id)));
+    } else {
+      setSelectedProductIds((prev) => Array.from(new Set([...prev, ...allIds])));
+    }
   };
 
   const handlePrintSelected = () => {
@@ -239,111 +278,72 @@ export function ProductListPage() {
     }
   };
 
-  const columns: Column<Product>[] = [
-    {
-      key: 'image',
-      header: t('products.image') || 'Image',
-      className: 'w-20',
-      render: (item: Product) => {
-        const imageUrl = Array.isArray(item.images) && item.images.length > 0
-          ? (item.images[0] as any).image || item.image
-          : item.image;
+  // Helper: get image URL from product
+  const getImageUrl = (item: Product): string | null => {
+    if (Array.isArray(item.images) && item.images.length > 0) {
+      const first = item.images[0];
+      if (typeof first === 'string') return first;
+      if (typeof first === 'object' && first !== null && 'image' in first) return (first as { image: string }).image;
+    }
+    return item.image || null;
+  };
 
-        if (!imageUrl) {
-          return (
-            <div className="h-10 w-10 rounded border border-dashed bg-muted flex items-center justify-center">
-              <span className="text-xs text-muted-foreground">—</span>
-            </div>
-          );
+  // Helper: get barcode/sku from product
+  const getArticle = (item: Product): string => {
+    return item.sku || item.barcode || (item.batches && item.batches.length > 0 ? item.batches[0].barcode : '') || '—';
+  };
+
+  // Compute total quantity for a product
+  const getTotalQuantity = (item: Product): number => {
+    if (item.inventory_by_store && item.inventory_by_store.length > 0) {
+      return item.inventory_by_store.reduce((sum, inv) => sum + inv.quantity, 0);
+    }
+    return item.total_quantity ?? item.quantity ?? 0;
+  };
+
+  // Get quantity for a specific store
+  const getStoreQuantity = (item: Product, storeId: string): number => {
+    if (!item.inventory_by_store) return 0;
+    const inv = item.inventory_by_store.find(i => String(i.store_id) === String(storeId));
+    return inv?.quantity ?? 0;
+  };
+
+  // Pagination
+  const totalPages = Math.ceil(total / limit);
+  const allCurrentSelected = products.length > 0 && products.every((p) => selectedProductIds.includes(p.id));
+
+  // Determine which stores have inventory data in any product (for dynamic columns)
+  const storeColumns = useMemo(() => {
+    // Collect all unique store ids from product inventory data
+    const storeMap = new Map<string, string>();
+    products.forEach((product) => {
+      product.inventory_by_store?.forEach((inv) => {
+        if (!storeMap.has(String(inv.store_id))) {
+          storeMap.set(String(inv.store_id), inv.store_name);
         }
+      });
+    });
+    // If no inventory data, fall back to loaded stores
+    if (storeMap.size === 0 && stores.length > 0) {
+      stores.forEach((s) => storeMap.set(s.id, s.name));
+    }
+    return Array.from(storeMap.entries()).map(([id, name]) => ({ id, name }));
+  }, [products, stores]);
 
-        return (
-          <img
-            src={imageUrl}
-            alt={item.name}
-            className="h-10 w-10 rounded object-cover border"
-            onError={(e) => {
-              const img = e.target as HTMLImageElement;
-              img.style.display = 'none';
-            }}
-          />
-        );
-      }
-    },
-    {
-      key: 'sku',
-      header: t('products.sku'),
-      className: 'font-mono text-sm',
-    },
-    {
-      key: 'name',
-      header: t('products.productName'),
-    },
-    {
-      key: 'category',
-      header: t('products.category'),
-      render: (item: Product) => item.category_name ?? item.category,
-    },
-    {
-      key: 'quantity',
-      header: t('products.quantity'),
-      className: 'min-w-[180px]',
-    },
-    {
-      key: 'purchase_price',
-      header: t('products.purchasePrice'),
-      className: 'text-right',
-      render: (item: Product) => formatCurrency(item.purchase_price ?? 0),
-    },
-    {
-      key: 'selling_price',
-      header: t('products.sellingPrice'),
-      className: 'text-right',
-      render: (item: Product) => formatCurrency(item.selling_price ?? 0),
-    },
-    {
-      key: 'actions',
-      header: t('common.actions'),
-      className: 'text-right',
-      render: (item: Product) => (
-        <div className="flex items-center justify-end gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e: MouseEvent<HTMLButtonElement>) => {
-              e.stopPropagation();
-              navigate(`/${lang}/products/${item.id}/barcode`);
-            }}
-            title={t('products.printBarcode')}
-          >
-            <Barcode className="h-4 w-4" />
-          </Button>
-          {isAdmin && <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e: MouseEvent<HTMLButtonElement>) => {
-              e.stopPropagation();
-              navigate(`/${lang}/products/${item.id}/edit`);
-            }}
-            title={t('common.edit')}
-          >
-            <Edit className="h-4 w-4" />
-          </Button>}
-          {isAdmin && <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e: MouseEvent<HTMLButtonElement>) => {
-              e.stopPropagation();
-              setDeleteId(item.id);
-            }}
-            title={t('common.delete')}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>}
-        </div>
-      ),
-    },
-  ];
+  // Split stores into warehouse (Ombor) and shops (Do'konlar)
+  const warehouseStore = useMemo(() => {
+    return stores.find(s => s.is_warehouse);
+  }, [stores]);
+
+  const shopStores = useMemo(() => {
+    // If stores loaded, use is_warehouse to filter; otherwise just use storeColumns
+    if (stores.length > 0) {
+      const warehouseIds = new Set(stores.filter(s => s.is_warehouse).map(s => s.id));
+      return storeColumns.filter(sc => !warehouseIds.has(sc.id));
+    }
+    // Fallback: first store is warehouse, rest are shops
+    return storeColumns.slice(1);
+  }, [storeColumns, stores]);
 
   return (
     <div className="space-y-6">
@@ -351,16 +351,17 @@ export function ProductListPage() {
         title={t('products.title')}
         description={t('products.productList')}
         actions={isAdmin ? (
-          <Button onClick={() => navigate(`/${lang}/products/new`)}>
+          <Button onClick={() => setIsAddModalOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             {t('products.addProduct')}
           </Button>
         ) : undefined}
       />
 
-      <div className="flex flex-col sm:flex-row gap-4">
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={t('products.searchPlaceholder')}
             value={searchQuery}
@@ -373,7 +374,7 @@ export function ProductListPage() {
           value={filters.category || 'all'}
           onValueChange={(value) => handleFilterChange('category', value === 'all' ? '' : value)}
         >
-          <SelectTrigger className="w-full sm:w-45">
+          <SelectTrigger className="w-full sm:w-48">
             <SelectValue placeholder={t('products.filterByCategory')} />
           </SelectTrigger>
           <SelectContent>
@@ -387,19 +388,21 @@ export function ProductListPage() {
         </Select>
       </div>
 
+      {/* Selected products action bar */}
       {selectedProducts.length > 0 && (
-        <div className="flex items-center justify-between rounded-lg border bg-muted/20 px-4 py-3">
-          <p className="text-sm text-muted-foreground">
+        <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-primary/5 px-5 py-3">
+          <p className="text-sm font-medium text-primary">
             {selectedProducts.length} {t('products.selectedProducts', 'та маҳсулот танланди')}
           </p>
           <div className="flex gap-2">
-            <Button onClick={handlePrintSelected}>
+            <Button size="sm" onClick={handlePrintSelected}>
               <Printer className="mr-2 h-4 w-4" />
               {t('products.printBarcode')}
             </Button>
             {isAdmin && (
               <Button
                 variant="destructive"
+                size="sm"
                 onClick={handleDeactivateSelected}
                 disabled={deactivating}
               >
@@ -411,28 +414,248 @@ export function ProductListPage() {
         </div>
       )}
 
-      <DataTable
-        data={products}
-        columns={columns}
-        loading={loading}
-        onRowClick={(item: Product) => isAdmin ? navigate(`/${lang}/products/${item.id}/edit`) : undefined}
-        pagination={{
-          page,
-          limit,
-          total,
-          onPageChange: setPage,
-        }}
-        inventoryByStore={getInventoryByStore}
-        itemNameKey={'name' as keyof Product}
-        showFooter={true}
-        showStoreStats={true}
-        storeKey={'store_name' as keyof Product}
-        quantityKey={'quantity' as keyof Product}
-        selectableRows={true}
-        selectedRowIds={selectedProductIds}
-        onToggleRowSelection={handleToggleProductSelection}
-        onToggleAllRows={handleToggleAllProducts}
-      />
+      {/* ═══════ Product Table ═══════ */}
+      <div className="w-full overflow-x-auto rounded-2xl border border-border/60 bg-card">
+        <table className="w-full text-sm" style={{ minWidth: '1100px' }}>
+          <thead>
+            <tr className="border-b border-border/50 bg-muted/30">
+              {/* ID */}
+              <th className="w-14 px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                ID
+              </th>
+              {/* Image */}
+              <th className="w-16 px-2 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t('products.image', 'Tovar rasmi')}
+              </th>
+              {/* Name + barcode underneath */}
+              <th className="min-w-[200px] px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t('products.productName', 'Tovar nomi')}
+              </th>
+              {/* Article / SKU */}
+              <th className="w-[130px] px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t('products.sku', 'Artikul')}
+              </th>
+              {/* Category */}
+              <th className="w-[140px] px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t('products.category', 'Kategoriya')}
+              </th>
+              {/* Purchase price */}
+              <th className="w-[110px] px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t('products.purchasePrice', 'Kelish narxi')}
+              </th>
+              {/* Selling price */}
+              <th className="w-[110px] px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t('products.sellingPrice', 'Sotuv narxi')}
+              </th>
+              {/* Ombor (Warehouse) */}
+              <th className="w-[80px] px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t('products.warehouse', 'Ombor')}
+              </th>
+              {/* Dynamic store columns */}
+              {shopStores.map((store, idx) => (
+                <th key={store.id} className="w-[90px] px-2 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {store.name || `${t('stores.title', "Do'kon")} ${idx + 1}`}
+                </th>
+              ))}
+              {/* Status */}
+              <th className="w-[110px] px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t('common.status', 'Holat')}
+              </th>
+              {/* Actions */}
+              <th className="w-10 px-2 py-3"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={9 + shopStores.length} className="h-40 text-center">
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <span className="text-sm">{t('common.loading')}</span>
+                  </div>
+                </td>
+              </tr>
+            ) : products.length === 0 ? (
+              <tr>
+                <td colSpan={9 + shopStores.length} className="h-40 text-center">
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <Package className="h-8 w-8 opacity-40" />
+                    <span className="text-sm">{t('common.noData', "Ma'lumot yo'q")}</span>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              products.map((item) => {
+                const imageUrl = getImageUrl(item);
+                const article = getArticle(item);
+                const totalQty = getTotalQuantity(item);
+                const isSelected = selectedProductIds.includes(item.id);
+                const isActive = item.is_active !== false;
+                const warehouseQty = warehouseStore ? getStoreQuantity(item, warehouseStore.id) : totalQty;
+
+                return (
+                  <tr
+                    key={item.id}
+                    className={cn(
+                      'border-b border-border/40 transition-colors hover:bg-muted/20',
+                      isSelected && 'bg-primary/5',
+                      !isActive && 'opacity-60'
+                    )}
+                  >
+                    {/* ID */}
+                    <td className="px-3 py-3">
+                      <span className="text-xs font-mono text-muted-foreground">#{item.id}</span>
+                    </td>
+
+                    {/* Product Image */}
+                    <td className="px-2 py-2">
+                      {imageUrl ? (
+                        <img
+                          src={imageUrl}
+                          alt={item.name}
+                          className="h-11 w-11 rounded-lg object-cover border border-border/40"
+                          onError={(e) => {
+                            const img = e.target as HTMLImageElement;
+                            img.style.display = 'none';
+                            img.parentElement!.innerHTML = '<div class="h-11 w-11 rounded-lg border border-dashed border-border bg-muted/30 flex items-center justify-center"><span class="text-muted-foreground text-xs">—</span></div>';
+                          }}
+                        />
+                      ) : (
+                        <div className="h-11 w-11 rounded-lg border border-dashed border-border bg-muted/30 flex items-center justify-center">
+                          <Package className="h-4 w-4 text-muted-foreground/40" />
+                        </div>
+                      )}
+                    </td>
+
+                    {/* Product Name + barcode underneath */}
+                    <td
+                      className="px-3 py-2 cursor-pointer"
+                      onClick={() => isAdmin && navigate(`/${lang}/products/${item.id}/edit`)}
+                    >
+                      <div className="min-w-0">
+                        <p className="font-semibold text-foreground truncate max-w-[220px] leading-tight">
+                          {item.name}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground font-mono mt-0.5">
+                          {item.barcode || item.sku || `ID: ${item.id}`}
+                        </p>
+                      </div>
+                    </td>
+
+                    {/* Article / SKU */}
+                    <td className="px-3 py-2">
+                      <code className="text-xs font-mono bg-muted/40 px-2 py-0.5 rounded-md text-muted-foreground">
+                        {article}
+                      </code>
+                    </td>
+
+                    {/* Category */}
+                    <td className="px-3 py-2 text-sm text-muted-foreground">
+                      {item.category_name || String(item.category || '—')}
+                    </td>
+
+                    {/* Purchase Price */}
+                    <td className="px-3 py-2 text-right text-sm tabular-nums">
+                      {formatCurrency(item.purchase_price ?? 0)}
+                    </td>
+
+                    {/* Selling Price */}
+                    <td className="px-3 py-2 text-right text-sm font-semibold tabular-nums">
+                      {formatCurrency(item.selling_price ?? 0)}
+                    </td>
+
+                    {/* Warehouse Quantity */}
+                    <td className="px-3 py-2 text-center">
+                      <span className={cn(
+                        'text-sm font-semibold tabular-nums',
+                        warehouseQty === 0 && 'text-muted-foreground',
+                        warehouseQty > 0 && warehouseQty < 5 && 'text-amber-600',
+                        warehouseQty >= 5 && 'text-foreground'
+                      )}>
+                        {warehouseQty}
+                      </span>
+                    </td>
+
+                    {/* Dynamic Store Columns */}
+                    {shopStores.map((store) => {
+                      const qty = getStoreQuantity(item, store.id);
+                      return (
+                        <td key={store.id} className="px-2 py-2 text-center">
+                          <span className={cn(
+                            'text-sm font-semibold tabular-nums',
+                            qty === 0 && 'text-muted-foreground',
+                            qty > 0 && qty < 5 && 'text-amber-600',
+                            qty >= 5 && 'text-blue-600 dark:text-blue-400'
+                          )}>
+                            {qty}
+                          </span>
+                        </td>
+                      );
+                    })}
+
+                    {/* Status */}
+                    <td className="px-3 py-2 text-center">
+                      {totalQty > 0 ? (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold badge-success whitespace-nowrap">
+                          {t('products.inStock', 'Omborda bor')}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold badge-danger whitespace-nowrap">
+                          {t('products.outOfStock', 'Tugagan')}
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Action: View */}
+                    <td className="px-2 py-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setViewProduct(item);
+                        }}
+                        className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                        title={t('common.view', "Ko'rish")}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-sm text-muted-foreground">
+            {(page - 1) * limit + 1}-{Math.min(page * limit, total)} / {total}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(page - 1)}
+              disabled={page === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm font-medium">
+              {page} / {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(page + 1)}
+              disabled={page === totalPages}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         open={!!deleteId}
@@ -445,7 +668,827 @@ export function ProductListPage() {
         loading={deleting}
       />
 
+      {/* ═══════ Product Detail Modal ═══════ */}
+      <ProductDetailModal
+        product={viewProduct}
+        onClose={() => setViewProduct(null)}
+        onEdit={(id) => navigate(`/${lang}/products/${id}/edit`)}
+        stores={stores}
+        warehouseStore={warehouseStore ?? null}
+        t={t}
+      />
+
+      {/* ═══════ Add Product Modal ═══════ */}
+      <AddProductModal
+        open={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={() => {
+          setIsAddModalOpen(false);
+          void loadProducts();
+        }}
+        categories={categories}
+        refreshCategories={refreshCategories}
+        t={t}
+      />
+
     </div>
+  );
+}
+
+/* ════════════════════════════════════════════════
+   Product Detail Modal Component
+   ════════════════════════════════════════════════ */
+
+interface ProductDetailModalProps {
+  product: Product | null;
+  onClose: () => void;
+  onEdit: (id: string) => void;
+  stores: Store[];
+  warehouseStore: Store | null;
+  t: (key: string, fallback?: string) => string;
+}
+
+function ProductDetailModal({ product, onClose, onEdit, stores, warehouseStore, t }: ProductDetailModalProps) {
+  // Use a callback ref to generate the barcode because Dialog portals mount asynchronously,
+  // meaning the SVG element may not be present in the DOM during the first render/useEffect run.
+  const barcodeRef = useCallback((node: SVGSVGElement | null) => {
+    if (!node || !product) return;
+    const barcodeValue = product.barcode || product.sku || '';
+    if (!barcodeValue) return;
+
+    try {
+      JsBarcode(node, barcodeValue, {
+        format: 'CODE128',
+        width: 2.5,
+        height: 70,
+        displayValue: true,
+        fontSize: 13,
+        margin: 8,
+        textMargin: 6,
+        background: 'transparent',
+      });
+    } catch (err) {
+      console.error('Barcode generation failed:', err);
+    }
+  }, [product]);
+
+  if (!product) return null;
+
+  const imageUrl = (() => {
+    if (Array.isArray(product.images) && product.images.length > 0) {
+      const first = product.images[0];
+      if (typeof first === 'string') return first;
+      if (typeof first === 'object' && first !== null && 'image' in first) return (first as { image: string }).image;
+    }
+    return product.image || null;
+  })();
+
+  const barcodeValue = product.barcode || product.sku || '';
+  const totalQty = product.inventory_by_store
+    ? product.inventory_by_store.reduce((s, i) => s + i.quantity, 0)
+    : (product.total_quantity ?? product.quantity ?? 0);
+
+  const warehouseIds = new Set(stores.filter(s => s.is_warehouse).map(s => String(s.id)));
+
+  const handlePrint = () => {
+    if (!barcodeValue) return;
+
+    const canvas = document.createElement('canvas');
+    try {
+      JsBarcode(canvas, barcodeValue, {
+        format: 'CODE128',
+        width: 2,
+        height: 80,
+        displayValue: true,
+        fontSize: 14,
+        margin: 10,
+      });
+    } catch { return; }
+
+    const dataUrl = canvas.toDataURL('image/png');
+    const htmlContent = `<!DOCTYPE html>
+      <html><head><title>${product.name} - Barcode</title>
+      <style>
+        @page { size: auto; margin: 10mm; }
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        .name { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+        .sku { font-size: 12px; color: #666; margin-bottom: 12px; }
+        img { max-width: 280px; }
+      </style></head>
+      <body>
+        <p class="name">${escapeHtml(product.name)}</p>
+        <p class="sku">${escapeHtml(product.sku || '')}</p>
+        <img src="${dataUrl}" />
+        <script>window.onload=function(){setTimeout(function(){window.print()},500)};<\/script>
+      </body></html>`;
+
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    window.open(URL.createObjectURL(blob), '_blank');
+  };
+
+  return (
+    <Dialog open={!!product} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent size="lg" className="max-h-[90vh] overflow-y-auto p-0">
+        {/* Header */}
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/60 bg-card px-6 py-4">
+          <DialogHeader className="p-0">
+            <DialogTitle className="text-lg">{t('products.productDetails', "Mahsulot ma'lumotlari")}</DialogTitle>
+          </DialogHeader>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => onEdit(product.id)}>
+              <Edit className="h-3.5 w-3.5 mr-1.5" />
+              {t('common.edit', 'Tahrirlash')}
+            </Button>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Top: Image + Basic Info */}
+          <div className="flex gap-6">
+            {/* Product Image */}
+            <div className="shrink-0">
+              {imageUrl ? (
+                <img
+                  src={imageUrl}
+                  alt={product.name}
+                  className="h-32 w-32 rounded-2xl object-cover border border-border/40"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              ) : (
+                <div className="h-32 w-32 rounded-2xl border border-dashed border-border bg-muted/30 flex items-center justify-center">
+                  <Package className="h-10 w-10 text-muted-foreground/30" />
+                </div>
+              )}
+            </div>
+
+            {/* Info Grid */}
+            <div className="flex-1 min-w-0">
+              <h2 className="text-xl font-bold text-foreground mb-1 truncate">{product.name}</h2>
+              {product.name_uz_cyrl && (
+                <p className="text-sm text-muted-foreground mb-3">{product.name_uz_cyrl}</p>
+              )}
+
+              <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-muted-foreground">ID:</span>
+                  <span className="font-semibold">#{product.id}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-muted-foreground">{t('products.category', 'Kategoriya')}:</span>
+                  <span className="font-semibold">{product.category_name || String(product.category || '—')}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Barcode className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-muted-foreground">{t('products.sku', 'Artikul')}:</span>
+                  <code className="font-mono text-xs bg-muted/40 px-1.5 py-0.5 rounded">{product.sku || '—'}</code>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Layers className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-muted-foreground">{t('products.unit', 'Birlik')}:</span>
+                  <span className="font-semibold">{product.unit_measurement_name || '—'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Pricing */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+              <p className="text-xs text-muted-foreground mb-1">{t('products.purchasePrice', 'Kelish narxi')}</p>
+              <p className="text-lg font-bold tabular-nums">{formatCurrency(product.purchase_price ?? 0)}</p>
+            </div>
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+              <p className="text-xs text-muted-foreground mb-1">{t('products.sellingPrice', 'Sotuv narxi')}</p>
+              <p className="text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{formatCurrency(product.selling_price ?? 0)}</p>
+            </div>
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+              <p className="text-xs text-muted-foreground mb-1">{t('products.totalQuantity', 'Jami miqdor')}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-lg font-bold tabular-nums">{totalQty}</p>
+                {totalQty > 0 ? (
+                  <span className="badge-success text-[10px] px-2 py-0.5 rounded-md font-semibold">{t('products.inStock', 'Omborda bor')}</span>
+                ) : (
+                  <span className="badge-danger text-[10px] px-2 py-0.5 rounded-md font-semibold">{t('products.outOfStock', 'Tugagan')}</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Store Inventory Breakdown */}
+          {product.inventory_by_store && product.inventory_by_store.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <Warehouse className="h-4 w-4 text-muted-foreground" />
+                {t('products.storeInventory', "Do'konlar bo'yicha qoldiq")}
+              </h3>
+              <div className="space-y-2">
+                {product.inventory_by_store.map((inv) => {
+                  const isWh = warehouseIds.has(String(inv.store_id));
+                  return (
+                    <div
+                      key={inv.store_id}
+                      className="flex items-center justify-between px-4 py-3 rounded-xl border border-border/50 bg-muted/10"
+                    >
+                      <div className="flex items-center gap-3">
+                        {isWh ? (
+                          <Warehouse className="h-4 w-4 text-blue-500" />
+                        ) : (
+                          <StoreIcon className="h-4 w-4 text-violet-500" />
+                        )}
+                        <span className="text-sm font-medium">{inv.store_name}</span>
+                        {isWh && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 font-medium">Ombor</span>
+                        )}
+                      </div>
+                      <span className={cn(
+                        'text-sm font-bold tabular-nums',
+                        inv.quantity === 0 && 'text-muted-foreground',
+                        inv.quantity > 0 && inv.quantity < 5 && 'text-amber-600',
+                        inv.quantity >= 5 && 'text-foreground'
+                      )}>
+                        {inv.quantity} {product.unit_measurement_name || t('products.pcs', 'dona')}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Description */}
+          {product.description && (
+            <div>
+              <h3 className="text-sm font-semibold mb-2">{t('products.description', 'Tavsif')}</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">{product.description}</p>
+            </div>
+          )}
+
+          {/* Barcode / Shtrix code */}
+          {barcodeValue && (
+            <div className="rounded-2xl border border-border/60 bg-muted/10 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <Barcode className="h-4 w-4 text-muted-foreground" />
+                  {t('products.barcode', 'Shtrix kod')}
+                </h3>
+                <Button size="sm" variant="outline" onClick={handlePrint}>
+                  <Printer className="h-3.5 w-3.5 mr-1.5" />
+                  {t('common.print', 'Chop etish')}
+                </Button>
+              </div>
+              <div className="flex justify-center bg-white rounded-xl p-4">
+                <svg ref={barcodeRef} />
+              </div>
+              <p className="text-center text-xs text-muted-foreground mt-2 font-mono">{barcodeValue}</p>
+            </div>
+          )}
+
+          {/* Meta info */}
+          <div className="flex items-center gap-4 text-[11px] text-muted-foreground pt-2 border-t border-border/40">
+            <span className="flex items-center gap-1">
+              <Calendar className="h-3 w-3" />
+              {t('common.createdAt', 'Yaratilgan')}: {product.created_at ? new Date(product.created_at).toLocaleDateString() : '—'}
+            </span>
+            <span className="flex items-center gap-1">
+              <Calendar className="h-3 w-3" />
+              {t('common.updatedAt', 'Yangilangan')}: {product.updated_at ? new Date(product.updated_at).toLocaleDateString() : '—'}
+            </span>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ════════════════════════════════════════════════
+   Add Product Modal Component
+   ════════════════════════════════════════════════ */
+
+interface AddProductModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  categories: { id: string; name: string }[];
+  refreshCategories: () => Promise<void>;
+  t: (key: string, fallback?: string) => string;
+}
+
+const addProductInitialForm: ProductFormData = {
+  name: '',
+  name_uz_cyrl: '',
+  description: '',
+  description_uz_cyrl: '',
+  category: '',
+  unit_measurement: '',
+  location: '',
+  purchase_price: '',
+  selling_price: '',
+  images: [],
+  is_active: true,
+};
+
+function AddProductModal({ open, onClose, onSuccess, categories, refreshCategories, t }: AddProductModalProps) {
+  const [formData, setFormData] = useState<ProductFormData>(addProductInitialForm);
+  const [saving, setSaving] = useState(false);
+  const [units, setUnits] = useState<ProductUnit[]>([]);
+  const [locations, setLocations] = useState<ProductLocation[]>([]);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+
+  // Sub-dialog states: Category
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [savingCategory, setSavingCategory] = useState(false);
+  const [categoryFormData, setCategoryFormData] = useState<CategoryFormData>({
+    name_uz: '',
+    name_uz_cyrl: '',
+    description_uz: '',
+    description_uz_cyrl: '',
+    image: '',
+  });
+
+  // Sub-dialog states: Unit
+  const [isUnitDialogOpen, setIsUnitDialogOpen] = useState(false);
+  const [savingUnit, setSavingUnit] = useState(false);
+  const [unitFormData, setUnitFormData] = useState<ProductUnitFormData>({
+    measurement_uz: '',
+    measurement_uz_cyrl: '',
+  });
+
+  // Load options when modal opens
+  useEffect(() => {
+    if (!open) return;
+    const loadOptions = async () => {
+      try {
+        const [unitList, locationList] = await Promise.all([
+          productUnitService.getAll(),
+          productLocationService.getAll(),
+        ]);
+        setUnits(unitList);
+        setLocations(locationList?.data || []);
+      } catch (error) {
+        console.error('Failed to load product form options:', error);
+      }
+    };
+    void loadOptions();
+  }, [open]);
+
+  // Reset form when modal opens
+  useEffect(() => {
+    if (open) {
+      setFormData(addProductInitialForm);
+      setImageFiles([]);
+      setImagePreviews([]);
+    }
+  }, [open]);
+
+  // Clean up previews on unmount
+  useEffect(() => {
+    return () => {
+      imagePreviews.forEach((p) => {
+        if (p.startsWith('blob:')) URL.revokeObjectURL(p);
+      });
+    };
+  }, [imagePreviews]);
+
+  const handleChange = (field: keyof ProductFormData, value: string | boolean) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleNameChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      name: value,
+      name_uz_cyrl: latinToCyrillic(value),
+    }));
+  };
+
+  const handleDescriptionChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      description: value,
+      description_uz_cyrl: latinToCyrillic(value),
+    }));
+  };
+
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    imagePreviews.forEach((p) => {
+      if (p.startsWith('blob:')) URL.revokeObjectURL(p);
+    });
+    const previews = files.map((file) => URL.createObjectURL(file));
+    setImageFiles(files);
+    setImagePreviews(previews);
+  };
+
+  const handleRemoveImage = (index: number) => {
+    const preview = imagePreviews[index];
+    if (preview?.startsWith('blob:')) URL.revokeObjectURL(preview);
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    try {
+      setSaving(true);
+      const payload: ProductFormData = {
+        ...formData,
+        images: imageFiles,
+      };
+      await productService.create(payload);
+      toast.success(t('products.productAdded'));
+      onSuccess();
+    } catch (error) {
+      console.error('Failed to create product:', error);
+      toast.error(t('errors.generic'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Category sub-dialog handlers
+  const handleOpenCategoryDialog = () => {
+    setIsCategoryDialogOpen(true);
+    setCategoryFormData({ name_uz: '', name_uz_cyrl: '', description_uz: '', description_uz_cyrl: '', image: '' });
+  };
+
+  const handleCategorySubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      setSavingCategory(true);
+      const created = await categoryService.create(categoryFormData);
+      toast.success(t('categories.categoryAdded'));
+      await refreshCategories();
+      handleChange('category', created.id);
+      setIsCategoryDialogOpen(false);
+    } catch (error) {
+      console.error('Failed to save category:', error);
+      toast.error(t('errors.generic'));
+    } finally {
+      setSavingCategory(false);
+    }
+  };
+
+  // Unit sub-dialog handlers
+  const handleOpenUnitDialog = () => {
+    setIsUnitDialogOpen(true);
+    setUnitFormData({ measurement_uz: '', measurement_uz_cyrl: '' });
+  };
+
+  const handleUnitSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      setSavingUnit(true);
+      const created = await productUnitService.create(unitFormData);
+      toast.success(t('products.unitAdded'));
+      const unitList = await productUnitService.getAll();
+      setUnits(unitList);
+      handleChange('unit_measurement', created.id);
+      setIsUnitDialogOpen(false);
+    } catch (error) {
+      console.error('Failed to save unit:', error);
+      toast.error(t('errors.generic'));
+    } finally {
+      setSavingUnit(false);
+    }
+  };
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <DialogContent size="lg" className="max-h-[90vh] overflow-y-auto p-0">
+          {/* Header */}
+          <div className="sticky top-0 z-10 border-b border-border/60 bg-card px-6 py-5">
+            <DialogHeader className="p-0">
+              <DialogTitle className="text-lg flex items-center gap-2">
+                <Package className="h-5 w-5 text-primary" />
+                {t('products.addProduct')}
+              </DialogTitle>
+            </DialogHeader>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            <div className="px-6 py-5 space-y-5">
+              {/* ── Row 1: Name ── */}
+              <div className="space-y-2">
+                <Label htmlFor="add-name" className="flex items-center gap-1.5">
+                  <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+                  {t('products.productName')} <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="add-name"
+                  placeholder="Tovar nomini kiriting..."
+                  value={formData.name}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleNameChange(e.target.value)}
+                  required
+                />
+              </div>
+
+              {/* ── Row 2: Category + Unit ── */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Category */}
+                <div className="space-y-2">
+                  <Label htmlFor="add-category" className="flex items-center gap-1.5">
+                    <Layers className="h-3.5 w-3.5 text-muted-foreground" />
+                    {t('products.category')}
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <Select
+                        value={formData.category || ''}
+                        onValueChange={(value) => handleChange('category', value)}
+                      >
+                        <SelectTrigger id="add-category">
+                          <SelectValue placeholder={t('products.category')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button type="button" variant="outline" size="sm" onClick={handleOpenCategoryDialog} className="shrink-0">
+                      <Plus className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Unit of Measurement */}
+                <div className="space-y-2">
+                  <Label htmlFor="add-unit" className="flex items-center gap-1.5">
+                    <Ruler className="h-3.5 w-3.5 text-muted-foreground" />
+                    {t('products.unitMeasurement')}
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <Select
+                        value={formData.unit_measurement || ''}
+                        onValueChange={(value) => handleChange('unit_measurement', value)}
+                      >
+                        <SelectTrigger id="add-unit">
+                          <SelectValue placeholder={t('products.selectUnitMeasurement')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {units.map((unit) => (
+                            <SelectItem key={unit.id} value={unit.id}>{unit.measurement_uz}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button type="button" variant="outline" size="sm" onClick={handleOpenUnitDialog} className="shrink-0">
+                      <Plus className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Row 3: Purchase Price + Selling Price ── */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="add-purchase-price" className="flex items-center gap-1.5">
+                    <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+                    {t('products.purchasePrice', 'Kelish narxi')}
+                  </Label>
+                  <Input
+                    id="add-purchase-price"
+                    type="number"
+                    min="0"
+                    step="any"
+                    placeholder="0"
+                    value={formData.purchase_price ?? ''}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('purchase_price', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="add-selling-price" className="flex items-center gap-1.5">
+                    <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+                    {t('products.sellingPrice', 'Sotuv narxi')}
+                  </Label>
+                  <Input
+                    id="add-selling-price"
+                    type="number"
+                    min="0"
+                    step="any"
+                    placeholder="0"
+                    value={formData.selling_price ?? ''}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('selling_price', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* ── Row 4: Description ── */}
+              <div className="space-y-2">
+                <Label htmlFor="add-description" className="flex items-center gap-1.5">
+                  <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+                  {t('common.description')}
+                </Label>
+                <textarea
+                  id="add-description"
+                  rows={3}
+                  placeholder="Tovar tavsifini kiriting..."
+                  value={formData.description}
+                  onChange={(e) => handleDescriptionChange(e.target.value)}
+                  className="flex w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm ring-offset-background placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-primary/50 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 resize-none"
+                />
+              </div>
+
+              {/* ── Row 5: Location ── */}
+              <div className="space-y-2">
+                <Label htmlFor="add-location" className="flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                  {t('products.productLocation', 'Tovar joylashuvi')}
+                </Label>
+                <Select
+                  value={formData.location || ''}
+                  onValueChange={(value) => handleChange('location', value)}
+                >
+                  <SelectTrigger id="add-location">
+                    <SelectValue placeholder={t('products.selectLocation')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations.map((loc) => (
+                      <SelectItem key={loc.id} value={loc.id}>{loc.location_uz}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* ── Row 6: Images ── */}
+              <div className="space-y-2">
+                <Label htmlFor="add-image" className="flex items-center gap-1.5">
+                  <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                  {t('products.image', 'Rasm')}
+                </Label>
+                <div className="relative">
+                  <label
+                    htmlFor="add-image"
+                    className={cn(
+                      'flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/60 bg-muted/20 px-4 py-6 cursor-pointer transition-all duration-200 hover:border-primary/40 hover:bg-primary/5',
+                      imagePreviews.length > 0 && 'py-3'
+                    )}
+                  >
+                    <Upload className="h-6 w-6 text-muted-foreground/50" />
+                    <span className="text-sm text-muted-foreground">
+                      {t('products.image', 'Rasm yuklash uchun bosing')}
+                    </span>
+                    <input
+                      id="add-image"
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageChange}
+                      className="sr-only"
+                    />
+                  </label>
+                </div>
+
+                {imagePreviews.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {imagePreviews.map((src, idx) => (
+                      <div key={idx} className="relative group">
+                        <img
+                          src={src}
+                          alt={`Preview ${idx + 1}`}
+                          className="h-20 w-20 rounded-lg object-cover border border-border/40"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage(idx)}
+                          className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+                          title={t('common.delete')}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="sticky bottom-0 z-10 border-t border-border/60 bg-card px-6 py-4 flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+                {t('common.cancel')}
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {t('common.loading')}
+                  </>
+                ) : (
+                  <>
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t('products.addProduct')}
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Category Sub-Dialog ── */}
+      <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('categories.addCategory')}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCategorySubmit}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="modal_cat_name">{t('categories.categoryName')}</Label>
+                <Input
+                  id="modal_cat_name"
+                  value={categoryFormData.name_uz}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    setCategoryFormData((prev) => ({
+                      ...prev,
+                      name_uz: e.target.value,
+                      name_uz_cyrl: latinToCyrillic(e.target.value),
+                    }))
+                  }
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="modal_cat_name_cyrl">{t('categories.categoryName')} (Cyrillic)</Label>
+                <Input
+                  id="modal_cat_name_cyrl"
+                  value={categoryFormData.name_uz_cyrl}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    setCategoryFormData((prev) => ({ ...prev, name_uz_cyrl: e.target.value }))
+                  }
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsCategoryDialogOpen(false)}>
+                {t('common.cancel')}
+              </Button>
+              <Button type="submit" disabled={savingCategory}>
+                {savingCategory ? t('common.loading') : t('common.save')}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Unit Sub-Dialog ── */}
+      <Dialog open={isUnitDialogOpen} onOpenChange={setIsUnitDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('products.addUnit')}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUnitSubmit}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="modal_unit_name">{t('products.unitName')}</Label>
+                <Input
+                  id="modal_unit_name"
+                  value={unitFormData.measurement_uz}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    setUnitFormData((prev) => ({
+                      ...prev,
+                      measurement_uz: e.target.value,
+                      measurement_uz_cyrl: latinToCyrillic(e.target.value),
+                    }))
+                  }
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="modal_unit_name_cyrl">{t('products.unitName')} (Cyrillic)</Label>
+                <Input
+                  id="modal_unit_name_cyrl"
+                  value={unitFormData.measurement_uz_cyrl}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    setUnitFormData((prev) => ({ ...prev, measurement_uz_cyrl: e.target.value }))
+                  }
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsUnitDialogOpen(false)}>
+                {t('common.cancel')}
+              </Button>
+              <Button type="submit" disabled={savingUnit}>
+                {savingUnit ? t('common.loading') : t('common.save')}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

@@ -226,7 +226,7 @@ const item = (raw ?? {}) as Partial<Product> & {
     store_id: item.store_id !== undefined ? String(item.store_id) : (item.store?.id !== undefined ? String(item.store.id) : undefined),
     store_name: item.store_name ?? item.store?.name ?? item.store?.name_uz ?? item.store?.name_uz_cyrl,
     sku: item.sku ?? '',
-    barcode: item.barcode ?? item.barcode_value ?? item.sku,
+    barcode: item.barcode ?? item.barcode_value ?? (batches && Array.isArray(batches) && batches.length > 0 ? (batches.find(b => b.barcode || b.shtrix_code)?.barcode || batches[0].barcode) : '') ?? item.sku,
     barcode_img: resolveImageUrl(item.barcode_img),
     shtrix_code: item.shtrix_code ?? null,
     image,
@@ -294,6 +294,9 @@ const mapProductPayload = (
     const payload = new FormData();
     if (categoryId) payload.append('category', categoryId);
     if (unitMeasurementId) payload.append('unit_measurement', unitMeasurementId);
+    if (typeof data.location === 'string' && data.location.trim() !== '') {
+      payload.append('location', data.location.trim());
+    }
     if (typeof data.name === 'string') {
       payload.append('name_uz', data.name);
       const cyr = typeof data.name_uz_cyrl === 'string' ? data.name_uz_cyrl : latinToCyrillic(data.name);
@@ -305,6 +308,12 @@ const mapProductPayload = (
         ? data.description_uz_cyrl
         : latinToCyrillic(data.description);
       payload.append('description_uz_cyrl', cyr);
+    }
+    if (data.purchase_price !== undefined && data.purchase_price !== '') {
+      payload.append('purchase_price', String(data.purchase_price));
+    }
+    if (data.selling_price !== undefined && data.selling_price !== '') {
+      payload.append('selling_price', String(data.selling_price));
     }
     imageFiles.forEach((file) => {
       payload.append('images', file);
@@ -318,6 +327,9 @@ const mapProductPayload = (
   const payload: Record<string, unknown> = {};
   if (categoryId) payload.category = categoryId;
   if (unitMeasurementId) payload.unit_measurement = unitMeasurementId;
+  if (typeof data.location === 'string' && data.location.trim() !== '') {
+    payload.location = data.location.trim();
+  }
   if (typeof data.name === 'string') {
     if (mode === 'update') {
       payload.name = data.name;
@@ -335,6 +347,12 @@ const mapProductPayload = (
         ? data.description_uz_cyrl
         : latinToCyrillic(data.description);
     }
+  }
+  if (data.purchase_price !== undefined && data.purchase_price !== '') {
+    payload.purchase_price = String(data.purchase_price);
+  }
+  if (data.selling_price !== undefined && data.selling_price !== '') {
+    payload.selling_price = String(data.selling_price);
   }
   if (mode === 'create' && stringImages.length > 0) {
     payload.images = stringImages;

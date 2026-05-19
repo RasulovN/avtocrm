@@ -403,7 +403,7 @@ export function StoreListPage() {
             </span>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="rounded-lg bg-muted/40 p-3">
               <p className="text-xs text-muted-foreground">{t('stores.phone')}</p>
               <p className="mt-1 font-medium">{currentStore.phone_number || currentStore.phone || '-'}</p>
@@ -411,14 +411,6 @@ export function StoreListPage() {
             <div className="rounded-lg bg-muted/40 p-3">
               <p className="text-xs text-muted-foreground">ID</p>
               <p className="mt-1 font-medium">#{currentStore.id}</p>
-            </div>
-            <div className="rounded-lg bg-muted/40 p-3">
-              <p className="text-xs text-muted-foreground">{t('stores.latitude')}</p>
-              <p className="mt-1 font-medium">{currentStore.latitude || '-'}</p>
-            </div>
-            <div className="rounded-lg bg-muted/40 p-3">
-              <p className="text-xs text-muted-foreground">{t('stores.longitude')}</p>
-              <p className="mt-1 font-medium">{currentStore.longitude || '-'}</p>
             </div>
           </div>
 

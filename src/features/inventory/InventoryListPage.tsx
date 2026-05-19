@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Label } from '../../components/ui/Label';
 import { useInventoryStore } from '../../store/inventory.store';
 import { storeService } from '../../services/storeService';
+import { useAuthStore } from '../../app/store';
 import type { Store } from '../../types';
 import { formatDate } from '../../utils';
 
@@ -26,20 +27,44 @@ export function InventorySessionsListPage({
   const lang = params.lang || 'uz';
   const navigate = useNavigate();
 
+  const { user } = useAuthStore();
+  const isAdmin = Boolean(user?.is_superuser);
+  const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores.find(s => s.type === 'b')?.id || user.stores[0].id) : '');
+
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [selectedStore, setSelectedStore] = useState('');
+  const [selectedStore, setSelectedStore] = useState(isAdmin ? '' : userStoreId);
   const [stores, setStores] = useState<Store[]>([]);
 
   const { sessions, loading, fetchSessions, startSession } = useInventoryStore();
 
   const loadStores = useCallback(async () => {
+    if (!isAdmin) {
+      if (user?.stores && user.stores.length > 0) {
+        setStores(user.stores.map(s => ({
+          id: String(s.id),
+          name: s.name,
+          type: s.type,
+          is_active: s.is_active,
+        } as Store)));
+      } else if (userStoreId) {
+        try {
+          const res = await storeService.getAll();
+          const allStores = Array.isArray(res.data) ? res.data : [];
+          setStores(allStores.filter(store => String(store.id) === String(userStoreId)));
+        } catch {
+          setStores([]);
+        }
+      }
+      return;
+    }
+
     try {
       const res = await storeService.getAll();
       setStores(Array.isArray(res.data) ? res.data : []);
     } catch {
       console.error('Failed to load stores:');
     }
-  }, []);
+  }, [isAdmin, userStoreId, user?.stores]);
 
   useEffect(() => {
     loadStores();
@@ -64,7 +89,7 @@ export function InventorySessionsListPage({
     try {
       const sessionId = await startSession(parseInt(selectedStore));
       setShowCreateDialog(false);
-      setSelectedStore('');
+      setSelectedStore(isAdmin ? '' : userStoreId);
       toast.success(t('inventory.sessionCreated'));
       navigate(`/${lang}/inventory-session/${sessionId}`);
     } catch {
@@ -265,7 +290,7 @@ export function InventorySessionsListPage({
         </div>
       )}
 
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog} clas>
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('inventory.startNewSession')}</DialogTitle>
@@ -276,7 +301,7 @@ export function InventorySessionsListPage({
           <div className="space-y-4 mb-5">
             <div className="space-y-2">
               <Label>{t('stores.title')}</Label>
-              <Select value={selectedStore} onValueChange={setSelectedStore}>
+              <Select value={selectedStore} onValueChange={setSelectedStore} disabled={!isAdmin}>
                 <SelectTrigger>
                   <SelectValue placeholder={t('inventory.selectStore')} />
                 </SelectTrigger>
