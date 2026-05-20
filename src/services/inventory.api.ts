@@ -85,10 +85,13 @@ const INVENTORY_ENDPOINT = '/inventory';
 export const inventoryApi = {
   /** GET /api/inventory/list/ — all sessions */
   getSessions: async (): Promise<InventorySession[]> => {
-    const response = await apiClient.get<InventorySession[]>(
+    const response = await apiClient.get<any>(
       `${INVENTORY_ENDPOINT}/list/`
     );
-    return response.data;
+    if (response.data && typeof response.data === 'object' && 'results' in response.data && Array.isArray(response.data.results)) {
+      return response.data.results;
+    }
+    return Array.isArray(response.data) ? response.data : [];
   },
 
   /** POST /api/inventory/inventory/start/ — start new session */
