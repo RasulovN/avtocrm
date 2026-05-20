@@ -603,7 +603,7 @@ export function DashboardPage() {
               <div className="flex h-[260px] items-center justify-center rounded-xl border-2 border-dashed bg-muted/20">
                 <div className="text-center">
                   <TrendingUp className="mx-auto h-10 w-10 text-muted-foreground opacity-30" />
-                  <p className="mt-2 text-sm text-muted-foreground font-medium">{t('common.loading')}</p>
+                  <p className="mt-2 text-sm text-muted-foreground font-medium">{loading ? t('common.loading') : t('common.noData')}</p>
                 </div>
               </div>
             )}

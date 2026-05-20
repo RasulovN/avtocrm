@@ -234,27 +234,19 @@ export const reportService = {
     try {
       const response = await apiClient.get<unknown>('/reports/dashboard/', {
         params: buildReportQueryParams(params),
-        expectedErrorStatuses: [404],
+        skipGlobalErrorHandler: true,
       });
       return normalizeDashboardReportData(response.data);
     } catch (error: unknown) {
-      const axiosError = error as { response?: { status?: number } };
-      if (axiosError.response?.status === 404) {
-        try {
-          const fallback = await apiClient.get<unknown>('/reports/', {
-            params: buildReportQueryParams(params),
-            expectedErrorStatuses: [404],
-          });
-          return normalizeDashboardReportData(fallback.data);
-        } catch (fallbackError: unknown) {
-          const fallbackAxiosError = fallbackError as { response?: { status?: number } };
-          if (fallbackAxiosError.response?.status === 404) {
-            return null;
-          }
-          throw fallbackError;
-        }
+      try {
+        const fallback = await apiClient.get<unknown>('/reports/', {
+          params: buildReportQueryParams(params),
+          skipGlobalErrorHandler: true,
+        });
+        return normalizeDashboardReportData(fallback.data);
+      } catch {
+        return null;
       }
-      throw error;
     }
   },
 
@@ -263,19 +255,19 @@ export const reportService = {
     try {
       const response = await apiClient.get<unknown>('/reports/top-products/', {
         params: query,
-        expectedErrorStatuses: [404],
+        skipGlobalErrorHandler: true,
       });
       return normalizeDashboardTopProducts(response.data);
     } catch (error: unknown) {
-      const axiosError = error as { response?: { status?: number } };
-      if (axiosError.response?.status !== 404) {
-        throw error;
+      try {
+        const fallback = await apiClient.get<unknown>('/top-products/', {
+          params: query,
+          skipGlobalErrorHandler: true,
+        });
+        return normalizeDashboardTopProducts(fallback.data);
+      } catch {
+        return [];
       }
-
-      const fallback = await apiClient.get<unknown>('/top-products/', {
-        params: query,
-      });
-      return normalizeDashboardTopProducts(fallback.data);
     }
   },
 
@@ -284,15 +276,11 @@ export const reportService = {
     try {
       const response = await apiClient.get<unknown>('/reports/', {
         params: requestParams,
-        expectedErrorStatuses: [403, 404],
+        skipGlobalErrorHandler: true,
       });
       return normalizeDetailedReportsResponse(response.data);
-    } catch (error: unknown) {
-      const axiosError = error as { response?: { status?: number } };
-      if (axiosError.response?.status === 403 || axiosError.response?.status === 404) {
-        return normalizeDetailedReportsResponse(null);
-      }
-      throw error;
+    } catch {
+      return normalizeDetailedReportsResponse(null);
     }
   },
 };
