@@ -222,7 +222,7 @@ export function DataTable<T extends { id: string }>({
         </div>
       )}
 
-      <div className="w-full overflow-x-auto rounded-lg border bg-card">
+      <div className="w-full overflow-x-auto rounded-2xl border border-border/60 bg-card">
         {isMobile ? (
           <div className="divide-y divide-border">
             {loading ? (
@@ -283,7 +283,7 @@ export function DataTable<T extends { id: string }>({
         ) : (
           <div className="min-w-160 sm:min-w-180" style={{ minWidth }}>
             <Table>
-              <TableHeader className="sticky top-0 bg-muted/50 backdrop-blur-sm z-10">
+              <TableHeader className="sticky top-0 bg-muted/30 backdrop-blur-sm z-10">
                 <TableRow className="hover:bg-transparent">
                   {selectableRows && (
                     <TableHead className="w-12">
@@ -377,7 +377,7 @@ export function DataTable<T extends { id: string }>({
       </div>
 
       {showFooter && stats && !isMobile && (
-        <div className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-3 sm:flex-row sm:flex-wrap sm:gap-4">
+        <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-muted/20 p-3 sm:flex-row sm:flex-wrap sm:gap-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">{t('products.productTotalCount')}</span>
             <span className="font-semibold">{stats.totalQuantity.toLocaleString()}</span>
@@ -447,7 +447,7 @@ export function DataTable<T extends { id: string }>({
                 {selectedInventory.map((inv, idx) => (
                   <div 
                     key={idx} 
-                    className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+                    className="flex items-center justify-between p-3 bg-muted/20 rounded-xl"
                   >
                     <div className="flex items-center gap-2">
                       <Building2 className="h-4 w-4 text-primary" />

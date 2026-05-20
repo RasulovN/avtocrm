@@ -18,7 +18,7 @@ export default function InventoryPage() {
   const lang = params.lang || 'uz';
   const { user } = useAuthStore();
   const isAdmin = Boolean(user?.is_superuser);
-  const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores[0].id) : '');
+  const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores.find(s => s.type === 'b')?.id || user.stores[0].id) : '');
 
   const [stores, setStores] = useState<Store[]>([]);
   const [storesLoading, setStoresLoading] = useState(false);
@@ -27,17 +27,40 @@ export default function InventoryPage() {
   const { startSession } = useInventoryStore();
 
   const loadStores = useCallback(async () => {
+    if (!isAdmin) {
+      if (user?.stores && user.stores.length > 0) {
+        setStores(user.stores.map(s => ({
+          id: String(s.id),
+          name: s.name,
+          type: s.type,
+          is_active: s.is_active,
+        } as Store)));
+      } else if (userStoreId) {
+        try {
+          setStoresLoading(true);
+          const response = await storeService.getAll({ limit: 300 });
+          const allStores = Array.isArray(response.data) ? response.data : [];
+          setStores(allStores.filter((store) => String(store.id) === String(userStoreId)));
+        } catch {
+          setStores([]);
+        } finally {
+          setStoresLoading(false);
+        }
+      }
+      return;
+    }
+
     try {
       setStoresLoading(true);
       const response = await storeService.getAll({ limit: 300 });
       const allStores = Array.isArray(response.data) ? response.data : [];
-      setStores(isAdmin ? allStores : allStores.filter((store) => String(store.id) === String(userStoreId)));
+      setStores(allStores);
     } catch {
       setStores([]);
     } finally {
       setStoresLoading(false);
     }
-  }, [isAdmin, userStoreId]);
+  }, [isAdmin, userStoreId, user?.stores]);
 
   useEffect(() => {
     void loadStores();
@@ -76,7 +99,7 @@ export default function InventoryPage() {
           <p className="text-sm text-muted-foreground">
             {t('inventory.startNewSessionDescription')}
           </p>
-          <Select value={selectedStore} onValueChange={setSelectedStore} disabled={storesLoading}>
+          <Select value={selectedStore} onValueChange={setSelectedStore} disabled={!isAdmin || storesLoading}>
             <SelectTrigger>
               <SelectValue placeholder={t('inventory.selectStore')} />
             </SelectTrigger>

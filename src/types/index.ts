@@ -150,6 +150,8 @@ export interface ProductFormData {
   supplier_id?: string;
   store_id?: string;
   image?: string | File | null;
+  purchase_price?: number | string;
+  selling_price?: number | string;
 }
 
 // Category Types

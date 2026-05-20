@@ -41,6 +41,8 @@ export function SettingsPage() {
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSending, setForgotSending] = useState(false);
   
+  const isAdmin = Boolean(user?.is_superuser);
+
   const [profileData, setProfileData] = useState<ProfileFormData>({
     full_name: user?.full_name || 'Admin',
     phone_number: user?.phone_number || '',
@@ -103,6 +105,7 @@ export function SettingsPage() {
 
   const handleProfileSubmit = async (e: ChangeEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!isAdmin) return;
     setProfileSaving(true);
     setTimeout(() => {
       setProfileSaving(false);
@@ -149,7 +152,7 @@ export function SettingsPage() {
               {t('auth.profile')}
             </CardTitle>
             <CardDescription>
-              {t('auth.profileDescription')}
+              {isAdmin ? t('auth.profileDescription') : t('common.viewOnly', 'Faqat ko\'rish rejimi')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -163,6 +166,7 @@ export function SettingsPage() {
                     value={profileData.full_name}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => handleProfileChange('full_name', e.target.value)}
                     className="pl-10"
+                    disabled={!isAdmin}
                   />
                 </div>
               </div>
@@ -175,13 +179,16 @@ export function SettingsPage() {
                     value={profileData.phone_number}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => handleProfileChange('phone_number', e.target.value)}
                     className="pl-10"
+                    disabled={!isAdmin}
                   />
                 </div>
               </div>
-              <Button type="submit" disabled={profileSaving}>
-                <Save className="h-4 w-4 mr-2" />
-                {profileSaving ? t('common.loading') : t('common.save')}
-              </Button>
+              {isAdmin && (
+                <Button type="submit" disabled={profileSaving}>
+                  <Save className="h-4 w-4 mr-2" />
+                  {profileSaving ? t('common.loading') : t('common.save')}
+                </Button>
+              )}
             </form>
           </CardContent>
         </Card>

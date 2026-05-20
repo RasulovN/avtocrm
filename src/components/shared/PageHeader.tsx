@@ -16,12 +16,12 @@ export function PageHeader({
   actions,
 }: PageHeaderProps) {
   return (
-    <div className="flex flex-col space-y-4 pb-6">
+    <div className="flex flex-col space-y-3 pb-6">
       {breadcrumbs && breadcrumbs.length > 0 && (
         <nav className="flex flex-wrap text-sm text-muted-foreground">
           {breadcrumbs.map((item, index) => (
             <span key={index} className="flex items-center">
-              {index > 0 && <ChevronRight className="mx-2 h-4 w-4" />}
+              {index > 0 && <ChevronRight className="mx-1.5 h-3.5 w-3.5" />}
               {item.href ? (
                 <Link
                   to={item.href}
@@ -30,7 +30,7 @@ export function PageHeader({
                   {item.label}
                 </Link>
               ) : (
-                <span className="text-foreground">{item.label}</span>
+                <span className="text-foreground font-medium">{item.label}</span>
               )}
             </span>
           ))}
@@ -38,9 +38,9 @@ export function PageHeader({
       )}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{title}</h1>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl text-foreground">{title}</h1>
           {description && (
-            <p className="mt-1 text-sm text-muted-foreground sm:text-base">{description}</p>
+            <p className="mt-1.5 text-sm text-muted-foreground sm:text-base">{description}</p>
           )}
         </div>
         {actions && <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end">{actions}</div>}

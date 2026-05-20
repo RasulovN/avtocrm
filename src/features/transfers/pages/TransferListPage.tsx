@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { Plus, ArrowRight, Eye, Search, Check, X } from 'lucide-react';
+import { Plus, ArrowRight, Eye, Search, Check, X, Package, CheckCircle2 } from 'lucide-react';
 import { PageHeader } from '../../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../../components/shared/DataTable';
 import { Button } from '../../../components/ui/Button';
@@ -13,12 +13,16 @@ import { storeService } from '../../../services/storeService';
 import { formatDate } from '../../../utils';
 import type { Transfer, Store } from '../../../types';
 import { useProducts } from '../../../context/ProductContext';
+import { useAuthStore } from '../../../app/store';
 
 export function TransferListPage() {
   const { t } = useTranslation();
   const params = useParams();
   const lang = params.lang || 'uz';
   const { products } = useProducts();
+  const { user } = useAuthStore();
+  const isAdmin = Boolean(user?.is_superuser);
+  const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores.find(s => s.type === 'b')?.id || user.stores[0].id) : '');
   const [stores, setStores] = useState<Store[]>([]);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -175,42 +179,69 @@ export function TransferListPage() {
 
   const columns: Column<Transfer>[] = [
     {
-      key: 'from_store',
-      header: t('transfers.fromStore'),
-      render: (item) => fromStoreLabel(item),
-      className: 'font-medium',
-    },
-    {
-      key: 'to_store',
-      header: t('transfers.toStore'),
-      render: (item) => toStoreLabel(item),
-    },
-    {
-      key: 'quantity',
-      header: t('products.quantity'),
-      render: (item) => getQuantityDisplay(item),
-    },
-    {
-      key: 'created_at',
-      header: t('common.date'),
-      render: (item) => formatDate(item.created_at),
-    },
-    {
-      key: 'status',
-      header: t('common.status'),
+      key: 'id',
+      header: 'Hujjat №',
       render: (item) => (
-        <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadge(item.status)}`}>
-          {getStatusLabel(item.status)}
+        <span className="font-medium text-foreground">
+          №{item.id}
         </span>
       ),
     },
     {
+      key: 'created_at',
+      header: 'Sana',
+      render: (item) => (
+        <span className="text-muted-foreground">
+          {new Date(item.created_at).toLocaleDateString('en-US')}
+        </span>
+      ),
+    },
+    {
+      key: 'route',
+      header: "Yo'nalish",
+      render: (item) => (
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <span>{fromStoreLabel(item)}</span>
+          <ArrowRight className="h-4 w-4 text-muted-foreground/60 shrink-0" />
+          <span className="font-medium text-foreground">{toStoreLabel(item)}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'items_count',
+      header: 'Tovarlar',
+      render: (item) => (
+        <span className="text-muted-foreground">
+          {item.items?.length || 0}
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Holat',
+      render: (item) => {
+        const isApproved = item.status === 'a';
+        return (
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold ${
+            isApproved 
+              ? 'bg-[#00B050] text-white' 
+              : item.status === 'r' 
+                ? 'bg-red-500 text-white' 
+                : 'bg-yellow-500 text-white'
+          }`}>
+            {isApproved && <CheckCircle2 className="h-3.5 w-3.5" />}
+            {getStatusLabel(item.status)}
+          </span>
+        );
+      },
+    },
+    {
       key: 'actions',
-      header: t('common.actions'),
+      header: '',
       className: 'text-right',
       render: (item) => (
         <div className="flex items-center justify-end gap-1">
-          {item.status === 'p' && (
+          {item.status === 'p' && (isAdmin || String(item.to_store) === String(userStoreId)) && (
             <>
               <Button
                 variant="ghost"
@@ -220,7 +251,7 @@ export function TransferListPage() {
                   handleApprove(item.id);
                 }}
                 title={t('transfers.accepted')}
-                className="text-green-600 hover:text-green-700 hover:bg-green-100 h-8 w-8"
+                className="text-green-600 hover:text-green-700 hover:bg-green-100/10 h-8 w-8"
               >
                 <Check className="h-4 w-4" />
               </Button>
@@ -232,7 +263,7 @@ export function TransferListPage() {
                   handleReject(item.id);
                 }}
                 title={t('transfers.rejected')}
-                className="text-red-600 hover:text-red-700 hover:bg-red-100 h-8 w-8"
+                className="text-red-600 hover:text-red-700 hover:bg-red-100/10 h-8 w-8"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -245,8 +276,9 @@ export function TransferListPage() {
               e.stopPropagation();
               handleShowDetails(item);
             }}
+            className="text-muted-foreground hover:text-foreground"
           >
-            <Eye className="h-4 w-4" />
+            <Package className="h-5 w-5" />
           </Button>
         </div>
       ),
@@ -326,7 +358,7 @@ export function TransferListPage() {
                       <>
                         <Button
                           variant="outline"
-                          className="flex-1 text-green-600 border-green-600 hover:bg-green-50"
+                          className="flex-1 text-green-600 border-green-600 dark:hover:bg-green-950/20 hover:bg-green-50"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleApprove(item.id);
@@ -337,7 +369,7 @@ export function TransferListPage() {
                         </Button>
                         <Button
                           variant="outline"
-                          className="flex-1 text-red-600 border-red-600 hover:bg-red-50"
+                          className="flex-1 text-red-600 border-red-600 dark:hover:bg-red-950/20 hover:bg-red-50"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleReject(item.id);

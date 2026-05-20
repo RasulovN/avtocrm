@@ -24,7 +24,7 @@ export function TransferRequestsPage(): ReactElement {
   const { products } = useProducts();
   const { user } = useAuthStore();
   const isAdmin = Boolean(user?.is_superuser);
-  const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores[0].id) : '');
+  const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores.find(s => s.type === 'b')?.id || user.stores[0].id) : '');
 
   const canApprove = (item: Transfer) => {
     if (isAdmin) return true;

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { Plus, FileText, Eye, Printer, Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, FileText, Eye, Search, X, ChevronLeft, ChevronRight, CreditCard } from 'lucide-react';
+import { StockEntryCreateDialog } from './StockEntryCreateDialog';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
 import { Button } from '../../components/ui/Button';
@@ -17,8 +18,6 @@ import { supplierService } from '../../services/supplierService';
 import { storeService } from '../../services/storeService';
 import { formatCurrency, formatDate } from '../../utils';
 import type { InventoryItem, Store, Supplier } from '../../types';
-import { BarcodePrintAll } from '../../components/ui/BarcodePrint';
-import { generateBarcodePrintHtml, generateMultipleBarcodesPrintHtml } from '../../utils/xss';
 export interface SupplierPayment {
   id: number;
   supplier: number;
@@ -71,11 +70,10 @@ export function StockEntryListPage() {
 
   const [selectedInventory, setSelectedInventory] = useState<DisplayInventory | null>(null);
   const [showDetails, setShowDetails] = useState(false);
-  const [showBarcodeDialog, setShowBarcodeDialog] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paying, setPaying] = useState(false);
-  const [barcodeItems, setBarcodeItems] = useState<InventoryItem[]>([]);
   const [paymentHistory, setPaymentHistory] = useState<SupplierPayment[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
 
@@ -88,7 +86,7 @@ export function StockEntryListPage() {
           supplierService.getAll()
         ]);
         setStores(storesRes.data || []);
-        setSuppliers(Array.isArray(suppliersRes) ? suppliersRes : []);
+        setSuppliers(Array.isArray(suppliersRes.data) ? suppliersRes.data : []);
       } catch (err) {
         console.error('Failed to load filter data', err);
       }
@@ -214,47 +212,6 @@ export function StockEntryListPage() {
     }
   };
 
-  const handlePrintBarcodes = (item: DisplayInventory) => {
-    setBarcodeItems(item.items || []);
-    setShowBarcodeDialog(true);
-  };
-
-  const handlePrintInventoryBarcode = (item: DisplayInventory, itemIndex: number) => {
-    const invItem = item.items?.[itemIndex];
-    if (!invItem) return;
-
-    const shtrixCode = invItem.shtrix_code || '';
-    const productBarcode = invItem.product_barcode || '';
-    // Always use product_barcode for JsBarcode generation (more reliable)
-    const barcodeValue = productBarcode || shtrixCode.replace(/.*\//, '').replace(/\..*/, '') || shtrixCode;
-
-    if (!barcodeValue) return;
-
-    const html = generateBarcodePrintHtml(barcodeValue);
-    const blob = new Blob([html], { type: 'text/html' });
-    const blobUrl = URL.createObjectURL(blob);
-    window.open(blobUrl, '_blank');
-  };
-
-  const handlePrintAllInventoryBarcodes = (item: DisplayInventory) => {
-    const items = item.items || [];
-    if (items.length === 0) return;
-
-    const barcodeValues = items.map((invItem) => {
-      const shtrixCode = invItem.shtrix_code || '';
-      const productBarcode = invItem.product_barcode || '';
-      const value = productBarcode || shtrixCode.replace(/.*\//, '').replace(/\..*/, '') || shtrixCode;
-      return { value, productName: invItem.product_name };
-    }).filter(item => item.value);
-
-    if (barcodeValues.length === 0) return;
-
-    const html = generateMultipleBarcodesPrintHtml(barcodeValues);
-    const blob = new Blob([html], { type: 'text/html' });
-    const blobUrl = URL.createObjectURL(blob);
-    window.open(blobUrl, '_blank');
-  };
-
   const handlePayDebt = () => {
     if (!selectedInventory || !selectedInventory.debt) return;
     setPaymentAmount(String(selectedInventory.debt));
@@ -345,13 +302,8 @@ export function StockEntryListPage() {
       render: (item) => (
         <div className="flex justify-end gap-1">
           <Button variant="ghost" size="sm" onClick={() => handleShowDetails(item)}>
-            <Eye className="h-4 w-4" />
+            <FileText className="h-4 w-4" />
           </Button>
-          {item.items && item.items.length > 0 && (
-            <Button variant="ghost" size="sm" onClick={() => handlePrintAllInventoryBarcodes(item)} title={t('titles.printAllBarcodes')}>
-              <Printer className="h-4 w-4" />
-            </Button>
-          )}
         </div>
       ),
     },
@@ -364,18 +316,16 @@ export function StockEntryListPage() {
           title={t('inventory.title')}
           description={t('inventory.listDescription')}
         />
-        <Link to={`/${lang}/stockentry/new`}>
-          <Button className="w-full sm:w-auto">
-            <Plus className="h-4 w-4 mr-2" />
-            {t('inventory.createIncomingStock')}
-          </Button>
-        </Link>
+        <Button className="w-full sm:w-auto mt-4 sm:mt-0" onClick={() => setShowCreateDialog(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          {t('inventory.createIncomingStock')}
+        </Button>
       </div>
 
       {/* Filters Section */}
       <Card className='border-none'>
-        <CardContent className='p-0'>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 items-end">
+        <CardContent className='p-4'>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
             <div className="space-y-2">
               <Label>{t('common.search')}</Label>
               <div className="relative">
@@ -387,20 +337,6 @@ export function StockEntryListPage() {
                   className="pl-9"
                 />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label>{t('stores.title')}</Label>
-              <Select value={storeFilter} onValueChange={(val) => { setStoreFilter(val); setPage(1); }}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t('placeholders.selectStore')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t('common.all')}</SelectItem>
-                  {stores.map(store => (
-                    <SelectItem key={store.id} value={String(store.id)}>{store.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
             <div className="space-y-2">
               <Label>{t('suppliers.title')}</Label>
@@ -499,16 +435,10 @@ export function StockEntryListPage() {
                   </div>
 
                   <div className="flex flex-wrap gap-2">
-                    <Button variant="outline" size="sm" className="flex-1 min-w-30" onClick={() => handleShowDetails(item)}>
+                    <Button variant="outline" size="sm" className="w-full" onClick={() => handleShowDetails(item)}>
                       <Eye className="mr-2 h-4 w-4" />
                       {t('common.actions')}
                     </Button>
-                    {item.items && item.items.length > 0 && (
-                      <Button variant="outline" size="sm" className="flex-1 min-w-30" onClick={() => handlePrintBarcodes(item)}>
-                        <Printer className="mr-2 h-4 w-4" />
-                        {t('products.printBarcode')}
-                      </Button>
-                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -577,9 +507,18 @@ export function StockEntryListPage() {
                   <span className="text-muted-foreground">{t('inventory.store')}:</span>
                   <span className="ml-2 font-medium">{selectedInventory.store_name || selectedInventory.store_id}</span>
                 </div>
-                <div>
+                <div className="flex items-center">
                   <span className="text-muted-foreground">{t('common.status')}:</span>
-                  <span className="ml-2 font-medium">{selectedInventory.status}</span>
+                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold ${
+                    selectedInventory.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+                    selectedInventory.status === 'pending' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
+                    'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                  }`}>
+                    {selectedInventory.status === 'completed' ? t('common.completed') :
+                     selectedInventory.status === 'pending' ? t('common.pending') :
+                     selectedInventory.status === 'cancelled' ? t('common.cancelled') :
+                     selectedInventory.status}
+                  </span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">{t('common.total')}:</span>
@@ -589,11 +528,27 @@ export function StockEntryListPage() {
                   <span className="text-muted-foreground">{t('inventory.paidAmount')}:</span>
                   <span className="ml-2 font-medium">{formatCurrency(selectedInventory.paid)}</span>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">{t('suppliers.debt')}:</span>
-                  <span className="ml-2 font-medium text-red-500">{formatCurrency(selectedInventory.debt)}</span>
+                <div className={`col-span-1 sm:col-span-2 lg:col-span-3 flex items-center justify-between p-3 mt-2 rounded-lg border ${
+                  selectedInventory.debt > 0
+                    ? 'bg-red-50 dark:bg-red-950/20 border-red-100 dark:border-red-900/30'
+                    : 'bg-green-50/50 dark:bg-green-950/10 border-green-100/50 dark:border-green-900/20'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm font-medium ${selectedInventory.debt > 0 ? 'text-red-800 dark:text-red-400' : 'text-green-800 dark:text-green-400'}`}>
+                      {t('suppliers.debt')}:
+                    </span>
+                    <span className={`text-lg font-bold ${selectedInventory.debt > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                      {formatCurrency(selectedInventory.debt)}
+                    </span>
+                  </div>
                   {selectedInventory.debt > 0 && (
-                    <Button variant="outline" size="sm" className="ml-3" onClick={handlePayDebt}>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-sm transition-all duration-200 flex items-center gap-1.5"
+                      onClick={handlePayDebt}
+                    >
+                      <CreditCard className="h-4 w-4" />
                       {t('customers.payNow')}
                     </Button>
                   )}
@@ -604,15 +559,6 @@ export function StockEntryListPage() {
                 <div className="space-y-3">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <h4 className="text-sm font-semibold">{t('products.title')}</h4>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full sm:w-auto"
-                      onClick={() => handlePrintAllInventoryBarcodes(selectedInventory)}
-                    >
-                      <Printer className="mr-2 h-4 w-4" />
-                      {t('products.printAllBarcodes')}
-                    </Button>
                   </div>
                   <div className="space-y-3 md:hidden">
                     {selectedInventory.items.map((item, idx) => (
@@ -623,16 +569,6 @@ export function StockEntryListPage() {
                               <p className="font-medium">{item.product_name}</p>
                               <p className="mt-1 text-xs font-mono text-muted-foreground">{item.product_sku}</p>
                             </div>
-                            {(item.shtrix_code || item.product_barcode) && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handlePrintInventoryBarcode(selectedInventory, idx)}
-                                title={t('titles.printBarcode')}
-                              >
-                                <Printer className="h-4 w-4" />
-                              </Button>
-                            )}
                           </div>
                           <div className="grid grid-cols-2 gap-3 text-sm">
                             <div className="rounded-lg bg-muted/30 p-3">
@@ -661,35 +597,22 @@ export function StockEntryListPage() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>{t('products.title')}</TableHead>
-                          <TableHead>{t('products.sku')}</TableHead>
+                          {/* <TableHead>{t('products.sku')}</TableHead> */}
                           <TableHead>{t('products.barcode')}</TableHead>
                           <TableHead>{t('sales.quantity')}</TableHead>
                           <TableHead>{t('sales.price')}</TableHead>
                           <TableHead>{t('sales.total')}</TableHead>
-                          <TableHead>{t('common.actions')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {selectedInventory.items.map((item, idx) => (
                           <TableRow key={idx}>
                             <TableCell>{item.product_name}</TableCell>
-                            <TableCell className="font-mono text-xs">{item.product_sku}</TableCell>
+                            {/* <TableCell className="font-mono text-xs">{item.product_sku}</TableCell> */}
                             <TableCell className="font-mono text-xs">{item.product_barcode || '-'}</TableCell>
                             <TableCell>{item.quantity}</TableCell>
                             <TableCell>{formatCurrency(item.purchase_price)}</TableCell>
                             <TableCell className="font-medium">{formatCurrency(item.total)}</TableCell>
-                            <TableCell>
-                              {(item.shtrix_code || item.product_barcode) && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handlePrintInventoryBarcode(selectedInventory, idx)}
-                                  title={t('titles.printBarcode')}
-                                >
-                                  <Printer className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -733,18 +656,6 @@ export function StockEntryListPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Barcode Print Dialog */}
-      <Dialog open={showBarcodeDialog} onOpenChange={setShowBarcodeDialog}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>{t('products.printBarcodes')}</DialogTitle>
-            <DialogDescription>
-              {t('inventory.barcodeDescription')}
-            </DialogDescription>
-          </DialogHeader>
-          <BarcodePrintAll items={barcodeItems} />
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
         <DialogContent className='pb-6'>
@@ -779,6 +690,12 @@ export function StockEntryListPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <StockEntryCreateDialog 
+        open={showCreateDialog} 
+        onOpenChange={setShowCreateDialog} 
+        onSuccess={loadData} 
+      />
     </div>
   );
 }

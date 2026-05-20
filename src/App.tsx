@@ -39,9 +39,7 @@ const ProductLocationPage = lazy(() =>
 const StockEntryListPage = lazy(() =>
   import('./features/StockEntry/StockEntryListPage').then((module) => ({ default: module.StockEntryListPage }))
 );
-const StockEntryCreatePage = lazy(() =>
-  import('./features/StockEntry/StockEntryCreatePage').then((module) => ({ default: module.StockEntryCreatePage }))
-);
+
 const InventorySessionsListPage = lazy(() =>
   import('./features/inventory/InventoryListPage').then((module) => ({ default: module.InventorySessionsListPage }))
 ); 
@@ -91,7 +89,7 @@ const ReportsPage = lazy(() =>
 );
 
 // Styles
-import './i18n'; 
+import './i18n/index'; 
 import InventoryPage from './features/inventory/InventoryPage';
 
 const DEFAULT_META = {
@@ -263,11 +261,7 @@ function App() {
             withLayout(<StockEntryListPage />)
           } />
           
-          {/* Stock entry - Create */}
-          <Route path={`/:lang/stockentry/new`} element={
-            withLayout(<StockEntryCreatePage />)
-          } />
-          
+
           {/* Inventorizatsiya */}
           <Route path={`/:lang/inventory`} element={
             withLayout(<InventorySessionsListPage />)
