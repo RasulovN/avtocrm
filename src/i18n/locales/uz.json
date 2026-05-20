@@ -550,7 +550,8 @@
     "noSuppliers": "Ta'minotchilar yo'q",
     "supplierAdded": "Ta'minotchi muvaffaqiyatli qo'shildi",
     "supplierUpdated": "Ta'minotchi muvaffaqiyatli yangilandi",
-    "supplierDeleted": "Ta'minotchi muvaffaqiyatli o'chirildi"
+    "supplierDeleted": "Ta'minotchi muvaffaqiyatli o'chirildi",
+    "totalPurchases": "Jami xaridlar"
   },
   "stores": {
     "title": "Do'konlar",

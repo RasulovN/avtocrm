@@ -80,7 +80,7 @@ export function ReportsPage() {
               <DollarSign className="h-4 w-4" />
               <p className="text-sm font-semibold">Umumiy tushum</p>
             </div>
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">11 000 RUB</h3>
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">11 000 SO'M</h3>
             <p className="text-xs text-emerald-500 flex items-center gap-1">
                <TrendingUp className="h-3 w-3" />
                Marja: -93.3%
@@ -94,7 +94,7 @@ export function ReportsPage() {
               <TrendingUp className="h-4 w-4" />
               <p className="text-sm font-semibold">Sof foyda</p>
             </div>
-            <h3 className="text-2xl font-bold text-emerald-600 dark:text-emerald-500 mb-1">-154 150 RUB</h3>
+            <h3 className="text-2xl font-bold text-emerald-600 dark:text-emerald-500 mb-1">-154 150 SO'M</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">-93.3% marjadorlik</p>
           </CardContent>
         </Card>
@@ -116,7 +116,7 @@ export function ReportsPage() {
               <Users className="h-4 w-4" />
               <p className="text-sm font-semibold">Mijozlar qarzlari</p>
             </div>
-            <h3 className="text-2xl font-bold text-[#ff6b00] dark:text-amber-500 mb-1">345 000 RUB</h3>
+            <h3 className="text-2xl font-bold text-[#ff6b00] dark:text-amber-500 mb-1">345 000 SO'M</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">3 mijoz</p>
           </CardContent>
         </Card>
@@ -201,7 +201,7 @@ export function ReportsPage() {
                               boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
                             }}
                             wrapperStyle={{ zIndex: 100 }}
-                            formatter={(value: number) => [`${value}%`, 'Ulushi']}
+                            formatter={(value: any) => [`${value}%`, 'Ulushi']}
                           />
                         </PieChart>
                       </ResponsiveContainer>
@@ -247,7 +247,7 @@ export function ReportsPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white whitespace-nowrap">
-                          {prod.revenue} RUB
+                          {prod.revenue} SO'M
                         </td>
                       </tr>
                     ))}
@@ -278,14 +278,14 @@ export function ReportsPage() {
                       <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                         <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{pay.method}</td>
                         <td className="px-6 py-4 text-right font-medium text-slate-900 dark:text-white">{pay.count}</td>
-                        <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">{pay.amount} RUB</td>
+                        <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">{pay.amount} SO'M</td>
                         <td className="px-6 py-4 text-right font-medium text-slate-900 dark:text-white">{pay.percent}</td>
                       </tr>
                     ))}
                     <tr className="bg-slate-50 dark:bg-slate-800/30">
                        <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">Jami</td>
                        <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">5</td>
-                       <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">11 000 RUB</td>
+                       <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">11 000 SO'M</td>
                        <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">100%</td>
                     </tr>
                   </tbody>
@@ -313,7 +313,7 @@ export function ReportsPage() {
                       <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                         <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{debtor.name}</td>
                         <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{debtor.phone}</td>
-                        <td className="px-6 py-4 text-right font-bold text-[#ff6b00] dark:text-amber-500">{debtor.debt} RUB</td>
+                        <td className="px-6 py-4 text-right font-bold text-[#ff6b00] dark:text-amber-500">{debtor.debt} SO'M</td>
                       </tr>
                     ))}
                   </tbody>
