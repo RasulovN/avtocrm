@@ -119,7 +119,27 @@
     "inInventory": "Захирада",
     "noDebts": "Қарзлар мавжуд эмас",
     "subtitleAdmin": "Филиаллар кесимида умумий кўрсаткичлар ва таҳлил",
-    "subtitleUser": "Филиалингиз бўйича тезкор статистика"
+    "subtitleUser": "Филиалингиз бўйича тезкор статистика",
+    "allBranches": "Барча филиалларни жамлаш",
+    "mainBranch": "Асосий филиал (Чилонзор)",
+    "sergeliBranch": "Сергели Автобозор филиал",
+    "pageTitle": "Бошқарув панели",
+    "mainStats": "Асосий кўрсаткичлар ва статистика",
+    "todayRevenue": "Бугунги тушум",
+    "comparedToYesterday": "Кечагига нисбатан",
+    "salesActivity": "Сотув фаоллиги",
+    "totalDebtAmount": "Умумий қарз миқдори",
+    "salesDynamics": "Савдолар Динамикаси",
+    "partsSalesVolume": "Авто қисмлар сотуви ҳажми",
+    "duringMonth": "Ой давомида",
+    "duringWeek": "Ҳафта давомида",
+    "revenues": "Тушумлар",
+    "lowStockProducts": "Тугаётган маҳсулотлар",
+    "inStock": "Омборда",
+    "order": "Буюртма",
+    "topSellingParts": "Топ Эҳтиёт Қисмлар (Сотув бўйича)",
+    "piecesSold": "дона сотилган",
+    "allReceipts": "Барча квитанциялар"
   },
   "products": {
     "title": "Маҳсулотлар",
@@ -790,7 +810,8 @@
     "branch": "Филиал",
     "scanBarcode": "Штрихкодни сканерланг ёки киритинг...",
     "search": "Қидириш...",
-    "selectSupplier": "Таъминотчини танланг"
+    "selectSupplier": "Таъминотчини танланг",
+    "allStores": "Барча дўконлар"
   },
   "titles": {
     "clickToView": "Кўриш учун босинг",

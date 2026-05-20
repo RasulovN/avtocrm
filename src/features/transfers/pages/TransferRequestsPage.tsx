@@ -47,7 +47,7 @@ export function TransferRequestsPage(): ReactElement {
 
   const resolveProductName = (transfer: Transfer) => {
     if (transfer.product_name) return transfer.product_name;
-    if (transfer.product) return productNameById.get(String(transfer.product)) ?? transfer.product;
+    if (transfer.product) return productNameById.get(String(transfer.product)) ?? String(transfer.product);
     if (transfer.items?.[0]?.product_name) return transfer.items[0].product_name;
     return '-';
   };

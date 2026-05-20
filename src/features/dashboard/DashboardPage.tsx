@@ -1,13 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   CalendarDays,
   CreditCard,
   DollarSign,
   Package,
-  Store,
-  TrendingUp,
-  ShoppingCart,
   Users,
   AlertTriangle,
   ArrowUpRight,
@@ -19,9 +16,7 @@ import {
   Battery,
   ArrowRight,
   Clock,
-  Car
 } from 'lucide-react';
-import { PageHeader } from '../../components/shared/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
 import { useAuthStore } from '../../app/store';
@@ -69,10 +64,10 @@ const generateAutoPartsData = (storeId: string, filter: string) => {
       labels: filter === 'today' ? ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00']
         : filter === 'weekly' ? ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'] : ['1-5', '6-10', '11-15', '16-20', '21-25', '26-30'],
       data: filter === 'today'
-        ? Array.from({length: 7}).map((_, i) => Math.floor(1200000 * mult * (1 + (Math.sin(i+seed) * 0.5))))
-        : filter === 'weekly' 
-        ? Array.from({length: 7}).map((_, i) => Math.floor(8000000 * mult * (1 + (Math.sin(i+seed) * 0.5)))) 
-        : Array.from({length: 6}).map((_, i) => Math.floor(45000000 * mult * (1 + (Math.sin(i+seed) * 0.5))))
+        ? Array.from({ length: 7 }).map((_, i) => Math.floor(1200000 * mult * (1 + (Math.sin(i + seed) * 0.5))))
+        : filter === 'weekly'
+          ? Array.from({ length: 7 }).map((_, i) => Math.floor(8000000 * mult * (1 + (Math.sin(i + seed) * 0.5))))
+          : Array.from({ length: 6 }).map((_, i) => Math.floor(45000000 * mult * (1 + (Math.sin(i + seed) * 0.5))))
     }
   };
 };
@@ -111,14 +106,18 @@ export function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState(() => generateAutoPartsData(storeId, period));
 
-  const availableBranches = isAdmin 
-    ? [{ id: 'all', name: 'Barcha filiallarni jamlash' }, { id: '1', name: 'Asosiy filial (Chilonzor)' }, { id: '2', name: 'Sergeli Avtobo\'zor filial' }]
-    : [{ id: userStoreId || 'all', name: user?.store_name || 'Mening filialim' }];
+  const availableBranches = isAdmin
+    ? [
+      { id: 'all', name: t('dashboard.allBranches', 'Barcha filiallarni jamlash') },
+      { id: '1', name: t('dashboard.mainBranch', 'Asosiy filial (Chilonzor)') },
+      { id: '2', name: t('dashboard.sergeliBranch', 'Sergeli Avtobo\'zor filial') }
+    ]
+    : [{ id: userStoreId || 'all', name: user?.store_name || t('common.myBranch', 'Mening filialim') }];
 
   useEffect(() => {
     let active = true;
     setIsLoading(true);
-    
+
     // Simulate network delay for smooth transition
     setTimeout(() => {
       if (active) {
@@ -140,10 +139,10 @@ export function DashboardPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between py-2">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-            Boshqaruv paneli
+            {t('dashboard.pageTitle', 'Boshqaruv paneli')}
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Asosiy ko'rsatkichlar va statistika
+            {t('dashboard.mainStats', 'Asosiy ko\'rsatkichlar va statistika')}
           </p>
         </div>
 
@@ -151,19 +150,19 @@ export function DashboardPage() {
           <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-1 shadow-sm">
             <div className="flex items-center px-3 py-1.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-md text-sm font-medium mr-1">
               <CalendarDays className="w-4 h-4 mr-2" />
-              Bugun
+              {t('common.today', 'Bugun')}
             </div>
             <button className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors" onClick={() => setPeriod('weekly')}>
-              Hafta
+              {t('common.week', 'Hafta')}
             </button>
             <button className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors" onClick={() => setPeriod('monthly')}>
-              Oy
+              {t('common.month', 'Oy')}
             </button>
           </div>
 
           <Select value={storeId} onValueChange={setStoreId} disabled={!isAdmin}>
             <SelectTrigger className="w-full sm:w-48 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm rounded-lg h-9">
-              <SelectValue placeholder="Barcha do'konlar" />
+              <SelectValue placeholder={t('placeholders.allStores', 'Barcha do\'konlar')} />
             </SelectTrigger>
             <SelectContent>
               {availableBranches.map((b) => (
@@ -179,7 +178,7 @@ export function DashboardPage() {
         {/* REVENUE */}
         <div className="rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-xs">
           <div className="flex justify-between items-center mb-3">
-            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Bugungi tushum</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t('dashboard.todayRevenue', 'Bugungi tushum')}</p>
             <DollarSign className="w-4 h-4 text-slate-400" />
           </div>
           {isLoading ? (
@@ -190,32 +189,32 @@ export function DashboardPage() {
             </h3>
           )}
           <div className="mt-2 text-xs font-medium text-slate-500">
-            Kechagiga nisbatan <span className="text-emerald-600">+{data.kpi.revenueGrowth}%</span>
+            {t('dashboard.comparedToYesterday', 'Kechagiga nisbatan')} <span className="text-emerald-600">+{data.kpi.revenueGrowth}%</span>
           </div>
         </div>
 
         {/* ORDERS */}
         <div className="rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-xs">
           <div className="flex justify-between items-center mb-3">
-            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Sotilgan tovarlar</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t('dashboard.totalProducts', 'Sotilgan tovarlar')}</p>
             <Package className="w-4 h-4 text-slate-400" />
           </div>
           {isLoading ? (
             <div className="h-8 w-24 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-md" />
           ) : (
             <h3 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-              {data.kpi.orders.toLocaleString()} ta
+              {data.kpi.orders.toLocaleString()} {t('common.qtyUnits', 'ta')}
             </h3>
           )}
           <div className="mt-2 text-xs font-medium text-slate-500">
-            Sotuv faolligi <span className="text-blue-600">+{data.kpi.ordersGrowth}%</span>
+            {t('dashboard.salesActivity', 'Sotuv faolligi')} <span className="text-blue-600">+{data.kpi.ordersGrowth}%</span>
           </div>
         </div>
 
         {/* TRANSACTIONS / AVG RECEIPT (We used transactions here based on reference) */}
         <div className="rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-xs">
           <div className="flex justify-between items-center mb-3">
-            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Tranzaksiyalar</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t('reports.labels.transactions', 'Tranzaksiyalar')}</p>
             <ArrowUpRight className="w-4 h-4 text-slate-400" />
           </div>
           {isLoading ? (
@@ -226,14 +225,14 @@ export function DashboardPage() {
             </h3>
           )}
           <div className="mt-2 text-xs font-medium text-slate-500">
-            O'rtacha chek: <span className="text-slate-700 dark:text-slate-300 font-semibold">{formatCurrency(Math.floor(data.kpi.revenue / data.kpi.orders))}</span>
+            {t('reports.labels.averageReceipt', 'O\'rtacha chek')}: <span className="text-slate-700 dark:text-slate-300 font-semibold">{formatCurrency(Math.floor(data.kpi.revenue / data.kpi.orders))}</span>
           </div>
         </div>
 
         {/* CLIENT DEBTS */}
         <div className="rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-xs">
           <div className="flex justify-between items-center mb-3">
-            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Mijozlar qarzi</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t('dashboard.totalDebt', 'Mijozlar qarzi')}</p>
             <AlertTriangle className="w-4 h-4 text-amber-500" />
           </div>
           {isLoading ? (
@@ -244,25 +243,31 @@ export function DashboardPage() {
             </h3>
           )}
           <div className="mt-2 text-xs font-medium text-slate-500">
-            Umumiy qarz miqdori
+            {t('dashboard.totalDebtAmount', 'Umumiy qarz miqdori')}
           </div>
         </div>
       </div>
 
       {/* CHARTS AND LISTS */}
       <div className="grid gap-6 lg:grid-cols-7">
-        
+
         {/* MAIN CHART */}
         <Card className="lg:col-span-5 rounded-3xl border-slate-200/60 dark:border-slate-800 shadow-xs overflow-hidden bg-white dark:bg-slate-900">
           <CardHeader className="pb-0 pt-6 px-6 sm:px-8 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <CardTitle className="text-lg font-semibold text-slate-900 dark:text-white">Savdolar Dinamikasi</CardTitle>
-                <CardDescription className="text-sm text-slate-500 mt-1">Avto qismlar sotuvi hajmi ({period === 'today' ? 'Bugun' : period === 'monthly' ? 'Oy davomida' : 'Hafta davomida'})</CardDescription>
+                <CardTitle className="text-lg font-semibold text-slate-900 dark:text-white">{t('dashboard.salesDynamics', 'Savdolar Dinamikasi')}</CardTitle>
+                <CardDescription className="text-sm text-slate-500 mt-1">
+                  {t('dashboard.partsSalesVolume', 'Avto qismlar sotuvi hajmi')} ({
+                    period === 'today' ? t('common.today', 'Bugun') :
+                      period === 'monthly' ? t('dashboard.duringMonth', 'Oy davomida') :
+                        t('dashboard.duringWeek', 'Hafta davomida')
+                  })
+                </CardDescription>
               </div>
               <div className="hidden sm:flex items-center gap-4 bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-xl border border-slate-100 dark:border-slate-800">
                 <div className="px-3 py-1 bg-white dark:bg-slate-700 rounded-lg shadow-xs text-xs font-semibold text-slate-700 dark:text-white">
-                  Tushumlar
+                  {t('dashboard.revenues', 'Tushumlar')}
                 </div>
               </div>
             </div>
@@ -360,7 +365,7 @@ export function DashboardPage() {
             <CardHeader className="bg-rose-50/50 dark:bg-rose-500/5 pb-4 border-b border-rose-100 dark:border-rose-900/30">
               <CardTitle className="text-lg font-semibold flex items-center gap-2 text-rose-700 dark:text-rose-400">
                 <AlertTriangle className="w-5 h-5" />
-                Tugayotgan mahsulotlar
+                {t('dashboard.lowStockProducts', 'Tugayotgan mahsulotlar')}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -374,10 +379,12 @@ export function DashboardPage() {
                     <div key={item.id} className="p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
                       <div>
                         <p className="font-medium text-sm text-slate-800 dark:text-slate-200">{item.name}</p>
-                        <p className="text-xs text-slate-500 font-medium mt-0.5">Omborda: <strong className="font-semibold text-rose-600 dark:text-rose-400">{item.left} dona</strong></p>
+                        <p className="text-xs text-slate-500 font-medium mt-0.5">
+                          {t('dashboard.inStock', 'Omborda')}: <strong className="font-semibold text-rose-600 dark:text-rose-400">{item.left} {t('common.pcs', 'dona')}</strong>
+                        </p>
                       </div>
                       <button className="px-3 py-1.5 text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
-                        Buyurtma
+                        {t('dashboard.order', 'Buyurtma')}
                       </button>
                     </div>
                   ))}
@@ -385,7 +392,7 @@ export function DashboardPage() {
               )}
               <div className="p-4 bg-slate-50/50 dark:bg-slate-800/20 text-center border-t border-slate-100 dark:border-slate-800">
                 <button className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 flex items-center justify-center w-full hover:text-indigo-700 transition-colors">
-                  Barchasini ko'rish <ArrowRight className="w-4 h-4 ml-1" />
+                  {t('common.viewAll', 'Barchasini ko\'rish')} <ArrowRight className="w-4 h-4 ml-1" />
                 </button>
               </div>
             </CardContent>
@@ -400,7 +407,7 @@ export function DashboardPage() {
           <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-4 pt-5">
             <CardTitle className="text-lg font-semibold flex items-center gap-2 text-slate-900 dark:text-white">
               <Package className="w-5 h-5 text-indigo-500" />
-              Top Ehtiyot Qismlar (Sotuv bo'yicha)
+              {t('dashboard.topSellingParts', 'Top Ehtiyot Qismlar (Sotuv bo\'yicha)')}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -424,7 +431,7 @@ export function DashboardPage() {
                             <p className="font-medium text-sm text-slate-900 dark:text-white group-hover:text-indigo-500 transition-colors">
                               {idx + 1}. {part.name}
                             </p>
-                            <p className="text-xs font-medium text-slate-500">{part.sold} dona sotilgan</p>
+                            <p className="text-xs font-medium text-slate-500">{part.sold} {t('dashboard.piecesSold', 'dona sotilgan')}</p>
                           </div>
                         </div>
                         <p className="font-semibold text-sm text-slate-700 dark:text-slate-300">
@@ -432,7 +439,7 @@ export function DashboardPage() {
                         </p>
                       </div>
                       <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                        <div 
+                        <div
                           className="h-full bg-linear-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-1000 ease-out relative"
                           style={{ width: `${pct}%` }}
                         >
@@ -452,11 +459,11 @@ export function DashboardPage() {
           <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-4 pt-5">
             <CardTitle className="text-lg font-semibold flex items-center gap-2 text-slate-900 dark:text-white">
               <Clock className="w-5 h-5 text-emerald-500" />
-              So'nggi savdolar
+              {t('dashboard.recentSales', 'So\'nggi savdolar')}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-             {isLoading ? (
+            {isLoading ? (
               <div className="p-6 space-y-4">
                 {[1, 2, 3, 4].map(i => <div key={i} className="h-16 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />)}
               </div>
@@ -465,14 +472,13 @@ export function DashboardPage() {
                 {data.recentSales.map((sale) => (
                   <div key={sale.id} className="p-5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
                     <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
-                        sale.type === 'cash' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400' :
-                        sale.type === 'debt' ? 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400' :
-                        'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400'
-                      }`}>
-                        {sale.type === 'cash' ? <DollarSign className="w-6 h-6" /> : 
-                         sale.type === 'debt' ? <Users className="w-6 h-6" /> : 
-                         <CreditCard className="w-6 h-6" />}
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${sale.type === 'cash' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400' :
+                          sale.type === 'debt' ? 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400' :
+                            'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400'
+                        }`}>
+                        {sale.type === 'cash' ? <DollarSign className="w-6 h-6" /> :
+                          sale.type === 'debt' ? <Users className="w-6 h-6" /> :
+                            <CreditCard className="w-6 h-6" />}
                       </div>
                       <div>
                         <p className="font-semibold text-sm sm:text-base text-slate-900 dark:text-white">{sale.client}</p>
@@ -483,12 +489,11 @@ export function DashboardPage() {
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-slate-900 dark:text-white">{formatCurrency(sale.amount)}</p>
-                      <p className={`text-xs font-medium mt-1 ${
-                        sale.type === 'cash' ? 'text-emerald-500' :
-                        sale.type === 'debt' ? 'text-amber-500' :
-                        'text-blue-500'
-                      }`}>
-                        {sale.type === 'cash' ? 'Naqd' : sale.type === 'debt' ? 'Nasiya' : 'Plastik'}
+                      <p className={`text-xs font-medium mt-1 ${sale.type === 'cash' ? 'text-emerald-500' :
+                          sale.type === 'debt' ? 'text-amber-500' :
+                            'text-blue-500'
+                        }`}>
+                        {sale.type === 'cash' ? t('sales.cash', 'Naqd') : sale.type === 'debt' ? t('customers.debt', 'Nasiya') : t('sales.card', 'Plastik')}
                       </p>
                     </div>
                   </div>
@@ -497,7 +502,7 @@ export function DashboardPage() {
             )}
             <div className="p-4 bg-slate-50/50 dark:bg-slate-800/20 text-center border-t border-slate-100 dark:border-slate-800">
               <button className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 flex items-center justify-center w-full hover:text-emerald-700 transition-colors">
-                Barcha kvitansiyalar <ArrowRight className="w-4 h-4 ml-1" />
+                {t('dashboard.allReceipts', 'Barcha kvitansiyalar')} <ArrowRight className="w-4 h-4 ml-1" />
               </button>
             </div>
           </CardContent>

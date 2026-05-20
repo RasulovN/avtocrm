@@ -116,7 +116,27 @@
     "inInventory": "Zaxirada",
     "noDebts": "Qarzlar mavjud emas",
     "subtitleAdmin": "Filiallar kesimida umumiy ko'rsatkichlar va tahlil",
-    "subtitleUser": "Filialingiz bo'yicha tezkor statistika"
+    "subtitleUser": "Filialingiz bo'yicha tezkor statistika",
+    "allBranches": "Barcha filiallarni jamlash",
+    "mainBranch": "Asosiy filial (Chilonzor)",
+    "sergeliBranch": "Sergeli Avtobo'zor filial",
+    "pageTitle": "Boshqaruv paneli",
+    "mainStats": "Asosiy ko'rsatkichlar va statistika",
+    "todayRevenue": "Bugungi tushum",
+    "comparedToYesterday": "Kechagiga nisbatan",
+    "salesActivity": "Sotuv faolligi",
+    "totalDebtAmount": "Umumiy qarz miqdori",
+    "salesDynamics": "Savdolar Dinamikasi",
+    "partsSalesVolume": "Avto qismlar sotuvi hajmi",
+    "duringMonth": "Oy davomida",
+    "duringWeek": "Hafta davomida",
+    "revenues": "Tushumlar",
+    "lowStockProducts": "Tugayotgan mahsulotlar",
+    "inStock": "Omborda",
+    "order": "Buyurtma",
+    "topSellingParts": "Top Ehtiyot Qismlar (Sotuv bo'yicha)",
+    "piecesSold": "dona sotilgan",
+    "allReceipts": "Barcha kvitansiyalar"
   },
   "products": {
     "title": "Mahsulotlar",
@@ -717,7 +737,7 @@
     "resetLinkSent": "Parol tiklash havolasi emailga yuborildi",
     "insufficientStock": "Omborida yetarli mahsulot yo'q "
   },
-  "placeholders": {
+   "placeholders": {
     "enterAmount": "Summani kiriting",
     "enterLocationName": "Joylashuv nomini kiriting",
     "enterLocationNameCyrl": "Joylashuv nomini kirillcha kiriting",
@@ -735,7 +755,8 @@
     "branch": "Filial",
     "scanBarcode": "Shtrixkodni skanerlang yoki kiriting...",
     "search": "Qidirish...",
-    "selectSupplier": "Ta'minotchini tanlang"
+    "selectSupplier": "Ta'minotchini tanlang",
+    "allStores": "Barcha do'konlar"
   },
   "titles": {
     "clickToView": "Ko'rish uchun bosing",

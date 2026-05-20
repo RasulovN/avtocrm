@@ -331,18 +331,20 @@ export interface TransferItem {
 
 export interface Transfer {
   id: string;
-  from_store: number;
+  from_store?: number | string;
+  from_store_id?: string;
   from_store_name?: string;
-  to_store: number;
+  to_store?: number | string;
+  to_store_id?: string;
   to_store_name?: string;
   status: string;
-  created_by?: number;
-  approved_by?: number;
+  created_by?: number | string;
+  approved_by?: number | string;
   approved_by_name?: string;
   approved_at?: string | null;
   items?: TransferItem[];
   created_at: string;
-  product?: number;
+  product?: number | string;
   product_name?: string;
   quantity?: number;
   purchase_price?: string;
