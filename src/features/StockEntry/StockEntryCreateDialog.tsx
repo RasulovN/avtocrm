@@ -394,15 +394,15 @@ export function StockEntryCreateDialog({
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>{t('sales.paymentType', 'To\'lov turi')}</Label>
+                <Label>{t('sales.paymentType')}</Label>
                 <Select value={paymentType} onValueChange={setPaymentType}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="cash">{t('payment.cash', 'Naqd')}</SelectItem>
-                    <SelectItem value="card">{t('payment.card', 'Karta')}</SelectItem>
-                    <SelectItem value="debt">{t('payment.debt', 'Qarz')}</SelectItem>
+                    <SelectItem value="cash">{t('payment.cash')}</SelectItem>
+                    <SelectItem value="card">{t('payment.card')}</SelectItem>
+                    <SelectItem value="debt">{t('payment.debt')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

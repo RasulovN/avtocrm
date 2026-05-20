@@ -519,7 +519,13 @@
     "phone": "Телефон",
     "name": "Номи",
     "storeStock": "Дўкондаги қолдиқ",
-    "autoSpareParts": "Авто эҳтиёт қисмлар"
+    "autoSpareParts": "Авто эҳтиёт қисмлар",
+    "paymentType": "Тўлов тури"
+  },
+  "payment": {
+    "cash": "Нақд",
+    "card": "Карта",
+    "debt": "Насия"
   },
   "saleReturns": {
     "title": "Қайтаришлар",
