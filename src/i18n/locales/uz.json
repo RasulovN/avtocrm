@@ -742,7 +742,8 @@
     "profileUpdateNotConnected": "Profilni yangilash hali backendga ulanmagan",
     "passwordsNotMatch": "Parollar mos emas",
     "resetLinkSent": "Parol tiklash havolasi emailga yuborildi",
-    "insufficientStock": "Omborida yetarli mahsulot yo'q "
+    "insufficientStock": "Omborda yetarli mahsulot yo'q",
+    "notInYourStore": "Sizning do'koningizda yo'q"
   },
    "placeholders": {
     "enterAmount": "Summani kiriting",
