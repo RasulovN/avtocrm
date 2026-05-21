@@ -162,8 +162,8 @@ const item = (raw ?? {}) as Partial<Product> & {
   const unitInfo = resolveMeasurement(item.unit_measurement);
   const locationInfo = resolveLocation(item.location ?? item.location_id);
   const images = normalizeImages(item.images, item.image);
-  logger.info('normalizeProduct - item.images:', item.images); // Debug
-  logger.info('normalizeProduct - images after normalize:', images); // Debug
+  // logger.info('normalizeProduct - item.images:', item.images); // Debug
+  // logger.info('normalizeProduct - images after normalize:', images); // Debug
   const image = resolveImageUrl(item.image) || (Array.isArray(images) && images.length > 0 ? images[0].image : '');
   
   const batches = item.batches;

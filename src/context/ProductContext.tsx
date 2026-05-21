@@ -36,9 +36,9 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
       }
       logger.info('Fetching products with filters:', filters);
       const response = await productService.getAll(filters);
-      logger.info('Products API response:', response);
+      // logger.info('Products API response:', response);
       const data = Array.isArray(response.data) ? response.data : [];
-      logger.info('Products count:', data.length);
+      // logger.info('Products count:', data.length);
       setProducts(data);
       setError(null);
     } catch (err) {
