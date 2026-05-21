@@ -82,8 +82,8 @@ export function ReportsPage() {
             </div>
             <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">11 000 SO'M</h3>
             <p className="text-xs text-emerald-500 flex items-center gap-1">
-               <TrendingUp className="h-3 w-3" />
-               Marja: -93.3%
+              <TrendingUp className="h-3 w-3" />
+              Marja: -93.3%
             </p>
           </CardContent>
         </Card>
@@ -128,11 +128,10 @@ export function ReportsPage() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 min-w-[120px] px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-              activeTab === tab.id
-                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800/50'
-            }`}
+            className={`flex-1 min-w-[120px] px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${activeTab === tab.id
+              ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800/50'
+              }`}
           >
             {tab.label}
           </button>
@@ -260,65 +259,65 @@ export function ReportsPage() {
 
         {activeTab === 'tolovlar' && (
           <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
-             <div className="p-6 border-b border-slate-100 dark:border-slate-800">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">To'lovlar tarkibi</h3>
-             </div>
-             <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-semibold text-xs uppercase tracking-wider">
-                    <tr>
-                      <th className="px-6 py-4 rounded-tl-xl">To'lov usuli</th>
-                      <th className="px-6 py-4 text-right">Sotuvlar soni</th>
-                      <th className="px-6 py-4 text-right">Summa</th>
-                      <th className="px-6 py-4 text-right rounded-tr-xl">Ulushi</th>
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">To'lovlar tarkibi</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-semibold text-xs uppercase tracking-wider">
+                  <tr>
+                    <th className="px-6 py-4 rounded-tl-xl">To'lov usuli</th>
+                    <th className="px-6 py-4 text-right">Sotuvlar soni</th>
+                    <th className="px-6 py-4 text-right">Summa</th>
+                    <th className="px-6 py-4 text-right rounded-tr-xl">Ulushi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
+                  {PAYMENT_STRUCTURE.map((pay, i) => (
+                    <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                      <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{pay.method}</td>
+                      <td className="px-6 py-4 text-right font-medium text-slate-900 dark:text-white">{pay.count}</td>
+                      <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">{pay.amount} SO'M</td>
+                      <td className="px-6 py-4 text-right font-medium text-slate-900 dark:text-white">{pay.percent}</td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
-                    {PAYMENT_STRUCTURE.map((pay, i) => (
-                      <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                        <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{pay.method}</td>
-                        <td className="px-6 py-4 text-right font-medium text-slate-900 dark:text-white">{pay.count}</td>
-                        <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">{pay.amount} SO'M</td>
-                        <td className="px-6 py-4 text-right font-medium text-slate-900 dark:text-white">{pay.percent}</td>
-                      </tr>
-                    ))}
-                    <tr className="bg-slate-50 dark:bg-slate-800/30">
-                       <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">Jami</td>
-                       <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">5</td>
-                       <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">11 000 SO'M</td>
-                       <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">100%</td>
-                    </tr>
-                  </tbody>
-                </table>
-             </div>
+                  ))}
+                  <tr className="bg-slate-50 dark:bg-slate-800/30">
+                    <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">Jami</td>
+                    <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">5</td>
+                    <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">11 000 SO'M</td>
+                    <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">100%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </Card>
         )}
 
         {activeTab === 'qarzlar' && (
-           <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
-             <div className="p-6 border-b border-slate-100 dark:border-slate-800">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Qarzdorligi bor mijozlar</h3>
-             </div>
-             <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-semibold text-xs uppercase tracking-wider">
-                    <tr>
-                      <th className="px-6 py-4 rounded-tl-xl">Mijoz</th>
-                      <th className="px-6 py-4">Telefon</th>
-                      <th className="px-6 py-4 text-right rounded-tr-xl">Qarzdorlik</th>
+          <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Qarzdorligi bor mijozlar</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-semibold text-xs uppercase tracking-wider">
+                  <tr>
+                    <th className="px-6 py-4 rounded-tl-xl">Mijoz</th>
+                    <th className="px-6 py-4">Telefon</th>
+                    <th className="px-6 py-4 text-right rounded-tr-xl">Qarzdorlik</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
+                  {DEBTORS.map((debtor, i) => (
+                    <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                      <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{debtor.name}</td>
+                      <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{debtor.phone}</td>
+                      <td className="px-6 py-4 text-right font-bold text-[#ff6b00] dark:text-amber-500">{debtor.debt} SO'M</td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
-                    {DEBTORS.map((debtor, i) => (
-                      <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                        <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{debtor.name}</td>
-                        <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{debtor.phone}</td>
-                        <td className="px-6 py-4 text-right font-bold text-[#ff6b00] dark:text-amber-500">{debtor.debt} SO'M</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-             </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </Card>
         )}
 
