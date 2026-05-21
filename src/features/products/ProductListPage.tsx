@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useCallback, useRef, type MouseEvent, typ
 import JsBarcode from 'jsbarcode';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import toast from 'react-hot-toast';
 import { Plus, Edit, Trash2, Barcode, Search, Printer, Power, Eye, Package, Loader2, ChevronLeft, ChevronRight, X, Warehouse, Store as StoreIcon, Calendar, Tag, Hash, Layers, Upload, MapPin, DollarSign, Ruler, ImageIcon } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
@@ -159,7 +160,7 @@ export function ProductListPage() {
     const barcodeCards = selectedProducts.map((product) => {
       const barcodeValue = product.barcode || product.sku || '';
       if (!barcodeValue) return '';
-      
+
       let dataUrl = '';
       try {
         JsBarcode(canvas, barcodeValue, {
@@ -869,7 +870,7 @@ interface ProductDetailModalProps {
   onEdit: (id: string) => void;
   stores: Store[];
   warehouseStore: Store | null;
-  t: (key: string, fallback?: string) => string;
+  t: TFunction<'translation', undefined>;
 }
 
 function ProductDetailModal({ product, onClose, onEdit, stores, warehouseStore, t }: ProductDetailModalProps) {
@@ -1138,7 +1139,7 @@ interface AddProductModalProps {
   onSuccess: () => void;
   categories: { id: string; name: string }[];
   refreshCategories: () => Promise<void>;
-  t: (key: string, fallback?: string) => string;
+  t: TFunction<'translation', undefined>;
 }
 
 const addProductInitialForm: ProductFormData = {
