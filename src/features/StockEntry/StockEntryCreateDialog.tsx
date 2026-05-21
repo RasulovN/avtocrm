@@ -49,12 +49,12 @@ export function StockEntryCreateDialog({
   const { user } = useAuthStore();
   const isAdmin = Boolean(user?.is_superuser);
   const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores.find(s => s.type === 'b')?.id || user.stores[0].id) : '');
-  
+
   const [stores, setStores] = useState<Store[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [saving, setSaving] = useState(false);
   const { products: allProducts, loading: productsLoading, refreshProducts } = useProducts();
-  
+
   const safeStores = useMemo(() => (Array.isArray(stores) ? stores : []), [stores]);
   const safeSuppliers = useMemo(() => (Array.isArray(suppliers) ? suppliers : []), [suppliers]);
   const safeProducts = useMemo(() => {
@@ -166,13 +166,15 @@ export function StockEntryCreateDialog({
 
       if (activeItemIndex !== null) {
         const newItems = [...items];
+        const purchasePrice = createdProduct.purchase_price !== null && createdProduct.purchase_price !== undefined ? Number(createdProduct.purchase_price) : Number(newProductData.purchase_price);
+        const sellingPrice = createdProduct.selling_price !== null && createdProduct.selling_price !== undefined ? Number(createdProduct.selling_price) : Number(newProductData.selling_price);
         newItems[activeItemIndex] = {
           ...newItems[activeItemIndex],
           product_id: String(createdProduct.id),
           product_name: createdProduct.name,
-          purchase_price: createdProduct.purchase_price ?? newProductData.purchase_price ?? '',
-          selling_price: createdProduct.selling_price ?? newProductData.selling_price ?? '',
-          total: (Number(createdProduct.purchase_price ?? newProductData.purchase_price) || 0) * (newItems[activeItemIndex].quantity || 0),
+          purchase_price: purchasePrice,
+          selling_price: sellingPrice,
+          total: purchasePrice * (newItems[activeItemIndex].quantity || 0),
         };
         setItems(newItems);
       }
@@ -266,15 +268,13 @@ export function StockEntryCreateDialog({
     if (field === 'product_id') {
       const product = safeProducts.find(p => p.id === value);
       if (product) {
-        const purchasePrice = product.purchase_price ?? '';
-        const sellingPrice = product.selling_price ?? '';
         newItems[index] = {
           ...newItems[index],
           product_id: value as string,
           product_name: product.name,
-          purchase_price: purchasePrice,
-          selling_price: sellingPrice,
-          total: (purchasePrice || 0) * (newItems[index].quantity || 0),
+          purchase_price: product.purchase_price !== null && product.purchase_price !== undefined ? Number(product.purchase_price) : 0,
+          selling_price: product.selling_price !== null && product.selling_price !== undefined ? Number(product.selling_price) : 0,
+          total: (product.purchase_price !== null && product.purchase_price !== undefined ? Number(product.purchase_price) : 0) * (newItems[index].quantity || 0),
         };
       }
     } else if (field === 'quantity') {
@@ -282,14 +282,14 @@ export function StockEntryCreateDialog({
       newItems[index] = {
         ...newItems[index],
         quantity: qty,
-        total: ((newItems[index].purchase_price || 0) as number) * (qty as number),
+        total: ((newItems[index].purchase_price || 0) as number) * (qty as number || 0),
       };
     } else if (field === 'purchase_price') {
       const price = value === '' ? '' : Number(value);
       newItems[index] = {
         ...newItems[index],
         purchase_price: price,
-        total: (price as number) * (newItems[index].quantity || 0),
+        total: (price || 0) * (newItems[index].quantity || 0),
       };
     } else if (field === 'selling_price') {
       newItems[index] = {
@@ -313,7 +313,7 @@ export function StockEntryCreateDialog({
     const price = item.purchase_price === '' ? 0 : item.purchase_price;
     return sum + (qty as number) * (price as number);
   }, 0);
-  
+
   // If payment is debt, paid amount is 0 automatically
   const actualPaidAmount = paymentType === 'debt' ? 0 : (paid === '' ? 0 : paid);
   const debt = total - actualPaidAmount;
@@ -340,7 +340,7 @@ export function StockEntryCreateDialog({
         })),
         paid_amount: actualPaidAmount,
         // payment_type: paymentType // Send it if backend accepts it in the future
-        ...( { payment_type: paymentType } as any )
+        ...({ payment_type: paymentType } as any)
       });
       toast.success(t('inventory.inventoryCreated', 'Kirim muvaffaqiyatli yaratildi'));
       onSuccess?.();
@@ -434,15 +434,15 @@ export function StockEntryCreateDialog({
                   {t('inventory.addProduct', 'Qo\'shish')}
                 </Button>
               </div>
-              
+
               <div className="space-y-3">
                 {items.map((item, index) => (
                   <div key={index} className="rounded-lg border p-4 bg-muted/20 relative">
                     {items.length > 1 && (
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="icon" 
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
                         className="absolute right-2 top-2 h-8 w-8"
                         onClick={() => removeItem(index)}
                       >
@@ -487,7 +487,7 @@ export function StockEntryCreateDialog({
                           min="1"
                           required
                           value={item.quantity}
-                          onChange={(e: ChangeEvent<HTMLInputElement>) => handleItemChange(index, 'quantity', e.target.value)}
+                          onChange={(e: ChangeEvent<HTMLInputElement>) => handleItemChange(index, 'quantity', e.target.value === '' ? '' : Number(e.target.value))}
                         />
                       </div>
                       <div className="space-y-2">
@@ -497,7 +497,7 @@ export function StockEntryCreateDialog({
                           min="0"
                           required
                           value={item.purchase_price}
-                          onChange={(e: ChangeEvent<HTMLInputElement>) => handleItemChange(index, 'purchase_price', e.target.value)}
+                          onChange={(e: ChangeEvent<HTMLInputElement>) => handleItemChange(index, 'purchase_price', e.target.value === '' ? '' : Number(e.target.value))}
                         />
                       </div>
                       <div className="space-y-2">
@@ -506,7 +506,7 @@ export function StockEntryCreateDialog({
                           type="number"
                           min="0"
                           value={item.selling_price}
-                          onChange={(e: ChangeEvent<HTMLInputElement>) => handleItemChange(index, 'selling_price', e.target.value)}
+                          onChange={(e: ChangeEvent<HTMLInputElement>) => handleItemChange(index, 'selling_price', e.target.value === '' ? '' : Number(e.target.value))}
                         />
                       </div>
                     </div>
@@ -553,8 +553,8 @@ export function StockEntryCreateDialog({
               <Input
                 placeholder={t('placeholders.enterProductName', 'Tovar nomini kiriting...')}
                 value={newProductData.name}
-                onChange={(e) => setNewProductData({ 
-                  ...newProductData, 
+                onChange={(e) => setNewProductData({
+                  ...newProductData,
                   name: e.target.value,
                   name_uz_cyrl: latinToCyrillic(e.target.value)
                 })}
@@ -580,10 +580,10 @@ export function StockEntryCreateDialog({
                       <option key={cat.id} value={cat.id}>{cat.name}</option>
                     ))}
                   </select>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="icon" 
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
                     className="shrink-0"
                     onClick={() => setIsCategoryDialogOpen(true)}
                   >
@@ -608,10 +608,10 @@ export function StockEntryCreateDialog({
                       <option key={unit.id} value={unit.id}>{unit.measurement_uz}</option>
                     ))}
                   </select>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="icon" 
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
                     className="shrink-0"
                     onClick={() => setIsUnitDialogOpen(true)}
                   >
@@ -660,8 +660,8 @@ export function StockEntryCreateDialog({
                 className="w-full min-h-[80px] px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 placeholder={t('placeholders.enterProductDescription', 'Tovar tavsifini kiriting...')}
                 value={newProductData.description}
-                onChange={(e) => setNewProductData({ 
-                  ...newProductData, 
+                onChange={(e) => setNewProductData({
+                  ...newProductData,
                   description: e.target.value,
                   description_uz_cyrl: latinToCyrillic(e.target.value)
                 })}

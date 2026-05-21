@@ -11,7 +11,7 @@ import { productService } from '../../services/productService';
 import type { Product } from '../../types';
 import { formatCurrency } from '../../utils';
 import { BarcodePrint } from '../../components/ui/BarcodePrint';
-import { generateBarcodePrintHtml, generateBarcodeDataUrl, escapeHtml, escapeJsString } from '../../utils/xss';
+import { generateBarcodePrintHtml, generateBarcodeDataUrl, escapeHtml } from '../../utils/xss';
 import { useProducts } from '../../context/ProductContext';
 
 export function ProductBarcodePage() {
