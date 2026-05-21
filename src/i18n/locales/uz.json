@@ -471,7 +471,13 @@
     "paid": "To'langan",
     "change": "Qaytim",
     "discount": "Chegirma",
-    "discountAmount": "Chiqim miqdori"
+    "discountAmount": "Chiqim miqdori",
+    "paymentType": "To'lov turi"
+  },
+  "payment": {
+    "cash": "Naqd",
+    "card": "Karta",
+    "debt": "Nasiya"
   },
   "saleReturns": {
     "title": "Vazratlar",

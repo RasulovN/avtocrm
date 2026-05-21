@@ -45,7 +45,7 @@ const getProductImages = (product?: Product | null): string[] => {
         if (typeof img === 'object' && img !== null && typeof img.image === 'string') return img.image;
         return null;
       }).filter(Boolean) as string[];
-      
+
       images.push(...mappedImages);
     } else if (typeof product.images === 'string') {
       images.push(product.images);
@@ -101,7 +101,7 @@ export function SalesPage() {
   const [saving, setSaving] = useState(false);
   const [searchResults, setSearchResults] = useState<Product[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
-  const { categories } = useCategories();
+  // const { categories } = useCategories();
   const { products: allProducts, loading: productsLoading } = useProducts();
 
   // Debug logs
@@ -122,8 +122,8 @@ export function SalesPage() {
   }, [allProducts, productsLoading]);
 
   const [storeId, setStoreId] = useState(userStoreId);
-  const [categoryFilter, setCategoryFilter] = useState('');
-  
+  // const [categoryFilter, setCategoryFilter] = useState('');
+
   const [items, setItems] = useState<CartItem[]>(() => {
     try {
       const saved = localStorage.getItem(`crm_cart_${user?.id || 'guest'}`);
@@ -173,21 +173,21 @@ export function SalesPage() {
 
     if (!matchedProduct) return normalizedProduct;
 
-      return {
-        ...matchedProduct,
-        ...normalizedProduct,
-        id: matchedProduct.id || productId,
-        name: product.name || matchedProduct.name,
-        sku: product.sku || matchedProduct.sku,
-        barcode: product.barcode || matchedProduct.barcode,
-        shtrix_code: product.shtrix_code || matchedProduct.shtrix_code,
-        purchase_price: product.purchase_price ?? matchedProduct.purchase_price,
-        selling_price: product.selling_price ?? matchedProduct.selling_price,
-        quantity: product.quantity ?? matchedProduct.quantity,
-        total_count: product.total_count ?? matchedProduct.total_count,
-        store_id: product.store_id || matchedProduct.store_id,
-        store_name: product.store_name || matchedProduct.store_name,
-      };
+    return {
+      ...matchedProduct,
+      ...normalizedProduct,
+      id: matchedProduct.id || productId,
+      name: product.name || matchedProduct.name,
+      sku: product.sku || matchedProduct.sku,
+      barcode: product.barcode || matchedProduct.barcode,
+      shtrix_code: product.shtrix_code || matchedProduct.shtrix_code,
+      purchase_price: product.purchase_price ?? matchedProduct.purchase_price,
+      selling_price: product.selling_price ?? matchedProduct.selling_price,
+      quantity: product.quantity ?? matchedProduct.quantity,
+      total_count: product.total_count ?? matchedProduct.total_count,
+      store_id: product.store_id || matchedProduct.store_id,
+      store_name: product.store_name || matchedProduct.store_name,
+    };
   }, [allProducts]);
 
   const addProduct = useCallback((product: Product) => {
@@ -213,7 +213,7 @@ export function SalesPage() {
       if (existingIndex >= 0) {
         const newItems = [...prevItems];
         const existingItem = newItems[existingIndex];
-        
+
         if (existingItem.quantity + 1 > availableStock) {
           toast.error(t('messages.insufficientStock', 'Omborda mahsulot yetarli emas!') + ` (${availableStock})`);
           return prevItems;
@@ -222,11 +222,11 @@ export function SalesPage() {
         existingItem.quantity += 1;
         existingItem.total = existingItem.selling_price * existingItem.quantity;
         return newItems;
-      } 
-      
+      }
+
       if (availableStock < 1) {
-         toast.error(t('messages.insufficientStock', 'Omborda mahsulot yetarli emas!') + ' (0)');
-         return prevItems;
+        toast.error(t('messages.insufficientStock', 'Omborda mahsulot yetarli emas!') + ' (0)');
+        return prevItems;
       }
 
       return [
@@ -284,7 +284,7 @@ export function SalesPage() {
 
   const handleScan = useCallback(async (barcode: string) => {
     const product = await findProductByBarcode(barcode);
-    
+
     if (product) {
       addProduct(product);
       playSuccessSound();
@@ -349,11 +349,11 @@ export function SalesPage() {
           return p;
         });
     }
-    if (categoryFilter) {
-      result = result.filter((p) => String(p.category) === categoryFilter);
-    }
+    // if (categoryFilter) {
+    //   result = result.filter((p) => String(p.category) === categoryFilter);
+    // }
     return result;
-  }, [allProducts, categoryFilter, storeId]);
+  }, [allProducts, storeId]);
   const displayedProducts = searchResults ?? filteredProducts;
 
   const loadData = useCallback(async () => {
@@ -423,7 +423,7 @@ export function SalesPage() {
         } else {
           const products = await productService.search(query);
           setSearchResults(products.map(hydrateProductFromCatalog));
-        } 
+        }
       } catch (error) {
         console.error('Product search failed:', error);
         setSearchResults([]);
@@ -446,7 +446,7 @@ export function SalesPage() {
         keyEvent.preventDefault();
         setShowScanner(true);
       }
-      
+
       if (keyEvent.key === 'Escape') {
         setShowScanner(false);
       }
@@ -458,7 +458,7 @@ export function SalesPage() {
 
   const handleBarcodeManual = (e: KeyboardEvent<HTMLInputElement>) => {
     barcodeOnKeyDown(e);
-    
+
     if (e.key === 'Enter' && barcodeValue.trim()) {
       const isNumeric = /^\d+$/.test(barcodeValue.trim());
       if (isNumeric && searchResults && searchResults.length > 0) {
@@ -479,7 +479,7 @@ export function SalesPage() {
   const handleScannerScan = async (barcode: string) => {
     // Camera scanner adds directly to cart (same as device scanner)
     const product = await findProductByBarcode(barcode, true);
-    
+
     if (product) {
       addProduct(product);
       playSuccessSound();
@@ -505,7 +505,7 @@ export function SalesPage() {
     } else {
       item.quantity = quantity;
     }
-    
+
     item.total = item.selling_price * item.quantity;
     setItems(newItems);
   };
@@ -651,7 +651,7 @@ export function SalesPage() {
     try {
       setProductLoading(true);
       const fullProduct = await productService.getById(String(hydratedProduct.id));
-      
+
       // Merge loaded data over existing hydrated data to ensure we don't lose existing context
       setSelectedProduct({
         ...hydratedProduct,
@@ -662,19 +662,19 @@ export function SalesPage() {
         sku: fullProduct.sku || hydratedProduct.sku,
         barcode: fullProduct.barcode || hydratedProduct.barcode,
         shtrix_code: fullProduct.shtrix_code || hydratedProduct.shtrix_code,
-        category_name: fullProduct.category_name && fullProduct.category_name !== String(fullProduct.category) 
-          ? fullProduct.category_name 
+        category_name: fullProduct.category_name && fullProduct.category_name !== String(fullProduct.category)
+          ? fullProduct.category_name
           : hydratedProduct.category_name,
-        inventory_by_store: fullProduct.inventory_by_store?.length 
-          ? fullProduct.inventory_by_store 
+        inventory_by_store: fullProduct.inventory_by_store?.length
+          ? fullProduct.inventory_by_store
           : hydratedProduct.inventory_by_store,
         quantity: fullProduct.quantity ?? hydratedProduct.quantity,
         total_count: fullProduct.total_count ?? hydratedProduct.total_count,
         selling_price: fullProduct.selling_price || hydratedProduct.selling_price,
         purchase_price: fullProduct.purchase_price || hydratedProduct.purchase_price,
         image: fullProduct.image || hydratedProduct.image,
-        images: (fullProduct.images && fullProduct.images.length > 0) 
-          ? fullProduct.images 
+        images: (fullProduct.images && fullProduct.images.length > 0)
+          ? fullProduct.images
           : hydratedProduct.images,
       });
       // Productdan location ma'lumotlarini olish
@@ -703,7 +703,7 @@ export function SalesPage() {
 
   return (
     <div>
-    <style>{`
+      <style>{`
          @media print {
           @page { size: 100% auto; margin: 0; }
           body * { visibility: hidden; }
@@ -724,7 +724,7 @@ export function SalesPage() {
           .print-hidden { display: none !important; } 
         }
           `}</style>
-      {/* /* Main Sales Interface */ }
+      {/* /* Main Sales Interface */}
       <div className="space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -756,20 +756,19 @@ export function SalesPage() {
                     onClick={handleOpenScanner}
                     title="Ctrl+S"
                   >
-                    <ScanBarcode className="w-5 text-muted-foreground dark:text-gray-400" />
+                    <ScanBarcode className="w-5 " />
                   </Button>
                 </div>
                 {scanMessage && (
                   <div
-                    className={`mt-2 rounded-lg border px-3 py-2 text-sm ${
-                      scanStatus === 'success'
-                        ? 'border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400'
-                        : scanStatus === 'not_found' || scanStatus === 'error'
+                    className={`mt-2 rounded-lg border px-3 py-2 text-sm ${scanStatus === 'success'
+                      ? 'border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400'
+                      : scanStatus === 'not_found' || scanStatus === 'error'
                         ? 'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400'
                         : scanStatus === 'searching'
-                        ? 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400'
-                        : 'border-primary/20 bg-primary/5 text-muted-foreground'
-                    }`}
+                          ? 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400'
+                          : 'border-primary/20 bg-primary/5 text-muted-foreground'
+                      }`}
                   >
                     {scanMessage}
                   </div>
@@ -789,7 +788,7 @@ export function SalesPage() {
                       </SelectContent>
                     </Select>
                   )}
-                  <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  {/* <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                     <SelectTrigger className="h-8 w-full dark:bg-gray-900 dark:border-gray-600 dark:text-white sm:w-40">
                       <SelectValue placeholder={t('placeholders.selectCategory')} />
                     </SelectTrigger>
@@ -800,7 +799,7 @@ export function SalesPage() {
                         </SelectItem>
                       ))}
                     </SelectContent>
-                  </Select>
+                  </Select> */}
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto space-y-1.5">
@@ -814,52 +813,52 @@ export function SalesPage() {
                   </div>
                 ) : (
                   displayedProducts.map((product) => (
-                      <div
-                        key={product.id}
-                        className="w-full text-left rounded-lg p-2.5 border border-gray-900 hover:bg-accent dark:hover:bg-gray-900 transition-colors cursor-pointer"
-                        onClick={() => handleProductClick(product)}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            handleProductClick(product);
-                          }
-                        }}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1">
-                            <div className="font-medium dark:text-white">
-                              {product.name || product.sku  || t('sales.unknownProduct')}
-                            </div>
-                            <div className="text-xs text-muted-foreground dark:text-gray-400">
-                              {product.sku ||  product.barcode}
-                            </div>
+                    <div
+                      key={product.id}
+                      className="w-full text-left rounded-lg p-2.5 border border-gray-900 hover:bg-accent dark:hover:bg-gray-900 transition-colors cursor-pointer"
+                      onClick={() => handleProductClick(product)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleProductClick(product);
+                        }
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <div className="font-medium dark:text-white">
+                            {product.name || product.sku || t('sales.unknownProduct')}
                           </div>
-                          <div className="ml-3 flex items-start gap-2">
-                            <button
-                              type="button"
-                              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-input bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200 dark:hover:bg-gray-800"
-                              onClick={(event) => {
-                                event.preventDefault();
-                                event.stopPropagation();
-                                void handleOpenProductDialog(product);
-                              }}
-                              aria-label={t('sales.productDetails')}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </button>
-                            <div className="text-right">
-                              <div className="font-bold dark:text-white">{formatCurrency(product.selling_price ?? 0)}</div>
-                              <div className="flex items-center justify-end">
-                                <span className="inline-flex items-center rounded bg-primary/10 dark:bg-gray-600 px-1.5 py-0.5 text-xs font-medium dark:text-gray-200">
-                                  {product.quantity}
-                                </span>
-                              </div>
+                          <div className="text-xs text-muted-foreground dark:text-gray-400">
+                            {product.sku || product.barcode}
+                          </div>
+                        </div>
+                        <div className="ml-3 flex items-start gap-2">
+                          <button
+                            type="button"
+                            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-input bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200 dark:hover:bg-gray-800"
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              void handleOpenProductDialog(product);
+                            }}
+                            aria-label={t('sales.productDetails')}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          <div className="text-right">
+                            <div className="font-bold dark:text-white">{formatCurrency(product.selling_price ?? 0)}</div>
+                            <div className="flex items-center justify-end">
+                              <span className="inline-flex items-center rounded bg-primary/10 dark:bg-gray-600 px-1.5 py-0.5 text-xs font-medium dark:text-gray-200">
+                                {product.quantity}
+                              </span>
                             </div>
                           </div>
                         </div>
                       </div>
+                    </div>
                   ))
                 )}
               </div>
@@ -1035,15 +1034,39 @@ export function SalesPage() {
                     </div>
                   </div>
                 </div>
+                <div>
+                  <Label className="text-xs dark:text-gray-300">{t('sales.discount')}</Label>
+                  <div className="flex gap-1">
+                    <Select value={discountType} onValueChange={(val: 'p' | 'f') => setDiscountType(val)}>
+                      <SelectTrigger className="h-9 w-20 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="f">{t('sales.uzs')}</SelectItem>
+                        <SelectItem value="p">%</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={discount || ''}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                        const val = e.target.value;
+                        setDiscount(val === '' ? 0 : Number(val));
+                      }}
+                      className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white flex-1"
+                    />
+                  </div>
+                </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground dark:text-gray-400">{t('sales.quickPayment')}</Label>
                   <div className="grid grid-cols-2 gap-1.5">
                     <Button
                       type="button"
                       variant={activePayment === 'cash' ? 'default' : 'outline'}
-                      className={`h-10 text-xs ${
-                        activePayment === 'cash' ? '' : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'
-                      }`}
+                      className={`h-10 text-xs ${activePayment === 'cash' ? '' : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'
+                        }`}
                       onClick={handleQuickCash}
                     >
                       {t('sales.cash')}
@@ -1051,9 +1074,8 @@ export function SalesPage() {
                     <Button
                       type="button"
                       variant={activePayment === 'card' ? 'default' : 'outline'}
-                      className={`h-10 text-xs ${
-                        activePayment === 'card' ? '' : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'
-                      }`}
+                      className={`h-10 text-xs ${activePayment === 'card' ? '' : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'
+                        }`}
                       onClick={handleQuickCard}
                     >
                       {t('sales.card')}
@@ -1088,31 +1110,6 @@ export function SalesPage() {
                       }}
                       className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white"
                     />
-                  </div>
-                  <div>
-                    <Label className="text-xs dark:text-gray-300">{t('sales.discount')}</Label>
-                    <div className="flex gap-1">
-                      <Select value={discountType} onValueChange={(val: 'p' | 'f') => setDiscountType(val)}>
-                        <SelectTrigger className="h-9 w-20 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="f">{t('sales.uzs')}</SelectItem>
-                          <SelectItem value="p">%</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        type="number"
-                        min="0"
-                        placeholder="0"
-                        value={discount || ''}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                          const val = e.target.value;
-                          setDiscount(val === '' ? 0 : Number(val));
-                        }}
-                        className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white flex-1"
-                      />
-                    </div>
                   </div>
                 </div>
                 <div className="rounded-lg p-2.5 bg-muted/50 dark:bg-gray-900 space-y-1.5">
@@ -1159,7 +1156,7 @@ export function SalesPage() {
         </div>
       </div>
 
-{/* Receipt Modal */}
+      {/* Receipt Modal */}
       {showReceipt && (
         <div className="receipt-modal fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="receipt-content receipt-print bg-white dark:bg-gray-800 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -1173,7 +1170,7 @@ export function SalesPage() {
               <div className="text-center border-b dark:border-gray-600 pb-3">
                 <h4 className="text-xl font-bold dark:text-white print:text-black">AvtoCRM</h4>
                 <p className="text-sm text-muted-foreground dark:text-gray-400 print:text-black">{t('sales.receipt')}</p>
-                <p className="text-xs text-muted-foreground dark:text-gray-400 print:text-black">{new Date().toLocaleString('uz-UZ', { hour12: false})}</p>
+                <p className="text-xs text-muted-foreground dark:text-gray-400 print:text-black">{new Date().toLocaleString('uz-UZ', { hour12: false })}</p>
               </div>
               <div className="border-b dark:border-gray-600 pb-2 text-sm dark:text-gray-300">
                 {selectedCustomerId &&
@@ -1410,7 +1407,7 @@ export function SalesPage() {
                     <p className="text-sm text-muted-foreground">{t('sales.noLocation')}</p>
                   )}
                 </div>
-                
+
                 {/* Stock in other stores */}
                 {selectedProduct?.inventory_by_store && selectedProduct.inventory_by_store.length > 0 && (
                   <div className="space-y-3">
@@ -1422,8 +1419,8 @@ export function SalesPage() {
                     </div>
                     <div className="grid gap-2">
                       {selectedProduct.inventory_by_store.map((inv) => (
-                        <div 
-                          key={inv.store_id} 
+                        <div
+                          key={inv.store_id}
                           className="flex items-center justify-between rounded-xl border bg-background p-3 text-sm"
                         >
                           <div className="flex flex-col">
@@ -1433,12 +1430,11 @@ export function SalesPage() {
                             )}
                           </div>
                           <div className="flex flex-col items-end gap-1">
-                            <span 
-                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${
-                                inv.quantity > 0 
-                                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' 
-                                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                              }`}
+                            <span
+                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${inv.quantity > 0
+                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                }`}
                             >
                               {inv.quantity} {t('common.pcs', 'дона')}
                             </span>
