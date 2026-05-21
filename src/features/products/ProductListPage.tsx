@@ -414,8 +414,172 @@ export function ProductListPage() {
         </div>
       )}
 
+      {/* ═══════ Mobile Card-Based View ═══════ */}
+      <div className="block md:hidden space-y-4">
+        {loading ? (
+          <div className="h-40 flex flex-col items-center justify-center gap-2 text-muted-foreground bg-card rounded-2xl border border-border/60">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <span className="text-sm font-medium">{t('common.loading')}</span>
+          </div>
+        ) : products.length === 0 ? (
+          <div className="h-40 flex flex-col items-center justify-center gap-2 text-muted-foreground bg-card rounded-2xl border border-border/60">
+            <Package className="h-8 w-8 opacity-40 text-muted-foreground" />
+            <span className="text-sm">{t('common.noData', "Ma'lumot yo'q")}</span>
+          </div>
+        ) : (
+          products.map((item) => {
+            const imageUrl = getImageUrl(item);
+            const article = getArticle(item);
+            const totalQty = getTotalQuantity(item);
+            const isActive = item.is_active !== false;
+            const warehouseQty = warehouseStore ? getStoreQuantity(item, warehouseStore.id) : totalQty;
+
+            return (
+              <div
+                key={item.id}
+                onClick={() => isAdmin && navigate(`/${lang}/products/${item.id}/edit`)}
+                className={cn(
+                  "rounded-2xl border border-border/60 bg-card p-4 shadow-sm space-y-4 active:scale-[0.99] transition-transform cursor-pointer relative",
+                  !isActive && "opacity-60"
+                )}
+              >
+                {/* Upper part: Image and title info */}
+                <div className="flex gap-3">
+                  <div className="shrink-0">
+                    {imageUrl ? (
+                      <img
+                        src={imageUrl}
+                        alt={item.name}
+                        className="h-16 w-16 rounded-xl object-cover border border-border/40"
+                        onError={(e) => {
+                          const img = e.target as HTMLImageElement;
+                          img.style.display = 'none';
+                          img.parentElement!.innerHTML = '<div class="h-16 w-16 rounded-xl border border-dashed border-border bg-muted/30 flex items-center justify-center"><span class="text-muted-foreground text-xs">—</span></div>';
+                        }}
+                      />
+                    ) : (
+                      <div className="h-16 w-16 rounded-xl border border-dashed border-border bg-muted/30 flex items-center justify-center">
+                        <Package className="h-6 w-6 text-muted-foreground/40" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className="font-bold text-slate-900 dark:text-white text-sm leading-snug line-clamp-2">
+                        {item.name}
+                      </h4>
+                      <span className="text-[10px] font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
+                        #{item.id}
+                      </span>
+                    </div>
+
+                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                      {item.category_name && (
+                        <span className="text-muted-foreground font-medium flex items-center gap-1">
+                          <Tag className="h-3 w-3 text-primary" />
+                          {item.category_name}
+                        </span>
+                      )}
+                      <span className="text-muted-foreground font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px]">
+                        {article}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Middle part: Prices */}
+                <div className="grid grid-cols-2 gap-3 bg-muted/30 p-2.5 rounded-xl border border-border/40 text-xs">
+                  <div>
+                    <span className="text-muted-foreground block text-[10px] uppercase tracking-wider">{t('products.purchasePrice', 'Kelish narxi')}</span>
+                    <span className="font-semibold text-slate-900 dark:text-slate-200 mt-0.5 block">
+                      {formatCurrency(item.purchase_price ?? 0)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[10px] uppercase tracking-wider">{t('products.sellingPrice', 'Sotuv narxi')}</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-500 mt-0.5 block">
+                      {formatCurrency(item.selling_price ?? 0)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Inventory / Stocks details */}
+                <div className="space-y-2 bg-slate-50 dark:bg-slate-900/40 p-3 rounded-xl border border-border/30">
+                  <div className="flex items-center justify-between text-xs border-b border-border/30 pb-2">
+                    <span className="text-slate-600 dark:text-slate-400 flex items-center gap-1.5 font-medium">
+                      <Warehouse className="h-3.5 w-3.5 text-primary" />
+                      {t('products.warehouse', 'Ombor')}:
+                    </span>
+                    <span className={cn(
+                      "font-bold tabular-nums text-sm",
+                      warehouseQty === 0 ? "text-muted-foreground" : "text-slate-900 dark:text-white"
+                    )}>
+                      {warehouseQty}
+                    </span>
+                  </div>
+
+                  {shopStores.length > 0 && (
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs pt-1">
+                      {shopStores.map((store) => {
+                        const qty = getStoreQuantity(item, store.id);
+                        return (
+                          <div key={store.id} className="flex justify-between items-center py-0.5">
+                            <span className="text-slate-600 dark:text-slate-400 truncate max-w-[80px] flex items-center gap-1 font-medium">
+                              <StoreIcon className="h-3 w-3 shrink-0 text-blue-500" />
+                              {store.name}
+                            </span>
+                            <span className={cn(
+                              "font-bold tabular-nums",
+                              qty === 0 ? "text-muted-foreground" : "text-blue-600 dark:text-blue-400"
+                            )}>
+                              {qty}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer part: Status & action button */}
+                <div className="flex items-center justify-between pt-1 border-t border-border/30">
+                  <div>
+                    {totalQty > 0 ? (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold badge-success">
+                        {t('products.inStock', 'Omborda bor')}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold badge-danger">
+                        {t('products.outOfStock', 'Tugagan')}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3 rounded-lg flex items-center text-xs shadow-sm bg-card hover:bg-muted border border-border"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setViewProduct(item);
+                      }}
+                    >
+                      <Eye className="h-3.5 w-3.5 mr-1" />
+                      {t('common.view', "Ko'rish")}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
       {/* ═══════ Product Table ═══════ */}
-      <div className="w-full overflow-x-auto rounded-2xl border border-border/60 bg-card">
+      <div className="hidden md:block w-full overflow-x-auto rounded-2xl border border-border/60 bg-card">
         <table className="w-full text-sm" style={{ minWidth: '1100px' }}>
           <thead>
             <tr className="border-b border-border/50 bg-muted/30">

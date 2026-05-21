@@ -35,7 +35,7 @@ export function TransferCreatePage() {
   const [fromStoreId, setFromStoreId] = useState(isAdmin ? '' : userStoreId);
   const [toStoreId, setToStoreId] = useState('');
   const [items, setItems] = useState<TransferItemForm[]>([]);
-  
+
   const safeStores = useMemo(() => (Array.isArray(stores) ? stores : []), [stores]);
   const safeProducts = useMemo(() => {
     if (productsLoading) return [];
@@ -80,7 +80,7 @@ export function TransferCreatePage() {
   const handleSubmit = async (e: ChangeEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (saving) return;
-    
+
     const invalidItems = items.filter(item => {
       const currentStock = getProductStock(item.product);
       return item.quantity > currentStock;
@@ -122,7 +122,7 @@ export function TransferCreatePage() {
       <form onSubmit={handleSubmit}>
         <Card className="border border-border/60 shadow-sm rounded-xl overflow-hidden bg-card">
           <CardContent className="p-6 space-y-8">
-            
+
             {/* Top section: From and To Stores */}
             <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-2">
@@ -172,23 +172,23 @@ export function TransferCreatePage() {
               <div className="space-y-3">
                 {items.length === 0 && (
                   <div className="text-center p-8 border border-dashed border-border rounded-xl bg-muted/20">
-                     <p className="text-sm text-muted-foreground">{t('transfers.noItems', "Hech qanday tovar qo'shilmagan")}</p>
+                    <p className="text-sm text-muted-foreground">{t('transfers.noItems', "Hech qanday tovar qo'shilmagan")}</p>
                   </div>
                 )}
-                
+
                 {items.map((item, index) => (
                   <div key={index} className="flex flex-col sm:flex-row items-start sm:items-end gap-4 p-4 rounded-xl bg-muted/40 border border-border/60">
                     <div className="flex-1 w-full space-y-2">
                       <Label className="text-xs font-semibold text-muted-foreground">{t('products.title', 'Tovar')}</Label>
-                      <Select 
-                        value={item.product} 
+                      <Select
+                        value={item.product}
                         onValueChange={(value) => {
                           const newItems = [...items];
                           const availableQty = getProductStock(value);
                           newItems[index].product = value;
                           newItems[index].availableQuantity = availableQty;
                           if (newItems[index].quantity > availableQty) {
-                             newItems[index].quantity = availableQty;
+                            newItems[index].quantity = availableQty;
                           }
                           setItems(newItems);
                         }}
@@ -198,11 +198,11 @@ export function TransferCreatePage() {
                         </SelectTrigger>
                         <SelectContent>
                           {safeProducts.map(p => {
-                             const inv = p.inventory_by_store?.find(i => String(i.store_id) === String(fromStoreId));
-                             const q = inv ? inv.quantity : 0;
-                             return (
-                               <SelectItem key={p.id} value={String(p.id)}>{p.name} (Omborda: {q})</SelectItem>
-                             )
+                            const inv = p.inventory_by_store?.find(i => String(i.store_id) === String(fromStoreId));
+                            const q = inv ? inv.quantity : 0;
+                            return (
+                              <SelectItem key={p.id} value={String(p.id)}>{p.name} (Omborda: {q})</SelectItem>
+                            )
                           })}
                         </SelectContent>
                       </Select>
@@ -220,12 +220,12 @@ export function TransferCreatePage() {
                           const val = e.target.value;
                           const numVal = val === '' ? 0 : Number(val);
                           const availableQty = newItems[index].availableQuantity ?? getProductStock(newItems[index].product);
-                          
+
                           if (numVal > availableQty) {
-                             toast.error(`${t('messages.insufficientStock', 'Maksimal qoldiq')}: ${availableQty}`);
-                             newItems[index].quantity = availableQty;
+                            toast.error(`${t('messages.insufficientStock', 'Maksimal qoldiq')}: ${availableQty}`);
+                            newItems[index].quantity = availableQty;
                           } else {
-                             newItems[index].quantity = numVal;
+                            newItems[index].quantity = numVal;
                           }
                           setItems(newItems);
                         }}
@@ -248,22 +248,22 @@ export function TransferCreatePage() {
 
           </CardContent>
           <CardFooter className="p-6 pt-0 flex flex-col sm:flex-row gap-4">
-             <Button 
-               type="button" 
-               variant="outline" 
-               onClick={() => navigate(`/${lang}/transfers`)}
-               className="w-full sm:flex-1 h-11 border border-border bg-card text-foreground rounded-lg hover:bg-muted"
-             >
-               {t('common.cancel', 'Bekor qilish')}
-             </Button>
-             <Button 
-               type="submit" 
-               className="w-full sm:flex-[2] bg-primary hover:bg-primary/90 text-primary-foreground h-11 rounded-lg" 
-               disabled={saving || !fromStoreId || !toStoreId || items.length === 0}
-             >
-               <Send className="h-4 w-4 mr-2" />
-               {saving ? t('common.loading', 'Yuklanmoqda...') : t('transfers.createTransfer', "Tovarni jo'natish")}
-             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate(`/${lang}/transfers`)}
+              className="w-full sm:flex-1 h-11 border border-border bg-card text-foreground rounded-lg hover:bg-muted"
+            >
+              {t('common.cancel', 'Bekor qilish')}
+            </Button>
+            <Button
+              type="submit"
+              className="w-full sm:flex-[2] bg-primary hover:bg-primary/90 text-primary-foreground h-11 rounded-lg"
+              disabled={saving || !fromStoreId || !toStoreId || items.length === 0}
+            >
+              <Send className="h-4 w-4 mr-2" />
+              {saving ? t('common.loading', 'Yuklanmoqda...') : t('transfers.createTransfer', "Tovarni jo'natish")}
+            </Button>
           </CardFooter>
         </Card>
       </form>
