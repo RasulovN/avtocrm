@@ -177,22 +177,29 @@ const item = (raw ?? {}) as Partial<Product> & {
   if (batches && Array.isArray(batches)) {
     inventoryByStore = batches.map((batch) => {
       totalQuantity += batch.quantity;
-      const purchasePrice = Number(batch.purchase_price);
-      const sellingPrice = Number(batch.selling_price);
-      if (!isNaN(purchasePrice)) {
-        if (minPurchasePrice === undefined || purchasePrice < minPurchasePrice) minPurchasePrice = purchasePrice;
-        if (maxPurchasePrice === undefined || purchasePrice > maxPurchasePrice) maxPurchasePrice = purchasePrice;
+      
+      const parsedPurchase = batch.purchase_price !== null && batch.purchase_price !== undefined && String(batch.purchase_price).trim() !== ''
+        ? Number(batch.purchase_price)
+        : undefined;
+      const parsedSelling = batch.selling_price !== null && batch.selling_price !== undefined && String(batch.selling_price).trim() !== ''
+        ? Number(batch.selling_price)
+        : undefined;
+
+      if (parsedPurchase !== undefined && !isNaN(parsedPurchase)) {
+        if (minPurchasePrice === undefined || parsedPurchase < minPurchasePrice) minPurchasePrice = parsedPurchase;
+        if (maxPurchasePrice === undefined || parsedPurchase > maxPurchasePrice) maxPurchasePrice = parsedPurchase;
       }
-      if (!isNaN(sellingPrice)) {
-        if (minSellingPrice === undefined || sellingPrice < minSellingPrice) minSellingPrice = sellingPrice;
-        if (maxSellingPrice === undefined || sellingPrice > maxSellingPrice) maxSellingPrice = sellingPrice;
+      if (parsedSelling !== undefined && !isNaN(parsedSelling)) {
+        if (minSellingPrice === undefined || parsedSelling < minSellingPrice) minSellingPrice = parsedSelling;
+        if (maxSellingPrice === undefined || parsedSelling > maxSellingPrice) maxSellingPrice = parsedSelling;
       }
+
       return {
         store_id: String(batch.store),
         store_name: batch.store_name,
         quantity: batch.quantity,
-        purchase_price: purchasePrice,
-        selling_price: sellingPrice,
+        purchase_price: parsedPurchase && !isNaN(parsedPurchase) ? parsedPurchase : 0,
+        selling_price: parsedSelling && !isNaN(parsedSelling) ? parsedSelling : 0,
         location_name: batch.location?.name,
         location_description: batch.location?.description,
       };

@@ -26,7 +26,7 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
   const refreshCategories = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await categoryService.getAll();
+      const response = await categoryService.getAll({ limit: 1000 });
       const data = Array.isArray(response.data) ? response.data : [];
       setCategories(data);
       setError(null);

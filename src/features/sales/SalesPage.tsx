@@ -102,7 +102,7 @@ export function SalesPage() {
   const [searchResults, setSearchResults] = useState<Product[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
   // const { categories } = useCategories();
-  const { products: allProducts, loading: productsLoading } = useProducts();
+  const { products: allProducts, loading: productsLoading, refreshProducts } = useProducts();
 
   // Debug logs
   useEffect(() => {
@@ -171,24 +171,41 @@ export function SalesPage() {
       (product.sku && item.sku === product.sku)
     );
 
-    if (!matchedProduct) return normalizedProduct;
+    const baseProduct = matchedProduct ? { ...matchedProduct, ...normalizedProduct } : normalizedProduct;
+
+    // Apply store-specific values if storeId is selected
+    let storeQty = baseProduct.quantity;
+    let storePurchasePrice = baseProduct.purchase_price;
+    let storeSellingPrice = baseProduct.selling_price;
+    let storeName = baseProduct.store_name;
+
+    if (storeId && baseProduct.inventory_by_store) {
+      const storeInv = baseProduct.inventory_by_store.find(
+        (inv) => String(inv.store_id) === String(storeId)
+      );
+      if (storeInv) {
+        storeQty = storeInv.quantity;
+        storePurchasePrice = storeInv.purchase_price;
+        storeSellingPrice = storeInv.selling_price;
+        storeName = storeInv.store_name;
+      }
+    }
 
     return {
-      ...matchedProduct,
-      ...normalizedProduct,
-      id: matchedProduct.id || productId,
-      name: product.name || matchedProduct.name,
-      sku: product.sku || matchedProduct.sku,
-      barcode: product.barcode || matchedProduct.barcode,
-      shtrix_code: product.shtrix_code || matchedProduct.shtrix_code,
-      purchase_price: product.purchase_price ?? matchedProduct.purchase_price,
-      selling_price: product.selling_price ?? matchedProduct.selling_price,
-      quantity: product.quantity ?? matchedProduct.quantity,
-      total_count: product.total_count ?? matchedProduct.total_count,
-      store_id: product.store_id || matchedProduct.store_id,
-      store_name: product.store_name || matchedProduct.store_name,
+      ...baseProduct,
+      id: baseProduct.id || productId,
+      name: product.name || baseProduct.name,
+      sku: product.sku || baseProduct.sku,
+      barcode: product.barcode || baseProduct.barcode,
+      shtrix_code: product.shtrix_code || baseProduct.shtrix_code,
+      purchase_price: storePurchasePrice,
+      selling_price: storeSellingPrice,
+      quantity: storeQty,
+      total_count: baseProduct.total_count ?? storeQty,
+      store_id: storeId || baseProduct.store_id,
+      store_name: storeName || baseProduct.store_name,
     };
-  }, [allProducts]);
+  }, [allProducts, storeId]);
 
   const addProduct = useCallback((product: Product) => {
     const productId = String(product.id || product.product_id || '');
@@ -592,6 +609,11 @@ export function SalesPage() {
       }
 
       await salesService.create(saleData);
+      try {
+        await refreshProducts();
+      } catch (err) {
+        console.error('Failed to refresh products after sale:', err);
+      }
 
       setShowReceipt(true);
     } catch (error) {

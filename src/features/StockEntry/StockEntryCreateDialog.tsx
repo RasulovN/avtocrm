@@ -343,6 +343,11 @@ export function StockEntryCreateDialog({
         ...( { payment_type: paymentType } as any )
       });
       toast.success(t('inventory.inventoryCreated', 'Kirim muvaffaqiyatli yaratildi'));
+      try {
+        await refreshProducts();
+      } catch (err) {
+        console.error('Failed to refresh products after stock entry:', err);
+      }
       onSuccess?.();
       onOpenChange(false);
     } catch (error) {
@@ -621,34 +626,7 @@ export function StockEntryCreateDialog({
               </div>
             </div>
 
-            {/* Xarid narxi & Sotish narxi */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  {t('products.purchasePrice', 'Xarid narxi')}
-                </Label>
-                <Input
-                  type="number"
-                  placeholder="0"
-                  value={newProductData.purchase_price}
-                  onChange={(e) => setNewProductData({ ...newProductData, purchase_price: e.target.value })}
-                />
-              </div>
 
-              <div className="space-y-2">
-                <Label className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  {t('products.sellingPrice', 'Sotish narxi')}
-                </Label>
-                <Input
-                  type="number"
-                  placeholder="0"
-                  value={newProductData.selling_price}
-                  onChange={(e) => setNewProductData({ ...newProductData, selling_price: e.target.value })}
-                />
-              </div>
-            </div>
 
             {/* Tavsif */}
             <div className="space-y-2">
