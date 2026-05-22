@@ -159,7 +159,7 @@ export function TransferRequestsPage(): ReactElement {
     try {
       setLoading(true);
       const res = await transferService.getAll();
-      const pending = (res.data || []).filter((item) => item.status === 'pending');
+      const pending = (res.data || []).filter((item) => item.status === 'pending' || item.status === 'p');
       setRequests(pending);
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
