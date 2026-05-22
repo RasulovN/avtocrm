@@ -96,13 +96,13 @@ export function SalesPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const isAdmin = Boolean(user?.is_superuser);
-  const userStoreId = user?.store_id || '';
+  const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores.find(s => s.type === 'b')?.id || user.stores[0].id) : '');
   const [stores, setStores] = useState<Store[]>([]);
   const [saving, setSaving] = useState(false);
   const [searchResults, setSearchResults] = useState<Product[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
   // const { categories } = useCategories();
-  const { products: allProducts, loading: productsLoading } = useProducts();
+  const { products: allProducts, loading: productsLoading, refreshProducts } = useProducts();
 
   // Debug logs
   useEffect(() => {
@@ -122,6 +122,7 @@ export function SalesPage() {
   }, [allProducts, productsLoading]);
 
   const [storeId, setStoreId] = useState(userStoreId);
+  const activeStoreId = storeId || userStoreId;
   // const [categoryFilter, setCategoryFilter] = useState('');
 
   const [items, setItems] = useState<CartItem[]>(() => {
@@ -171,41 +172,73 @@ export function SalesPage() {
       (product.sku && item.sku === product.sku)
     );
 
-    if (!matchedProduct) return normalizedProduct;
+    const baseProduct = matchedProduct ? { ...matchedProduct, ...normalizedProduct } : normalizedProduct;
+
+    // Apply store-specific values if activeStoreId is selected
+    let storeQty = activeStoreId ? 0 : baseProduct.quantity;
+    let storePurchasePrice = baseProduct.purchase_price;
+    let storeSellingPrice = baseProduct.selling_price;
+    let storeName = baseProduct.store_name;
+
+    if (activeStoreId && baseProduct.inventory_by_store) {
+      const storeInv = baseProduct.inventory_by_store.find(
+        (inv) => String(inv.store_id) === String(activeStoreId)
+      );
+      if (storeInv) {
+        storeQty = storeInv.quantity;
+        storePurchasePrice = storeInv.purchase_price;
+        storeSellingPrice = storeInv.selling_price;
+        storeName = storeInv.store_name;
+      }
+    }
 
     return {
-      ...matchedProduct,
-      ...normalizedProduct,
-      id: matchedProduct.id || productId,
-      name: product.name || matchedProduct.name,
-      sku: product.sku || matchedProduct.sku,
-      barcode: product.barcode || matchedProduct.barcode,
-      shtrix_code: product.shtrix_code || matchedProduct.shtrix_code,
-      purchase_price: product.purchase_price ?? matchedProduct.purchase_price,
-      selling_price: product.selling_price ?? matchedProduct.selling_price,
-      quantity: product.quantity ?? matchedProduct.quantity,
-      total_count: product.total_count ?? matchedProduct.total_count,
-      store_id: product.store_id || matchedProduct.store_id,
-      store_name: product.store_name || matchedProduct.store_name,
+      ...baseProduct,
+      id: baseProduct.id || productId,
+      name: product.name || baseProduct.name,
+      sku: product.sku || baseProduct.sku,
+      barcode: product.barcode || baseProduct.barcode,
+      shtrix_code: product.shtrix_code || baseProduct.shtrix_code,
+      purchase_price: storePurchasePrice,
+      selling_price: storeSellingPrice,
+      quantity: storeQty,
+      total_count: baseProduct.total_count ?? storeQty,
+      store_id: activeStoreId || baseProduct.store_id,
+      store_name: storeName || baseProduct.store_name,
     };
-  }, [allProducts]);
+  }, [allProducts, activeStoreId]);
 
   const addProduct = useCallback((product: Product) => {
     const productId = String(product.id || product.product_id || '');
     if (!productId) {
       toast.error(t('messages.productIdNotFound'));
-      return;
+      return false;
     }
 
     // Determine available stock for this specific store
     let availableStock = 0;
-    if (product.quantity !== undefined) {
-      availableStock = product.quantity;
-    } else if (product.inventory_by_store && storeId) {
-      const storeInv = product.inventory_by_store.find(inv => String(inv.store_id) === String(storeId));
+    if (product.inventory_by_store && activeStoreId) {
+      const storeInv = product.inventory_by_store.find(inv => String(inv.store_id) === String(activeStoreId));
       availableStock = storeInv ? storeInv.quantity : 0;
+    } else if (product.quantity !== undefined) {
+      availableStock = product.quantity;
     } else {
       availableStock = product.total_count ?? 0;
+    }
+
+    if (availableStock < 1) {
+      if (activeStoreId) {
+        toast.error(t('messages.notInYourStore', "Sizning do'koningizda yo'q"));
+      } else {
+        toast.error(t('messages.insufficientStock', 'Omborda mahsulot yetarli emas!') + ' (0)');
+      }
+      return false;
+    }
+
+    const existingItem = items.find((item) => String(item.product_id) === productId);
+    if (existingItem && existingItem.quantity + 1 > availableStock) {
+      toast.error(t('messages.insufficientStock', 'Omborda mahsulot yetarli emas!') + ` (${availableStock})`);
+      return false;
     }
 
     setItems((prevItems) => {
@@ -213,20 +246,9 @@ export function SalesPage() {
       if (existingIndex >= 0) {
         const newItems = [...prevItems];
         const existingItem = newItems[existingIndex];
-
-        if (existingItem.quantity + 1 > availableStock) {
-          toast.error(t('messages.insufficientStock', 'Omborda mahsulot yetarli emas!') + ` (${availableStock})`);
-          return prevItems;
-        }
-
         existingItem.quantity += 1;
         existingItem.total = existingItem.selling_price * existingItem.quantity;
         return newItems;
-      }
-
-      if (availableStock < 1) {
-        toast.error(t('messages.insufficientStock', 'Omborda mahsulot yetarli emas!') + ' (0)');
-        return prevItems;
       }
 
       return [
@@ -234,7 +256,7 @@ export function SalesPage() {
         {
           product_id: productId,
           product_name: product.name || product.sku || 'Noma\'lum',
-          store_id: product.store_id || storeId || userStoreId || '1',
+          store_id: product.store_id || activeStoreId || '1',
           quantity: 1,
           purchase_price: product.purchase_price ?? 0,
           selling_price: product.selling_price ?? 0,
@@ -243,7 +265,9 @@ export function SalesPage() {
         },
       ];
     });
-  }, [storeId, userStoreId, t]);
+
+    return true;
+  }, [activeStoreId, items, t]);
 
   const findProductByBarcode = useCallback(async (barcode: string, isFromScan: boolean = true): Promise<Product | null> => {
     const normalizedBarcode = barcode.trim();
@@ -286,13 +310,17 @@ export function SalesPage() {
     const product = await findProductByBarcode(barcode);
 
     if (product) {
-      addProduct(product);
-      playSuccessSound();
+      const success = addProduct(product);
+      if (success) {
+        playSuccessSound();
+      } else {
+        playErrorSound();
+      }
     } else {
       playErrorSound();
       toast.error(`${t('messages.productNotFound')}: ${barcode}`);
     }
-  }, [findProductByBarcode, addProduct]);
+  }, [findProductByBarcode, addProduct, t]);
 
   const {
     inputRef,
@@ -322,38 +350,34 @@ export function SalesPage() {
   const productImages = getProductImages(selectedProduct);
   const filteredProducts = useMemo(() => {
     let result = allProducts;
-    if (storeId) {
-      result = result
-        .filter((p) => {
-          const storeInventory = p.inventory_by_store?.find(
-            (inv) => inv.store_id === storeId
-          );
-          return !!storeInventory && storeInventory.quantity > 0;
-        })
-        .map((p) => {
-          const storeInventory = p.inventory_by_store?.find(
-            (inv) => inv.store_id === storeId
-          );
-          if (storeInventory) {
-            return {
-              ...p,
-              quantity: storeInventory.quantity,
-              purchase_price: storeInventory.purchase_price,
-              selling_price: storeInventory.selling_price,
-              store_id: storeInventory.store_id,
-              store_name: storeInventory.store_name,
-              location_name: storeInventory.location_name,
-              location_description: storeInventory.location_description,
-            };
-          }
-          return p;
-        });
+    if (activeStoreId) {
+      result = result.map((p) => {
+        const storeInventory = p.inventory_by_store?.find(
+          (inv) => String(inv.store_id) === String(activeStoreId)
+        );
+        if (storeInventory) {
+          return {
+            ...p,
+            quantity: storeInventory.quantity,
+            purchase_price: storeInventory.purchase_price,
+            selling_price: storeInventory.selling_price,
+            store_id: storeInventory.store_id,
+            store_name: storeInventory.store_name,
+            location_name: storeInventory.location_name,
+            location_description: storeInventory.location_description,
+          };
+        }
+        return {
+          ...p,
+          quantity: 0,
+        };
+      });
     }
     // if (categoryFilter) {
     //   result = result.filter((p) => String(p.category) === categoryFilter);
     // }
     return result;
-  }, [allProducts, storeId]);
+  }, [allProducts, activeStoreId]);
   const displayedProducts = searchResults ?? filteredProducts;
 
   const loadData = useCallback(async () => {
@@ -363,7 +387,7 @@ export function SalesPage() {
         customerApiService.getAll({ limit: 1000 }),
       ]);
       const loadedStores = Array.isArray(storesRes.data) ? storesRes.data : [];
-      setStores(isAdmin ? loadedStores : loadedStores.filter((store) => store.id === userStoreId));
+      setStores(isAdmin ? loadedStores : loadedStores.filter((store) => String(store.id) === String(userStoreId)));
       setCustomers(customersRes.data || []);
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
@@ -372,7 +396,7 @@ export function SalesPage() {
       const fallbackStores = [
         { id: '1', name: 'Main Store', is_warehouse: false, created_at: '' },
       ];
-      setStores(isAdmin ? fallbackStores : fallbackStores.filter((store) => store.id === userStoreId));
+      setStores(isAdmin ? fallbackStores : fallbackStores.filter((store) => String(store.id) === String(userStoreId)));
       setCustomers([]);
     }
   }, [isAdmin, userStoreId]);
@@ -574,7 +598,7 @@ export function SalesPage() {
         payments.push({ type: 'card', amount: String(cardAmount) });
       }
 
-      const selectedStoreId = items.length > 0 ? items[0].store_id : storeId || userStoreId || '1';
+      const selectedStoreId = items.length > 0 ? items[0].store_id : activeStoreId || '1';
       const saleData: any = {
         store: parseInt(selectedStoreId),
         items: items.map((item) => ({
@@ -592,6 +616,11 @@ export function SalesPage() {
       }
 
       await salesService.create(saleData);
+      try {
+        await refreshProducts();
+      } catch (err) {
+        console.error('Failed to refresh products after sale:', err);
+      }
 
       setShowReceipt(true);
     } catch (error) {
@@ -728,12 +757,12 @@ export function SalesPage() {
       <div className="space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight dark:text-white">{t('sales.title')} (POS)</h2>
+            <h2 className="text-2xl font-bold tracking-tight dark:text-white">{t('sales.title')}</h2>
             <p className="text-sm text-muted-foreground dark:text-gray-400">{t('sales.salesPanel')}</p>
           </div>
         </div>
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-12 xl:gap-3 xl:h-[calc(100vh-11rem)]">
-          <div className="flex flex-col space-y-2 xl:col-span-5">
+          <div className="flex flex-col space-y-2 xl:col-span-5 overflow-y-scroll">
             <div className="bg-card border border-gray-900 rounded-lg flex min-h-80 flex-col p-3 xl:min-h-0 xl:flex-1">
               <div className="mb-3">
                 <h4 className="text-base font-semibold flex items-center gap-2 dark:text-white mb-2">
@@ -812,59 +841,70 @@ export function SalesPage() {
                     {t('messages.productNotFound')}
                   </div>
                 ) : (
-                  displayedProducts.map((product) => (
-                    <div
-                      key={product.id}
-                      className="w-full text-left rounded-lg p-2.5 border border-gray-900 hover:bg-accent dark:hover:bg-gray-900 transition-colors cursor-pointer"
-                      onClick={() => handleProductClick(product)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          handleProductClick(product);
-                        }
-                      }}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1">
-                          <div className="font-medium dark:text-white">
-                            {product.name || product.sku || t('sales.unknownProduct')}
+                  displayedProducts.map((product) => {
+                    const isNotAvailable = activeStoreId && (product.quantity === undefined || product.quantity <= 0);
+                    return (
+                      <div
+                        key={product.id}
+                        className={`w-full text-left rounded-lg p-2.5 border border-gray-900 hover:bg-accent dark:hover:bg-gray-900 transition-colors cursor-pointer ${
+                          isNotAvailable ? 'opacity-70' : ''
+                        }`}
+                        onClick={() => handleProductClick(product)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleProductClick(product);
+                          }
+                        }}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1">
+                            <div className="font-medium dark:text-white">
+                              {product.name || product.sku || t('sales.unknownProduct')}
+                            </div>
+                            <div className="text-xs text-muted-foreground dark:text-gray-400">
+                              {product.sku || product.barcode}
+                            </div>
                           </div>
-                          <div className="text-xs text-muted-foreground dark:text-gray-400">
-                            {product.sku || product.barcode}
-                          </div>
-                        </div>
-                        <div className="ml-3 flex items-start gap-2">
-                          <button
-                            type="button"
-                            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-input bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200 dark:hover:bg-gray-800"
-                            onClick={(event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                              void handleOpenProductDialog(product);
-                            }}
-                            aria-label={t('sales.productDetails')}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </button>
-                          <div className="text-right">
-                            <div className="font-bold dark:text-white">{formatCurrency(product.selling_price ?? 0)}</div>
-                            <div className="flex items-center justify-end">
-                              <span className="inline-flex items-center rounded bg-primary/10 dark:bg-gray-600 px-1.5 py-0.5 text-xs font-medium dark:text-gray-200">
-                                {product.quantity}
-                              </span>
+                          <div className="ml-3 flex items-start gap-2">
+                            <button
+                              type="button"
+                              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-input bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200 dark:hover:bg-gray-800"
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                void handleOpenProductDialog(product);
+                              }}
+                              aria-label={t('sales.productDetails')}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
+                            <div className="text-right">
+                              <div className="font-bold dark:text-white">{formatCurrency(product.selling_price ?? 0)}</div>
+                              <div className="flex items-center justify-end mt-1">
+                                {isNotAvailable ? (
+                                  <span className="inline-flex items-center rounded bg-destructive/10 px-1.5 py-0.5 text-[10px] font-medium text-destructive dark:bg-red-900/30 dark:text-red-400">
+                                    {t('messages.notInYourStore', "Sizning do'koningizda yo'q")}
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center rounded bg-primary/10 dark:bg-gray-600 px-1.5 py-0.5 text-xs font-medium dark:text-gray-200">
+                                    {product.quantity}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
           </div>
-          <div className="flex flex-col space-y-2 xl:col-span-4">
+          <div className="flex flex-col space-y-2 xl:col-span-4 overflow-y-scroll">
             <div className="bg-card border border-gray-900 rounded-lg flex min-h-80 flex-col xl:flex-1">
               <div className="p-3 pb-2">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

@@ -18,6 +18,8 @@ const normalizeSupplier = (raw: unknown): Supplier => {
     inn?: string;
     is_active?: boolean;
     debt?: number;
+    total_purchase_amount?: string | number;
+    total_debt?: string | number;
     created_at?: string;
   };
 
@@ -36,7 +38,9 @@ const normalizeSupplier = (raw: unknown): Supplier => {
     phone_number: item.phone_number ?? item.phone ?? '',
     inn: item.inn,
     is_active: item.is_active,
-    debt: typeof item.debt === 'number' ? item.debt : 0,
+    debt: item.total_debt !== undefined ? Number(item.total_debt) : (typeof item.debt === 'number' ? item.debt : 0),
+    total_purchase_amount: item.total_purchase_amount,
+    total_debt: item.total_debt,
     created_at: item.created_at ?? '',
   };
 };

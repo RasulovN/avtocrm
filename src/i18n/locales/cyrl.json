@@ -797,7 +797,8 @@
     "productAddError": "Маҳсулот қўшишда хатолик юз берди",
     "insufficientStock": "Омборда етарли маҳсулот йўқ",
     "invalidQuantity": "Нотўғри миқдор киритилди",
-    "success": "Муваффақиятли"
+    "success": "Муваффақиятли",
+    "notInYourStore": "Сизнинг дўконингизда йўқ"
   },
   "placeholders": {
     "enterAmount": "Суммани киритинг",

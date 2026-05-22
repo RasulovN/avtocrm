@@ -31,7 +31,7 @@ import { productLocationService, type ProductLocation } from '../../services/pro
 import { categoryService } from '../../services/categoryService';
 import { useAuthStore } from '../../app/store';
 import { useCategories } from '../../context/CategoryContext';
-import type { Product, ProductFormData, ProductFilters, ProductUnit, CategoryFormData, ProductUnitFormData, Store } from '../../types';
+import type { Product, ProductFormData, ProductFilters, ProductUnit, CategoryFormData, ProductUnitFormData, Store, Category } from '../../types';
 import { formatCurrency, cn } from '../../utils';
 import { escapeHtml } from '../../utils/xss';
 import { latinToCyrillic } from '../../utils/transliteration';
@@ -337,14 +337,8 @@ export function ProductListPage() {
   }, [stores]);
 
   const shopStores = useMemo(() => {
-    // If stores loaded, use is_warehouse to filter; otherwise just use storeColumns
-    if (stores.length > 0) {
-      const warehouseIds = new Set(stores.filter(s => s.is_warehouse).map(s => s.id));
-      return storeColumns.filter(sc => !warehouseIds.has(sc.id));
-    }
-    // Fallback: first store is warehouse, rest are shops
-    return storeColumns.slice(1);
-  }, [storeColumns, stores]);
+    return storeColumns;
+  }, [storeColumns]);
 
   return (
     <div className="space-y-6">
@@ -382,7 +376,7 @@ export function ProductListPage() {
             <SelectItem value="all">{t('common.all')}</SelectItem>
             {categories.map((category) => (
               <SelectItem key={category.id} value={category.id}>
-                {category.name}
+                {lang === 'cyrl' && category.name_uz_cyrl ? category.name_uz_cyrl : (category.name_uz || category.name)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -433,7 +427,6 @@ export function ProductListPage() {
             const article = getArticle(item);
             const totalQty = getTotalQuantity(item);
             const isActive = item.is_active !== false;
-            const warehouseQty = warehouseStore ? getStoreQuantity(item, warehouseStore.id) : totalQty;
 
             return (
               <div
@@ -509,14 +502,14 @@ export function ProductListPage() {
                 <div className="space-y-2 bg-slate-50 dark:bg-slate-900/40 p-3 rounded-xl border border-border/30">
                   <div className="flex items-center justify-between text-xs border-b border-border/30 pb-2">
                     <span className="text-slate-600 dark:text-slate-400 flex items-center gap-1.5 font-medium">
-                      <Warehouse className="h-3.5 w-3.5 text-primary" />
-                      {t('products.warehouse', 'Ombor')}:
+                      <Layers className="h-3.5 w-3.5 text-primary" />
+                      {t('common.total', 'Jami')}:
                     </span>
                     <span className={cn(
                       "font-bold tabular-nums text-sm",
-                      warehouseQty === 0 ? "text-muted-foreground" : "text-slate-900 dark:text-white"
+                      totalQty === 0 ? "text-muted-foreground" : "text-slate-900 dark:text-white"
                     )}>
-                      {warehouseQty}
+                      {totalQty}
                     </span>
                   </div>
 
@@ -612,9 +605,9 @@ export function ProductListPage() {
               <th className="w-[110px] px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {t('products.sellingPrice', 'Sotuv narxi')}
               </th>
-              {/* Ombor (Warehouse) */}
+              {/* Jami (Total) */}
               <th className="w-[80px] px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {t('products.warehouse', 'Ombor')}
+                {t('common.total', 'Jami')}
               </th>
               {/* Dynamic store columns */}
               {shopStores.map((store, idx) => (
@@ -656,7 +649,6 @@ export function ProductListPage() {
                 const totalQty = getTotalQuantity(item);
                 const isSelected = selectedProductIds.includes(item.id);
                 const isActive = item.is_active !== false;
-                const warehouseQty = warehouseStore ? getStoreQuantity(item, warehouseStore.id) : totalQty;
 
                 return (
                   <tr
@@ -729,15 +721,15 @@ export function ProductListPage() {
                       {formatCurrency(item.selling_price ?? 0)}
                     </td>
 
-                    {/* Warehouse Quantity */}
+                    {/* Total Quantity */}
                     <td className="px-3 py-2 text-center">
                       <span className={cn(
                         'text-sm font-semibold tabular-nums',
-                        warehouseQty === 0 && 'text-muted-foreground',
-                        warehouseQty > 0 && warehouseQty < 5 && 'text-amber-600',
-                        warehouseQty >= 5 && 'text-foreground'
+                        totalQty === 0 && 'text-muted-foreground',
+                        totalQty > 0 && totalQty < 5 && 'text-amber-600',
+                        totalQty >= 5 && 'text-foreground'
                       )}>
-                        {warehouseQty}
+                        {totalQty}
                       </span>
                     </td>
 
@@ -1137,7 +1129,7 @@ interface AddProductModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  categories: { id: string; name: string }[];
+  categories: Category[];
   refreshCategories: () => Promise<void>;
   t: TFunction<'translation', undefined>;
 }
@@ -1157,6 +1149,8 @@ const addProductInitialForm: ProductFormData = {
 };
 
 function AddProductModal({ open, onClose, onSuccess, categories, refreshCategories, t }: AddProductModalProps) {
+  const { i18n } = useTranslation();
+  const lang = i18n.language || 'uz';
   const [formData, setFormData] = useState<ProductFormData>(addProductInitialForm);
   const [saving, setSaving] = useState(false);
   const [units, setUnits] = useState<ProductUnit[]>([]);
@@ -1375,7 +1369,9 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
                         </SelectTrigger>
                         <SelectContent>
                           {categories.map((cat) => (
-                            <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                            <SelectItem key={cat.id} value={cat.id}>
+                              {lang === 'cyrl' && cat.name_uz_cyrl ? cat.name_uz_cyrl : (cat.name_uz || cat.name)}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -1415,39 +1411,6 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
                 </div>
               </div>
 
-              {/* ── Row 3: Purchase Price + Selling Price ── */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="add-purchase-price" className="flex items-center gap-1.5">
-                    <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
-                    {t('products.purchasePrice', 'Kelish narxi')}
-                  </Label>
-                  <Input
-                    id="add-purchase-price"
-                    type="number"
-                    min="0"
-                    step="any"
-                    placeholder="0"
-                    value={formData.purchase_price ?? ''}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('purchase_price', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="add-selling-price" className="flex items-center gap-1.5">
-                    <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
-                    {t('products.sellingPrice', 'Sotuv narxi')}
-                  </Label>
-                  <Input
-                    id="add-selling-price"
-                    type="number"
-                    min="0"
-                    step="any"
-                    placeholder="0"
-                    value={formData.selling_price ?? ''}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('selling_price', e.target.value)}
-                  />
-                </div>
-              </div>
 
               {/* ── Row 4: Description ── */}
               <div className="space-y-2">

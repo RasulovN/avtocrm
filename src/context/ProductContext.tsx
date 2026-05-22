@@ -31,9 +31,6 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true);
       const filters: { limit?: number; store_id?: string } = { limit: 2000 };
-      if (!isAdmin && userStoreId) {
-        filters.store_id = userStoreId;
-      }
       logger.info('Fetching products with filters:', filters);
       const response = await productService.getAll(filters);
       // logger.info('Products API response:', response);
