@@ -131,7 +131,7 @@ export function DashboardPage() {
   const { t, i18n } = useTranslation();
   const { user } = useAuthStore();
   const isAdmin = Boolean(user?.is_superuser);
-  const userStoreId = user?.store_id ? String(user.store_id) : '';
+  const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores.find(s => s.type === 'b')?.id || user.stores[0].id) : '');
 
   const [period, setPeriod] = useState<string>('monthly');
   const [storeId, setStoreId] = useState<string>(userStoreId || 'all');
@@ -139,6 +139,12 @@ export function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<DashboardReportData>(initialDashboardData);
   const [stores, setStores] = useState<Store[]>([]);
+
+  useEffect(() => {
+    if (!isAdmin && userStoreId) {
+      setStoreId(userStoreId);
+    }
+  }, [userStoreId, isAdmin]);
 
   useEffect(() => {
     const fetchStores = async () => {

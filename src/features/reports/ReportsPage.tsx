@@ -84,7 +84,7 @@ export function ReportsPage() {
 
   const { user } = useAuthStore();
   const isAdmin = Boolean(user?.is_superuser);
-  const userStoreId = user?.store_id ? String(user.store_id) : '';
+  const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores.find(s => s.type === 'b')?.id || user.stores[0].id) : '');
 
   const [activeTab, setActiveTab] = useState('sotuvlar');
   const [filter, setFilter] = useState<ReportsFilter>('monthly');
@@ -96,6 +96,12 @@ export function ReportsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stores, setStores] = useState<Store[]>([]);
+
+  useEffect(() => {
+    if (!isAdmin && userStoreId) {
+      setStoreId(userStoreId);
+    }
+  }, [userStoreId, isAdmin]);
 
   const getTrans = (key: string) => {
     return TRANSLATIONS[key]?.[lang === 'cyrl' ? 'cyrl' : 'uz'] || key;
