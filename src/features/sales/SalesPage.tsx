@@ -864,8 +864,9 @@ export function SalesPage() {
                             <div className="font-medium dark:text-white">
                               {product.name || product.sku || t('sales.unknownProduct')}
                             </div>
-                            <div className="text-xs text-muted-foreground dark:text-gray-400">
-                              {product.sku || product.barcode}
+                            <div className="text-xs text-muted-foreground dark:text-gray-400 space-y-1">
+                              <div>{product.sku || product.barcode}</div>
+                              <div className='dark:text-white text-black font-semibold'>ID: {product.id || (product as any).product_id || '-'}</div>
                             </div>
                           </div>
                           <div className="ml-3 flex items-start gap-2">
@@ -939,8 +940,9 @@ export function SalesPage() {
                       <div className="flex items-start justify-between mb-1.5">
                         <div className="flex-1">
                           <div className="font-medium dark:text-white text-sm">{item.product_name}</div>
-                          <div className="text-xs text-muted-foreground dark:text-gray-400">
-                            {safeProducts.find((p) => p.id === item.product_id)?.sku}
+                          <div className="text-xs text-muted-foreground dark:text-gray-400 space-y-1">
+                            <div>{safeProducts.find((p) => p.id === item.product_id)?.sku}</div>
+                            <div>ID: {item.product_id}</div>
                           </div>
                         </div>
                         <Button
