@@ -21,64 +21,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
 import { useAuthStore } from '../../app/store';
 import { formatCurrency } from '../../utils';
+import { reportService } from '../../services/reportService';
+import type { DashboardReportData } from '../../services/reportService';
+import { storeService } from '../../services/storeService';
+import type { Store } from '../../types';
 
-// =======================
-// STATIC MOCK DATA GENERATOR
-// =======================
-const generateAutoPartsData = (storeId: string, filter: string) => {
-  const isAll = storeId === 'all';
-  const seed = isAll ? 5 : String(storeId).charCodeAt(0) || 1;
-  const mult = isAll ? 3 : 1 + (seed % 3) * 0.5;
 
-  return {
-    kpi: {
-      revenue: 285000000 * mult,
-      revenueGrowth: 14.5,
-      debt: 45000000 * mult,
-      debtGrowth: -5.2, // negative is good for debt
-      orders: Math.floor(1250 * mult),
-      ordersGrowth: 8.4,
-      lowStockCount: Math.floor(12 * mult),
-    },
-    topParts: [
-      { id: 'p1', name: 'Motor Moyi Castrol Edge 5W-40 (4L)', sold: Math.floor(210 * mult), rev: Math.floor(94500000 * mult), icon: Droplet, color: 'text-amber-500' },
-      { id: 'p2', name: 'Tormoz Kolodka - GM (Cobalt/Gentra)', sold: Math.floor(450 * mult), rev: Math.floor(54000000 * mult), icon: Activity, color: 'text-rose-500' },
-      { id: 'p3', name: 'Svecha NGK Iridium', sold: Math.floor(520 * mult), rev: Math.floor(41600000 * mult), icon: Zap, color: 'text-yellow-500' },
-      { id: 'p4', name: 'Akkumulyator Delkor 60Ah', sold: Math.floor(65 * mult), rev: Math.floor(39000000 * mult), icon: Battery, color: 'text-emerald-500' },
-      { id: 'p5', name: 'Amortizator KYB Excel-G (Old)', sold: Math.floor(85 * mult), rev: Math.floor(34000000 * mult), icon: Cog, color: 'text-blue-500' },
-      { id: 'p6', name: 'Havo va Salon filtrlari to\'plami', sold: Math.floor(320 * mult), rev: Math.floor(16000000 * mult), icon: Wrench, color: 'text-slate-500' },
-    ],
-    lowStock: [
-      { id: 'ls1', name: 'Antifriz Felix Carbox 5L', left: 2, status: 'critical' },
-      { id: 'ls2', name: 'Moy filtri (GM Original)', left: 5, status: 'warning' },
-      { id: 'ls3', name: 'Rul tyagasi (Spark)', left: 1, status: 'critical' },
-      { id: 'ls4', name: 'Ksenon lampa H7', left: 4, status: 'warning' },
-    ],
-    recentSales: [
-      { id: 'tx1', client: 'Usta Bahodir (Mator)', amount: 1450000, time: '10 daqiqa oldin', type: 'debt' },
-      { id: 'tx2', client: 'Chakana xaridor', amount: 320000, time: '25 daqiqa oldin', type: 'cash' },
-      { id: 'tx3', client: 'Avtoservis "Tezkor"', amount: 4500000, time: '1 soat oldin', type: 'transfer' },
-      { id: 'tx4', client: 'Usta Alisher (Xodovoy)', amount: 850000, time: '2 soat oldin', type: 'cash' },
-    ],
-    chart: {
-      labels: filter === 'today' ? ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00']
-        : filter === 'weekly' ? ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'] : ['1-5', '6-10', '11-15', '16-20', '21-25', '26-30'],
-      data: filter === 'today'
-        ? Array.from({ length: 7 }).map((_, i) => Math.floor(1200000 * mult * (1 + (Math.sin(i + seed) * 0.5))))
-        : filter === 'weekly'
-          ? Array.from({ length: 7 }).map((_, i) => Math.floor(8000000 * mult * (1 + (Math.sin(i + seed) * 0.5))))
-          : Array.from({ length: 6 }).map((_, i) => Math.floor(45000000 * mult * (1 + (Math.sin(i + seed) * 0.5))))
-    }
-  };
-};
+// generateFallbackData was removed to only show database data
 
-const getLinePoints = (data: number[], chartWidth = 100, chartHeight = 100): Array<{ x: number; y: number }> => {
+const getLinePoints = (data: (number | null)[], chartWidth = 100, chartHeight = 100): Array<{ x: number; y: number }> => {
   if (data.length === 0) return [];
-  const maxVal = Math.max(...data, 1);
-  return data.map((val, idx) => ({
-    x: (idx / Math.max(1, data.length - 1)) * chartWidth,
-    y: chartHeight - (val / maxVal) * chartHeight,
-  }));
+  const validData = data.filter((val): val is number => val !== null);
+  const maxVal = validData.length > 0 ? Math.max(...validData, 1) : 1;
+  return data
+    .map((val, idx) => {
+      if (val === null) return null;
+      return {
+        x: (idx / Math.max(1, data.length - 1)) * chartWidth,
+        y: chartHeight - (val / maxVal) * chartHeight,
+      };
+    })
+    .filter((p): p is { x: number; y: number } => p !== null);
 };
 
 const buildSmoothPath = (points: Array<{ x: number; y: number }>): string => {
@@ -92,49 +55,249 @@ const buildSmoothPath = (points: Array<{ x: number; y: number }>): string => {
   return path;
 };
 
+const initialDashboardData: DashboardReportData = {
+  kpi: {
+    revenue: 0,
+    revenueGrowth: 0,
+    debt: 0,
+    debtGrowth: 0,
+    orders: 0,
+    ordersGrowth: 0,
+    lowStockCount: 0
+  },
+  topParts: [],
+  lowStock: [],
+  recentSales: [],
+  chart: {
+    labels: [],
+    data: []
+  }
+};
+
+const iconsList = [Droplet, Activity, Zap, Battery, Cog, Wrench];
+const colorsList = ['text-amber-500', 'text-rose-500', 'text-yellow-500', 'text-emerald-500', 'text-blue-500', 'text-slate-500'];
+
+const latinToCyrillicMap: Record<string, string> = {
+  // Weekdays (Full)
+  'Dushanba': 'Душанба',
+  'Seshanba': 'Сешанба',
+  'Chorshanba': 'Чоршанба',
+  'Payshanba': 'Пайшанба',
+  'Juma': 'Жума',
+  'Shanba': 'Шанба',
+  'Yakshanba': 'Якшанба',
+  
+  // Weekdays (Short)
+  'Du': 'Ду',
+  'Se': 'Се',
+  'Ch': 'Чо',
+  'Pa': 'Па',
+  'Ju': 'Жу',
+  'Sh': 'Ша',
+  'Ya': 'Як',
+
+  // Months (Full)
+  'Yanvar': 'Январ',
+  'Fevral': 'Феврал',
+  'Mart': 'Март',
+  'Aprel': 'Апрел',
+  'May': 'Май',
+  'Iyun': 'Июн',
+  'Iyul': 'Июл',
+  'Avgust': 'Август',
+  'Sentabr': 'Сентябр',
+  'Sentyabr': 'Сентябр',
+  'Oktabr': 'Октябр',
+  'Oktyabr': 'Октябр',
+  'Noyabr': 'Ноябр',
+  'Dekabr': 'Декабр',
+
+  // Months (Short)
+  'Yan': 'Янв',
+  'Feb': 'Фев',
+  'Mar': 'Мар',
+  'Apr': 'Апр',
+  'Avg': 'Авг',
+  'Sen': 'Сен',
+  'Okt': 'Окт',
+  'Noy': 'Ноя',
+  'Dek': 'Дек',
+};
+
 // =======================
 // DASHBOARD COMPONENT
 // =======================
 export function DashboardPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuthStore();
   const isAdmin = Boolean(user?.is_superuser);
-  const userStoreId = user?.store_id ? String(user.store_id) : '';
+  const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores.find(s => s.type === 'b')?.id || user.stores[0].id) : '');
 
-  const [period, setPeriod] = useState<string>('today');
+  const [period, setPeriod] = useState<string>('monthly');
   const [storeId, setStoreId] = useState<string>(userStoreId || 'all');
   const [isLoading, setIsLoading] = useState(true);
-  const [data, setData] = useState(() => generateAutoPartsData(storeId, period));
+  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<DashboardReportData>(initialDashboardData);
+  const [stores, setStores] = useState<Store[]>([]);
 
-  const availableBranches = isAdmin
-    ? [
-      { id: 'all', name: t('dashboard.allBranches', 'Barcha filiallarni jamlash') },
-      { id: '1', name: t('dashboard.mainBranch', 'Asosiy filial (Chilonzor)') },
-      { id: '2', name: t('dashboard.sergeliBranch', 'Sergeli Avtobo\'zor filial') }
-    ]
-    : [{ id: userStoreId || 'all', name: user?.store_name || t('common.myBranch', 'Mening filialim') }];
+  useEffect(() => {
+    if (!isAdmin && userStoreId) {
+      setStoreId(userStoreId);
+    }
+  }, [userStoreId, isAdmin]);
+
+  useEffect(() => {
+    const fetchStores = async () => {
+      try {
+        const res = await storeService.getAll({ limit: 100 });
+        setStores(res.data);
+      } catch (err) {
+        console.error('Failed to load stores:', err);
+      }
+    };
+    void fetchStores();
+  }, []);
+
+  const availableBranches = useMemo(() => {
+    const lang = i18n.language || 'uz';
+    if (isAdmin) {
+      const branchesList = stores.map((s) => {
+        const name = lang === 'cyrl' ? (s.name_uz_cyrl || s.name) : s.name;
+        return {
+          id: String(s.id),
+          name: name,
+        };
+      });
+      return [
+        { id: 'all', name: t('dashboard.allBranches', 'Barcha filiallarni jamlash') },
+        ...branchesList,
+      ];
+    }
+    const userStore = stores.find(s => String(s.id) === String(userStoreId));
+    let storeName = user?.store_name || t('common.myBranch', 'Mening filialim');
+    if (userStore) {
+      storeName = lang === 'cyrl' ? (userStore.name_uz_cyrl || userStore.name) : userStore.name;
+    }
+    return [{ id: userStoreId || 'all', name: storeName }];
+  }, [isAdmin, stores, userStoreId, user?.store_name, t, i18n.language]);
 
   useEffect(() => {
     let active = true;
     setIsLoading(true);
+    setError(null);
 
-    // Simulate network delay for smooth transition
-    setTimeout(() => {
-      if (active) {
-        setData(generateAutoPartsData(storeId, period));
-        setIsLoading(false);
+    const fetchDashboard = async () => {
+      try {
+        const storeParam = storeId === 'all' ? 'all' : Number(storeId);
+        const res = await reportService.getDashboardData({
+          period,
+          store_id: storeParam
+        });
+
+        if (active) {
+          if (res) {
+            setData(res);
+          } else {
+            setError(t('errors.requestFailed', 'Ma\'lumotlarni serverdan olishda xatolik yuz berdi'));
+            setData(initialDashboardData);
+          }
+          setIsLoading(false);
+        }
+      } catch (err) {
+        if (active) {
+          setError(t('errors.generic', 'Tizimda xatolik yuz berdi'));
+          setData(initialDashboardData);
+          setIsLoading(false);
+        }
       }
-    }, 600);
+    };
+
+    void fetchDashboard();
 
     return () => { active = false; };
-  }, [storeId, period]);
+  }, [storeId, period, t]);
 
-  const points = useMemo(() => getLinePoints(data.chart.data), [data.chart.data]);
+  const chartData = useMemo(() => {
+    return data.chart || { labels: [], data: [] };
+  }, [data.chart]);
+
+  const localizedChartLabels = useMemo(() => {
+    const lang = i18n.language || 'uz';
+    if (lang === 'cyrl') {
+      return chartData.labels.map(lbl => latinToCyrillicMap[lbl] || lbl);
+    }
+    return chartData.labels;
+  }, [chartData.labels, i18n.language]);
+
+  const points = useMemo(() => getLinePoints(chartData.data), [chartData.data]);
   const smoothPath = useMemo(() => buildSmoothPath(points), [points]);
-  const maxRev = Math.max(...data.topParts.map(p => p.rev));
+
+  const maxChartVal = useMemo(() => {
+    const validData = chartData.data.filter((val): val is number => val !== null);
+    return validData.length > 0 ? Math.max(...validData) : 0;
+  }, [chartData.data]);
+
+  const lowStockItems = useMemo(() => {
+    return data.lowStock || [];
+  }, [data.lowStock]);
+
+  const topPartsItems = useMemo(() => {
+    const list = data.topParts || [];
+    return list.map((part, idx) => ({
+      ...part,
+      icon: iconsList[idx % iconsList.length],
+      color: colorsList[idx % colorsList.length],
+    }));
+  }, [data.topParts]);
+
+  const recentSalesItems = useMemo(() => {
+    return data.recentSales || [];
+  }, [data.recentSales]);
+
+  const formatRelativeTime = (timeStr: string, minutesAgo?: number) => {
+    const lang = i18n.language || 'uz';
+    if (lang === 'cyrl') {
+      if (minutesAgo !== undefined && minutesAgo !== null) {
+        if (minutesAgo < 60) {
+          return `${minutesAgo} дақиқа олдин`;
+        } else {
+          const hours = Math.floor(minutesAgo / 60);
+          return `${hours} соат олдин`;
+        }
+      }
+      let trans = timeStr;
+      trans = trans.replace(/daqiqa/g, 'дақиқа');
+      trans = trans.replace(/soat/g, 'соат');
+      trans = trans.replace(/oldin/g, 'олдин');
+      return trans;
+    }
+    return timeStr;
+  };
+
+  const maxRev = useMemo(() => {
+    return topPartsItems.length > 0 ? Math.max(...topPartsItems.map(p => p.rev)) : 1;
+  }, [topPartsItems]);
+
+  const avgReceipt = useMemo(() => {
+    return data.kpi.orders > 0 ? Math.floor(data.kpi.revenue / data.kpi.orders) : 0;
+  }, [data.kpi.revenue, data.kpi.orders]);
+
+  const getGrowthText = () => {
+    if (period === 'weekly') return t('dashboard.comparedToLastWeek', 'O\'tgan haftaga nisbatan');
+    if (period === 'yearly') return t('dashboard.comparedToLastYear', 'O\'tgan yilga nisbatan');
+    return t('dashboard.comparedToLastMonth', 'O\'tgan oyga nisbatan');
+  };
 
   return (
     <div className="space-y-8 pb-10 max-w-[1600px] mx-auto animate-in fade-in duration-500">
+      {/* ERROR / OFFLINE ALERTS */}
+      {error && (
+        <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 text-amber-800 dark:text-amber-300 text-sm font-medium rounded-2xl flex items-center gap-3">
+          <AlertTriangle className="w-5 h-5 shrink-0 text-amber-500" />
+          <span>{error}</span>
+        </div>
+      )}
+
       {/* HEADER SECTION */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between py-2">
         <div>
@@ -148,15 +311,36 @@ export function DashboardPage() {
 
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-1 shadow-sm">
-            <div className="flex items-center px-3 py-1.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-md text-sm font-medium mr-1">
+            <button
+              onClick={() => setPeriod('weekly')}
+              className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                period === 'weekly'
+                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
               <CalendarDays className="w-4 h-4 mr-2" />
-              {t('common.today', 'Bugun')}
-            </div>
-            <button className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors" onClick={() => setPeriod('weekly')}>
               {t('common.week', 'Hafta')}
             </button>
-            <button className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors" onClick={() => setPeriod('monthly')}>
+            <button
+              onClick={() => setPeriod('monthly')}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                period === 'monthly'
+                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
               {t('common.month', 'Oy')}
+            </button>
+            <button
+              onClick={() => setPeriod('yearly')}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                period === 'yearly'
+                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              {t('reports.periods.year', 'Yil')}
             </button>
           </div>
 
@@ -178,7 +362,13 @@ export function DashboardPage() {
         {/* REVENUE */}
         <div className="rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-xs">
           <div className="flex justify-between items-center mb-3">
-            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t('dashboard.todayRevenue', 'Bugungi tushum')}</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              {period === 'weekly' 
+                ? t('dashboard.weeklyRevenue', 'Haftalik tushum') 
+                : period === 'yearly' 
+                  ? t('dashboard.yearlyRevenue', 'Yillik tushum') 
+                  : t('dashboard.monthlyRevenue', 'Oylik tushum')}
+            </p>
             <DollarSign className="w-4 h-4 text-slate-400" />
           </div>
           {isLoading ? (
@@ -189,7 +379,10 @@ export function DashboardPage() {
             </h3>
           )}
           <div className="mt-2 text-xs font-medium text-slate-500">
-            {t('dashboard.comparedToYesterday', 'Kechagiga nisbatan')} <span className="text-emerald-600">+{data.kpi.revenueGrowth}%</span>
+            {getGrowthText()}{' '}
+            <span className={data.kpi.revenueGrowth >= 0 ? 'text-emerald-600 font-semibold' : 'text-rose-600 font-semibold'}>
+              {data.kpi.revenueGrowth >= 0 ? '+' : ''}{data.kpi.revenueGrowth}%
+            </span>
           </div>
         </div>
 
@@ -207,11 +400,14 @@ export function DashboardPage() {
             </h3>
           )}
           <div className="mt-2 text-xs font-medium text-slate-500">
-            {t('dashboard.salesActivity', 'Sotuv faolligi')} <span className="text-blue-600">+{data.kpi.ordersGrowth}%</span>
+            {t('dashboard.salesActivity', 'Sotuv faolligi')}{' '}
+            <span className={data.kpi.ordersGrowth >= 0 ? 'text-emerald-600 font-semibold' : 'text-rose-600 font-semibold'}>
+              {data.kpi.ordersGrowth >= 0 ? '+' : ''}{data.kpi.ordersGrowth}%
+            </span>
           </div>
         </div>
 
-        {/* TRANSACTIONS / AVG RECEIPT (We used transactions here based on reference) */}
+        {/* TRANSACTIONS / AVG RECEIPT */}
         <div className="rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-xs">
           <div className="flex justify-between items-center mb-3">
             <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t('reports.labels.transactions', 'Tranzaksiyalar')}</p>
@@ -225,7 +421,10 @@ export function DashboardPage() {
             </h3>
           )}
           <div className="mt-2 text-xs font-medium text-slate-500">
-            {t('reports.labels.averageReceipt', 'O\'rtacha chek')}: <span className="text-slate-700 dark:text-slate-300 font-semibold">{formatCurrency(Math.floor(data.kpi.revenue / data.kpi.orders))}</span>
+            {t('reports.labels.averageReceipt', 'O\'rtacha chek')}:{' '}
+            <span className="text-slate-700 dark:text-slate-300 font-semibold">
+              {formatCurrency(avgReceipt)}
+            </span>
           </div>
         </div>
 
@@ -243,7 +442,12 @@ export function DashboardPage() {
             </h3>
           )}
           <div className="mt-2 text-xs font-medium text-slate-500">
-            {t('dashboard.totalDebtAmount', 'Umumiy qarz miqdori')}
+            {t('dashboard.totalDebtAmount', 'Umumiy qarz miqdori')}{' '}
+            {data.kpi.debtGrowth !== 0 && (
+              <span className={data.kpi.debtGrowth < 0 ? 'text-emerald-600 font-semibold' : 'text-rose-600 font-semibold'}>
+                ({data.kpi.debtGrowth > 0 ? '+' : ''}{data.kpi.debtGrowth}%)
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -259,9 +463,9 @@ export function DashboardPage() {
                 <CardTitle className="text-lg font-semibold text-slate-900 dark:text-white">{t('dashboard.salesDynamics', 'Savdolar Dinamikasi')}</CardTitle>
                 <CardDescription className="text-sm text-slate-500 mt-1">
                   {t('dashboard.partsSalesVolume', 'Avto qismlar sotuvi hajmi')} ({
-                    period === 'today' ? t('common.today', 'Bugun') :
-                      period === 'monthly' ? t('dashboard.duringMonth', 'Oy davomida') :
-                        t('dashboard.duringWeek', 'Hafta davomida')
+                    period === 'weekly' ? t('dashboard.duringWeek', 'Hafta davomida') :
+                      period === 'yearly' ? t('reports.periods.year', 'Yil') + ' davomida' :
+                        t('dashboard.duringMonth', 'Oy davomida')
                   })
                 </CardDescription>
               </div>
@@ -279,9 +483,9 @@ export function DashboardPage() {
               <div className="h-[320px] w-full relative">
                 {/* Y-Axis */}
                 <div className="absolute left-0 top-0 bottom-8 w-16 flex flex-col justify-between text-xs font-semibold text-slate-400 text-right pr-4">
-                  <span>{formatCurrency(Math.max(...data.chart.data)).split(' ')[0]}</span>
-                  <span>{formatCurrency(Math.max(...data.chart.data) * 0.66).split(' ')[0]}</span>
-                  <span>{formatCurrency(Math.max(...data.chart.data) * 0.33).split(' ')[0]}</span>
+                  <span>{formatCurrency(maxChartVal).split(' ')[0]}</span>
+                  <span>{formatCurrency(maxChartVal * 0.66).split(' ')[0]}</span>
+                  <span>{formatCurrency(maxChartVal * 0.33).split(' ')[0]}</span>
                   <span>0</span>
                 </div>
 
@@ -347,9 +551,13 @@ export function DashboardPage() {
                 </div>
 
                 {/* X-Axis */}
-                <div className="absolute left-16 right-0 bottom-0 h-8 flex justify-between items-end text-xs font-semibold text-slate-400">
-                  {data.chart.labels.map((lbl, i) => (
-                    <div key={i} className="-translate-x-1/2" style={{ marginLeft: i === 0 ? '0' : i === data.chart.labels.length - 1 ? '100%' : '50%' }}>
+                <div className="absolute left-16 right-0 bottom-0 h-8 text-xs font-semibold text-slate-400">
+                  {localizedChartLabels.map((lbl, i) => (
+                    <div
+                      key={i}
+                      className="absolute bottom-0 -translate-x-1/2 whitespace-nowrap text-center"
+                      style={{ left: `${(i / Math.max(1, localizedChartLabels.length - 1)) * 100}%` }}
+                    >
                       {lbl}
                     </div>
                   ))}
@@ -375,10 +583,12 @@ export function DashboardPage() {
                 </div>
               ) : (
                 <div className="divide-y divide-slate-100 dark:divide-slate-800/50">
-                  {data.lowStock.map((item) => (
+                  {lowStockItems.map((item) => (
                     <div key={item.id} className="p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
                       <div>
-                        <p className="font-medium text-sm text-slate-800 dark:text-slate-200">{item.name}</p>
+                        <p className="font-medium text-sm text-slate-800 dark:text-slate-200">
+                          {(i18n.language === 'cyrl' && item.name_uz_cyrl) ? item.name_uz_cyrl : item.name}
+                        </p>
                         <p className="text-xs text-slate-500 font-medium mt-0.5">
                           {t('dashboard.inStock', 'Omborda')}: <strong className="font-semibold text-rose-600 dark:text-rose-400">{item.left} {t('common.pcs', 'dona')}</strong>
                         </p>
@@ -388,6 +598,11 @@ export function DashboardPage() {
                       </button>
                     </div>
                   ))}
+                  {lowStockItems.length === 0 && (
+                    <div className="p-6 text-center text-sm text-slate-500">
+                      {t('common.noData', 'Ma\'lumotlar mavjud emas')}
+                    </div>
+                  )}
                 </div>
               )}
               <div className="p-4 bg-slate-50/50 dark:bg-slate-800/20 text-center border-t border-slate-100 dark:border-slate-800">
@@ -417,7 +632,7 @@ export function DashboardPage() {
               </div>
             ) : (
               <div className="p-6 space-y-6">
-                {data.topParts.map((part, idx) => {
+                {topPartsItems.map((part, idx) => {
                   const Icon = part.icon;
                   const pct = Math.max((part.rev / maxRev) * 100, 2);
                   return (
@@ -429,7 +644,7 @@ export function DashboardPage() {
                           </div>
                           <div>
                             <p className="font-medium text-sm text-slate-900 dark:text-white group-hover:text-indigo-500 transition-colors">
-                              {idx + 1}. {part.name}
+                              {idx + 1}. {(i18n.language === 'cyrl' && part.name_uz_cyrl) ? part.name_uz_cyrl : part.name}
                             </p>
                             <p className="text-xs font-medium text-slate-500">{part.sold} {t('dashboard.piecesSold', 'dona sotilgan')}</p>
                           </div>
@@ -449,6 +664,11 @@ export function DashboardPage() {
                     </div>
                   );
                 })}
+                {topPartsItems.length === 0 && (
+                  <div className="text-center py-6 text-sm text-slate-500">
+                    {t('common.noData', 'Ma\'lumotlar mavjud emas')}
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
@@ -469,13 +689,14 @@ export function DashboardPage() {
               </div>
             ) : (
               <div className="divide-y divide-slate-100 dark:divide-slate-800/50">
-                {data.recentSales.map((sale) => (
+                {recentSalesItems.map((sale) => (
                   <div key={sale.id} className="p-5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
                     <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${sale.type === 'cash' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400' :
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
+                        sale.type === 'cash' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400' :
                           sale.type === 'debt' ? 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400' :
                             'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400'
-                        }`}>
+                      }`}>
                         {sale.type === 'cash' ? <DollarSign className="w-6 h-6" /> :
                           sale.type === 'debt' ? <Users className="w-6 h-6" /> :
                             <CreditCard className="w-6 h-6" />}
@@ -483,21 +704,27 @@ export function DashboardPage() {
                       <div>
                         <p className="font-semibold text-sm sm:text-base text-slate-900 dark:text-white">{sale.client}</p>
                         <p className="text-xs font-medium text-slate-500 flex items-center gap-1 mt-0.5">
-                          <Clock className="w-3 h-3" /> {sale.time}
+                          <Clock className="w-3 h-3" /> {formatRelativeTime(sale.time, sale.minutesAgo)}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-slate-900 dark:text-white">{formatCurrency(sale.amount)}</p>
-                      <p className={`text-xs font-medium mt-1 ${sale.type === 'cash' ? 'text-emerald-500' :
+                      <p className={`text-xs font-medium mt-1 ${
+                        sale.type === 'cash' ? 'text-emerald-500' :
                           sale.type === 'debt' ? 'text-amber-500' :
                             'text-blue-500'
-                        }`}>
+                      }`}>
                         {sale.type === 'cash' ? t('sales.cash', 'Naqd') : sale.type === 'debt' ? t('customers.debt', 'Nasiya') : t('sales.card', 'Plastik')}
                       </p>
                     </div>
                   </div>
                 ))}
+                {recentSalesItems.length === 0 && (
+                  <div className="text-center py-6 text-sm text-slate-500">
+                    {t('common.noData', 'Ma\'lumotlar mavjud emas')}
+                  </div>
+                )}
               </div>
             )}
             <div className="p-4 bg-slate-50/50 dark:bg-slate-800/20 text-center border-t border-slate-100 dark:border-slate-800">
