@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, type ChangeEvent, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Edit, Trash2, User, DollarSign, Phone, Mail, MapPin, CheckCircle2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Phone, Mail, MapPin, CheckCircle2 } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
