@@ -353,9 +353,9 @@ export function TransferListPage() {
                     </div>
                   </div>
 
-                  <div className="mt-4 flex gap-2">
-                    {item.status === 'pending' && (
-                      <>
+                  <div className="mt-4 flex flex-col gap-2">
+                    {(item.status === 'p' || item.status === 'pending') && (isAdmin || String(item.to_store) === String(userStoreId)) && (
+                      <div className="flex gap-2">
                         <Button
                           variant="outline"
                           className="flex-1 text-green-600 border-green-600 dark:hover:bg-green-950/20 hover:bg-green-50"
@@ -378,9 +378,9 @@ export function TransferListPage() {
                           <X className="mr-2 h-4 w-4" />
                           {t('transfers.rejected')}
                         </Button>
-                      </>
+                      </div>
                     )}
-                    <Button variant="outline" className="flex-1" onClick={() => handleShowDetails(item)}>
+                    <Button variant="outline" className="w-full" onClick={() => handleShowDetails(item)}>
                       <Eye className="mr-2 h-4 w-4" />
                       {t('common.view')}
                     </Button>
