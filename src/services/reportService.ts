@@ -8,7 +8,7 @@ export interface ReportData {
   report_date: string;
 }
 
-export type ReportsFilter = 'monthly' | 'weekly';
+export type ReportsFilter = 'monthly' | 'weekly' | 'yearly';
 
 export interface ReportsQueryParams {
   filter?: ReportsFilter;
@@ -16,6 +16,7 @@ export interface ReportsQueryParams {
   to?: string;
   store_id?: string | number;
   storeId?: string | number;
+  period?: string;
 }
 
 export interface ReportsSummary {
@@ -44,12 +45,16 @@ export interface TopSellingProduct {
   rank: number;
   productId: number;
   name: string;
+  name_uz_cyrl?: string;
+  category?: string;
+  category_uz_cyrl?: string;
   totalSold: number;
   totalRevenue: number;
 }
 
 export interface CustomerDebt {
   customerName: string;
+  phone?: string;
   debt: number;
 }
 
@@ -58,10 +63,26 @@ export interface SupplierDebt {
   debt: number;
 }
 
+export interface CategoryStatistic {
+  categoryName: string;
+  categoryName_uz_cyrl?: string;
+  revenue: number;
+  percent: number;
+}
+
+export interface PaymentStructureItem {
+  method: string;
+  count: number;
+  amount: number;
+  percent: string;
+}
+
 export interface DetailedReportsResponse {
   filters: Record<string, unknown>;
   summary: ReportsSummary;
   branchStatistics: BranchStatistic[];
+  categoryStatistics: CategoryStatistic[];
+  paymentStructure: PaymentStructureItem[];
   charts: {
     profitTrend: ChartSeries;
   };
@@ -77,6 +98,55 @@ export interface DashboardTopProduct {
   name: string;
   sold: number;
   revenue: number;
+}
+
+// Unified Live Dashboard Report interfaces
+export interface DashboardTopPart {
+  id: string;
+  name: string;
+  name_uz_cyrl?: string;
+  sold: number;
+  rev: number;
+}
+
+export interface DashboardLowStock {
+  id: string;
+  name: string;
+  name_uz_cyrl?: string;
+  left: number;
+  status: 'critical' | 'warning' | 'normal';
+}
+
+export interface DashboardRecentSale {
+  id: string;
+  client: string;
+  amount: number;
+  time: string;
+  type: 'cash' | 'card' | 'debt' | string;
+  minutesAgo?: number;
+}
+
+export interface DashboardChartData {
+  labels: string[];
+  data: (number | null)[];
+}
+
+export interface DashboardKpi {
+  revenue: number;
+  revenueGrowth: number;
+  debt: number;
+  debtGrowth: number;
+  orders: number;
+  ordersGrowth: number;
+  lowStockCount: number;
+}
+
+export interface DashboardReportData {
+  kpi: DashboardKpi;
+  topParts: DashboardTopPart[];
+  lowStock: DashboardLowStock[];
+  recentSales: DashboardRecentSale[];
+  chart: DashboardChartData;
 }
 
 const toNumber = (value: unknown): number => {
@@ -106,6 +176,8 @@ const normalizeDetailedReportsResponse = (payload: unknown): DetailedReportsResp
     filters?: unknown;
     summary?: unknown;
     branchStatistics?: unknown;
+    categoryStatistics?: unknown;
+    paymentStructure?: unknown;
     charts?: unknown;
     topSellingProducts?: unknown;
     debts?: unknown;
@@ -113,6 +185,8 @@ const normalizeDetailedReportsResponse = (payload: unknown): DetailedReportsResp
 
   const summaryRaw = (source.summary ?? {}) as Record<string, unknown>;
   const branchStatisticsRaw = Array.isArray(source.branchStatistics) ? source.branchStatistics : [];
+  const categoryStatisticsRaw = Array.isArray(source.categoryStatistics) ? source.categoryStatistics : [];
+  const paymentStructureRaw = Array.isArray(source.paymentStructure) ? source.paymentStructure : [];
   const chartsRaw = (source.charts ?? {}) as { profitTrend?: unknown };
   const topProductsRaw = Array.isArray(source.topSellingProducts) ? source.topSellingProducts : [];
   const debtsRaw = (source.debts ?? {}) as { customerDebts?: unknown; supplierDebts?: unknown };
@@ -139,6 +213,24 @@ const normalizeDetailedReportsResponse = (payload: unknown): DetailedReportsResp
         customers: toNumber(branch.customers),
       };
     }),
+    categoryStatistics: categoryStatisticsRaw.map((item) => {
+      const cat = (item ?? {}) as Record<string, unknown>;
+      return {
+        categoryName: String(cat.categoryName ?? cat.category_name ?? cat.name ?? ''),
+        categoryName_uz_cyrl: cat.categoryName_uz_cyrl || cat.category_name_uz_cyrl || cat.name_uz_cyrl ? String(cat.categoryName_uz_cyrl || cat.category_name_uz_cyrl || cat.name_uz_cyrl) : undefined,
+        revenue: toNumber(cat.revenue),
+        percent: toNumber(cat.percent),
+      };
+    }),
+    paymentStructure: paymentStructureRaw.map((item) => {
+      const pay = (item ?? {}) as Record<string, unknown>;
+      return {
+        method: String(pay.method ?? ''),
+        count: toNumber(pay.count),
+        amount: toNumber(pay.amount),
+        percent: String(pay.percent ?? ''),
+      };
+    }),
     charts: {
       profitTrend: normalizeChartSeries(chartsRaw.profitTrend),
     },
@@ -148,6 +240,9 @@ const normalizeDetailedReportsResponse = (payload: unknown): DetailedReportsResp
         rank: toNumber(product.rank),
         productId: toNumber(product.productId),
         name: String(product.name ?? ''),
+        name_uz_cyrl: product.name_uz_cyrl ? String(product.name_uz_cyrl) : undefined,
+        category: product.category ? String(product.category) : undefined,
+        category_uz_cyrl: product.category_uz_cyrl ? String(product.category_uz_cyrl) : undefined,
         totalSold: toNumber(product.totalSold),
         totalRevenue: toNumber(product.totalRevenue),
       };
@@ -157,6 +252,7 @@ const normalizeDetailedReportsResponse = (payload: unknown): DetailedReportsResp
         const debt = (item ?? {}) as Record<string, unknown>;
         return {
           customerName: String(debt.customerName ?? ''),
+          phone: debt.phone ? String(debt.phone) : undefined,
           debt: toNumber(debt.debt),
         };
       }),
@@ -186,12 +282,129 @@ const normalizeDashboardReportData = (payload: unknown): ReportData => {
   };
 };
 
+const normalizeDashboardData = (payload: unknown): DashboardReportData => {
+  const source = (payload ?? {}) as Record<string, unknown>;
+
+  // Normalize KPI
+  const kpiRaw = (source.kpi ?? {}) as Record<string, unknown>;
+  const kpi: DashboardKpi = {
+    revenue: toNumber(kpiRaw.revenue ?? kpiRaw.total_revenue ?? kpiRaw.monthly_revenue),
+    revenueGrowth: toNumber(kpiRaw.revenueGrowth ?? kpiRaw.revenue_growth ?? kpiRaw.growth_revenue ?? kpiRaw.growthRatio ?? 0),
+    debt: toNumber(kpiRaw.debt ?? kpiRaw.total_customer_debt ?? kpiRaw.customer_debt ?? 0),
+    debtGrowth: toNumber(kpiRaw.debtGrowth ?? kpiRaw.debt_growth ?? kpiRaw.growth_debt ?? 0),
+    orders: toNumber(kpiRaw.orders ?? kpiRaw.total_orders ?? kpiRaw.ordersCount ?? 0),
+    ordersGrowth: toNumber(kpiRaw.ordersGrowth ?? kpiRaw.orders_growth ?? kpiRaw.growth_orders ?? 0),
+    lowStockCount: toNumber(kpiRaw.lowStockCount ?? kpiRaw.low_stock_count ?? kpiRaw.lowStockProductsCount ?? kpiRaw.low_stock ?? 0),
+  };
+
+  // Normalize Top Parts
+  const topPartsRaw = Array.isArray(source.topParts) 
+    ? source.topParts 
+    : Array.isArray(source.top_parts) 
+      ? source.top_parts 
+      : Array.isArray(source.topSellingProducts) 
+        ? source.topSellingProducts 
+        : [];
+  
+  const topParts = topPartsRaw.map((item: unknown, index: number) => {
+    const part = (item ?? {}) as Record<string, unknown>;
+    return {
+      id: String(part.id ?? part.productId ?? part.product_id ?? index),
+      name: String(part.name ?? part.productName ?? part.product_name ?? ''),
+      name_uz_cyrl: part.name_uz_cyrl ? String(part.name_uz_cyrl) : undefined,
+      sold: toNumber(part.sold ?? part.totalSold ?? part.total_sold ?? part.quantity),
+      rev: toNumber(part.rev ?? part.revenue ?? part.totalRevenue ?? part.total_revenue),
+    };
+  });
+
+  // Normalize Low Stock
+  const lowStockRaw = Array.isArray(source.lowStock) 
+    ? source.lowStock 
+    : Array.isArray(source.low_stock) 
+      ? source.low_stock 
+      : Array.isArray(source.lowStockProducts) 
+        ? source.lowStockProducts 
+        : [];
+
+  const lowStock = lowStockRaw.map((item: unknown, index: number) => {
+    const part = (item ?? {}) as Record<string, unknown>;
+    const left = toNumber(part.left ?? part.quantity ?? part.inStock ?? part.in_stock ?? part.stock);
+    let status = part.status || 'warning';
+    if (left <= 2) {
+      status = 'critical';
+    } else if (left <= 5) {
+      status = 'warning';
+    } else {
+      status = 'normal';
+    }
+    return {
+      id: String(part.id ?? part.productId ?? part.product_id ?? index),
+      name: String(part.name ?? part.productName ?? part.product_name ?? ''),
+      name_uz_cyrl: part.name_uz_cyrl ? String(part.name_uz_cyrl) : undefined,
+      left,
+      status: status as 'critical' | 'warning' | 'normal',
+    };
+  });
+
+  // Normalize Recent Sales
+  const recentSalesRaw = Array.isArray(source.recentSales) 
+    ? source.recentSales 
+    : Array.isArray(source.recent_sales) 
+      ? source.recent_sales 
+      : Array.isArray(source.recentTransactions) 
+        ? source.recentTransactions 
+        : Array.isArray(source.recent_transactions) 
+          ? source.recent_transactions 
+          : [];
+
+  const recentSales = recentSalesRaw.map((item: unknown, index: number) => {
+    const sale = (item ?? {}) as Record<string, unknown>;
+    let timeStr = '';
+    const mins = sale.minutesAgo !== undefined && sale.minutesAgo !== null ? toNumber(sale.minutesAgo) : null;
+    if (mins !== null && mins > 0) {
+      if (mins < 60) {
+        timeStr = `${mins} daqiqa oldin`;
+      } else {
+        const hours = Math.floor(mins / 60);
+        timeStr = `${hours} soat oldin`;
+      }
+    } else {
+      timeStr = String(sale.time ?? sale.createdAt ?? sale.created_at ?? sale.date ?? '');
+    }
+
+    return {
+      id: String(sale.id ?? index),
+      client: String(sale.client ?? sale.clientName ?? sale.customerName ?? sale.customer ?? 'Chakana xaridor'),
+      amount: toNumber(sale.amount ?? sale.totalPrice ?? sale.total_price ?? sale.sum ?? sale.revenue),
+      time: timeStr,
+      type: String(sale.type ?? sale.paymentMethod ?? sale.payment_method ?? 'cash'),
+      minutesAgo: mins !== null ? mins : undefined,
+    };
+  });
+
+  // Normalize Chart
+  const chartRaw = (source.chart ?? source.charts ?? source.salesChart ?? source.sales_chart ?? {}) as Record<string, unknown>;
+  const chart: DashboardChartData = {
+    labels: Array.isArray(chartRaw.labels) ? chartRaw.labels.map(lbl => String(lbl ?? '')) : [],
+    data: Array.isArray(chartRaw.data) ? chartRaw.data.map(val => val === null ? null : toNumber(val)) : [],
+  };
+
+  return {
+    kpi,
+    topParts,
+    lowStock,
+    recentSales,
+    chart,
+  };
+};
+
 const buildReportQueryParams = (params?: ReportsQueryParams): Record<string, string | number> => {
   if (!params) return {};
   const query: Record<string, string | number> = {};
   if (params.filter) query.filter = params.filter;
   if (params.from) query.from = params.from;
   if (params.to) query.to = params.to;
+  if (params.period) query.period = params.period;
 
   const resolvedStoreId = params.store_id ?? params.storeId;
   if (resolvedStoreId !== undefined && resolvedStoreId !== null && String(resolvedStoreId).trim() !== '') {
@@ -247,6 +460,18 @@ export const reportService = {
       } catch {
         return null;
       }
+    }
+  },
+
+  async getDashboardData(params?: ReportsQueryParams): Promise<DashboardReportData | null> {
+    try {
+      const response = await apiClient.get<unknown>('/reports/dashboard/', {
+        params: buildReportQueryParams(params),
+        skipGlobalErrorHandler: true,
+      });
+      return normalizeDashboardData(response.data);
+    } catch (error: unknown) {
+      return null;
     }
   },
 

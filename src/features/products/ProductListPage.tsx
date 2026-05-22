@@ -591,7 +591,7 @@ export function ProductListPage() {
               </th>
               {/* Article / SKU */}
               <th className="w-[130px] px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {t('products.sku', 'Artikul')}
+                {t('products.barcode')}
               </th>
               {/* Category */}
               <th className="w-[140px] px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -1000,8 +1000,8 @@ function ProductDetailModal({ product, onClose, onEdit, stores, warehouseStore, 
                 </div>
                 <div className="flex items-center gap-2">
                   <Barcode className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-muted-foreground">{t('products.sku', 'Artikul')}:</span>
-                  <code className="font-mono text-xs bg-muted/40 px-1.5 py-0.5 rounded">{product.sku || '—'}</code>
+                  <span className="text-muted-foreground">{t('products.barcode', 'Barcode')}:</span>
+                  <code className="font-mono text-xs bg-muted/40 px-1.5 py-0.5 rounded">{product.barcode || '—'}</code>
                 </div>
                 <div className="flex items-center gap-2">
                   <Layers className="h-3.5 w-3.5 text-muted-foreground" />
