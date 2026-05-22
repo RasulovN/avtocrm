@@ -1,14 +1,16 @@
 import { apiClient } from './api';
 import type { PaginatedResponse } from '../types';
 
-interface CustomerFromApi {
+export interface CustomerFromApi {
   id: number;
   full_name: string;
   phone_number: string;
-  created_at: string;
-  updated_at: string;
-  debt?: number;
-  total_debt?: number | string;
+  total_purchase_amount?: string | number;
+  total_debt?: string | number;
+  store_debts?: Array<{ store: string; debt: number }>;
+  sales?: any[];
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface CustomerFormData {

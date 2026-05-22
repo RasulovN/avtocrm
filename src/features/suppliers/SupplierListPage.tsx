@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, type ChangeEvent, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Edit, Trash2, User, DollarSign, FileText, Phone, Mail, MapPin, CheckCircle2 } from 'lucide-react';
+import { Plus, Edit, Trash2, User, DollarSign, Phone, Mail, MapPin, CheckCircle2 } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
@@ -32,9 +32,6 @@ export function SupplierListPage() {
   const [deleting, setDeleting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [detailSupplier, setDetailSupplier] = useState<Supplier | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [supplierPayments, setSupplierPayments] = useState<SupplierPayment[]>([]);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [formData, setFormData] = useState<SupplierFormData>({
     name_uz: '',
@@ -105,23 +102,6 @@ export function SupplierListPage() {
     } finally {
       setDeleting(false);
       setDeleteId(null);
-    }
-  };
-
-  const handleOpenDetail = async (supplier: Supplier) => {
-    setDetailSupplier(supplier);
-    setDetailOpen(true);
-    setDetailLoading(true);
-    setSupplierPayments([]);
-    
-    try {
-      const fresh = await supplierService.getById(supplier.id);
-      setDetailSupplier(fresh);
-      setSupplierPayments((fresh as any).payments || []);
-    } catch (error) {
-      console.error('Failed to load supplier detail:', error);
-    } finally {
-      setDetailLoading(false);
     }
   };
 
@@ -227,8 +207,7 @@ export function SupplierListPage() {
       key: 'total_purchases',
       header: t('suppliers.totalPurchases', 'Jami xaridlar'),
       render: (item: Supplier) => {
-        // Fallback since total purchases might not be directly available on the model yet
-        const total = (item as any).total_purchases || 0;
+        const total = typeof item.total_purchase_amount !== 'undefined' ? Number(item.total_purchase_amount) : ((item as any).total_purchases || 0);
         if (total === 0) return <span className="text-muted-foreground">—</span>;
         return <span className="font-semibold">{formatCurrency(total)}</span>;
       },
@@ -259,16 +238,6 @@ export function SupplierListPage() {
       className: 'text-right',
       render: (item: Supplier) => (
         <div className="flex items-center justify-end gap-1">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleOpenDetail(item); }}
-            title={t('common.history', 'Tarix')}
-            className="h-8 gap-1.5"
-          >
-            <FileText className="h-3.5 w-3.5" />
-            Tarix
-          </Button>
           <Button 
             variant="ghost" 
             size="icon" 
@@ -310,7 +279,7 @@ export function SupplierListPage() {
         </div>
         <div className="rounded-lg border bg-card p-4 shadow-sm">
           <p className="text-sm text-muted-foreground">{t('suppliers.totalPurchases', 'Jami xaridlar')}</p>
-          <p className="text-2xl font-bold">{formatCurrency(suppliers.reduce((sum, s) => sum + (Number((s as any).total_purchases) || 0), 0))}</p>
+          <p className="text-2xl font-bold">{formatCurrency(suppliers.reduce((sum, s) => sum + (typeof s.total_purchase_amount !== 'undefined' ? Number(s.total_purchase_amount) : (Number((s as any).total_purchases) || 0)), 0))}</p>
         </div>
         <div className="rounded-lg border bg-card p-4 shadow-sm">
           <p className="text-sm text-muted-foreground">{t('dashboard.totalDebt', 'Жами қарздорлик')}</p>
@@ -450,56 +419,6 @@ export function SupplierListPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('common.cancel')}</Button>
             <Button onClick={handleSave} disabled={saving}>{saving ? t('common.loading') : t('common.save')}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              {detailSupplier?.name_uz || detailSupplier?.name || 'Ta\'minotchi'}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="rounded-lg bg-muted p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">{t('dashboard.totalDebt', 'Жами қарздорлик')}</span>
-                <span className="text-xl font-bold text-red-500">
-                  {formatCurrency(typeof detailSupplier?.debt === 'number' ? detailSupplier.debt : 0)}
-                </span>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-sm font-medium mb-2">{t('history.payments')}</h4>
-              {detailLoading ? (
-                <div className="text-center py-4 text-muted-foreground">{t('common.loading')}</div>
-              ) : supplierPayments.length > 0 ? (
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {supplierPayments.map((payment) => (
-                    <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                          <DollarSign className="h-4 w-4 text-green-600" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">{payment.type === 'cash' ? 'Naqd' : 'Karta'}</p>
-                          <p className="text-xs text-muted-foreground">{formatDate(payment.created_at)}</p>
-                        </div>
-                      </div>
-                      <p className="font-semibold text-green-600">{formatCurrency(parseFloat(payment.amount))}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-center py-4 text-muted-foreground">{t('common.noData')}</p>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDetailOpen(false)}>{t('common.close')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

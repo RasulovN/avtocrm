@@ -205,6 +205,8 @@ export interface Supplier {
   address_uz_cyrl?: string;
   is_active?: boolean;
   debt: number | string;
+  total_purchase_amount?: string | number;
+  total_debt?: string | number;
   created_at?: string;
 }
 

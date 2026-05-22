@@ -22,10 +22,12 @@ interface CustomerFromApi {
   id: number;
   full_name: string;
   phone_number: string;
-  created_at: string;
-  updated_at: string;
-  debt?: number;
-  total_debt?: number;
+  total_purchase_amount?: string | number;
+  total_debt?: string | number;
+  store_debts?: Array<{ store: string; debt: number }>;
+  sales?: any[];
+  created_at?: string;
+  updated_at?: string;
 }
 
 type DialogMode = 'closed' | 'create' | 'edit' | 'view';
@@ -80,7 +82,7 @@ export function CustomerListPage() {
 
   const stats = useMemo(() => {
     const totalCustomers = total;
-    const totalDebt = customers.reduce((sum, c) => sum + (Number(c.debt) || Number(c.total_debt) || 0), 0);
+    const totalDebt = customers.reduce((sum, c) => sum + (Number(c.total_debt) || 0), 0);
     return { totalCustomers, totalDebt };
   }, [customers, total]);
 
@@ -119,8 +121,7 @@ export function CustomerListPage() {
       key: 'total_purchases',
       header: t('customers.totalPurchases', 'Jami xaridlar'),
       render: (item) => {
-        // Fallback to random or 0 if not from API yet. We will format 0 as '—'
-        const total = (item as any).total_purchases || 0;
+        const total = Number(item.total_purchase_amount) || 0;
         if (total === 0) return <span className="text-muted-foreground">—</span>;
         return formatCurrency(total);
       },
@@ -129,7 +130,7 @@ export function CustomerListPage() {
       key: 'debt',
       header: t('customers.debt', 'Qarz'),
       render: (item) => {
-        const debt = Number(item.debt) || Number(item.total_debt) || 0;
+        const debt = Number(item.total_debt) || 0;
         if (debt === 0) return <span className="text-muted-foreground">—</span>;
         return <span className="font-medium text-[#ff6b00]">{formatCurrency(debt)}</span>;
       },
@@ -138,7 +139,7 @@ export function CustomerListPage() {
       key: 'status',
       header: t('customers.status', 'Holat'),
       render: (item) => {
-        const debt = Number(item.debt) || Number(item.total_debt) || 0;
+        const debt = Number(item.total_debt) || 0;
         if (debt === 0) {
           return (
             <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-2.5 py-0.5 text-xs font-medium text-white">
@@ -489,20 +490,79 @@ export function CustomerListPage() {
                   <Card className="border-dashed">
                     <CardContent className="flex items-center gap-3 p-3">
                       <div>
-                        <p className="text-xs text-muted-foreground">{t('customers.createdAt')}</p>
-                        <p className="font-semibold">{formatDate(selectedCustomer.created_at)}</p>
+                        <p className="text-xs text-muted-foreground">{t('customers.totalPurchases')}</p>
+                        <p className="font-semibold">{formatCurrency(Number(selectedCustomer.total_purchase_amount) || 0)}</p>
                       </div>
                     </CardContent>
                   </Card>
                   <Card className="border-dashed">
                     <CardContent className="flex items-center gap-3 p-3">
                       <div>
-                        <p className="text-xs text-muted-foreground">{t('customers.updatedAt')}</p>
-                        <p className="font-semibold">{formatDate(selectedCustomer.updated_at)}</p>
+                        <p className="text-xs text-muted-foreground">{t('customers.debt')}</p>
+                        <p className={`font-semibold ${Number(selectedCustomer.total_debt) > 0 ? 'text-[#ff6b00]' : ''}`}>
+                          {formatCurrency(Number(selectedCustomer.total_debt) || 0)}
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
                 </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  {selectedCustomer.created_at && (
+                    <Card className="border-dashed">
+                      <CardContent className="flex items-center gap-3 p-3">
+                        <div>
+                          <p className="text-xs text-muted-foreground">{t('customers.createdAt')}</p>
+                          <p className="font-semibold">{formatDate(selectedCustomer.created_at)}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                  {selectedCustomer.updated_at && (
+                    <Card className="border-dashed">
+                      <CardContent className="flex items-center gap-3 p-3">
+                        <div>
+                          <p className="text-xs text-muted-foreground">{t('customers.updatedAt')}</p>
+                          <p className="font-semibold">{formatDate(selectedCustomer.updated_at)}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+
+
+
+                {selectedCustomer.sales && selectedCustomer.sales.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-semibold">{t('customers.salesHistory', 'Xaridlar tarixi')}</h4>
+                    <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                      {selectedCustomer.sales.map((sale: any) => (
+                        <div key={sale.id} className="rounded-lg border p-3 space-y-2 bg-card">
+                          <div className="flex items-center justify-between border-b pb-2">
+                            <span className="text-sm font-semibold">{sale.store_name}</span>
+                            <span className="text-xs text-muted-foreground">{formatDate(sale.created_at)}</span>
+                          </div>
+                          <div className="text-sm space-y-1">
+                            {sale.items?.map((item: any) => (
+                              <div key={item.id} className="flex justify-between items-start gap-4">
+                                <span className="text-muted-foreground">
+                                  {item.product_name} <span className="text-xs">x{item.quantity}</span>
+                                </span>
+                                <span className="font-medium whitespace-nowrap">{formatCurrency(Number(item.total_price))}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex flex-col sm:flex-row sm:justify-between pt-2 border-t mt-2 gap-1 sm:gap-4">
+                            <span className="text-sm font-medium">{t('customers.totalAmount', 'Jami')}: {formatCurrency(Number(sale.total_amount))}</span>
+                            <span className={`text-sm font-semibold ${sale.status === 'paid' ? 'text-green-600' : 'text-[#ff6b00]'}`}>
+                              {sale.status === 'paid' ? t('customers.statusPaid', 'To\'langan') : t('customers.debt', 'Qarz') + ': ' + formatCurrency(Number(sale.total_amount) - Number(sale.paid_amount))}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </DialogBody>
             </>
           )}
