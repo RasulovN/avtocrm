@@ -12,7 +12,6 @@ import { productService } from '../../services/productService';
 import { salesService } from '../../services/salesService';
 import { customerApiService } from '../../services/customerService';
 import { useAuthStore } from '../../app/store';
-import { useCategories } from '../../context/CategoryContext';
 import { useProducts } from '../../context/ProductContext';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import type { Store, Product } from '../../types';
@@ -945,10 +944,10 @@ export function SalesPage() {
                       <div className="flex items-start justify-between mb-1.5">
                         <div className="flex-1">
                           <div className="font-medium dark:text-white text-sm">{item.product_name}</div>
-                          <div className="text-xs text-muted-foreground dark:text-gray-400 space-y-1">
+                          {/* <div className="text-xs text-muted-foreground dark:text-gray-400 space-y-1">
                             <div>{safeProducts.find((p) => p.id === item.product_id)?.sku}</div>
                             <div>ID: {item.product_id}</div>
-                          </div>
+                          </div> */}
                         </div>
                         <Button
                           type="button"
