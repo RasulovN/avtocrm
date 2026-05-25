@@ -11,7 +11,7 @@ import { productService } from '../../services/productService';
 import type { Product } from '../../types';
 import { formatCurrency } from '../../utils';
 import { BarcodePrint } from '../../components/ui/BarcodePrint';
-import { generateBarcodePrintHtml, generateBarcodeDataUrl, escapeHtml } from '../../utils/xss';
+import { generateBarcodePrintHtml, generateBarcodeDataUrl, escapeHtml, extractBarcodeFromUrl } from '../../utils/xss';
 import { useProducts } from '../../context/ProductContext';
 
 export function ProductBarcodePage() {
@@ -96,10 +96,12 @@ export function ProductBarcodePage() {
         displayValue: false
       });
       
+      const cleanValue = extractBarcodeFromUrl(barcodeValue);
+
       return `
         <div class="barcode-card">
           <img src="${dataUrl}" alt="Barcode" />
-          <div class="barcode-value">${escapeHtml(barcodeValue)}</div>
+          <div class="barcode-value">${escapeHtml(cleanValue)}</div>
         </div>
       `;
     }).join('');
@@ -185,7 +187,7 @@ export function ProductBarcodePage() {
         ? String((user as any).store.id)
         : undefined;
   const userStoreId = resolvedUserStoreId;
-  const canViewAllStores = Boolean(user?.is_superuser || user?.role === 'admin');
+  const canViewAllStores = Boolean(user?.is_superuser || user?.role === 'superuser' || user?.role === 'admin');
   const visibleBatches = canViewAllStores
     ? batches
     : batches.filter((batch) => userStoreId ? String(batch.store) === userStoreId : false);
@@ -326,7 +328,7 @@ export function ProductBarcodePage() {
                             showName={false} 
                             thermalPrinter={false}
                           />
-                          <div className="barcode-value mt-1 text-sm font-mono font-medium text-gray-700 dark:text-gray-300">{barcodeValue}</div>
+                          <div className="barcode-value mt-1 text-sm font-mono font-medium text-gray-700 dark:text-gray-300">{extractBarcodeFromUrl(barcodeValue)}</div>
                           <div className="mt-2 text-sm text-muted-foreground space-y-1">
                             <div><strong>{t('products.store')}:</strong> {batch.store_name}</div>
                             <div><strong>{t('products.quantity') || 'Quantity'}:</strong> {batch.quantity}</div>

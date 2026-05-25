@@ -17,3 +17,4 @@ export {
   SelectValue,
 } from './Select';
 export { BarcodePrint, BarcodePrintAll } from './BarcodePrint';
+export { SearchableSelect } from './SearchableSelect';

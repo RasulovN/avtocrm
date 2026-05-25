@@ -39,7 +39,7 @@ const buildFormData = (unit: Pick<ProductUnitFormData, 'measurement_uz' | 'measu
 function ProductUnit() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
-  const isSuperUser = Boolean(user?.is_superuser);
+  const isSuperUser = Boolean(user?.is_superuser || user?.role === 'superuser');
 
   const [units, setUnits] = useState<ProductUnit[]>([]);
   const [loading, setLoading] = useState(true);

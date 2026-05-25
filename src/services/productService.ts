@@ -235,7 +235,7 @@ const item = (raw ?? {}) as Partial<Product> & {
     sku: item.sku ?? '',
     barcode: item.barcode ?? item.barcode_value ?? (batches && Array.isArray(batches) && batches.length > 0 ? (batches.find(b => b.barcode || b.shtrix_code)?.barcode || batches[0].barcode) : '') ?? item.sku,
     barcode_img: resolveImageUrl(item.barcode_img),
-    shtrix_code: item.shtrix_code ?? null,
+    shtrix_code: item.shtrix_code ? resolveImageUrl(item.shtrix_code) : null,
     image,
     images,
     total_count: quantity,
@@ -494,21 +494,8 @@ export const productService = {
     }
   },
 
-search: async (query: string): Promise<Product[]> => {
-    const response = await apiClient.get<unknown>(`/products/search/${encodeURIComponent(query)}/`);
-    const data = response.data;
-    if (Array.isArray(data)) {
-      return data.map(normalizeProduct);
-    }
-    if (data && typeof data === 'object') {
-      const anyData = data as { results?: unknown; data?: unknown };
-      if (Array.isArray(anyData.results)) {
-        return anyData.results.map(normalizeProduct);
-      }
-      if (Array.isArray(anyData.data)) {
-        return anyData.data.map(normalizeProduct);
-      }
-    }
-    return [];
+  search: async (query: string): Promise<Product[]> => {
+    const response = await apiClient.get<unknown>(`/products/?search=${encodeURIComponent(query)}`);
+    return parsePaginatedProducts(response.data).data;
   },
 };

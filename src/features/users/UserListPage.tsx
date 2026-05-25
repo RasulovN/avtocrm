@@ -179,13 +179,13 @@ export function UserListPage() {
       header: t('users.role'),
       render: (item: User) => (
         <span className={`px-2 py-1 rounded-full text-xs ${
-          item.role === 'admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+          item.role === 'admin' || item.role === 'superuser' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
           item.role === 'm' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' :
           item.role === 's' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
           item.role === 'store_admin' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
           'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
         }`}>
-          {item.role === 's' ? t('users.seller') : item.role === 'm' ? t('users.manager') : item.role === 'su' ? t('users.superUser') : item.role === 'admin' ? t('users.admin') : item.role === 'store_admin' ? t('users.storeAdmin') : t('users.storeUser')}
+          {item.role === 's' ? t('users.seller') : item.role === 'm' ? t('users.manager') : item.role === 'su' || item.role === 'superuser' ? t('users.superUser') : item.role === 'admin' ? t('users.admin') : item.role === 'store_admin' ? t('users.storeAdmin') : t('users.storeUser')}
         </span>
       ),
     },
@@ -255,13 +255,13 @@ export function UserListPage() {
                   </div>
                   <div className="flex flex-col items-end gap-2 shrink-0">
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ${
-                      item.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                      item.role === 'admin' || item.role === 'superuser' ? 'bg-purple-100 text-purple-800' :
                       item.role === 'm' ? 'bg-indigo-100 text-indigo-800' :
                       item.role === 's' ? 'bg-emerald-100 text-emerald-800' :
                       item.role === 'store_admin' ? 'bg-blue-100 text-blue-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>
-                      {item.role === 's' ? t('users.seller') : item.role === 'm' ? t('users.manager') : item.role === 'su' ? t('users.superUser') : item.role === 'admin' ? t('users.admin') : item.role === 'store_admin' ? t('users.storeAdmin') : t('users.storeUser')}
+                      {item.role === 's' ? t('users.seller') : item.role === 'm' ? t('users.manager') : item.role === 'su' || item.role === 'superuser' ? t('users.superUser') : item.role === 'admin' ? t('users.admin') : item.role === 'store_admin' ? t('users.storeAdmin') : t('users.storeUser')}
                     </span>
                     <div className="flex items-center gap-1.5">
                       <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleViewLogs(item)} title={t('users.logs')}>

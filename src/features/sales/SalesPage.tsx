@@ -12,13 +12,13 @@ import { productService } from '../../services/productService';
 import { salesService } from '../../services/salesService';
 import { customerApiService } from '../../services/customerService';
 import { useAuthStore } from '../../app/store';
-import { useCategories } from '../../context/CategoryContext';
 import { useProducts } from '../../context/ProductContext';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import type { Store, Product } from '../../types';
 import { formatCurrency } from '../../utils';
 import { logger } from '../../utils/logger';
 import { useTranslation } from 'react-i18next';
+import { extractBarcodeFromUrl } from '../../utils/xss';
 
 interface CartItem {
   product_id: string;
@@ -95,7 +95,7 @@ const playErrorSound = () => {
 export function SalesPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
-  const isAdmin = Boolean(user?.is_superuser);
+  const isAdmin = Boolean(user?.is_superuser || user?.role === 'superuser');
   const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores.find(s => s.type === 'b')?.id || user.stores[0].id) : '');
   const [stores, setStores] = useState<Store[]>([]);
   const [saving, setSaving] = useState(false);
@@ -275,11 +275,12 @@ export function SalesPage() {
 
     if (!normalizedBarcode) return null;
 
-    const localProduct = safeProducts.find((product) =>
-      [product.shtrix_code, product.barcode, product.sku]
+    const localProduct = safeProducts.find((product) => {
+      const cleanShtrix = product.shtrix_code ? extractBarcodeFromUrl(product.shtrix_code) : '';
+      return [cleanShtrix, product.barcode, product.sku]
         .filter((value): value is string => typeof value === 'string' && value.trim() !== '')
-        .some((value) => value.trim() === normalizedBarcode)
-    );
+        .some((value) => value.trim() === normalizedBarcode);
+    });
 
     if (localProduct) {
       const hydratedProduct = hydrateProductFromCatalog(localProduct);
@@ -288,7 +289,15 @@ export function SalesPage() {
     }
 
     try {
-      const product = await productService.getByBarcode(normalizedBarcode);
+      const products = await productService.search(normalizedBarcode);
+      const product = products.find((p) => {
+        const cleanShtrix = p.shtrix_code ? extractBarcodeFromUrl(p.shtrix_code) : '';
+        return String(p.id) === normalizedBarcode ||
+          (p.barcode && String(p.barcode).trim() === normalizedBarcode) ||
+          (cleanShtrix && String(cleanShtrix).trim() === normalizedBarcode) ||
+          (p.sku && String(p.sku).trim() === normalizedBarcode);
+      }) || products[0];
+
       if (product) {
         const hydratedProduct = hydrateProductFromCatalog(product);
         // Only show search results if this is manual search, not from barcode scan
@@ -441,13 +450,8 @@ export function SalesPage() {
       setSearchLoading(true);
 
       try {
-        if (/^\d+$/.test(query)) {
-          const product = await productService.getByBarcode(query);
-          setSearchResults(product ? [hydrateProductFromCatalog(product)] : []);
-        } else {
-          const products = await productService.search(query);
-          setSearchResults(products.map(hydrateProductFromCatalog));
-        }
+        const products = await productService.search(query);
+        setSearchResults(products.map(hydrateProductFromCatalog));
       } catch (error) {
         console.error('Product search failed:', error);
         setSearchResults([]);
@@ -940,10 +944,10 @@ export function SalesPage() {
                       <div className="flex items-start justify-between mb-1.5">
                         <div className="flex-1">
                           <div className="font-medium dark:text-white text-sm">{item.product_name}</div>
-                          <div className="text-xs text-muted-foreground dark:text-gray-400 space-y-1">
+                          {/* <div className="text-xs text-muted-foreground dark:text-gray-400 space-y-1">
                             <div>{safeProducts.find((p) => p.id === item.product_id)?.sku}</div>
                             <div>ID: {item.product_id}</div>
-                          </div>
+                          </div> */}
                         </div>
                         <Button
                           type="button"

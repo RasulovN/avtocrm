@@ -9,6 +9,7 @@ import { Input } from '../../../components/ui/Input';
 import { Label } from '../../../components/ui/Label';
 import { Card, CardContent, CardFooter } from '../../../components/ui/Card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/Select';
+import { SearchableSelect } from '../../../components/ui/SearchableSelect';
 import { transferService } from '../../../services/transferService';
 import { storeService } from '../../../services/storeService';
 import { useProducts } from '../../../context/ProductContext';
@@ -29,7 +30,7 @@ export function TransferCreatePage() {
   const [saving, setSaving] = useState(false);
   const { products: allProducts, loading: productsLoading } = useProducts();
   const { user } = useAuthStore();
-  const isAdmin = Boolean(user?.is_superuser);
+  const isAdmin = Boolean(user?.is_superuser || user?.role === 'superuser');
   const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores.find(s => s.type === 'b')?.id || user.stores[0].id) : '');
 
   const [fromStoreId, setFromStoreId] = useState(isAdmin ? '' : userStoreId);
@@ -46,6 +47,17 @@ export function TransferCreatePage() {
       return inv && inv.quantity > 0;
     });
   }, [allProducts, productsLoading, fromStoreId]);
+
+  const productOptions = useMemo(() => {
+    return safeProducts.map(p => {
+      const inv = p.inventory_by_store?.find(i => String(i.store_id) === String(fromStoreId));
+      const q = inv ? inv.quantity : 0;
+      return {
+        value: String(p.id),
+        label: `${p.name} (Omborda: ${q})`
+      };
+    });
+  }, [safeProducts, fromStoreId]);
 
   const getProductStock = (productId: string) => {
     if (!fromStoreId || !productId) return 0;
@@ -109,7 +121,7 @@ export function TransferCreatePage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24">
       <PageHeader
         title={t('transfers.createTransfer', "Tovarlarni ko'chirish")}
         description={t('transfers.title', "Omborlar o'rtasida tovar jo'natish")}
@@ -120,7 +132,7 @@ export function TransferCreatePage() {
       />
 
       <form onSubmit={handleSubmit}>
-        <Card className="border border-border/60 shadow-sm rounded-xl overflow-hidden bg-card">
+        <Card className="border border-border/60 shadow-sm rounded-xl bg-card">
           <CardContent className="p-6 space-y-8">
 
             {/* Top section: From and To Stores */}
@@ -180,7 +192,7 @@ export function TransferCreatePage() {
                   <div key={index} className="flex flex-col sm:flex-row items-start sm:items-end gap-4 p-4 rounded-xl bg-muted/40 border border-border/60">
                     <div className="flex-1 w-full space-y-2">
                       <Label className="text-xs font-semibold text-muted-foreground">{t('products.title', 'Tovar')}</Label>
-                      <Select
+                      <SearchableSelect
                         value={item.product}
                         onValueChange={(value) => {
                           const newItems = [...items];
@@ -192,20 +204,11 @@ export function TransferCreatePage() {
                           }
                           setItems(newItems);
                         }}
-                      >
-                        <SelectTrigger className="bg-background border-border/60 h-10 shadow-none">
-                          <SelectValue placeholder={t('transfers.selectProduct', 'Tovarni tanlang')} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {safeProducts.map(p => {
-                            const inv = p.inventory_by_store?.find(i => String(i.store_id) === String(fromStoreId));
-                            const q = inv ? inv.quantity : 0;
-                            return (
-                              <SelectItem key={p.id} value={String(p.id)}>{p.name} (Omborda: {q})</SelectItem>
-                            )
-                          })}
-                        </SelectContent>
-                      </Select>
+                        options={productOptions}
+                        placeholder={t('transfers.selectProduct', 'Tovarni tanlang')}
+                        searchPlaceholder={t('common.search', 'Qidirish...')}
+                        emptyMessage={t('common.noData', "Ma'lumot yo'q")}
+                      />
                     </div>
 
                     <div className="w-full sm:w-32 space-y-2 shrink-0">

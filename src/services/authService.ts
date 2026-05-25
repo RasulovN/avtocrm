@@ -73,7 +73,8 @@ export const authService = {
 
   refreshAuth: async (): Promise<User | null> => {
     try {
-      const profileResponse = await apiClient.get<User>('/users/profile/');
+      await apiClient.post('/users/auth/refresh/', undefined, { skipGlobalErrorHandler: true });
+      const profileResponse = await apiClient.get<User>('/users/profile/', { skipGlobalErrorHandler: true });
       const user = profileResponse.data;
       localStorage.setItem('crm_auth_time', Date.now().toString());
       return user;

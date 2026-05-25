@@ -26,7 +26,7 @@ import type { Category, CategoryFormData } from '../../types';
 export function CategoryListPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
-  const isSuperUser = Boolean(user?.is_superuser);
+  const isSuperUser = Boolean(user?.is_superuser || user?.role === 'superuser');
   const { refreshCategories } = useCategories();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);

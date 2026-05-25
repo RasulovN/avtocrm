@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, type ChangeEvent, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Edit, Trash2, Phone, Mail, MapPin, CheckCircle2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
@@ -96,6 +97,7 @@ export function SupplierListPage() {
     try {
       setDeleting(true);
       await supplierService.delete(deleteId);
+      toast.success(t('suppliers.supplierDeleted', "Ta'minotchi muvaffaqiyatli o'chirildi"));
       loadSuppliers();
     } catch (error) {
       console.error('Failed to delete supplier:', error);
@@ -154,12 +156,19 @@ export function SupplierListPage() {
   };
 
   const handleSave = async () => {
+    if (!formData.name_uz.trim()) {
+      toast.error(t('suppliers.supplierNameRequired', 'Yetkazib beruvchi nomi kiritilishi shart!'));
+      return;
+    }
+
     try {
       setSaving(true);
       if (editingSupplier) {
         await supplierService.update(editingSupplier.id, formData);
+        toast.success(t('suppliers.supplierUpdated', "Ta'minotchi muvaffaqiyatli yangilandi"));
       } else {
         await supplierService.create(formData);
+        toast.success(t('suppliers.supplierAdded', "Ta'minotchi muvaffaqiyatli qo'shildi"));
       }
       setDialogOpen(false);
       loadSuppliers();

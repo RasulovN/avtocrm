@@ -41,7 +41,7 @@ export function ProductListPage() {
   const navigate = useNavigate();
   const lang = i18n.language || 'uz';
   const { user } = useAuthStore();
-  const isAdmin = Boolean(user?.is_superuser);
+  const isAdmin = Boolean(user?.is_superuser || user?.role === 'superuser');
   const userStoreId = user?.store_id;
   const { categories, refreshCategories } = useCategories();
   const [products, setProducts] = useState<Product[]>([]);
@@ -158,27 +158,31 @@ export function ProductListPage() {
 
     const canvas = document.createElement('canvas');
     const barcodeCards = selectedProducts.map((product) => {
+      const isShtrixUrl = product.shtrix_code && (product.shtrix_code.startsWith('http://') || product.shtrix_code.startsWith('https://') || product.shtrix_code.startsWith('/media/'));
       const barcodeValue = product.barcode || product.sku || '';
-      if (!barcodeValue) return '';
-
+      
       let dataUrl = '';
-      try {
-        JsBarcode(canvas, barcodeValue, {
-          format: 'CODE128',
-          width: 2,
-          height: 80,
-          displayValue: true,
-          fontSize: 14,
-          margin: 10
-        });
-        dataUrl = canvas.toDataURL('image/png');
-      } catch (error) {
-        console.error('Failed to generate barcode data URL:', error);
+      if (isShtrixUrl) {
+        dataUrl = product.shtrix_code!;
+      } else if (barcodeValue) {
+        try {
+          JsBarcode(canvas, barcodeValue, {
+            format: 'CODE128',
+            width: 2,
+            height: 80,
+            displayValue: false,
+            margin: 0
+          });
+          dataUrl = canvas.toDataURL('image/png');
+        } catch (error) {
+          console.error('Failed to generate barcode data URL:', error);
+        }
       }
+
+      if (!dataUrl) return '';
 
       return `
         <div class="barcode-label">
-          <p class="barcode-label-name">${escapeHtml(product.name)}</p>
           <img src="${dataUrl}" />
         </div>
       `;
@@ -468,16 +472,23 @@ export function ProductListPage() {
                       </span>
                     </div>
 
-                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
                       {item.category_name && (
                         <span className="text-muted-foreground font-medium flex items-center gap-1">
                           <Tag className="h-3 w-3 text-primary" />
                           {item.category_name}
                         </span>
                       )}
-                      <span className="text-muted-foreground font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px]">
-                        {article}
-                      </span>
+                      {item.sku && (
+                        <span className="text-slate-500 font-mono bg-slate-100 dark:bg-slate-800/60 px-1.5 py-0.5 rounded text-[10px]">
+                          SKU: {item.sku}
+                        </span>
+                      )}
+                      {item.barcode && (
+                        <span className="text-slate-500 font-mono bg-slate-100 dark:bg-slate-800/60 px-1.5 py-0.5 rounded text-[10px]">
+                          Barcode: {item.barcode}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -525,7 +536,7 @@ export function ProductListPage() {
                             </span>
                             <span className={cn(
                               "font-bold tabular-nums",
-                              qty === 0 ? "text-muted-foreground" : "text-blue-600 dark:text-blue-400"
+                              qty === 0 ? "text-muted-foreground" : "text-slate-900 dark:text-white"
                             )}>
                               {qty}
                             </span>
@@ -589,8 +600,12 @@ export function ProductListPage() {
               <th className="min-w-[200px] px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {t('products.productName', 'Tovar nomi')}
               </th>
-              {/* Article / SKU */}
-              <th className="w-[130px] px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {/* SKU */}
+              <th className="w-[120px] px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t('products.sku', 'SKU')}
+              </th>
+              {/* Barcode */}
+              <th className="w-[140px] px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {t('products.barcode')}
               </th>
               {/* Category */}
@@ -616,9 +631,9 @@ export function ProductListPage() {
                 </th>
               ))}
               {/* Status */}
-              <th className="w-[110px] px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {/* <th className="w-[110px] px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {t('common.status', 'Holat')}
-              </th>
+              </th> */}
               {/* Actions */}
               <th className="w-10 px-2 py-3"></th>
             </tr>
@@ -626,7 +641,7 @@ export function ProductListPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={9 + shopStores.length} className="h-40 text-center">
+                <td colSpan={10 + shopStores.length} className="h-40 text-center">
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
                     <Loader2 className="h-6 w-6 animate-spin" />
                     <span className="text-sm">{t('common.loading')}</span>
@@ -635,7 +650,7 @@ export function ProductListPage() {
               </tr>
             ) : products.length === 0 ? (
               <tr>
-                <td colSpan={9 + shopStores.length} className="h-40 text-center">
+                <td colSpan={10 + shopStores.length} className="h-40 text-center">
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
                     <Package className="h-8 w-8 opacity-40" />
                     <span className="text-sm">{t('common.noData', "Ma'lumot yo'q")}</span>
@@ -694,16 +709,36 @@ export function ProductListPage() {
                           {item.name}
                         </p>
                         <p className="text-[11px] text-muted-foreground font-mono mt-0.5">
-                          {item.barcode || item.sku || `ID: ${item.id}`}
+                          ID: {item.id}
                         </p>
                       </div>
                     </td>
 
-                    {/* Article / SKU */}
+                    {/* SKU */}
                     <td className="px-3 py-2">
                       <code className="text-xs font-mono bg-muted/40 px-2 py-0.5 rounded-md text-muted-foreground">
-                        {article}
+                        {item.sku || '—'}
                       </code>
+                    </td>
+
+                    {/* Barcode */}
+                    <td className="px-3 py-2">
+                      {item.barcode ? (
+                        <div className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
+                          <span>{item.barcode}</span>
+                          {item.shtrix_code && (
+                            <a
+                              href={item.shtrix_code}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:text-primary/80 transition-colors"
+                              title={t('titles.printBarcode', 'Barcode chop etish')}
+                            >
+                              <Barcode className="h-3.5 w-3.5" />
+                            </a>
+                          )}
+                        </div>
+                      ) : '—'}
                     </td>
 
                     {/* Category */}
@@ -725,9 +760,7 @@ export function ProductListPage() {
                     <td className="px-3 py-2 text-center">
                       <span className={cn(
                         'text-sm font-semibold tabular-nums',
-                        totalQty === 0 && 'text-muted-foreground',
-                        totalQty > 0 && totalQty < 5 && 'text-amber-600',
-                        totalQty >= 5 && 'text-foreground'
+                        totalQty === 0 ? 'text-muted-foreground' : 'text-foreground'
                       )}>
                         {totalQty}
                       </span>
@@ -740,9 +773,7 @@ export function ProductListPage() {
                         <td key={store.id} className="px-2 py-2 text-center">
                           <span className={cn(
                             'text-sm font-semibold tabular-nums',
-                            qty === 0 && 'text-muted-foreground',
-                            qty > 0 && qty < 5 && 'text-amber-600',
-                            qty >= 5 && 'text-blue-600 dark:text-blue-400'
+                            qty === 0 ? 'text-muted-foreground' : 'text-foreground'
                           )}>
                             {qty}
                           </span>
@@ -751,7 +782,7 @@ export function ProductListPage() {
                     })}
 
                     {/* Status */}
-                    <td className="px-3 py-2 text-center">
+                    {/* <td className="px-3 py-2 text-center">
                       {totalQty > 0 ? (
                         <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold badge-success whitespace-nowrap">
                           {t('products.inStock', 'Omborda bor')}
@@ -761,7 +792,7 @@ export function ProductListPage() {
                           {t('products.outOfStock', 'Tugagan')}
                         </span>
                       )}
-                    </td>
+                    </td> */}
 
                     {/* Action: View */}
                     <td className="px-2 py-2">
@@ -866,10 +897,12 @@ interface ProductDetailModalProps {
 }
 
 function ProductDetailModal({ product, onClose, onEdit, stores, warehouseStore, t }: ProductDetailModalProps) {
+  const isShtrixUrl = product && product.shtrix_code && (product.shtrix_code.startsWith('http://') || product.shtrix_code.startsWith('https://') || product.shtrix_code.startsWith('/media/'));
+
   // Use a callback ref to generate the barcode because Dialog portals mount asynchronously,
   // meaning the SVG element may not be present in the DOM during the first render/useEffect run.
   const barcodeRef = useCallback((node: SVGSVGElement | null) => {
-    if (!node || !product) return;
+    if (!node || !product || isShtrixUrl) return;
     const barcodeValue = product.barcode || product.sku || '';
     if (!barcodeValue) return;
 
@@ -887,7 +920,7 @@ function ProductDetailModal({ product, onClose, onEdit, stores, warehouseStore, 
     } catch (err) {
       console.error('Barcode generation failed:', err);
     }
-  }, [product]);
+  }, [product, isShtrixUrl]);
 
   if (!product) return null;
 
@@ -910,31 +943,43 @@ function ProductDetailModal({ product, onClose, onEdit, stores, warehouseStore, 
   const handlePrint = () => {
     if (!barcodeValue) return;
 
-    const canvas = document.createElement('canvas');
-    try {
-      JsBarcode(canvas, barcodeValue, {
-        format: 'CODE128',
-        width: 2,
-        height: 80,
-        displayValue: true,
-        fontSize: 14,
-        margin: 10,
-      });
-    } catch { return; }
+    let dataUrl = '';
+    if (isShtrixUrl) {
+      dataUrl = product.shtrix_code!;
+    } else {
+      const canvas = document.createElement('canvas');
+      try {
+        JsBarcode(canvas, barcodeValue, {
+          format: 'CODE128',
+          width: 2,
+          height: 80,
+          displayValue: false,
+          margin: 0,
+        });
+        dataUrl = canvas.toDataURL('image/png');
+      } catch { return; }
+    }
 
-    const dataUrl = canvas.toDataURL('image/png');
     const htmlContent = `<!DOCTYPE html>
-      <html><head><title>${product.name} - Barcode</title>
+      <html><head><title>Print Barcode</title>
       <style>
-        @page { size: auto; margin: 10mm; }
-        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
-        .name { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
-        .sku { font-size: 12px; color: #666; margin-bottom: 12px; }
-        img { max-width: 280px; }
+        @page { size: auto; margin: 0; }
+        body { 
+          margin: 0; 
+          padding: 0; 
+          display: flex; 
+          justify-content: center; 
+          align-items: center; 
+          height: 100vh; 
+          background: #fff;
+        }
+        img { 
+          max-width: 100%; 
+          max-height: 100%; 
+          object-fit: contain; 
+        }
       </style></head>
       <body>
-        <p class="name">${escapeHtml(product.name)}</p>
-        <p class="sku">${escapeHtml(product.sku || '')}</p>
         <img src="${dataUrl}" />
         <script>window.onload=function(){setTimeout(function(){window.print()},500)};<\/script>
       </body></html>`;
@@ -997,6 +1042,11 @@ function ProductDetailModal({ product, onClose, onEdit, stores, warehouseStore, 
                   <Tag className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="text-muted-foreground">{t('products.category', 'Kategoriya')}:</span>
                   <span className="font-semibold">{product.category_name || String(product.category || '—')}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Layers className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-muted-foreground">{t('products.sku', 'SKU')}:</span>
+                  <code className="font-mono text-xs bg-muted/40 px-1.5 py-0.5 rounded">{product.sku || '—'}</code>
                 </div>
                 <div className="flex items-center gap-2">
                   <Barcode className="h-3.5 w-3.5 text-muted-foreground" />
@@ -1063,9 +1113,7 @@ function ProductDetailModal({ product, onClose, onEdit, stores, warehouseStore, 
                       </div>
                       <span className={cn(
                         'text-sm font-bold tabular-nums',
-                        inv.quantity === 0 && 'text-muted-foreground',
-                        inv.quantity > 0 && inv.quantity < 5 && 'text-amber-600',
-                        inv.quantity >= 5 && 'text-foreground'
+                        inv.quantity === 0 ? 'text-muted-foreground' : 'text-foreground'
                       )}>
                         {inv.quantity} {product.unit_measurement_name || t('products.pcs', 'dona')}
                       </span>
@@ -1098,9 +1146,13 @@ function ProductDetailModal({ product, onClose, onEdit, stores, warehouseStore, 
                 </Button>
               </div>
               <div className="flex justify-center bg-white rounded-xl p-4">
-                <svg ref={barcodeRef} />
+                {isShtrixUrl ? (
+                  <img src={product.shtrix_code!} alt="Barcode" className="max-w-[280px] h-auto" />
+                ) : (
+                  <svg ref={barcodeRef} />
+                )}
               </div>
-              <p className="text-center text-xs text-muted-foreground mt-2 font-mono">{barcodeValue}</p>
+              <p className="text-center text-xs text-muted-foreground mt-2 font-mono">{isShtrixUrl ? (product.barcode || barcodeValue) : barcodeValue}</p>
             </div>
           )}
 

@@ -7,6 +7,7 @@ vi.mock('../../services/authService', () => ({
     login: vi.fn(),
     logout: vi.fn(),
     getCurrentUser: vi.fn(),
+    fetchProfile: vi.fn(),
   },
 }));
 
@@ -63,10 +64,10 @@ describe('useAuthStore', () => {
     expect(authService.logout).toHaveBeenCalled();
   });
 
-  it('checkAuth restores user from service', () => {
-    vi.mocked(authService.getCurrentUser).mockReturnValue(mockUser);
+  it('checkAuth restores user from service', async () => {
+    vi.mocked(authService.fetchProfile).mockResolvedValue(mockUser);
 
-    useAuthStore.getState().checkAuth();
+    await useAuthStore.getState().checkAuth();
 
     const state = useAuthStore.getState();
     expect(state.user).toEqual(mockUser);

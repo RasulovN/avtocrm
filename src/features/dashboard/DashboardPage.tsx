@@ -130,7 +130,7 @@ const latinToCyrillicMap: Record<string, string> = {
 export function DashboardPage() {
   const { t, i18n } = useTranslation();
   const { user } = useAuthStore();
-  const isAdmin = Boolean(user?.is_superuser);
+  const isAdmin = Boolean(user?.is_superuser || user?.role === 'superuser');
   const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores.find(s => s.type === 'b')?.id || user.stores[0].id) : '');
 
   const [period, setPeriod] = useState<string>('monthly');
