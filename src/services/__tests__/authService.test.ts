@@ -37,7 +37,6 @@ describe('authService', () => {
     });
     expect(apiClient.get).toHaveBeenCalledWith('/users/profile/');
     expect(result).toEqual(mockUser);
-    expect(localStorage.setItem).toHaveBeenCalledWith('crm_user', JSON.stringify(mockUser));
     expect(localStorage.setItem).toHaveBeenCalledWith('crm_auth_time', expect.any(String));
   });
 
@@ -46,36 +45,40 @@ describe('authService', () => {
 
     await authService.logout();
 
-    expect(localStorage.removeItem).toHaveBeenCalledWith('crm_user');
     expect(localStorage.removeItem).toHaveBeenCalledWith('crm_auth_time');
   });
 
-  it('returns stored user when session is valid', () => {
-    vi.mocked(localStorage.getItem).mockImplementation((key: string) => {
-      if (key === 'crm_user') return JSON.stringify(mockUser);
-      if (key === 'crm_auth_time') return Date.now().toString();
-      return null;
-    });
-
-    expect(authService.getCurrentUser()).toEqual(mockUser);
-  });
-
-  it('returns null for invalid stored user json', () => {
-    vi.mocked(localStorage.getItem).mockImplementation((key: string) => {
-      if (key === 'crm_user') return 'invalid';
-      return null;
-    });
-
+  it('returns null for getCurrentUser as it is a legacy method', () => {
     expect(authService.getCurrentUser()).toBeNull();
   });
 
   it('isAuthenticated reflects stored user presence', () => {
     vi.mocked(localStorage.getItem).mockImplementation((key: string) => {
-      if (key === 'crm_user') return JSON.stringify(mockUser);
       if (key === 'crm_auth_time') return Date.now().toString();
       return null;
     });
 
     expect(authService.isAuthenticated()).toBe(true);
+  });
+
+  it('refreshes auth token and returns user profile', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({ data: {} });
+    vi.mocked(apiClient.get).mockResolvedValue({ data: mockUser });
+
+    const result = await authService.refreshAuth();
+
+    expect(apiClient.post).toHaveBeenCalledWith('/users/auth/refresh/', undefined, { skipGlobalErrorHandler: true });
+    expect(apiClient.get).toHaveBeenCalledWith('/users/profile/', { skipGlobalErrorHandler: true });
+    expect(result).toEqual(mockUser);
+    expect(localStorage.setItem).toHaveBeenCalledWith('crm_auth_time', expect.any(String));
+  });
+
+  it('returns null and clears storage if refresh fails', async () => {
+    vi.mocked(apiClient.post).mockRejectedValue(new Error('Refresh failed'));
+
+    const result = await authService.refreshAuth();
+
+    expect(result).toBeNull();
+    expect(localStorage.removeItem).toHaveBeenCalledWith('crm_auth_time');
   });
 });

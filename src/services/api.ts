@@ -1,7 +1,6 @@
 import axios, { AxiosHeaders } from 'axios';
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { handleError } from '../utils/errorHandler';
-import { authService } from './authService';
 import { isDev } from '../config/environment';
 import { useAuthStore } from '../app/store';
 
@@ -14,6 +13,7 @@ export const API_ORIGIN = isDev ? '' : BaSE_URL.replace(/\/api\/?$/, '');
 export interface ApiRequestConfig extends AxiosRequestConfig {
   expectedErrorStatuses?: number[];
   skipGlobalErrorHandler?: boolean;
+  _retry?: boolean;
 }
 
 const removeAuth = async () => {
@@ -24,6 +24,25 @@ const removeAuth = async () => {
 };
 
 const hasStoredAuth = () => Boolean(localStorage.getItem('crm_auth_time'));
+
+interface FailedRequest {
+  resolve: (value: unknown) => void;
+  reject: (reason: unknown) => void;
+}
+
+let isRefreshing = false;
+let failedQueue: FailedRequest[] = [];
+
+const processQueue = (error: unknown) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(null);
+    }
+  });
+  failedQueue = [];
+};
 
 // Disable axios XHR debug logging
 // if (typeof window !== 'undefined' && window.XMLHttpRequest) {
@@ -114,9 +133,51 @@ api.interceptors.response.use(
     }
     
     if (status === 401) {
+      if (url.includes('/users/login/') || url.includes('/users/auth/refresh/') || url.includes('/users/logout/')) {
+        void removeAuth();
+        return Promise.reject(error);
+      }
+
       if (!hasStoredAuth()) {
         return Promise.reject(error);
       }
+
+      const originalRequest = error.config as ApiRequestConfig;
+      if (originalRequest && !originalRequest._retry) {
+        originalRequest._retry = true;
+
+        if (isRefreshing) {
+          return new Promise((resolve, reject) => {
+            failedQueue.push({ resolve, reject });
+          })
+            .then(() => {
+              return api(originalRequest);
+            })
+            .catch((err) => {
+              return Promise.reject(err);
+            });
+        }
+
+        isRefreshing = true;
+
+        return new Promise((resolve, reject) => {
+          api.post('/users/auth/refresh/', undefined, { skipGlobalErrorHandler: true })
+            .then(() => {
+              localStorage.setItem('crm_auth_time', Date.now().toString());
+              processQueue(null);
+              resolve(api(originalRequest));
+            })
+            .catch((err) => {
+              processQueue(err);
+              void removeAuth();
+              reject(err);
+            })
+            .finally(() => {
+              isRefreshing = false;
+            });
+        });
+      }
+
       void removeAuth();
       return Promise.reject(error);
     } else {
