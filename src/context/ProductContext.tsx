@@ -21,7 +21,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
   const { i18n } = useTranslation();
   const hasSession = useAuthStore((state) => Boolean(state.user || state.token));
   const user = useAuthStore((state) => state.user);
-  const isAdmin = Boolean(user?.is_superuser);
+  const isAdmin = Boolean(user?.is_superuser || user?.role === 'superuser');
   const userStoreId = user?.store_id;
   const prevLangRef = useRef(i18n.language);
   const initialLoadRef = useRef(true);

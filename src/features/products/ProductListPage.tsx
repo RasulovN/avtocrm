@@ -41,7 +41,7 @@ export function ProductListPage() {
   const navigate = useNavigate();
   const lang = i18n.language || 'uz';
   const { user } = useAuthStore();
-  const isAdmin = Boolean(user?.is_superuser);
+  const isAdmin = Boolean(user?.is_superuser || user?.role === 'superuser');
   const userStoreId = user?.store_id;
   const { categories, refreshCategories } = useCategories();
   const [products, setProducts] = useState<Product[]>([]);

@@ -17,7 +17,7 @@ export function StoreListPage() {
   const { t, i18n } = useTranslation();
   const lang = i18n.language || 'uz';
   const { user } = useAuthStore();
-  const isAdmin = Boolean(user?.is_superuser);
+  const isAdmin = Boolean(user?.is_superuser || user?.role === 'superuser');
   const userStores = user?.stores || [];
   const [stores, setStores] = useState<Store[]>([]);
   const [currentStore, setCurrentStore] = useState<Store | null>(null);

@@ -185,7 +185,7 @@ export function ProductBarcodePage() {
         ? String((user as any).store.id)
         : undefined;
   const userStoreId = resolvedUserStoreId;
-  const canViewAllStores = Boolean(user?.is_superuser || user?.role === 'admin');
+  const canViewAllStores = Boolean(user?.is_superuser || user?.role === 'superuser' || user?.role === 'admin');
   const visibleBatches = canViewAllStores
     ? batches
     : batches.filter((batch) => userStoreId ? String(batch.store) === userStoreId : false);

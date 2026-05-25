@@ -131,7 +131,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
   const notificationRef = useRef<HTMLDivElement>(null);
   const { theme, toggleTheme } = useThemeStore();
   const { user, logout } = useAuthStore();
-  const isSuperUser = Boolean(user?.is_superuser);
+  const isSuperUser = Boolean(user?.is_superuser || user?.role === 'superuser');
   const { notifications, unreadCount, markAsRead } = useNotifications();
 
   useEffect(() => {
@@ -358,6 +358,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
           ) : (
             navItems
               .filter((item) => {
+                if (item.href === '/inventory' && user?.role === 's') return false;
                 if (!item.access || item.access === 'all') return true;
                 if (item.access === 'superuser') return isSuperUser;
                 return !isSuperUser;

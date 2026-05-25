@@ -41,7 +41,7 @@ export function SettingsPage() {
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSending, setForgotSending] = useState(false);
   
-  const isAdmin = Boolean(user?.is_superuser);
+  const isAdmin = Boolean(user?.is_superuser || user?.role === 'superuser');
 
   const [profileData, setProfileData] = useState<ProfileFormData>({
     full_name: user?.full_name || 'Admin',

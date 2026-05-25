@@ -163,7 +163,7 @@ function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isAuthLoading = useAuthStore((state) => state.isLoading);
   const user = useAuthStore((state) => state.user);
-  const isSuperUser = Boolean(user?.is_superuser);
+  const isSuperUser = Boolean(user?.is_superuser || user?.role === 'superuser');
 
   useEffect(() => {
     checkAuth();
@@ -192,6 +192,19 @@ function App() {
 
   const withLayout = (page: React.ReactNode) =>
     requireAuth(<MainLayout key={currentLang}>{page}</MainLayout>);
+
+  const requireNoSeller = (element: React.ReactNode) => {
+    if (!isAuthenticated()) {
+      return <Navigate to="/login" replace />;
+    }
+    if (user?.role === 's') {
+      return <Navigate to={`/${currentLang}/dashboard`} replace />;
+    }
+    return element;
+  };
+
+  const withLayoutNoSeller = (page: React.ReactNode) =>
+    requireNoSeller(<MainLayout key={currentLang}>{page}</MainLayout>);
 
   const routeFallback = (
     <main id="main-content" className="flex min-h-screen items-center justify-center" aria-busy="true">
@@ -264,29 +277,29 @@ function App() {
 
           {/* Inventorizatsiya */}
           <Route path={`/:lang/inventory`} element={
-            withLayout(<InventorySessionsListPage />)
+            withLayoutNoSeller(<InventorySessionsListPage />)
           } />
           <Route path={`/:lang/inventory/new`} element={
-            withLayout(<InventoryPage />)
+            withLayoutNoSeller(<InventoryPage />)
           } />
 
 
           <Route path={`/:lang/inventory/kirimlar`} element={
-            withLayout(<StockEntryListPage />)
+            withLayoutNoSeller(<StockEntryListPage />)
           } />
 
           <Route path={`/:lang/inventory/kamomat`} element={
-            withLayout(<InventoryShortagesPage />)
+            withLayoutNoSeller(<InventoryShortagesPage />)
           } />
 
           {/* Inventory Sessions - List */}
           <Route path={`/:lang/inventory-sessions`} element={
-            withLayout(<InventorySessionsListPage />)
+            withLayoutNoSeller(<InventorySessionsListPage />)
           } />
           
           {/* Inventory Session - Detail */}
           <Route path={`/:lang/inventory-session/:id`} element={
-            withLayout(<InventoryDetailPage />)
+            withLayoutNoSeller(<InventoryDetailPage />)
           } />
           
           {/* Transfers - List */}

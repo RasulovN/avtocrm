@@ -15,7 +15,7 @@ type SaleRow = Sale & { id: string; rowNumber: number };
 export function SalesListPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
-  const isAdmin = Boolean(user?.is_superuser);
+  const isAdmin = Boolean(user?.is_superuser || user?.role === 'superuser');
   const userStoreIds = user?.stores?.map(s => String(s.id)) || [];
   const params = useParams();
   const lang = params.lang || 'uz';

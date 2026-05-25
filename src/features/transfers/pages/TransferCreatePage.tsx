@@ -30,7 +30,7 @@ export function TransferCreatePage() {
   const [saving, setSaving] = useState(false);
   const { products: allProducts, loading: productsLoading } = useProducts();
   const { user } = useAuthStore();
-  const isAdmin = Boolean(user?.is_superuser);
+  const isAdmin = Boolean(user?.is_superuser || user?.role === 'superuser');
   const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores.find(s => s.type === 'b')?.id || user.stores[0].id) : '');
 
   const [fromStoreId, setFromStoreId] = useState(isAdmin ? '' : userStoreId);

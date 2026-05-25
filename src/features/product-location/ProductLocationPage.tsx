@@ -24,7 +24,7 @@ import { formatDate } from '../../utils/index';
 export function ProductLocationPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
-  const isSuperUser = Boolean(user?.is_superuser);
+  const isSuperUser = Boolean(user?.is_superuser || user?.role === 'superuser');
   const [locations, setLocations] = useState<ProductLocation[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
