@@ -494,21 +494,8 @@ export const productService = {
     }
   },
 
-search: async (query: string): Promise<Product[]> => {
-    const response = await apiClient.get<unknown>(`/products/search/${encodeURIComponent(query)}/`);
-    const data = response.data;
-    if (Array.isArray(data)) {
-      return data.map(normalizeProduct);
-    }
-    if (data && typeof data === 'object') {
-      const anyData = data as { results?: unknown; data?: unknown };
-      if (Array.isArray(anyData.results)) {
-        return anyData.results.map(normalizeProduct);
-      }
-      if (Array.isArray(anyData.data)) {
-        return anyData.data.map(normalizeProduct);
-      }
-    }
-    return [];
+  search: async (query: string): Promise<Product[]> => {
+    const response = await apiClient.get<unknown>(`/products/?search=${encodeURIComponent(query)}`);
+    return parsePaginatedProducts(response.data).data;
   },
 };

@@ -525,7 +525,7 @@ export function ProductListPage() {
                             </span>
                             <span className={cn(
                               "font-bold tabular-nums",
-                              qty === 0 ? "text-muted-foreground" : "text-blue-600 dark:text-blue-400"
+                              qty === 0 ? "text-muted-foreground" : "text-slate-900 dark:text-white"
                             )}>
                               {qty}
                             </span>
@@ -725,9 +725,7 @@ export function ProductListPage() {
                     <td className="px-3 py-2 text-center">
                       <span className={cn(
                         'text-sm font-semibold tabular-nums',
-                        totalQty === 0 && 'text-muted-foreground',
-                        totalQty > 0 && totalQty < 5 && 'text-amber-600',
-                        totalQty >= 5 && 'text-foreground'
+                        totalQty === 0 ? 'text-muted-foreground' : 'text-foreground'
                       )}>
                         {totalQty}
                       </span>
@@ -740,9 +738,7 @@ export function ProductListPage() {
                         <td key={store.id} className="px-2 py-2 text-center">
                           <span className={cn(
                             'text-sm font-semibold tabular-nums',
-                            qty === 0 && 'text-muted-foreground',
-                            qty > 0 && qty < 5 && 'text-amber-600',
-                            qty >= 5 && 'text-blue-600 dark:text-blue-400'
+                            qty === 0 ? 'text-muted-foreground' : 'text-foreground'
                           )}>
                             {qty}
                           </span>
@@ -1063,9 +1059,7 @@ function ProductDetailModal({ product, onClose, onEdit, stores, warehouseStore, 
                       </div>
                       <span className={cn(
                         'text-sm font-bold tabular-nums',
-                        inv.quantity === 0 && 'text-muted-foreground',
-                        inv.quantity > 0 && inv.quantity < 5 && 'text-amber-600',
-                        inv.quantity >= 5 && 'text-foreground'
+                        inv.quantity === 0 ? 'text-muted-foreground' : 'text-foreground'
                       )}>
                         {inv.quantity} {product.unit_measurement_name || t('products.pcs', 'dona')}
                       </span>
