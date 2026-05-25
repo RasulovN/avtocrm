@@ -45,27 +45,29 @@ const normalizeSupplier = (raw: unknown): Supplier => {
   };
 };
 
-const mapSupplierPayload = (data: SupplierFormData): Record<string, unknown> => ({
-  phone_number: data.phone_number,
-  inn: data.inn,
-  name_uz: data.name_uz,
-  name_uz_cyrl: data.name_uz_cyrl,
-  description_uz: data.description_uz,
-  description_uz_cyrl: data.description_uz_cyrl,
-  address_uz: data.address_uz,
-  address_uz_cyrl: data.address_uz_cyrl,
-});
+const mapSupplierPayload = (data: SupplierFormData): Record<string, unknown> => {
+  const payload: Record<string, unknown> = {};
+  if (data.phone_number?.trim()) payload.phone_number = data.phone_number.trim();
+  if (data.inn?.trim()) payload.inn = data.inn.trim();
+  if (data.name_uz?.trim()) payload.name_uz = data.name_uz.trim();
+  if (data.name_uz_cyrl?.trim()) payload.name_uz_cyrl = data.name_uz_cyrl.trim();
+  if (data.description_uz?.trim()) payload.description_uz = data.description_uz.trim();
+  if (data.description_uz_cyrl?.trim()) payload.description_uz_cyrl = data.description_uz_cyrl.trim();
+  if (data.address_uz?.trim()) payload.address_uz = data.address_uz.trim();
+  if (data.address_uz_cyrl?.trim()) payload.address_uz_cyrl = data.address_uz_cyrl.trim();
+  return payload;
+};
 
 const mapSupplierUpdatePayload = (data: Partial<SupplierFormData>): Record<string, unknown> => {
   const payload: Record<string, unknown> = {};
-  if (typeof data.phone_number === 'string') payload.phone_number = data.phone_number;
-  if (typeof data.inn === 'string') payload.inn = data.inn;
-  if (typeof data.name_uz === 'string') payload.name_uz = data.name_uz;
-  if (typeof data.name_uz_cyrl === 'string') payload.name_uz_cyrl = data.name_uz_cyrl;
-  if (typeof data.description_uz === 'string') payload.description_uz = data.description_uz;
-  if (typeof data.description_uz_cyrl === 'string') payload.description_uz_cyrl = data.description_uz_cyrl;
-  if (typeof data.address_uz === 'string') payload.address_uz = data.address_uz;
-  if (typeof data.address_uz_cyrl === 'string') payload.address_uz_cyrl = data.address_uz_cyrl;
+  if (data.phone_number?.trim()) payload.phone_number = data.phone_number.trim();
+  if (data.inn?.trim()) payload.inn = data.inn.trim();
+  if (data.name_uz?.trim()) payload.name_uz = data.name_uz.trim();
+  if (data.name_uz_cyrl?.trim()) payload.name_uz_cyrl = data.name_uz_cyrl.trim();
+  if (data.description_uz?.trim()) payload.description_uz = data.description_uz.trim();
+  if (data.description_uz_cyrl?.trim()) payload.description_uz_cyrl = data.description_uz_cyrl.trim();
+  if (data.address_uz?.trim()) payload.address_uz = data.address_uz.trim();
+  if (data.address_uz_cyrl?.trim()) payload.address_uz_cyrl = data.address_uz_cyrl.trim();
   return payload;
 };
 

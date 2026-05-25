@@ -51,9 +51,22 @@ export function createSafePrintWindow(htmlContent: string): Window | null {
 }
 
 /**
+ * Extracts a barcode value from a URL string
+ */
+export function extractBarcodeFromUrl(url: string): string {
+  if (!url) return '';
+  const match = url.match(/\/([^\/]+)\.(?:png|jpg|jpeg|gif)$/i);
+  return match ? match[1] : url;
+}
+
+/**
  * Generates a barcode data URL using the main thread canvas
  */
 export function generateBarcodeDataUrl(value: string, options: any = {}): string {
+  if (!value) return '';
+  if (value.startsWith('/media/') || value.startsWith('http://') || value.startsWith('https://')) {
+    return value;
+  }
   if (typeof document === 'undefined') return '';
   const canvas = document.createElement('canvas');
   try {
@@ -80,57 +93,33 @@ export function generateBarcodePrintHtml(
   barcodeValue: string,
   title: string = 'Print Barcode'
 ): string {
-  const escapedBarcode = escapeHtml(barcodeValue);
-  const dataUrl = generateBarcodeDataUrl(barcodeValue);
+  const dataUrl = generateBarcodeDataUrl(barcodeValue, { width: 3, height: 100, displayValue: false });
 
   return `<!DOCTYPE html>
 <html>
   <head>
-    <title>${escapedBarcode}</title>
+    <title>Print Barcode</title>
     <style>
       @page {
-        size: 28mm 16mm;
+        size: 1.10in 0.63in;
         margin: 0;
       }
-      body {
-        font-family: 'Consolas', 'Courier New', monospace;
+      html, body {
         margin: 0;
         padding: 0;
-        text-align: center;
-        font-size: 6px;
-        width: 28mm;
-        height: 16mm;
-        box-sizing: border-box;
-      }
-      .barcode-card {
-        border: none;
-        padding: 0;
-        margin: 0;
-        text-align: center;
-        width: 28mm;
-        height: 16mm;
-        box-sizing: border-box;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-      }
-      .barcode-section {
-        margin: 0;
-      }
-      .barcode-value {
-        font-family: 'Consolas', monospace;
-        font-size: 8px;
-        font-weight: bold;
-        margin-top: 1px;
-        letter-spacing: 1px;
+        width: 1.10in;
+        height: 0.63in;
+        overflow: hidden;
+        background: #fff;
       }
       img {
-        width: auto;
-        max-width: 26mm;
-        max-height: 12mm;
+        width: 1.10in !important;
+        height: 0.63in !important;
         display: block;
-        margin: 0 auto;
+        margin: 0;
+        padding: 0;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
       }
       @media print {
         body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -138,12 +127,7 @@ export function generateBarcodePrintHtml(
     </style>
   </head>
   <body>
-    <div class="barcode-card">
-      <div class="barcode-section">
-        <img src="${dataUrl}" alt="Barcode" />
-        <div class="barcode-value">${escapedBarcode}</div>
-      </div>
-    </div>
+    <img src="${dataUrl}" alt="Barcode" />
     <script>
       window.onload = function() {
         setTimeout(function() { window.print(); }, 300);
@@ -160,13 +144,9 @@ export function generateMultipleBarcodesPrintHtml(barcodeValues: Array<{ value: 
   const barcodeCards = barcodeValues
     .filter((item) => item.value)
     .map((item) => {
-      const escapedValue = escapeHtml(item.value);
-      const dataUrl = generateBarcodeDataUrl(item.value, { height: 90, width: 1.5 });
+      const dataUrl = generateBarcodeDataUrl(item.value, { height: 100, width: 3, displayValue: false });
       return `<div class="barcode-card">
-  <div class="barcode-section">
-    <img src="${dataUrl}" alt="Barcode" />
-    <div class="barcode-value">${escapedValue}</div>
-  </div>
+  <img src="${dataUrl}" alt="Barcode" />
 </div>`;
     })
     .join('\n');
@@ -177,42 +157,32 @@ export function generateMultipleBarcodesPrintHtml(barcodeValues: Array<{ value: 
     <title>Print Barcodes</title>
     <style>
       @page {
-        size: 28mm 16mm;
+        size: 1.10in 0.63in;
         margin: 0;
       }
-      body {
-        font-family: 'Consolas', 'Courier New', monospace;
+      html, body {
         margin: 0;
         padding: 0;
-        text-align: center;
-        font-size: 6px;
-        width: 28mm;
-        height: 16mm;
+        width: 1.10in;
+        height: 0.63in;
+        overflow: hidden;
         box-sizing: border-box;
       }
       .barcode-card {
-        width: 28mm;
-        height: 16mm;
-        display: grid;
-        justify-content: center;
-        align-items: center;
-      }
-      .barcode-section {
-        margin: 0;
-      }
-      .barcode-value {
-        font-family: 'Consolas', monospace;
-        font-size: 10px;
-        font-weight: normal;
-        margin-top: 1px;
-        letter-spacing: 1px;
+        width: 1.10in;
+        height: 0.63in;
+        display: block;
+        page-break-after: always;
+        overflow: hidden;
       }
       img {
-        width: auto;
-        max-width: 26mm;
-        max-height: 12mm;
+        width: 1.10in !important;
+        height: 0.63in !important;
         display: block;
-        margin: 0 auto;
+        margin: 0;
+        padding: 0;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
       }
     </style>
   </head>

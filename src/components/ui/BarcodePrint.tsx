@@ -2,6 +2,11 @@ import { useEffect, useRef, useState, memo, useMemo, useCallback } from 'react';
 import JsBarcode from 'jsbarcode';
 import { cloneDomSafely } from '../../utils/xss';
 
+const isImageUrl = (value: string): boolean => {
+  if (!value) return false;
+  return value.startsWith('/media/') || value.startsWith('http://') || value.startsWith('https://');
+};
+
 interface BarcodePrintProps {
   value: string;
   productName?: string;
@@ -32,9 +37,10 @@ const barcodeOptions = {
 
 export const BarcodePrint = memo(function BarcodePrint({ value, productName, showName = true, thermalPrinter = false, displayValue = true }: BarcodePrintProps) {
   const svgRef = useRef<SVGSVGElement>(null);
+  const isImage = isImageUrl(value);
 
   useEffect(() => {
-    if (!svgRef.current || !value) return;
+    if (!svgRef.current || !value || isImage) return;
 
     try {
       const options = thermalPrinter ? barcodeOptions.thermal : { ...barcodeOptions.normal, displayValue };
@@ -42,7 +48,18 @@ export const BarcodePrint = memo(function BarcodePrint({ value, productName, sho
     } catch (error) {
       console.error('Failed to generate barcode:', error);
     }
-  }, [value, thermalPrinter, displayValue]);
+  }, [value, thermalPrinter, displayValue, isImage]);
+
+  if (isImage) {
+    return (
+      <div className="flex flex-col items-center">
+        {showName && productName && (
+          <span className="text-xs mb-1">{productName}</span>
+        )}
+        <img src={value} alt="Barcode" className="max-w-[180px] h-auto" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center">
@@ -62,11 +79,6 @@ interface BarcodePrintAllProps {
     quantity: number;
   }>;
 }
-
-const isImageUrl = (value: string): boolean => {
-  if (!value) return false;
-  return value.startsWith('/media/') || value.startsWith('http://') || value.startsWith('https://');
-};
 
 const BarcodeDisplay = memo(function BarcodeDisplay({ value, isImage = false, thermalPrinter = false }: { value: string; isImage?: boolean; thermalPrinter?: boolean }) {
   const svgRef = useRef<SVGSVGElement>(null);

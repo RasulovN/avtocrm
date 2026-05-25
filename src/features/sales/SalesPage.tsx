@@ -19,6 +19,7 @@ import type { Store, Product } from '../../types';
 import { formatCurrency } from '../../utils';
 import { logger } from '../../utils/logger';
 import { useTranslation } from 'react-i18next';
+import { extractBarcodeFromUrl } from '../../utils/xss';
 
 interface CartItem {
   product_id: string;
@@ -275,11 +276,12 @@ export function SalesPage() {
 
     if (!normalizedBarcode) return null;
 
-    const localProduct = safeProducts.find((product) =>
-      [product.shtrix_code, product.barcode, product.sku]
+    const localProduct = safeProducts.find((product) => {
+      const cleanShtrix = product.shtrix_code ? extractBarcodeFromUrl(product.shtrix_code) : '';
+      return [cleanShtrix, product.barcode, product.sku]
         .filter((value): value is string => typeof value === 'string' && value.trim() !== '')
-        .some((value) => value.trim() === normalizedBarcode)
-    );
+        .some((value) => value.trim() === normalizedBarcode);
+    });
 
     if (localProduct) {
       const hydratedProduct = hydrateProductFromCatalog(localProduct);
@@ -288,7 +290,15 @@ export function SalesPage() {
     }
 
     try {
-      const product = await productService.getByBarcode(normalizedBarcode);
+      const products = await productService.search(normalizedBarcode);
+      const product = products.find((p) => {
+        const cleanShtrix = p.shtrix_code ? extractBarcodeFromUrl(p.shtrix_code) : '';
+        return String(p.id) === normalizedBarcode ||
+          (p.barcode && String(p.barcode).trim() === normalizedBarcode) ||
+          (cleanShtrix && String(cleanShtrix).trim() === normalizedBarcode) ||
+          (p.sku && String(p.sku).trim() === normalizedBarcode);
+      }) || products[0];
+
       if (product) {
         const hydratedProduct = hydrateProductFromCatalog(product);
         // Only show search results if this is manual search, not from barcode scan
@@ -441,13 +451,8 @@ export function SalesPage() {
       setSearchLoading(true);
 
       try {
-        if (/^\d+$/.test(query)) {
-          const product = await productService.getByBarcode(query);
-          setSearchResults(product ? [hydrateProductFromCatalog(product)] : []);
-        } else {
-          const products = await productService.search(query);
-          setSearchResults(products.map(hydrateProductFromCatalog));
-        }
+        const products = await productService.search(query);
+        setSearchResults(products.map(hydrateProductFromCatalog));
       } catch (error) {
         console.error('Product search failed:', error);
         setSearchResults([]);

@@ -235,7 +235,7 @@ const item = (raw ?? {}) as Partial<Product> & {
     sku: item.sku ?? '',
     barcode: item.barcode ?? item.barcode_value ?? (batches && Array.isArray(batches) && batches.length > 0 ? (batches.find(b => b.barcode || b.shtrix_code)?.barcode || batches[0].barcode) : '') ?? item.sku,
     barcode_img: resolveImageUrl(item.barcode_img),
-    shtrix_code: item.shtrix_code ?? null,
+    shtrix_code: item.shtrix_code ? resolveImageUrl(item.shtrix_code) : null,
     image,
     images,
     total_count: quantity,
