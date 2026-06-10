@@ -599,8 +599,8 @@ const getStoreName = (id: number | string, defaultName: string) => {
                                 fontSize: '12px'
                               }}
                               wrapperStyle={{ zIndex: 100 }}
-                              formatter={(value: any,  props: any) => [
-                                `${value}% (${formatCurrency(props.payload.revenue)})`,
+formatter={(value: any, props: any) => [
+                                `${value}% (${formatCurrency(props?.payload?.revenue ?? 0)})`,
                                 getTrans('Ulushi')
                               ]}
                             />
