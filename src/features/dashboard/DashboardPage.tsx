@@ -25,6 +25,7 @@ import { reportService } from '../../services/reportService';
 import type { DashboardReportData } from '../../services/reportService';
 import { storeService } from '../../services/storeService';
 import type { Store } from '../../types';
+import { Link } from 'react-router-dom';
 
 
 // generateFallbackData was removed to only show database data
@@ -606,9 +607,9 @@ export function DashboardPage() {
                 </div>
               )}
               <div className="p-4 bg-slate-50/50 dark:bg-slate-800/20 text-center border-t border-slate-100 dark:border-slate-800">
-                <button className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 flex items-center justify-center w-full hover:text-indigo-700 transition-colors">
+                <Link to={`/${i18n.language || 'uz'}/products`} className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 flex items-center justify-center w-full hover:text-indigo-700 transition-colors">
                   {t('common.viewAll', 'Barchasini ko\'rish')} <ArrowRight className="w-4 h-4 ml-1" />
-                </button>
+                </Link>
               </div>
             </CardContent>
           </Card>
@@ -728,9 +729,9 @@ export function DashboardPage() {
               </div>
             )}
             <div className="p-4 bg-slate-50/50 dark:bg-slate-800/20 text-center border-t border-slate-100 dark:border-slate-800">
-              <button className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 flex items-center justify-center w-full hover:text-emerald-700 transition-colors">
+              <Link to={`/${i18n.language || 'uz'}/sales`} className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 flex items-center justify-center w-full hover:text-emerald-700 transition-colors">
                 {t('dashboard.allReceipts', 'Barcha kvitansiyalar')} <ArrowRight className="w-4 h-4 ml-1" />
-              </button>
+              </Link>
             </div>
           </CardContent>
         </Card>
