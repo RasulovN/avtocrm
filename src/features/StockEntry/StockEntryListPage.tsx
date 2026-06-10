@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Plus, FileText, Eye, Search, X, ChevronLeft, ChevronRight, CreditCard } from 'lucide-react';
 import { StockEntryCreateDialog } from './StockEntryCreateDialog';
 import { PageHeader } from '../../components/shared/PageHeader';
@@ -105,8 +105,7 @@ export function StockEntryListPage() {
         store: (storeFilter && storeFilter !== 'all') ? storeFilter : undefined,
         supplier: (supplierFilter && supplierFilter !== 'all') ? supplierFilter : undefined,
         date_from: dateFrom || undefined,
-        date_to: dateTo || undefined,
-        ordering: '-id' // default newest first
+        date_to: dateTo || undefined
       };
 
       const response = await inventoryService.getEntries(filterParams);
