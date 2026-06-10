@@ -94,6 +94,8 @@ export function StockEntryListPage() {
     loadReferences();
   }, []);
 
+const globalProductCache = new Map<string, { name: string; sku: string; barcode: string; shtrix_code: string }>();
+
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
@@ -109,69 +111,74 @@ export function StockEntryListPage() {
       };
 
       const response = await inventoryService.getEntries(filterParams);
-      const entries = response.data;
-      setTotalCount(response.total);
+      const entries = response.data || [];
+      setTotalCount(response.total || 0);
 
-      const productCache = new Map<string, { name: string; sku: string; barcode: string; shtrix_code: string }>();
-
-      const fetchProductDetails = async (productId: number) => {
-        const key = String(productId);
-        if (productCache.has(key)) return productCache.get(key)!;
-        try {
-          const product = await productService.getById(key);
-          const shtrixCode = product.shtrix_code || product.barcode || '';
-          const data = {
-            name: product.name || key,
-            sku: product.sku || '',
-            barcode: product.barcode || '',
-            shtrix_code: shtrixCode
-          };
-          productCache.set(key, data);
-          return data;
-        } catch {
-          const data = { name: key, sku: '', barcode: '', shtrix_code: '' };
-          productCache.set(key, data);
-          return data;
+      const uniqueProductIds = new Set<string>();
+      entries.forEach(entry => {
+        if (entry.items) {
+          entry.items.forEach(item => {
+            if (item.product) uniqueProductIds.add(String(item.product));
+          });
         }
-      };
+      });
 
-      const mapped: DisplayInventory[] = await Promise.all(
-        entries.map(async (entry) => {
-          const items: InventoryItem[] = await Promise.all(
-            entry.items.map(async (item) => {
-              const prod = await fetchProductDetails(item.product);
-              const shtrixCode = item.shtrix_code || item.barcode || prod.shtrix_code || '';
-              return {
-                id: String(item.id),
-                product_id: String(item.product),
-                product_name: prod.name,
-                product_sku: prod.sku,
-                product_barcode: item.barcode || prod.barcode,
-                shtrix_code: shtrixCode,
-                quantity: item.quantity,
-                purchase_price: parseFloat(item.purchase_price),
-                selling_price: item.selling_price ? parseFloat(item.selling_price) : undefined,
-                total: item.quantity * parseFloat(item.purchase_price)
-              };
-            })
-          );
-          const total = items.reduce((sum, i) => sum + i.total, 0);
+      const missingProductIds = Array.from(uniqueProductIds).filter(id => !globalProductCache.has(id));
+
+      if (missingProductIds.length > 0) {
+        await Promise.all(
+          missingProductIds.map(async (key) => {
+            try {
+              const product = await productService.getById(key);
+              const shtrixCode = product.shtrix_code || product.barcode || '';
+              globalProductCache.set(key, {
+                name: product.name || key,
+                sku: product.sku || '',
+                barcode: product.barcode || '',
+                shtrix_code: shtrixCode
+              });
+            } catch {
+              globalProductCache.set(key, { name: key, sku: '', barcode: '', shtrix_code: '' });
+            }
+          })
+        );
+      }
+
+      const mapped: DisplayInventory[] = entries.map((entry) => {
+        const items: InventoryItem[] = (entry.items || []).map((item) => {
+          const prod = globalProductCache.get(String(item.product)) || { name: String(item.product), sku: '', barcode: '', shtrix_code: '' };
+          const shtrixCode = item.shtrix_code || item.barcode || prod.shtrix_code || '';
           return {
-            id: String(entry.id),
-            supplier_id: String(entry.supplier),
-            supplier_name: entry.supplier_name || String(entry.supplier),
-            store_id: String(entry.store),
-            store_name: entry.store_name || String(entry.store),
-            total,
-            paid: entry.paid_amount ? parseFloat(entry.paid_amount) : 0,
-            debt: entry.debt ?? 0,
-            status: 'completed',
-            created_at: new Date().toISOString(),
-            items,
-            full_name: entry.full_name
+            id: String(item.id),
+            product_id: String(item.product),
+            product_name: prod.name,
+            product_sku: prod.sku,
+            product_barcode: item.barcode || prod.barcode,
+            shtrix_code: shtrixCode,
+            quantity: item.quantity,
+            purchase_price: parseFloat(item.purchase_price || '0'),
+            selling_price: item.selling_price ? parseFloat(item.selling_price) : undefined,
+            total: item.quantity * parseFloat(item.purchase_price || '0')
           };
-        })
-      );
+        });
+        
+        const total = items.reduce((sum, i) => sum + i.total, 0);
+        return {
+          id: String(entry.id),
+          supplier_id: String(entry.supplier),
+          supplier_name: entry.supplier_name || String(entry.supplier),
+          store_id: String(entry.store),
+          store_name: entry.store_name || String(entry.store),
+          total,
+          paid: entry.paid_amount ? parseFloat(entry.paid_amount) : 0,
+          debt: entry.debt ?? 0,
+          status: 'completed',
+          created_at: new Date().toISOString(),
+          items,
+          full_name: entry.full_name || ''
+        };
+      });
+      
       setInventory(mapped);
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
