@@ -84,7 +84,8 @@ export function ReportsPage() {
 
   const { user } = useAuthStore();
   const isAdmin = Boolean(user?.is_superuser || user?.role === 'superuser');
-  const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores.find(s => s.type === 'b')?.id || user.stores[0].id) : '');
+const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores.find(s => s.type === 'b')?.id ?? user.stores[0].id) : '');
+
 
   const [activeTab, setActiveTab] = useState('sotuvlar');
   const [filter, setFilter] = useState<ReportsFilter>('monthly');
@@ -127,7 +128,9 @@ export function ReportsPage() {
     void fetchStores();
   }, []);
 
-  const availableBranches = useMemo(() => {
+const availableBranches = useMemo(() => {
+    // const storeIdStr = String(userStoreId || 'all');
+
     if (isAdmin) {
       const branchesList = stores.map((s) => {
         const name = lang === 'cyrl' ? (s.name_uz_cyrl || s.name) : s.name;
@@ -183,7 +186,7 @@ export function ReportsPage() {
     };
   }, [filter, storeId, from, to]);
 
-  const getStoreName = (id: number, defaultName: string) => {
+const getStoreName = (id: number | string, defaultName: string) => {
     const store = stores.find((s) => s.id === id);
     if (store) {
       return lang === 'cyrl' ? (store.name_uz_cyrl || store.name) : store.name;
@@ -284,7 +287,7 @@ export function ReportsPage() {
   ], [lang]);
 
   return (
-    <div className="space-y-4 sm:space-y-6 pb-4 sm:pb-10 max-w-[1600px] mx-auto animate-in fade-in duration-500">
+    <div className="space-y-4 sm:space-y-6 pb-4 sm:pb-10 max-w-400 mx-auto animate-in fade-in duration-500">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -489,7 +492,7 @@ export function ReportsPage() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 min-w-[100px] sm:min-w-[120px] px-4 sm:px-6 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-sm font-medium transition-all duration-200 ${activeTab === tab.id
+            className={`flex-1 min-w-25 sm:min-w-30 px-4 sm:px-6 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-sm font-medium transition-all duration-200 ${activeTab === tab.id
                 ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800/50'
               }`}
@@ -511,15 +514,15 @@ export function ReportsPage() {
                     {getTrans("Do'konlar bo'yicha sotuvlar")}
                   </h3>
                   {isLoading ? (
-                    <div className="h-[200px] sm:h-[250px] w-full flex items-center justify-center">
+                    <div className="h-50 sm:h-62.5 w-full flex items-center justify-center">
                       <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
                     </div>
                   ) : storeSales.length === 0 ? (
-                    <div className="h-[200px] sm:h-[250px] w-full flex items-center justify-center text-xs text-slate-400">
+                    <div className="h-50 sm:h-62.5 w-full flex items-center justify-center text-xs text-slate-400">
                       {getTrans("Hech qanday ma'lumot topilmadi")}
                     </div>
                   ) : (
-                    <div className="h-[200px] sm:h-[250px] w-full">
+                    <div className="h-50 sm:h-62.5 w-full">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={storeSales} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#f1f5f9'} />
@@ -559,15 +562,15 @@ export function ReportsPage() {
                     {getTrans("Kategoriyalar bo'yicha sotuvlar")}
                   </h3>
                   {isLoading ? (
-                    <div className="h-[200px] sm:h-[250px] w-full flex items-center justify-center">
+                    <div className="h-50 sm:h-62.5 w-full flex items-center justify-center">
                       <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
                     </div>
                   ) : categoryStats.length === 0 ? (
-                    <div className="h-[200px] sm:h-[250px] w-full flex items-center justify-center text-xs text-slate-400">
+                    <div className="h-50 sm:h-62.5 w-full flex items-center justify-center text-xs text-slate-400">
                       {getTrans("Hech qanday ma'lumot topilmadi")}
                     </div>
                   ) : (
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-6 min-h-[200px] sm:min-h-[250px] py-2">
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-6 min-h-50 sm:min-h-62.5 py-2">
                       <div className="w-40 h-40 sm:w-48 sm:h-48 shrink-0">
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
@@ -596,7 +599,7 @@ export function ReportsPage() {
                                 fontSize: '12px'
                               }}
                               wrapperStyle={{ zIndex: 100 }}
-                              formatter={(value: any, name: any, props: any) => [
+                              formatter={(value: any,  props: any) => [
                                 `${value}% (${formatCurrency(props.payload.revenue)})`,
                                 getTrans('Ulushi')
                               ]}
@@ -604,12 +607,12 @@ export function ReportsPage() {
                           </PieChart>
                         </ResponsiveContainer>
                       </div>
-                      <div className="flex flex-col gap-1.5 w-full max-w-[220px]">
+                      <div className="flex flex-col gap-1.5 w-full max-w-55">
                         {categoryStats.map((cat, i) => (
                           <div key={i} className="flex items-center justify-between text-xs">
                             <div className="flex items-center gap-2">
                               <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }} />
-                              <span className="text-slate-600 dark:text-slate-400 truncate max-w-[120px]">{cat.name}</span>
+                              <span className="text-slate-600 dark:text-slate-400 truncate max-w-30">{cat.name}</span>
                             </div>
                             <span className="font-semibold text-right" style={{ color: cat.color }}>
                               {cat.percent}%

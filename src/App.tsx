@@ -92,10 +92,10 @@ const ReportsPage = lazy(() =>
 import './i18n/index'; 
 import InventoryPage from './features/inventory/InventoryPage';
 
-const DEFAULT_META = {
-  title: 'AvtoCRM - Avto ehtiyot qismlar boshqaruv tizimi',
-  description: "Avto ehtiyot qismlar do'konlari uchun professional CRM tizimi. Mahsulotlar, sotuvlar, kirim-chiqim va hisobotlarni bitta panelda boshqaring.",
-};
+// const DEFAULT_META = {
+//   title: 'AvtoCRM - Avto ehtiyot qismlar boshqaruv tizimi',
+//   description: "Avto ehtiyot qismlar do'konlari uchun professional CRM tizimi. Mahsulotlar, sotuvlar, kirim-chiqim va hisobotlarni bitta panelda boshqaring.",
+// };
 
 function DocumentMetaSync() {
   const location = useLocation();

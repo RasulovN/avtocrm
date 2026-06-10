@@ -12,15 +12,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { supplierService } from '../../services/supplierService';
 import type { Supplier, SupplierFormData } from '../../types';
 import { latinToCyrillic } from '../../utils/transliteration';
-import { formatCurrency, formatDate } from '../../utils';
+import { formatCurrency } from '../../utils';
 
-interface SupplierPayment {
-  id: number;
-  amount: string;
-  type: 'cash' | 'card';
-  note?: string;
-  created_at: string;
-}
+// interface SupplierPayment {
+//   id: number;
+//   amount: string;
+//   type: 'cash' | 'card';
+//   note?: string;
+//   created_at: string;
+// }
 
 export function SupplierListPage() {
   const { t } = useTranslation();
@@ -32,7 +32,6 @@ export function SupplierListPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [detailOpen, setDetailOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [formData, setFormData] = useState<SupplierFormData>({
     name_uz: '',
@@ -207,7 +206,7 @@ export function SupplierListPage() {
           )}
           <div className="flex items-center gap-2 text-muted-foreground">
             <MapPin className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate max-w-[200px]">{item.address_uz || item.address || '-'}</span>
+            <span className="truncate max-w-50">{item.address_uz || item.address || '-'}</span>
           </div>
         </div>
       ),

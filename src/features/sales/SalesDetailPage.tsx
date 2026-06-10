@@ -8,7 +8,6 @@ import { Input } from '../../components/ui/Input';
 import { salesService } from '../../services/salesService';
 import { customerApiService } from '../../services/customerService';
 import { productService } from '../../services/productService';
-import { API_BASE_URL } from '../../services/api';
 import { formatCurrency, formatDate } from '../../utils';
 import { extractBarcodeFromUrl } from '../../utils/xss';
 import type { Product, Sale, SaleItem } from '../../types';
@@ -583,7 +582,7 @@ export function SalesDetailPage() {
                       {selectedProduct?.shtrix_code && (selectedProduct.shtrix_code.startsWith('http') || selectedProduct.shtrix_code.startsWith('/media/')) && (
                         <div className="mt-3 pt-3 border-t flex flex-col items-center gap-1.5">
                           <span className="text-xs text-muted-foreground">{t('products.barcodeImage', 'Barcode rasmi')}</span>
-                          <img src={selectedProduct.shtrix_code} alt="Barcode" className="max-h-[48px] w-auto bg-white p-1 rounded border" />
+                          <img src={selectedProduct.shtrix_code} alt="Barcode" className="max-h-12] w-auto bg-white p-1 rounded border" />
                         </div>
                       )}
                     </div>
