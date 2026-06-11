@@ -505,6 +505,17 @@ export function CustomerListPage() {
                       </div>
                     </CardContent>
                   </Card>
+                  {/* to'lov sanasi */}
+                  <Card className="border-dashed">
+                    <CardContent className="flex items-center gap-3 p-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground">{t('customers.payDate')}</p>
+                        <p className={`font-semibold ${Number(selectedCustomer.total_debt) > 0 ? 'text-[#ff6b00]' : ''}`}>
+                          30.3.2026
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">

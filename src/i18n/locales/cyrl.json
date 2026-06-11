@@ -591,7 +591,9 @@
     "debtPaymentTitle": "Қарз тўлови",
     "debtPaymentDescription": "Мижоз қарзини тўлаш",
     "paymentAmount": "Тўлов суммаси",
-    "payNow": "Тўлаш"
+    "payNow": "Тўлаш",
+    "totalPurchases": "Жами харидлар",
+    "payDate": "Тўлов санаси"
   },
   "suppliers": {
     "title": "Та'минотчилар",

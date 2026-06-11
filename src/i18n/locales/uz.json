@@ -590,7 +590,9 @@
     "debtPaymentTitle": "Qarz to‘lovi",
     "debtPaymentDescription": "Mijoz qarzini to‘lash",
     "paymentAmount": "To‘lov summasi",
-    "payNow": "To‘lash"
+    "payNow": "To‘lash",
+    "totalPurchases": "Jami xaridlar",
+    "payDate": "To‘lov sanasi"
   },
   "suppliers": {
     "title": "Ta’minotchilar",
