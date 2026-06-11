@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
-import { Plus, FileText, Eye, Search, X, ChevronLeft, ChevronRight, CreditCard } from 'lucide-react';
+import { Plus, FileText, Eye, Search, X, ChevronLeft, ChevronRight, CreditCard, Printer } from 'lucide-react';
+import { BarcodePrintAll } from '../../components/ui/BarcodePrint';
+import { generateBarcodePrintHtml, generateMultipleBarcodesPrintHtml } from '../../utils/xss';
+
 import { StockEntryCreateDialog } from './StockEntryCreateDialog';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
@@ -76,6 +79,8 @@ export function StockEntryListPage() {
   const [paying, setPaying] = useState(false);
   const [paymentHistory, setPaymentHistory] = useState<SupplierPayment[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [printCounts, setPrintCounts] = useState<Record<string, number>>({});
 
   // Load initial reference data
   useEffect(() => {
@@ -207,6 +212,10 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
   const handleShowDetails = async (item: DisplayInventory) => {
     setSelectedInventory(item);
     setShowDetails(true);
+    setSelectedItems(new Set());
+    const initialCounts: Record<string, number> = {};
+    item.items.forEach(i => { initialCounts[i.id] = i.quantity; });
+    setPrintCounts(initialCounts);
     setLoadingPayments(true);
     try {
       const res = await inventoryService.getSupplierPayment(item.id);
@@ -215,6 +224,106 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
       setPaymentHistory([]);
     } finally {
       setLoadingPayments(false);
+    }
+  };
+
+  const handleSelectItem = (itemId: string) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(itemId)) {
+      newSelected.delete(itemId);
+    } else {
+      newSelected.add(itemId);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    if (!selectedInventory) return;
+    const allIds = selectedInventory.items.map(item => item.id);
+    const allSelected = allIds.every(id => selectedItems.has(id));
+    
+    if (allSelected) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(allIds));
+    }
+  };
+
+  const handleDecreaseCount = (itemId: string) => {
+    setPrintCounts(prev => ({
+      ...prev,
+      [itemId]: Math.max(1, (prev[itemId] || 1) - 1)
+    }));
+  };
+
+  const handleIncreaseCount = (itemId: string) => {
+    setPrintCounts(prev => ({
+      ...prev,
+      [itemId]: (prev[itemId] || 1) + 1
+    }));
+  };
+
+  const getSelectedItemsForPrint = () => {
+    if (!selectedInventory) return [];
+    return selectedInventory.items
+      .filter(item => selectedItems.has(item.id))
+      .map(item => ({
+        barcode: item.shtrix_code || item.product_barcode || '',
+        product_name: item.product_name,
+        quantity: item.quantity
+      }));
+  };
+
+  const handlePrintItem = (item: InventoryItem) => {
+    const barcodeValue = item.shtrix_code || item.product_barcode || '';
+    if (!barcodeValue) return;
+
+    const count = printCounts[item.id] || item.quantity || 1;
+    const barcodes = Array.from({ length: count }, () => ({
+      value: barcodeValue,
+      productName: item.product_name
+    }));
+
+    if (barcodes.length === 1) {
+      const html = generateBarcodePrintHtml(barcodeValue);
+      const blob = new Blob([html], { type: 'text/html' });
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank');
+    } else {
+      const html = generateMultipleBarcodesPrintHtml(barcodes);
+      const blob = new Blob([html], { type: 'text/html' });
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank');
+    }
+  };
+
+  const handlePrintSelected = () => {
+    if (!selectedInventory) return;
+
+    const selectedBarcodes = selectedInventory.items
+      .filter(item => selectedItems.has(item.id))
+      .flatMap(item => {
+        const barcodeValue = item.shtrix_code || item.product_barcode || '';
+        if (!barcodeValue) return [];
+        const count = printCounts[item.id] || item.quantity || 1;
+        return Array.from({ length: count }, () => ({
+          value: barcodeValue,
+          productName: item.product_name
+        }));
+      });
+
+    if (selectedBarcodes.length === 0) return;
+
+    if (selectedBarcodes.length === 1) {
+      const html = generateBarcodePrintHtml(selectedBarcodes[0].value);
+      const blob = new Blob([html], { type: 'text/html' });
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank');
+    } else {
+      const html = generateMultipleBarcodesPrintHtml(selectedBarcodes);
+      const blob = new Blob([html], { type: 'text/html' });
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank');
     }
   };
 
@@ -565,16 +674,48 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
                 <div className="space-y-3">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <h4 className="text-sm font-semibold">{t('products.title')}</h4>
+                    <div className="flex items-center gap-3">
+                      <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={selectedInventory.items.every(item => selectedItems.has(item.id))}
+                          onChange={handleSelectAll}
+                          className="h-4 w-4 rounded border-gray-300"
+                        />
+                        {t('common.all')}
+                      </label>
+                      <Button variant="outline" size="sm" disabled={selectedItems.size === 0} onClick={handlePrintSelected}>
+                        <Printer className="h-3.5 w-3.5 mr-1.5" />
+                        {t('products.printBarcode')}
+                      </Button>
+                    </div>
                   </div>
                   <div className="space-y-3 md:hidden">
                     {selectedInventory.items.map((item, idx) => (
                       <Card key={idx}>
                         <CardContent className="space-y-3 p-4">
                           <div className="flex items-start justify-between">
-                            <div>
-                              <p className="font-medium">{item.product_name}</p>
-                              <p className="mt-1 text-xs font-mono text-muted-foreground">{item.product_sku}</p>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={selectedItems.has(item.id)}
+                                onChange={() => handleSelectItem(item.id)}
+                                className="h-4 w-4 rounded border-gray-300"
+                              />
+                              <div>
+                                <p className="font-medium">{item.product_name}</p>
+                                <p className="mt-1 text-xs font-mono text-muted-foreground">{item.product_sku}</p>
+                              </div>
                             </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handlePrintItem(item)}
+                              disabled={!item.shtrix_code && !item.product_barcode}
+                              title={t('products.printBarcode')}
+                            >
+                              <Printer className="h-4 w-4" />
+                            </Button>
                           </div>
                           <div className="grid grid-cols-2 gap-3 text-sm">
                             <div className="rounded-lg bg-muted/30 p-3">
@@ -584,6 +725,20 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
                             <div className="rounded-lg bg-muted/30 p-3">
                               <p className="text-xs text-muted-foreground">{t('sales.quantity')}</p>
                               <p className="mt-1 font-semibold">{item.quantity}</p>
+                            </div>
+                            <div className="rounded-lg bg-muted/30 p-3">
+                              <p className="text-xs text-muted-foreground">Nusxa</p>
+                              <div className="mt-1 flex items-center gap-1">
+                                <button
+                                  onClick={() => handleDecreaseCount(item.id)}
+                                  className="w-6 h-6 flex items-center justify-center rounded border text-xs font-medium hover:bg-muted transition-colors"
+                                >-</button>
+                                <span className="w-7 text-center text-sm font-semibold tabular-nums">{printCounts[item.id] ?? item.quantity}</span>
+                                <button
+                                  onClick={() => handleIncreaseCount(item.id)}
+                                  className="w-6 h-6 flex items-center justify-center rounded border text-xs font-medium hover:bg-muted transition-colors"
+                                >+</button>
+                              </div>
                             </div>
                             <div className="rounded-lg bg-muted/30 p-3">
                               <p className="text-xs text-muted-foreground">{t('sales.price')}</p>
@@ -602,23 +757,63 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          <TableHead className="w-10">
+                            <input
+                              type="checkbox"
+                              checked={selectedInventory.items.every(item => selectedItems.has(item.id))}
+                              onChange={handleSelectAll}
+                              className="h-4 w-4 rounded border-gray-300"
+                            />
+                          </TableHead>
                           <TableHead>{t('products.title')}</TableHead>
-                          {/* <TableHead>{t('products.sku')}</TableHead> */}
                           <TableHead>{t('products.barcode')}</TableHead>
                           <TableHead>{t('sales.quantity')}</TableHead>
+                          <TableHead>Nusxa</TableHead>
                           <TableHead>{t('sales.price')}</TableHead>
                           <TableHead>{t('sales.total')}</TableHead>
+                          <TableHead className="w-12"></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {selectedInventory.items.map((item, idx) => (
                           <TableRow key={idx}>
+                            <TableCell>
+                              <input
+                                type="checkbox"
+                                checked={selectedItems.has(item.id)}
+                                onChange={() => handleSelectItem(item.id)}
+                                className="h-4 w-4 rounded border-gray-300"
+                              />
+                            </TableCell>
                             <TableCell>{item.product_name}</TableCell>
-                            {/* <TableCell className="font-mono text-xs">{item.product_sku}</TableCell> */}
                             <TableCell className="font-mono text-xs">{item.product_barcode || '-'}</TableCell>
                             <TableCell>{item.quantity}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => handleDecreaseCount(item.id)}
+                                  className="w-5 h-5 flex items-center justify-center rounded border text-xs font-medium hover:bg-muted transition-colors"
+                                >-</button>
+                                <span className="w-6 text-center text-xs font-semibold tabular-nums">{printCounts[item.id] ?? item.quantity}</span>
+                                <button
+                                  onClick={() => handleIncreaseCount(item.id)}
+                                  className="w-5 h-5 flex items-center justify-center rounded border text-xs font-medium hover:bg-muted transition-colors"
+                                >+</button>
+                              </div>
+                            </TableCell>
                             <TableCell>{formatCurrency(item.purchase_price)}</TableCell>
                             <TableCell className="font-medium">{formatCurrency(item.total)}</TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handlePrintItem(item)}
+                                disabled={!item.shtrix_code && !item.product_barcode}
+                                title={t('products.printBarcode')}
+                              >
+                                <Printer className="h-3.5 w-3.5" />
+                              </Button>
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>

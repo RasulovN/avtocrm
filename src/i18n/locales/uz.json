@@ -144,6 +144,7 @@
   "products": {
     "title": "Mahsulotlar",
     "list": "Ro‘yxat",
+    "selectCategory": "Kategoriya tanlang",
     "addProduct": "Mahsulot qo‘shish",
     "editProduct": "Mahsulotni tahrirlash",
     "productName": "Mahsulot nomi",

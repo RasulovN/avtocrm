@@ -1256,6 +1256,16 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
     }
   }, [open]);
 
+  // Set default unit to "dona" when units are loaded
+  useEffect(() => {
+    if (units.length > 0 && !formData.unit_measurement) {
+      const dona = units.find(u => u.measurement_uz?.toLowerCase() === 'dona');
+      if (dona) {
+        setFormData(prev => ({ ...prev, unit_measurement: dona.id }));
+      }
+    }
+  }, [units]);
+
   // Clean up previews on unmount
   useEffect(() => {
     return () => {
@@ -1416,9 +1426,9 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
                         value={formData.category || ''}
                         onValueChange={(value) => handleChange('category', value)}
                       >
-                        <SelectTrigger id="add-category">
-                          <SelectValue placeholder={t('products.category')} />
-                        </SelectTrigger>
+        <SelectTrigger id="add-category">
+          <SelectValue placeholder={t('products.selectCategory')} />
+        </SelectTrigger>
                         <SelectContent>
                           {categories.map((cat) => (
                             <SelectItem key={cat.id} value={cat.id}>

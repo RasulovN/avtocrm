@@ -93,7 +93,7 @@ export function generateBarcodePrintHtml(
   barcodeValue: string,
   title: string = 'Print Barcode'
 ): string {
-  const dataUrl = generateBarcodeDataUrl(barcodeValue, { width: 3, height: 100, displayValue: false });
+  const dataUrl = generateBarcodeDataUrl(barcodeValue, { width: 2, height: 90, displayValue: false });
 
   return `<!DOCTYPE html>
 <html>
@@ -101,23 +101,24 @@ export function generateBarcodePrintHtml(
     <title>Print Barcode</title>
     <style>
       @page {
-        size: 1.10in 0.63in;
+        size: 224px 128px;
         margin: 0;
       }
       html, body {
         margin: 0;
         padding: 0;
-        width: 1.10in;
-        height: 0.63in;
+        width: 224px;
+        height: 128px;
         overflow: hidden;
         background: #fff;
       }
       img {
-        width: 1.10in !important;
-        height: 0.63in !important;
+        width: 224px !important;
+        height: 128px !important;
         display: block;
         margin: 0;
         padding: 0;
+        object-fit: contain;
         image-rendering: pixelated;
         image-rendering: crisp-edges;
       }
@@ -144,7 +145,7 @@ export function generateMultipleBarcodesPrintHtml(barcodeValues: Array<{ value: 
   const barcodeCards = barcodeValues
     .filter((item) => item.value)
     .map((item) => {
-      const dataUrl = generateBarcodeDataUrl(item.value, { height: 100, width: 3, displayValue: false });
+      const dataUrl = generateBarcodeDataUrl(item.value, { height: 90, width: 2, displayValue: false });
       return `<div class="barcode-card">
   <img src="${dataUrl}" alt="Barcode" />
 </div>`;
@@ -157,30 +158,28 @@ export function generateMultipleBarcodesPrintHtml(barcodeValues: Array<{ value: 
     <title>Print Barcodes</title>
     <style>
       @page {
-        size: 1.10in 0.63in;
+        size: 224px 128px;
         margin: 0;
       }
       html, body {
         margin: 0;
         padding: 0;
-        width: 1.10in;
-        height: 0.63in;
-        overflow: hidden;
         box-sizing: border-box;
       }
       .barcode-card {
-        width: 1.10in;
-        height: 0.63in;
+        width: 224px;
+        height: 128px;
         display: block;
         page-break-after: always;
         overflow: hidden;
       }
       img {
-        width: 1.10in !important;
-        height: 0.63in !important;
+        width: 224px !important;
+        height: 128px !important;
         display: block;
         margin: 0;
         padding: 0;
+        object-fit: contain;
         image-rendering: pixelated;
         image-rendering: crisp-edges;
       }

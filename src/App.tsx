@@ -321,6 +321,10 @@ function App() {
             withLayout(<TransferRequestsPage />)
           } />
           
+          {/* Sales - Create (POS) */}
+          <Route path={`/:lang/sales/new`} element={
+            withLayout(<SalesPage />)
+          } />
           {/* Sales - List */}
           <Route path={`/:lang/sales`} element={
             withLayout(<SalesListPage />)
@@ -331,10 +335,6 @@ function App() {
             withLayout(<SalesDetailPage />)
           } />
 
-          {/* Sales - Create (POS) */}
-          <Route path={`/:lang/sales/new`} element={
-            withLayout(<SalesPage />)
-          } />
 
           {/* Sale Returns - List */}
           <Route path={`/:lang/sales-returns`} element={

@@ -144,7 +144,7 @@ export function SalesPage() {
   const [discount, setDiscount] = useState(0);
   const [discountType, setDiscountType] = useState<'p' | 'f'>('f');
   const [showReceipt, setShowReceipt] = useState(false);
-  const [activePayment, setActivePayment] = useState<'cash' | 'card' | null>(null);
+  const [activePayment, setActivePayment] = useState<'cash' | 'card' | null>('cash');
   const [showScanner, setShowScanner] = useState(false);
   const [customers, setCustomers] = useState<{ id: number; full_name: string; phone_number: string }[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');

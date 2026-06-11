@@ -144,6 +144,7 @@
   "products": {
     "title": "Маҳсулотлар",
     "list": "Руйхат",
+    "selectCategory":"Категорияни танланг", 
     "addProduct": "Маҳсулот қўшиш",
     "editProduct": "Маҳсулотни таҳрирлаш",
     "productName": "Маҳсулот номи",

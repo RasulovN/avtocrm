@@ -56,12 +56,12 @@ interface SubNavItem {
 
 const navItems: NavItem[] = [
   { titleKey: 'nav.dashboard', href: '/dashboard', icon: LayoutDashboard, access: 'all' },
+  { titleKey: 'nav.sales', href: '/sales', icon: DollarSign, access: 'all' },
+  { titleKey: 'nav.transfers', href: '/transfers', icon: ArrowRightLeft, access: 'all' },
   { titleKey: 'nav.products', href: '/products', icon: Package, access: 'all' },
   // { titleKey: 'nav.categories', href: '/categories', icon: Tags, access: 'all' },
   { titleKey: 'nav.stockentry', href: '/stockentry', icon: ArrowDownToLine, access: 'superuser' },
   { titleKey: 'nav.inventory', href: '/inventory', icon: ClipboardCheck, access: 'all' },
-  { titleKey: 'nav.transfers', href: '/transfers', icon: ArrowRightLeft, access: 'all' },
-  { titleKey: 'nav.sales', href: '/sales', icon: DollarSign, access: 'all' },
   { titleKey: 'nav.customers', href: '/customers', icon: Users, access: 'all' },
   { titleKey: 'nav.suppliers', href: '/suppliers', icon: Truck, access: 'superuser' },
   { titleKey: 'nav.stores', href: '/stores', icon: Store, access: 'superuser' },
@@ -87,9 +87,9 @@ const subNavs: Record<string, SubNavItem[]> = {
   //   // { titleKey: 'transfers.requestTransfer', href: '/transfers/requests', icon: Download },
   // ],
   '/sales': [
+    { titleKey: 'sales.newSale', href: '/sales/new', icon: Plus },
     { titleKey: 'sales.list', href: '/sales', icon: List },
-    { titleKey: 'nav.saleReturns', href: '/sales-returns', icon: Undo2 },
-    { titleKey: 'sales.newSale', href: '/sales/new', icon: Plus }
+    { titleKey: 'nav.saleReturns', href: '/sales-returns', icon: Undo2 }
   ],
   '/products': [
     { titleKey: 'products.list', href: '/products', icon: List },
@@ -364,11 +364,13 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
                 return !isSuperUser;
               })
               .map((item) => {
-                const href = `/${lang}${item.href}`;
+                const hasSubNav = !!filteredSubNavs[item.href];
+                const defaultHref = hasSubNav && filteredSubNavs[item.href]?.length
+                  ? filteredSubNavs[item.href][0].href
+                  : item.href;
+                const href = `/${lang}${defaultHref}`;
                 const isActive = location.pathname.startsWith(`/${lang}${item.href}`) ||
                   (item.href === '/dashboard' && location.pathname === `/${lang}`);
-
-                const hasSubNav = !!filteredSubNavs[item.href];
 
                 return (
                   <Link
