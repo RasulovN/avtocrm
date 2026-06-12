@@ -518,6 +518,7 @@ export interface ProductFilters {
   search?: string;
   category?: string;
   store_id?: string;
+  stock_status?: string;
 }
 
 export interface PaginationParams {

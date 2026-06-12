@@ -344,6 +344,24 @@ export function ProductListPage() {
     return storeColumns;
   }, [storeColumns]);
 
+  const LOW_STOCK_THRESHOLD = 5;
+
+  const getStockStatus = useCallback((totalQty: number): 'out_of_stock' | 'low_stock' | 'in_stock' => {
+    if (totalQty === 0) return 'out_of_stock';
+    if (totalQty <= LOW_STOCK_THRESHOLD) return 'low_stock';
+    return 'in_stock';
+  }, []);
+
+  const filteredProducts = useMemo(() => {
+    if (!filters.stock_status) return products;
+    return products.filter(p => {
+      const qty = getTotalQuantity(p);
+      if (filters.stock_status === 'out_of_stock') return qty === 0;
+      if (filters.stock_status === 'low_stock') return qty > 0 && qty <= LOW_STOCK_THRESHOLD;
+      return true;
+    });
+  }, [products, filters.stock_status]);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -358,8 +376,8 @@ export function ProductListPage() {
       />
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={t('products.searchPlaceholder')}
@@ -373,7 +391,7 @@ export function ProductListPage() {
           value={filters.category || 'all'}
           onValueChange={(value) => handleFilterChange('category', value === 'all' ? '' : value)}
         >
-          <SelectTrigger className="w-full sm:w-48">
+          <SelectTrigger className="w-full sm:w-44">
             <SelectValue placeholder={t('products.filterByCategory')} />
           </SelectTrigger>
           <SelectContent>
@@ -385,6 +403,42 @@ export function ProductListPage() {
             ))}
           </SelectContent>
         </Select>
+
+        <Select
+          value={filters.stock_status || 'all'}
+          onValueChange={(value) => handleFilterChange('stock_status', value === 'all' ? '' : value)}
+        >
+          <SelectTrigger className="w-full sm:w-44">
+            <SelectValue placeholder={t('products.stockStatus', 'Qoldiq holati')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t('common.all')}</SelectItem>
+            <SelectItem value="in_stock">
+              <span className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-green-500" />
+                {t('products.inStock', 'Omborda bor')}
+              </span>
+            </SelectItem>
+            <SelectItem value="low_stock">
+              <span className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-yellow-500" />
+                {t('products.lowStock', 'Kam qolgan')}
+              </span>
+            </SelectItem>
+            <SelectItem value="out_of_stock">
+              <span className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-red-500" />
+                {t('products.outOfStock', 'Tugagan')}
+              </span>
+            </SelectItem>
+          </SelectContent>
+        </Select>
+
+        {filters.stock_status && (
+          <div className="flex items-center text-xs text-muted-foreground bg-muted/50 px-3 py-1 rounded-lg">
+            {filteredProducts.length} / {products.length}
+          </div>
+        )}
       </div>
 
       {/* Selected products action bar */}
@@ -420,16 +474,17 @@ export function ProductListPage() {
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
             <span className="text-sm font-medium">{t('common.loading')}</span>
           </div>
-        ) : products.length === 0 ? (
+        ) : filteredProducts.length === 0 ? (
           <div className="h-40 flex flex-col items-center justify-center gap-2 text-muted-foreground bg-card rounded-2xl border border-border/60">
             <Package className="h-8 w-8 opacity-40 text-muted-foreground" />
             <span className="text-sm">{t('common.noData', "Ma'lumot yo'q")}</span>
           </div>
         ) : (
-          products.map((item) => {
+          filteredProducts.map((item) => {
             const imageUrl = getImageUrl(item);
             const article = getArticle(item);
             const totalQty = getTotalQuantity(item);
+            const stockStatus = getStockStatus(totalQty);
             const isActive = item.is_active !== false;
 
             return (
@@ -437,8 +492,11 @@ export function ProductListPage() {
                 key={item.id}
                 onClick={() => isAdmin && navigate(`/${lang}/products/${item.id}/edit`)}
                 className={cn(
-                  "rounded-2xl border border-border/60 bg-card p-4 shadow-sm space-y-4 active:scale-[0.99] transition-transform cursor-pointer relative",
-                  !isActive && "opacity-60"
+                  "rounded-2xl bg-card p-4 shadow-sm space-y-4 active:scale-[0.99] transition-transform cursor-pointer relative",
+                  !isActive && "opacity-60",
+                  stockStatus === 'out_of_stock' && "border-l-4 border-l-red-500 border border-border/60",
+                  stockStatus === 'low_stock' && "border-l-4 border-l-yellow-500 border border-border/60",
+                  stockStatus === 'in_stock' && "border border-border/60"
                 )}
               >
                 {/* Upper part: Image and title info */}
@@ -518,7 +576,9 @@ export function ProductListPage() {
                     </span>
                     <span className={cn(
                       "font-bold tabular-nums text-sm",
-                      totalQty === 0 ? "text-muted-foreground" : "text-slate-900 dark:text-white"
+                      stockStatus === 'out_of_stock' && "text-red-600 dark:text-red-400",
+                      stockStatus === 'low_stock' && "text-yellow-600 dark:text-yellow-400",
+                      stockStatus === 'in_stock' && "text-green-600 dark:text-green-400"
                     )}>
                       {totalQty}
                     </span>
@@ -528,6 +588,7 @@ export function ProductListPage() {
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs pt-1">
                       {shopStores.map((store) => {
                         const qty = getStoreQuantity(item, store.id);
+                        const storeStatus = getStockStatus(qty);
                         return (
                           <div key={store.id} className="flex justify-between items-center py-0.5">
                             <span className="text-slate-600 dark:text-slate-400 truncate max-w-[80px] flex items-center gap-1 font-medium">
@@ -536,7 +597,9 @@ export function ProductListPage() {
                             </span>
                             <span className={cn(
                               "font-bold tabular-nums",
-                              qty === 0 ? "text-muted-foreground" : "text-slate-900 dark:text-white"
+                              storeStatus === 'out_of_stock' && "text-red-600 dark:text-red-400",
+                              storeStatus === 'low_stock' && "text-yellow-600 dark:text-yellow-400",
+                              storeStatus === 'in_stock' && "text-green-600 dark:text-green-400"
                             )}>
                               {qty}
                             </span>
@@ -550,13 +613,17 @@ export function ProductListPage() {
                 {/* Footer part: Status & action button */}
                 <div className="flex items-center justify-between pt-1 border-t border-border/30">
                   <div>
-                    {totalQty > 0 ? (
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold badge-success">
-                        {t('products.inStock', 'Omborda bor')}
+                    {stockStatus === 'out_of_stock' ? (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                        {t('products.outOfStock', 'Tugagan')}
+                      </span>
+                    ) : stockStatus === 'low_stock' ? (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
+                        {t('products.lowStock', 'Kam qolgan')}
                       </span>
                     ) : (
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold badge-danger">
-                        {t('products.outOfStock', 'Tugagan')}
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                        {t('products.inStock', 'Omborda bor')}
                       </span>
                     )}
                   </div>
@@ -648,7 +715,7 @@ export function ProductListPage() {
                   </div>
                 </td>
               </tr>
-            ) : products.length === 0 ? (
+            ) : filteredProducts.length === 0 ? (
               <tr>
                 <td colSpan={10 + shopStores.length} className="h-40 text-center">
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
@@ -658,10 +725,11 @@ export function ProductListPage() {
                 </td>
               </tr>
             ) : (
-              products.map((item) => {
+              filteredProducts.map((item) => {
                 const imageUrl = getImageUrl(item);
                 const article = getArticle(item);
                 const totalQty = getTotalQuantity(item);
+                const stockStatus = getStockStatus(totalQty);
                 const isSelected = selectedProductIds.includes(item.id);
                 const isActive = item.is_active !== false;
 
@@ -671,7 +739,9 @@ export function ProductListPage() {
                     className={cn(
                       'border-b border-border/40 transition-colors hover:bg-muted/20',
                       isSelected && 'bg-primary/5',
-                      !isActive && 'opacity-60'
+                      !isActive && 'opacity-60',
+                      stockStatus === 'out_of_stock' && 'border-l-2 border-l-red-500',
+                      stockStatus === 'low_stock' && 'border-l-2 border-l-yellow-500'
                     )}
                   >
                     {/* ID */}
@@ -760,7 +830,9 @@ export function ProductListPage() {
                     <td className="px-3 py-2 text-center">
                       <span className={cn(
                         'text-sm font-semibold tabular-nums',
-                        totalQty === 0 ? 'text-muted-foreground' : 'text-foreground'
+                        stockStatus === 'out_of_stock' && 'text-red-600 dark:text-red-400',
+                        stockStatus === 'low_stock' && 'text-yellow-600 dark:text-yellow-400',
+                        stockStatus === 'in_stock' && 'text-green-600 dark:text-green-400'
                       )}>
                         {totalQty}
                       </span>
@@ -769,11 +841,14 @@ export function ProductListPage() {
                     {/* Dynamic Store Columns */}
                     {shopStores.map((store) => {
                       const qty = getStoreQuantity(item, store.id);
+                      const storeStatus = getStockStatus(qty);
                       return (
                         <td key={store.id} className="px-2 py-2 text-center">
                           <span className={cn(
                             'text-sm font-semibold tabular-nums',
-                            qty === 0 ? 'text-muted-foreground' : 'text-foreground'
+                            storeStatus === 'out_of_stock' && 'text-red-600 dark:text-red-400',
+                            storeStatus === 'low_stock' && 'text-yellow-600 dark:text-yellow-400',
+                            storeStatus === 'in_stock' && 'text-green-600 dark:text-green-400'
                           )}>
                             {qty}
                           </span>
