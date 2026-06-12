@@ -164,6 +164,7 @@ export function SalesPage() {
   const [showScanner, setShowScanner] = useState(false);
   const [customers, setCustomers] = useState<{ id: number; full_name: string; phone_number: string }[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+  const [debtDueDate, setDebtDueDate] = useState('');
   const [showNewCustomerDialog, setShowNewCustomerDialog] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState('');
   const [newCustomerPhone, setNewCustomerPhone] = useState('');
@@ -656,6 +657,10 @@ export function SalesPage() {
         saleData.customer = parseInt(selectedCustomerId);
       }
 
+      if (debtDueDate) {
+        saleData.debt_due_date = debtDueDate;
+      }
+
       await salesService.create(saleData);
       try {
         await refreshProducts();
@@ -681,6 +686,7 @@ export function SalesPage() {
     setActivePayment(null);
     setNewCustomerName('');
     setNewCustomerPhone('');
+    setDebtDueDate('');
     focusBarcodeInput();
   };
 
@@ -1226,6 +1232,19 @@ export function SalesPage() {
                     />
                   </div>
                 </div>
+                {debt > 0 && selectedCustomerId && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground dark:text-gray-400">Qarz muddati</Label>
+                    <Input
+                      type="date"
+                      min={new Date().toISOString().split('T')[0]}
+                      value={debtDueDate}
+                      onChange={(e) => setDebtDueDate(e.target.value)}
+                      className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white"
+                    />
+                  </div>
+                )}
+
                 <div className="rounded-lg p-2.5 bg-muted/50 dark:bg-gray-900 space-y-1.5">
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground dark:text-gray-400">{t('sales.total')}:</span>

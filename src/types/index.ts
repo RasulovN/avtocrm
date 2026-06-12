@@ -395,6 +395,7 @@ export interface Sale {
   total_amount: string;
   paid_amount: string;
   debt?: number | null;
+  debt_due_date?: string;
   discount_type?: string;
   discount_value?: string;
   discount_amount?: string;

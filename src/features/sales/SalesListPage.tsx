@@ -94,6 +94,13 @@ export function SalesListPage() {
       ),
     },
     {
+      key: 'debt_due_date',
+      header: t('sales.debtDueDate', 'Qarz muddati'),
+      render: (item) => item.debt_due_date ? (
+        <span className="text-muted-foreground text-xs">{formatDate(item.debt_due_date)}</span>
+      ) : '—',
+    },
+    {
       key: 'status',
       header: t('common.status'),
       render: (item) => (
@@ -231,6 +238,11 @@ export function SalesListPage() {
                   <div className="rounded-lg bg-muted/40 p-3 col-span-2">
                     <p className="text-xs text-muted-foreground">{t('suppliers.debt') || 'Qarz'}</p>
                     <p className={`mt-1 font-semibold ${(item.debt ?? 0) > 0 ? 'text-red-500' : ''}`}>{formatCurrency(item.debt ?? 0)}</p>
+                    {item.debt_due_date && (
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        {t('sales.debtDueDate', 'Qarz muddati')}: {formatDate(item.debt_due_date)}
+                      </p>
+                    )}
                   </div>
                 </div>
 

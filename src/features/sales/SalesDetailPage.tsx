@@ -335,6 +335,11 @@ export function SalesDetailPage() {
               <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20">
                 <p className="text-sm text-muted-foreground mb-1">{t('sales.debt')}</p>
                 <p className="text-xl font-bold text-amber-600">{formatCurrency(Number(sale.debt) || 0)}</p>
+                {sale.debt_due_date && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {t('sales.debtDueDate', 'Qarz muddati')}: {formatDate(sale.debt_due_date)}
+                  </p>
+                )}
               </div>
               <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20">
                 <p className="text-sm text-muted-foreground mb-1">{t('common.status')}</p>
