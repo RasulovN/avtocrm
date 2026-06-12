@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import { Plus, FileText, Eye, Search, X, ChevronLeft, ChevronRight, CreditCard, Printer } from 'lucide-react';
-import { BarcodePrintAll } from '../../components/ui/BarcodePrint';
 import { generateBarcodePrintHtml, generateMultipleBarcodesPrintHtml } from '../../utils/xss';
 
 import { StockEntryCreateDialog } from './StockEntryCreateDialog';
@@ -18,9 +17,8 @@ import { Label } from '../../components/ui/Label';
 import { inventoryService, type InventoryFilters } from '../../services/inventoryService';
 import { productService } from '../../services/productService';
 import { supplierService } from '../../services/supplierService';
-import { storeService } from '../../services/storeService';
 import { formatCurrency, formatDate } from '../../utils';
-import type { InventoryItem, Store, Supplier } from '../../types';
+import type { InventoryItem, Supplier } from '../../types';
 export interface SupplierPayment {
   id: number;
   supplier: number;
@@ -50,7 +48,7 @@ type DisplayInventoryRow = DisplayInventory & { rowNumber: number };
 export function StockEntryListPage() {
   const { t } = useTranslation();
   const params = useParams();
-  const lang = params.lang || 'uz';
+   params.lang || 'uz';
 
   const [inventory, setInventory] = useState<DisplayInventory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,7 +66,6 @@ export function StockEntryListPage() {
   const [dateTo, setDateTo] = useState('');
 
   // Reference lists
-  const [stores, setStores] = useState<Store[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
   const [selectedInventory, setSelectedInventory] = useState<DisplayInventory | null>(null);
@@ -86,11 +83,7 @@ export function StockEntryListPage() {
   useEffect(() => {
     const loadReferences = async () => {
       try {
-        const [storesRes, suppliersRes] = await Promise.all([
-          storeService.getAll(),
-          supplierService.getAll()
-        ]);
-        setStores(storesRes.data || []);
+        const suppliersRes = await supplierService.getAll();
         setSuppliers(Array.isArray(suppliersRes.data) ? suppliersRes.data : []);
       } catch (err) {
         console.error('Failed to load filter data', err);
@@ -261,17 +254,6 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
       ...prev,
       [itemId]: (prev[itemId] || 1) + 1
     }));
-  };
-
-  const getSelectedItemsForPrint = () => {
-    if (!selectedInventory) return [];
-    return selectedInventory.items
-      .filter(item => selectedItems.has(item.id))
-      .map(item => ({
-        barcode: item.shtrix_code || item.product_barcode || '',
-        product_name: item.product_name,
-        quantity: item.quantity
-      }));
   };
 
   const handlePrintItem = (item: InventoryItem) => {
