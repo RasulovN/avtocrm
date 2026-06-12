@@ -81,11 +81,15 @@ export function StoreListPage() {
           id: String(storeData.id),
           name: storeData.name,
           name_uz: storeData.name,
+          name_uz_cyrl: '',
           phone_number: storeData.phone_number || '',
           address: storeData.address || '',
           address_uz: storeData.address || '',
-          type: storeData.type,
+          address_uz_cyrl: '',
+          type: storeData.type as Store['type'],
           is_active: storeData.is_active,
+          is_warehouse: storeData.type === 'b',
+          created_at: '',
         };
         setCurrentStore(store);
         setStores([store]);
@@ -190,39 +194,64 @@ export function StoreListPage() {
     });
 
     let cancelled = false;
-    void loadYmaps()
-      .then(() => {
-        if (cancelled) return;
-        (window as any).ymaps.ready(() => {
-          if (cancelled) return;
-          if (!mapContainerRef.current) return;
-          if (!mapRef.current) {
-            const lat = Number(formData.latitude) || 41.311081;
-            const lng = Number(formData.longitude) || 69.240562;
-            mapRef.current = new (window as any).ymaps.Map(mapContainerRef.current, {
-              center: [lat, lng],
-              zoom: 12,
-              controls: ['zoomControl', 'searchControl'],
-            });
-            mapRef.current.events.add('click', (e: any) => {
-              const coords = e.get('coords') as number[];
-              setFormData((prev) => ({
-                ...prev,
-                latitude: coords[0].toFixed(6),
-                longitude: coords[1].toFixed(6),
-              }));
-            });
-          }
-        });
-      })
-      .catch((error) => {
-        handleError(error, { showToast: true });
+
+    async function initMap(lat: number, lng: number) {
+      if (cancelled) return;
+      await loadYmaps();
+      if (cancelled || !mapContainerRef.current) return;
+
+      (window as any).ymaps.ready(() => {
+        if (cancelled || !mapContainerRef.current) return;
+        if (!mapRef.current) {
+          mapRef.current = new (window as any).ymaps.Map(mapContainerRef.current, {
+            center: [lat, lng],
+            zoom: 12,
+            controls: ['zoomControl', 'searchControl'],
+          });
+          mapRef.current.events.add('click', (e: any) => {
+            const coords = e.get('coords') as number[];
+            setFormData((prev) => ({
+              ...prev,
+              latitude: coords[0].toFixed(6),
+              longitude: coords[1].toFixed(6),
+            }));
+          });
+        }
       });
+    }
+
+    if (editingStore) {
+      const lat = Number(formData.latitude) || 38.8576;
+      const lng = Number(formData.longitude) || 65.7973;
+      void initMap(lat, lng);
+    } else {
+      if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            if (cancelled) return;
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            setFormData((prev) => ({
+              ...prev,
+              latitude: lat.toFixed(6),
+              longitude: lng.toFixed(6),
+            }));
+            void initMap(lat, lng);
+          },
+          () => {
+            if (!cancelled) void initMap(38.8576, 65.7973);
+          },
+          { enableHighAccuracy: true, timeout: 5000 }
+        );
+      } else {
+        void initMap(38.8576, 65.7973);
+      }
+    }
 
     return () => {
       cancelled = true;
     };
-  }, [dialogOpen]);
+  }, [dialogOpen, editingStore]);
 
   useEffect(() => {
     const ymaps = (window as any).ymaps;
