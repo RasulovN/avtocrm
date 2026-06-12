@@ -5,6 +5,7 @@ import { PageHeader } from '../../components/shared/PageHeader';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
 import {
   Dialog,
   DialogBody,
@@ -42,6 +43,7 @@ export function CustomerListPage() {
 
   const [customers, setCustomers] = useState<CustomerFromApi[]>([]);
   const [search, setSearch] = useState('');
+  const [debtFilter, setDebtFilter] = useState<'all' | 'with_debt' | 'no_debt'>('all');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const limit = 10;
@@ -77,8 +79,10 @@ export function CustomerListPage() {
   };
 
   const filteredCustomers = useMemo(() => {
+    if (debtFilter === 'with_debt') return customers.filter(c => (Number(c.total_debt) || 0) > 0);
+    if (debtFilter === 'no_debt') return customers.filter(c => (Number(c.total_debt) || 0) === 0);
     return customers;
-  }, [customers]);
+  }, [customers, debtFilter]);
 
   const stats = useMemo(() => {
     const totalCustomers = total;
@@ -280,21 +284,31 @@ export function CustomerListPage() {
           title={t('customers.title')}
           description={t('customers.description')}
         />
-        <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
-          <div className="relative flex-1 sm:min-w-[280px]">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(event) => handleSearch(event.target.value)}
-              placeholder={t('customers.searchPlaceholder')}
-              className="pl-9 w-full"
-            />
+          <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
+            <div className="relative flex-1 sm:min-w-[280px]">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(event) => handleSearch(event.target.value)}
+                placeholder={t('customers.searchPlaceholder')}
+                className="pl-9 w-full"
+              />
+            </div>
+            <Select value={debtFilter} onValueChange={(v: 'all' | 'with_debt' | 'no_debt') => { setDebtFilter(v); setPage(1); }}>
+              <SelectTrigger className="w-full sm:w-[160px]">
+                <SelectValue placeholder={t('customers.debtFilter', 'Qarz filtri')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('customers.all', 'Hammasi')}</SelectItem>
+                <SelectItem value="with_debt">{t('customers.withDebt', 'Qarzdorlar')}</SelectItem>
+                <SelectItem value="no_debt">{t('customers.noDebt', 'Qarzi yo\'q')}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button onClick={openCreateDialog} className="shrink-0">
+              <Plus className="mr-2 h-4 w-4" />
+              {t('customers.addCustomer')}
+            </Button>
           </div>
-          <Button onClick={openCreateDialog} className="shrink-0">
-            <Plus className="mr-2 h-4 w-4" />
-            {t('customers.addCustomer')}
-          </Button>
-        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

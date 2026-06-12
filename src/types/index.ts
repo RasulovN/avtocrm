@@ -382,20 +382,29 @@ export interface SaleItem {
   total_price: string;
 }
 
+export interface SalePayment {
+  id: number;
+  amount: string;
+  type: 'cash' | 'card';
+  created_at: string;
+}
+
 export interface Sale {
   id: string;
   store: number;
   store_name?: string;
   seller: number;
   seller_name?: string;
-  customer: number;
-  customer_name?: string;
-  payments: number[];
+  customer: number | null;
+  customer_name?: string | null;
+  payments: SalePayment[];
   status: 'partial' | 'paid' | 'completed';
   total_amount: string;
   paid_amount: string;
   debt?: number | null;
   debt_due_date?: string;
+  total_increase?: string;
+  total_decrease?: string;
   discount_type?: string;
   discount_value?: string;
   discount_amount?: string;

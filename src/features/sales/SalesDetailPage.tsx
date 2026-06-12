@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, User, ShoppingCart, CreditCard, Calendar, Tag, DollarSign, Wallet, Printer, Eye, Package, Barcode, MapPin, Image as ImageIcon, Loader2, Undo2 } from 'lucide-react';
@@ -128,6 +128,20 @@ export function SalesDetailPage() {
       </span>
     );
   };
+
+  const cashAmount = useMemo(() => {
+    if (!sale?.payments) return 0;
+    return sale.payments
+      .filter(p => p.type === 'cash')
+      .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+  }, [sale]);
+
+  const cardAmount = useMemo(() => {
+    if (!sale?.payments) return 0;
+    return sale.payments
+      .filter(p => p.type === 'card')
+      .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+  }, [sale]);
 
   if (loading) {
     return (
@@ -327,10 +341,18 @@ export function SalesDetailPage() {
               <CreditCard className="h-5 w-5" />
               {t('sales.payment')}
             </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20">
                 <p className="text-sm text-muted-foreground mb-1">{t('inventory.paid')}</p>
                 <p className="text-xl font-bold text-green-600">{formatCurrency(parseFloat(sale.paid_amount))}</p>
+              </div>
+              <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-900/20">
+                <p className="text-sm text-muted-foreground mb-1">{t('payment.cash', 'Naqt')}</p>
+                <p className="text-xl font-bold text-emerald-600">{formatCurrency(cashAmount)}</p>
+              </div>
+              <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                <p className="text-sm text-muted-foreground mb-1">{t('payment.card', 'Karta')}</p>
+                <p className="text-xl font-bold text-blue-600">{formatCurrency(cardAmount)}</p>
               </div>
               <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20">
                 <p className="text-sm text-muted-foreground mb-1">{t('sales.debt')}</p>
@@ -340,10 +362,6 @@ export function SalesDetailPage() {
                     {t('sales.debtDueDate', 'Qarz muddati')}: {formatDate(sale.debt_due_date)}
                   </p>
                 )}
-              </div>
-              <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20">
-                <p className="text-sm text-muted-foreground mb-1">{t('common.status')}</p>
-                <div className="mt-1">{getStatusBadge(sale.status)}</div>
               </div>
             </div>
             {sale.debt && sale.debt > 0 && (
@@ -690,7 +708,8 @@ export function SalesDetailPage() {
               </div>
             </div>
         <div className="text-xs border-t dark:border-gray-600 mt-2 pt-2 dark:text-gray-300">
-              <div className="flex justify-between print:text-black"><span>{t('sales.cash')}:</span><span>{formatCurrency(parseFloat(sale.paid_amount))}</span></div>
+              {cashAmount > 0 && <div className="flex justify-between print:text-black"><span>{t('payment.cash', 'Naqt')}:</span><span>{formatCurrency(cashAmount)}</span></div>}
+              {cardAmount > 0 && <div className="flex justify-between print:text-black"><span>{t('payment.card', 'Karta')}:</span><span>{formatCurrency(cardAmount)}</span></div>}
               {sale.debt && Number(sale.debt) > 0 && <div className="flex justify-between text-red-500 print:text-black"><span>{t('sales.debt')}:</span><span>{formatCurrency(Number(sale.debt))}</span></div>}
             </div>
             <div className="text-center text-xs mt-2 dark:text-gray-400 print:text-black">{t('sales.thanks')}</div>
