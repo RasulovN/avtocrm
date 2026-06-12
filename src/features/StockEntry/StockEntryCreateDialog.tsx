@@ -25,7 +25,7 @@ import {
   DialogFooter,
 } from '../../components/ui/Dialog';
 import toast from 'react-hot-toast';
-import { formatCurrency } from '../../utils';
+import { formatCurrency, cn } from '../../utils';
 
 interface InventoryFormItem {
   product_id: string;
@@ -33,7 +33,16 @@ interface InventoryFormItem {
   quantity: number | '';
   purchase_price: number | '';
   selling_price: number | '';
+  wholesale_price: number | '';
   total: number;
+}
+
+interface ItemErrors {
+  product_id?: boolean;
+  quantity?: boolean;
+  purchase_price?: boolean;
+  selling_price?: boolean;
+  wholesale_price?: boolean;
 }
 
 export function StockEntryCreateDialog({
@@ -64,8 +73,10 @@ export function StockEntryCreateDialog({
 
   const [supplierId, setSupplierId] = useState('');
   const [storeId, setStoreId] = useState(isAdmin ? '' : userStoreId);
-  const [paid, setPaid] = useState<number | ''>('');
-  const [paymentType, setPaymentType] = useState('cash'); // 'cash', 'card', 'debt'
+  const [cashAmount, setCashAmount] = useState<number | ''>('');
+  const [cardAmount, setCardAmount] = useState<number | ''>('');
+  const [supplierError, setSupplierError] = useState(false);
+  const [itemErrors, setItemErrors] = useState<ItemErrors[]>([]);
 
   useEffect(() => {
     if (!isAdmin && userStoreId) {
@@ -74,7 +85,7 @@ export function StockEntryCreateDialog({
   }, [isAdmin, userStoreId]);
 
   const [items, setItems] = useState<InventoryFormItem[]>([
-    { product_id: '', product_name: '', quantity: '', purchase_price: '', selling_price: '', total: 0 }
+    { product_id: '', product_name: '', quantity: '', purchase_price: '', selling_price: '', wholesale_price: '', total: 0 }
   ]);
 
   // Product Dialog States
@@ -245,7 +256,8 @@ export function StockEntryCreateDialog({
         storeService.getAll(),
         supplierService.getAll(),
       ]);
-      setStores(Array.isArray(storesRes.data) ? storesRes.data : []);
+      const storesData = Array.isArray(storesRes.data) ? storesRes.data : [];
+      setStores(storesData);
       setSuppliers(Array.isArray(suppliersRes.data) ? suppliersRes.data : []);
     } catch (error) {
       console.error('Failed to load data:', error);
@@ -257,11 +269,21 @@ export function StockEntryCreateDialog({
       void loadData();
       setSupplierId('');
       setStoreId(isAdmin ? '' : userStoreId);
-      setPaid('');
-      setPaymentType('cash');
-      setItems([{ product_id: '', product_name: '', quantity: '', purchase_price: '', selling_price: '', total: 0 }]);
+      setCashAmount('');
+      setCardAmount('');
+      setSupplierError(false);
+      setItemErrors([]);
+      setItems([{ product_id: '', product_name: '', quantity: '', purchase_price: '', selling_price: '', wholesale_price: '', total: 0 }]);
     }
-  }, [open, loadData, isAdmin, userStoreId]);
+  }, [open]);
+
+  // Set default store to "Avtoyon" when stores load
+  useEffect(() => {
+    if (open && isAdmin && stores.length > 0 && !storeId) {
+      const avtoyon = stores.find(s => s.name?.toLowerCase().includes('avtoyon'));
+      if (avtoyon) setStoreId(avtoyon.id);
+    }
+  }, [open, isAdmin, stores, storeId]);
 
   const handleItemChange = (index: number, field: keyof InventoryFormItem, value: string | number) => {
     const newItems = [...items];
@@ -296,12 +318,17 @@ export function StockEntryCreateDialog({
         ...newItems[index],
         selling_price: value === '' ? '' : Number(value),
       };
+    } else if (field === 'wholesale_price') {
+      newItems[index] = {
+        ...newItems[index],
+        wholesale_price: value === '' ? '' : Number(value),
+      };
     }
     setItems(newItems);
   };
 
   const addItem = () => {
-    setItems([...items, { product_id: '', product_name: '', quantity: '', purchase_price: '', selling_price: '', total: 0 }]);
+    setItems([...items, { product_id: '', product_name: '', quantity: '', purchase_price: '', selling_price: '', wholesale_price: '', total: 0 }]);
   };
 
   const removeItem = (index: number) => {
@@ -314,33 +341,53 @@ export function StockEntryCreateDialog({
     return sum + (qty as number) * (price as number);
   }, 0);
 
-  // If payment is debt, paid amount is 0 automatically
-  const actualPaidAmount = paymentType === 'debt' ? 0 : (paid === '' ? 0 : paid);
-  const debt = total - actualPaidAmount;
-
-  useEffect(() => {
-    if (paymentType !== 'debt' && paid !== '' && paid > total) {
-      setPaid(total === 0 ? '' : total);
-    }
-  }, [total, paid, paymentType]);
+  const totalPaid = (cashAmount === '' ? 0 : cashAmount) + (cardAmount === '' ? 0 : cardAmount);
+  const debt = Math.max(0, total - totalPaid);
 
   const handleSubmit = async (e: ChangeEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (saving) return;
+
+    // Validation
+    let hasError = false;
+    const newSupplierError = !supplierId;
+    if (newSupplierError) hasError = true;
+    setSupplierError(newSupplierError);
+
+    const newItemErrors: ItemErrors[] = items.map(item => {
+      const errors: ItemErrors = {
+        product_id: !item.product_id,
+        quantity: item.quantity === '' || Number(item.quantity) <= 0,
+        purchase_price: item.purchase_price === '' || Number(item.purchase_price) <= 0,
+        selling_price: item.selling_price === '' || Number(item.selling_price) <= 0,
+        wholesale_price: item.wholesale_price === '' || Number(item.wholesale_price) <= 0,
+      };
+      if (errors.product_id || errors.quantity || errors.purchase_price || errors.selling_price || errors.wholesale_price) {
+        hasError = true;
+      }
+      return errors;
+    });
+    setItemErrors(newItemErrors);
+
+    if (hasError) {
+      toast.error(t('errors.validationError', 'Barcha majburiy maydonlarni to\'ldiring'));
+      return;
+    }
+
     try {
       setSaving(true);
       await inventoryService.create({
-        supplier: supplierId,
-        store: storeId,
+        supplier: Number(supplierId),
+        store: Number(storeId),
+        cash_amount: (cashAmount === '' ? 0 : cashAmount).toFixed(2),
+        card_amount: (cardAmount === '' ? 0 : cardAmount).toFixed(2),
         items: items.map(item => ({
-          product: item.product_id,
+          product: Number(item.product_id),
           quantity: item.quantity === '' ? 0 : item.quantity,
-          purchase_price: (item.purchase_price === '' ? '0' : String(item.purchase_price)),
-          selling_price: (item.selling_price === '' ? '0' : String(item.selling_price)),
+          purchase_price: (item.purchase_price === '' ? '0' : String(Number(item.purchase_price).toFixed(2))),
+          selling_price: (item.selling_price === '' ? '0' : String(Number(item.selling_price).toFixed(2))),
+          wholesale_price: (item.wholesale_price === '' ? '0.00' : String(Number(item.wholesale_price).toFixed(2))),
         })),
-        paid_amount: actualPaidAmount,
-        // payment_type: paymentType // Send it if backend accepts it in the future
-        ...({ payment_type: paymentType } as any)
       });
       toast.success(t('inventory.inventoryCreated', 'Kirim muvaffaqiyatli yaratildi'));
       try {
@@ -367,11 +414,11 @@ export function StockEntryCreateDialog({
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-6 mt-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>{t('suppliers.title', 'Ta\'minotchi')}</Label>
-                <Select value={supplierId} onValueChange={setSupplierId} required>
-                  <SelectTrigger>
+                <Label className={supplierError ? 'text-red-500' : ''}>{t('suppliers.title', 'Ta\'minotchi')}</Label>
+                <Select value={supplierId} onValueChange={(v) => { setSupplierId(v); setSupplierError(false); }} required>
+                  <SelectTrigger className={supplierError ? 'border-red-500 focus:border-red-500 focus:ring-red-500/30' : ''}>
                     <SelectValue placeholder={t('inventory.selectSupplier', 'Tanlang')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -398,37 +445,6 @@ export function StockEntryCreateDialog({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>{t('sales.paymentType')}</Label>
-                <Select value={paymentType} onValueChange={setPaymentType}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cash">{t('payment.cash')}</SelectItem>
-                    <SelectItem value="card">{t('payment.card')}</SelectItem>
-                    <SelectItem value="debt">{t('payment.debt')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>{t('inventory.paidAmount', 'To\'langan summa')}</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  max={total}
-                  value={paymentType === 'debt' ? 0 : paid}
-                  disabled={paymentType === 'debt'}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                    const val = e.target.value === '' ? '' : Number(e.target.value);
-                    if (val !== '' && val > total) {
-                      setPaid(total);
-                    } else {
-                      setPaid(val);
-                    }
-                  }}
-                />
-              </div>
             </div>
 
             <div className="space-y-4">
@@ -454,7 +470,7 @@ export function StockEntryCreateDialog({
                         <Trash2 className="h-4 w-4 text-red-500" />
                       </Button>
                     )}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
                       <div className="space-y-2 lg:col-span-2">
                         <div className="flex items-center justify-between">
                           <Label className="text-xs">{t('products.title', 'Mahsulot')}</Label>
@@ -472,10 +488,17 @@ export function StockEntryCreateDialog({
                         </div>
                         <Select
                           value={item.product_id}
-                          onValueChange={(v: string) => handleItemChange(index, 'product_id', v)}
+                          onValueChange={(v: string) => {
+                            handleItemChange(index, 'product_id', v);
+                            setItemErrors(prev => {
+                              const next = [...prev];
+                              if (next[index]) next[index] = { ...next[index], product_id: false };
+                              return next;
+                            });
+                          }}
                           required
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className={itemErrors[index]?.product_id ? 'border-red-500 focus:border-red-500 focus:ring-red-500/30' : ''}>
                             <SelectValue placeholder={t('inventory.selectProduct', 'Tanlang')} />
                           </SelectTrigger>
                           <SelectContent>
@@ -486,32 +509,73 @@ export function StockEntryCreateDialog({
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-xs">{t('inventory.quantity', 'Miqdor')}</Label>
+                        <Label className={cn('text-xs', itemErrors[index]?.quantity && 'text-red-500')}>{t('inventory.quantity', 'Miqdor')}</Label>
                         <Input
                           type="number"
                           min="1"
                           required
                           value={item.quantity}
-                          onChange={(e: ChangeEvent<HTMLInputElement>) => handleItemChange(index, 'quantity', e.target.value === '' ? '' : Number(e.target.value))}
+                          className={itemErrors[index]?.quantity ? 'border-red-500 focus:border-red-500 focus:ring-red-500/30' : ''}
+                          onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                            handleItemChange(index, 'quantity', e.target.value === '' ? '' : Number(e.target.value));
+                            setItemErrors(prev => {
+                              const next = [...prev];
+                              if (next[index]) next[index] = { ...next[index], quantity: false };
+                              return next;
+                            });
+                          }}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-xs">{t('inventory.purchasePrice', 'Xarid narxi')}</Label>
+                        <Label className={cn('text-xs', itemErrors[index]?.purchase_price && 'text-red-500')}>{t('inventory.purchasePrice', 'Xarid narxi')}</Label>
                         <Input
                           type="number"
                           min="0"
                           required
                           value={item.purchase_price}
-                          onChange={(e: ChangeEvent<HTMLInputElement>) => handleItemChange(index, 'purchase_price', e.target.value === '' ? '' : Number(e.target.value))}
+                          className={itemErrors[index]?.purchase_price ? 'border-red-500 focus:border-red-500 focus:ring-red-500/30' : ''}
+                          onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                            handleItemChange(index, 'purchase_price', e.target.value === '' ? '' : Number(e.target.value));
+                            setItemErrors(prev => {
+                              const next = [...prev];
+                              if (next[index]) next[index] = { ...next[index], purchase_price: false };
+                              return next;
+                            });
+                          }}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-xs">{t('products.sellingPrice', 'Sotuv narxi')}</Label>
+                        <Label className={cn('text-xs', itemErrors[index]?.selling_price && 'text-red-500')}>{t('products.sellingPrice', 'Sotuv narxi')}</Label>
                         <Input
                           type="number"
                           min="0"
                           value={item.selling_price}
-                          onChange={(e: ChangeEvent<HTMLInputElement>) => handleItemChange(index, 'selling_price', e.target.value === '' ? '' : Number(e.target.value))}
+                          className={itemErrors[index]?.selling_price ? 'border-red-500 focus:border-red-500 focus:ring-red-500/30' : ''}
+                          onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                            handleItemChange(index, 'selling_price', e.target.value === '' ? '' : Number(e.target.value));
+                            setItemErrors(prev => {
+                              const next = [...prev];
+                              if (next[index]) next[index] = { ...next[index], selling_price: false };
+                              return next;
+                            });
+                          }}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className={cn('text-xs', itemErrors[index]?.wholesale_price && 'text-red-500')}>Ulgurji narx</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={item.wholesale_price}
+                          className={itemErrors[index]?.wholesale_price ? 'border-red-500 focus:border-red-500 focus:ring-red-500/30' : ''}
+                          onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                            handleItemChange(index, 'wholesale_price', e.target.value === '' ? '' : Number(e.target.value));
+                            setItemErrors(prev => {
+                              const next = [...prev];
+                              if (next[index]) next[index] = { ...next[index], wholesale_price: false };
+                              return next;
+                            });
+                          }}
                         />
                       </div>
                     </div>
@@ -520,10 +584,60 @@ export function StockEntryCreateDialog({
               </div>
             </div>
 
+            {/* Naqt va Karta to'lov */}
+            <div className="rounded-lg border p-4 bg-muted/10 space-y-4">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                {t('payment.title', 'To\'lov')}
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-green-500" />
+                    {t('payment.cash', 'Naqt')}
+                  </Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="0.00"
+                    value={cashAmount}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                      const val = e.target.value === '' ? '' : Number(e.target.value);
+                      setCashAmount(val);
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-blue-500" />
+                    {t('payment.card', 'Karta')}
+                  </Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="0.00"
+                    value={cardAmount}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                      const val = e.target.value === '' ? '' : Number(e.target.value);
+                      setCardAmount(val);
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
             <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-muted/30 rounded-lg">
               <div className="space-y-1">
                 <p className="text-lg font-bold">{t('common.total', 'Jami')}: {formatCurrency(total)}</p>
-                <p className="text-sm font-medium text-red-500">{t('suppliers.debt', 'Qarz')}: {formatCurrency(debt)}</p>
+                <p className="text-sm text-muted-foreground">
+                  {t('payment.cash', 'Naqt')}: {formatCurrency(cashAmount === '' ? 0 : cashAmount)} |
+                  {t('payment.card', 'Karta')}: {formatCurrency(cardAmount === '' ? 0 : cardAmount)}
+                </p>
+                {debt > 0 ? (
+                  <p className="text-sm font-medium text-red-500">{t('suppliers.debt', 'Qarz')}: {formatCurrency(debt)}</p>
+                ) : (
+                  <p className="text-sm font-medium text-green-600">{t('common.paid', 'To\'langan')}</p>
+                )}
               </div>
               <div className="mt-4 sm:mt-0 flex gap-2">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

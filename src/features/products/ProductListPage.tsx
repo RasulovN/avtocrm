@@ -552,7 +552,7 @@ export function ProductListPage() {
                 </div>
 
                 {/* Middle part: Prices */}
-                <div className="grid grid-cols-2 gap-3 bg-muted/30 p-2.5 rounded-xl border border-border/40 text-xs">
+                <div className="grid grid-cols-3 gap-3 bg-muted/30 p-2.5 rounded-xl border border-border/40 text-xs">
                   <div>
                     <span className="text-muted-foreground block text-[10px] uppercase tracking-wider">{t('products.purchasePrice', 'Kelish narxi')}</span>
                     <span className="font-semibold text-slate-900 dark:text-slate-200 mt-0.5 block">
@@ -563,6 +563,12 @@ export function ProductListPage() {
                     <span className="text-muted-foreground block text-[10px] uppercase tracking-wider">{t('products.sellingPrice', 'Sotuv narxi')}</span>
                     <span className="font-bold text-emerald-600 dark:text-emerald-500 mt-0.5 block">
                       {formatCurrency(item.selling_price ?? 0)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[10px] uppercase tracking-wider">{t('products.wholesalePrice', 'Ulgurji narx')}</span>
+                    <span className="font-semibold text-slate-900 dark:text-slate-200 mt-0.5 block">
+                      {formatCurrency(item.wholesale_price ?? 0)}
                     </span>
                   </div>
                 </div>
@@ -686,6 +692,10 @@ export function ProductListPage() {
               {/* Selling price */}
               <th className="w-[110px] px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {t('products.sellingPrice', 'Sotuv narxi')}
+              </th>
+              {/* Wholesale price */}
+              <th className="w-[110px] px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t('products.wholesalePrice', 'Ulgurji narx')}
               </th>
               {/* Jami (Total) */}
               <th className="w-[80px] px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -824,6 +834,11 @@ export function ProductListPage() {
                     {/* Selling Price */}
                     <td className="px-3 py-2 text-right text-sm font-semibold tabular-nums">
                       {formatCurrency(item.selling_price ?? 0)}
+                    </td>
+
+                    {/* Wholesale Price */}
+                    <td className="px-3 py-2 text-right text-sm tabular-nums">
+                      {formatCurrency(item.wholesale_price ?? 0)}
                     </td>
 
                     {/* Total Quantity */}

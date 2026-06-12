@@ -152,6 +152,7 @@ const item = (raw ?? {}) as Partial<Product> & {
       quantity: number;
       purchase_price: string;
       selling_price: string;
+      wholesale_price?: string;
       barcode: string;
       shtrix_code: string | null;
       location?: { name?: string; description?: string } | null;
@@ -172,6 +173,7 @@ const item = (raw ?? {}) as Partial<Product> & {
   let maxPurchasePrice: number | undefined;
   let minSellingPrice: number | undefined;
   let maxSellingPrice: number | undefined;
+  let wholesalePrice: number | undefined;
   let inventoryByStore: ProductStoreInventory[] | undefined;
   
   if (batches && Array.isArray(batches)) {
@@ -184,6 +186,9 @@ const item = (raw ?? {}) as Partial<Product> & {
       const parsedSelling = batch.selling_price !== null && batch.selling_price !== undefined && String(batch.selling_price).trim() !== ''
         ? Number(batch.selling_price)
         : undefined;
+      const parsedWholesale = batch.wholesale_price !== null && batch.wholesale_price !== undefined && String(batch.wholesale_price).trim() !== ''
+        ? Number(batch.wholesale_price)
+        : undefined;
 
       if (parsedPurchase !== undefined && !isNaN(parsedPurchase)) {
         if (minPurchasePrice === undefined || parsedPurchase < minPurchasePrice) minPurchasePrice = parsedPurchase;
@@ -193,6 +198,9 @@ const item = (raw ?? {}) as Partial<Product> & {
         if (minSellingPrice === undefined || parsedSelling < minSellingPrice) minSellingPrice = parsedSelling;
         if (maxSellingPrice === undefined || parsedSelling > maxSellingPrice) maxSellingPrice = parsedSelling;
       }
+      if (parsedWholesale !== undefined && !isNaN(parsedWholesale)) {
+        if (wholesalePrice === undefined) wholesalePrice = parsedWholesale;
+      }
 
       return {
         store_id: String(batch.store),
@@ -200,6 +208,7 @@ const item = (raw ?? {}) as Partial<Product> & {
         quantity: batch.quantity,
         purchase_price: parsedPurchase && !isNaN(parsedPurchase) ? parsedPurchase : 0,
         selling_price: parsedSelling && !isNaN(parsedSelling) ? parsedSelling : 0,
+        wholesale_price: parsedWholesale && !isNaN(parsedWholesale) ? parsedWholesale : 0,
         location_name: batch.location?.name,
         location_description: batch.location?.description,
       };
@@ -243,6 +252,7 @@ const item = (raw ?? {}) as Partial<Product> & {
     quantity,
     purchase_price: purchasePrice,
     selling_price: sellingPrice,
+    wholesale_price: wholesalePrice,
     total_quantity: totalQuantity || undefined,
     min_purchase_price: minPurchasePrice,
     max_purchase_price: maxPurchasePrice,

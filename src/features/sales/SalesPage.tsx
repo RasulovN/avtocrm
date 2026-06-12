@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, type ChangeEvent, type KeyboardEvent } from 'react';
 import toast from 'react-hot-toast';
-import { ScanBarcode, Trash2, DollarSign, Search, X, UserPlus, Eye, Package, Barcode, MapPin, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { ScanBarcode, Trash2, DollarSign, Search, X, UserPlus, Eye, Package, Barcode, MapPin, Image as ImageIcon, Loader2, ArrowLeftRight } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/Dialog';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -27,8 +27,10 @@ interface CartItem {
   quantity: number;
   purchase_price: number;
   selling_price: number;
+  wholesale_price: number;
   total: number;
   available_stock: number;
+  use_wholesale: boolean;
 }
 
 const getProductImages = (product?: Product | null): string[] => {
@@ -128,7 +130,21 @@ export function SalesPage() {
   const [items, setItems] = useState<CartItem[]>(() => {
     try {
       const saved = localStorage.getItem(`crm_cart_${user?.id || 'guest'}`);
-      return saved ? JSON.parse(saved) : [];
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map((item: Partial<CartItem>) => ({
+        wholesale_price: item.wholesale_price ?? 0,
+        use_wholesale: item.use_wholesale ?? false,
+        product_id: item.product_id ?? '',
+        product_name: item.product_name ?? '',
+        store_id: item.store_id ?? '',
+        quantity: item.quantity ?? 1,
+        purchase_price: item.purchase_price ?? 0,
+        selling_price: item.selling_price ?? 0,
+        total: item.total ?? 0,
+        available_stock: item.available_stock ?? 0,
+      }));
     } catch {
       return [];
     }
@@ -178,6 +194,7 @@ export function SalesPage() {
     let storeQty = activeStoreId ? 0 : baseProduct.quantity;
     let storePurchasePrice = baseProduct.purchase_price;
     let storeSellingPrice = baseProduct.selling_price;
+    let storeWholesalePrice = baseProduct.wholesale_price;
     let storeName = baseProduct.store_name;
 
     if (activeStoreId && baseProduct.inventory_by_store) {
@@ -188,6 +205,7 @@ export function SalesPage() {
         storeQty = storeInv.quantity;
         storePurchasePrice = storeInv.purchase_price;
         storeSellingPrice = storeInv.selling_price;
+        storeWholesalePrice = storeInv.wholesale_price;
         storeName = storeInv.store_name;
       }
     }
@@ -201,6 +219,7 @@ export function SalesPage() {
       shtrix_code: product.shtrix_code || baseProduct.shtrix_code,
       purchase_price: storePurchasePrice,
       selling_price: storeSellingPrice,
+      wholesale_price: storeWholesalePrice,
       quantity: storeQty,
       total_count: baseProduct.total_count ?? storeQty,
       store_id: activeStoreId || baseProduct.store_id,
@@ -247,7 +266,8 @@ export function SalesPage() {
         const newItems = [...prevItems];
         const existingItem = newItems[existingIndex];
         existingItem.quantity += 1;
-        existingItem.total = existingItem.selling_price * existingItem.quantity;
+        const activePrice = existingItem.use_wholesale ? existingItem.wholesale_price : existingItem.selling_price;
+        existingItem.total = activePrice * existingItem.quantity;
         return newItems;
       }
 
@@ -260,8 +280,10 @@ export function SalesPage() {
           quantity: 1,
           purchase_price: product.purchase_price ?? 0,
           selling_price: product.selling_price ?? 0,
+          wholesale_price: product.wholesale_price ?? 0,
           total: product.selling_price ?? 0,
           available_stock: availableStock,
+          use_wholesale: false,
         },
       ];
     });
@@ -370,6 +392,7 @@ export function SalesPage() {
             quantity: storeInventory.quantity,
             purchase_price: storeInventory.purchase_price,
             selling_price: storeInventory.selling_price,
+            wholesale_price: storeInventory.wholesale_price,
             store_id: storeInventory.store_id,
             store_name: storeInventory.store_name,
             location_name: storeInventory.location_name,
@@ -534,15 +557,29 @@ export function SalesPage() {
       item.quantity = quantity;
     }
 
-    item.total = item.selling_price * item.quantity;
+    const activePrice = item.use_wholesale ? item.wholesale_price : item.selling_price;
+    item.total = activePrice * item.quantity;
     setItems(newItems);
   };
 
   const updatePrice = (index: number, price: number) => {
     if (price < 0) return;
     const newItems = [...items];
-    newItems[index].selling_price = price;
+    if (newItems[index].use_wholesale) {
+      newItems[index].wholesale_price = price;
+    } else {
+      newItems[index].selling_price = price;
+    }
     newItems[index].total = price * newItems[index].quantity;
+    setItems(newItems);
+  };
+
+  const togglePriceMode = (index: number) => {
+    const newItems = [...items];
+    const item = newItems[index];
+    item.use_wholesale = !item.use_wholesale;
+    const activePrice = item.use_wholesale ? item.wholesale_price : item.selling_price;
+    item.total = activePrice * item.quantity;
     setItems(newItems);
   };
 
@@ -608,7 +645,7 @@ export function SalesPage() {
         items: items.map((item) => ({
           product: parseInt(item.product_id),
           quantity: item.quantity,
-          price: String(item.selling_price),
+          price: String(item.use_wholesale ? item.wholesale_price : item.selling_price),
         })),
         payments,
         discount_type: discountType,
@@ -705,6 +742,7 @@ export function SalesPage() {
         total_count: fullProduct.total_count ?? hydratedProduct.total_count,
         selling_price: fullProduct.selling_price || hydratedProduct.selling_price,
         purchase_price: fullProduct.purchase_price || hydratedProduct.purchase_price,
+        wholesale_price: fullProduct.wholesale_price || hydratedProduct.wholesale_price,
         image: fullProduct.image || hydratedProduct.image,
         images: (fullProduct.images && fullProduct.images.length > 0)
           ? fullProduct.images
@@ -850,7 +888,7 @@ export function SalesPage() {
                     return (
                       <div
                         key={product.id}
-                        className={`w-full text-left rounded-lg p-2.5 border border-gray-900 hover:bg-accent dark:hover:bg-gray-900 transition-colors cursor-pointer ${
+                        className={`w-full text-left rounded-lg p-3 border border-gray-900 hover:bg-accent dark:hover:bg-gray-900 transition-colors cursor-pointer ${
                           isNotAvailable ? 'opacity-70' : ''
                         }`}
                         onClick={() => handleProductClick(product)}
@@ -863,20 +901,30 @@ export function SalesPage() {
                           }
                         }}
                       >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1">
-                            <div className="font-medium dark:text-white">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium dark:text-white text-sm truncate">
                               {product.name || product.sku || t('sales.unknownProduct')}
                             </div>
-                            <div className="text-xs text-muted-foreground dark:text-gray-400 space-y-1">
-                              <div>{product.sku || product.barcode}</div>
-                              <div className='dark:text-white text-black font-semibold'>ID: {product.id || (product as any).product_id || '-'}</div>
-                            </div>
+                            {!isNotAvailable && (
+                              <div className="mt-1 text-[10px] text-muted-foreground">
+                                SKU: {product.sku || product.barcode || '-'}
+                              </div>
+                            )}
                           </div>
-                          <div className="ml-3 flex items-start gap-2">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`inline-flex items-center justify-center rounded text-xs font-bold min-w-[1.75rem] h-5 px-1.5 ${
+                                isNotAvailable
+                                  ? 'bg-destructive/10 text-destructive dark:bg-red-900/30 dark:text-red-400'
+                                  : 'bg-primary/10 dark:bg-gray-600 dark:text-gray-200'
+                              }`}
+                            >
+                              {isNotAvailable ? '0' : product.quantity}
+                            </span>
                             <button
                               type="button"
-                              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-input bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200 dark:hover:bg-gray-800"
+                              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-input bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200 dark:hover:bg-gray-800"
                               onClick={(event) => {
                                 event.preventDefault();
                                 event.stopPropagation();
@@ -884,21 +932,27 @@ export function SalesPage() {
                               }}
                               aria-label={t('sales.productDetails')}
                             >
-                              <Eye className="h-4 w-4" />
+                              <Eye className="h-3.5 w-3.5" />
                             </button>
-                            <div className="text-right">
-                              <div className="font-bold dark:text-white">{formatCurrency(product.selling_price ?? 0)}</div>
-                              <div className="flex items-center justify-end mt-1">
-                                {isNotAvailable ? (
-                                  <span className="inline-flex items-center rounded bg-destructive/10 px-1.5 py-0.5 text-[10px] font-medium text-destructive dark:bg-red-900/30 dark:text-red-400">
-                                    {t('messages.notInYourStore', "Sizning do'koningizda yo'q")}
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center rounded bg-primary/10 dark:bg-gray-600 px-1.5 py-0.5 text-xs font-medium dark:text-gray-200">
-                                    {product.quantity}
-                                  </span>
-                                )}
-                              </div>
+                          </div>
+                        </div>
+                        <div className="mt-2 pt-2 border-t border-border/40 grid grid-cols-3 gap-2 text-xs">
+                          <div>
+                            <div className="text-muted-foreground mb-0.5">Kirish narxi</div>
+                            <div className="font-semibold tabular-nums text-foreground">
+                              {formatCurrency(product.purchase_price ?? 0)}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-muted-foreground mb-0.5">Sotuv narxi</div>
+                            <div className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
+                              {formatCurrency(product.selling_price ?? 0)}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-muted-foreground mb-0.5">Ulgurji narx</div>
+                            <div className="font-semibold tabular-nums text-indigo-600 dark:text-indigo-400">
+                              {formatCurrency(product.wholesale_price ?? 0)}
                             </div>
                           </div>
                         </div>
@@ -942,12 +996,11 @@ export function SalesPage() {
                       className="rounded-lg p-2.5 bg-muted/50 dark:bg-gray-900 hover:shadow-sm transition-shadow"
                     >
                       <div className="flex items-start justify-between mb-1.5">
-                        <div className="flex-1">
-                          <div className="font-medium dark:text-white text-sm">{item.product_name}</div>
-                          {/* <div className="text-xs text-muted-foreground dark:text-gray-400 space-y-1">
-                            <div>{safeProducts.find((p) => p.id === item.product_id)?.sku}</div>
-                            <div>ID: {item.product_id}</div>
-                          </div> */}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium dark:text-white text-sm truncate">{item.product_name}</div>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <span className="text-[10px] text-muted-foreground">Kir: {formatCurrency(item.purchase_price)}</span>
+                          </div>
                         </div>
                         <Button
                           type="button"
@@ -959,10 +1012,10 @@ export function SalesPage() {
                           <Trash2 className="h-3.5 w-3.5 text-red-500" />
                         </Button>
                       </div>
-                      <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-3 sm:gap-1.5">
-                        <div>
+                      <div className="grid grid-cols-12 gap-1.5 text-xs items-end">
+                        <div className="col-span-4">
                           <div className="text-muted-foreground dark:text-gray-400 mb-1">{t('sales.quantity')}</div>
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-0.5">
                             <Button
                               type="button"
                               variant="outline"
@@ -983,7 +1036,7 @@ export function SalesPage() {
                                   updateQuantity(index, val === '' ? 0 : Number(val));
                                 }
                               }}
-                              className="h-7 w-12 text-center text-xs dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                              className="h-7 w-10 text-center text-xs dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                             />
                             <Button
                               type="button"
@@ -996,12 +1049,27 @@ export function SalesPage() {
                             </Button>
                           </div>
                         </div>
-                        <div>
-                          <div className="text-muted-foreground dark:text-gray-400 mb-1">{t('sales.price')}</div>
+                        <div className="col-span-5">
+                          <div className="flex items-center gap-1 mb-1">
+                            <span className="text-muted-foreground dark:text-gray-400">{t('sales.price')}</span>
+                            <button
+                              type="button"
+                              onClick={() => togglePriceMode(index)}
+                              className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-medium transition-colors ${
+                                item.use_wholesale
+                                  ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'
+                                  : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                              }`}
+                              title={item.use_wholesale ? 'Sotuv narxiga o\'tish' : 'Ulgurji narxga o\'tish'}
+                            >
+                              <ArrowLeftRight className="h-3 w-3" />
+                              {item.use_wholesale ? 'Ulgurji' : 'Sotuv'}
+                            </button>
+                          </div>
                           <Input
                             type="number"
                             min="0"
-                            value={item.selling_price || ''}
+                            value={item.use_wholesale ? item.wholesale_price || '' : item.selling_price || ''}
                             onChange={(e: ChangeEvent<HTMLInputElement>) => {
                               const val = e.target.value;
                               updatePrice(index, val === '' ? 0 : Number(val));
@@ -1009,7 +1077,7 @@ export function SalesPage() {
                             className="h-7 text-center text-xs dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                           />
                         </div>
-                        <div>
+                        <div className="col-span-3">
                           <div className="text-muted-foreground dark:text-gray-400 mb-1">{t('sales.total')}</div>
                           <div className="h-7 flex items-center justify-center bg-green-100 dark:bg-green-900/30 rounded text-xs font-semibold text-green-700 dark:text-green-400">
                             {formatCurrency(item.total)}
@@ -1432,6 +1500,10 @@ export function SalesPage() {
                       <div className="flex justify-between gap-4">
                         <span className="text-muted-foreground">{t('sales.purchasePrice')}</span>
                         <span className="font-medium">{formatCurrency(selectedProduct?.purchase_price ?? 0)}</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">{t('products.wholesalePrice', 'Ulgurji narx')}</span>
+                        <span className="font-medium">{formatCurrency(selectedProduct?.wholesale_price ?? 0)}</span>
                       </div>
                     </div>
                   </div>

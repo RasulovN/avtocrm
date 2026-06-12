@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, X, Trash2, Send } from 'lucide-react';
+import { Plus, Trash2, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { PageHeader } from '../../../components/shared/PageHeader';
 import { Button } from '../../../components/ui/Button';

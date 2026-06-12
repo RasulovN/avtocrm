@@ -60,6 +60,7 @@ export interface ProductStoreInventory {
   quantity: number;
   purchase_price?: number;
   selling_price?: number;
+  wholesale_price?: number;
   location_name?: string;
   location_description?: string;
 }
@@ -83,6 +84,7 @@ export interface ProductBatch {
   quantity: number;
   purchase_price: string;
   selling_price: string;
+  wholesale_price?: string;
   barcode: string;
   shtrix_code: string | null;
   location?: ProductLocation | null;
@@ -119,6 +121,7 @@ export interface Product {
   max_purchase_price?: number;
   min_selling_price?: number;
   max_selling_price?: number;
+  wholesale_price?: number;
   inventory_by_store?: ProductStoreInventory[];
   location_id?: string;
   location_name?: string;
@@ -285,15 +288,17 @@ export interface Inventory {
 }
 
 export interface InventoryFormData {
-  supplier: string;
-  store: string;
+  supplier: number;
+  store: number;
+  cash_amount: string;
+  card_amount: string;
   items: {
-    product: string;
+    product: number;
     quantity: number;
     purchase_price: string;
     selling_price: string;
+    wholesale_price: string;
   }[];
-  paid_amount: number;
 }
 
 export interface ContractEntryItem {
