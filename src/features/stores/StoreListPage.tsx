@@ -12,6 +12,7 @@ import { storeService } from '../../services/storeService';
 import { useAuthStore } from '../../app/store';
 import type { Store, StoreFormData } from '../../types';
 import { latinToCyrillic } from '../../utils/transliteration';
+import { handleError } from '../../utils/errorHandler';
 
 export function StoreListPage() {
   const { t, i18n } = useTranslation();
@@ -93,7 +94,7 @@ export function StoreListPage() {
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
-      console.error('Failed to load stores:', error);
+      handleError(error, { showToast: true, logData: 'Failed to load stores' });
       setTotal(0);
     } finally {
       setLoading(false);
@@ -111,7 +112,7 @@ export function StoreListPage() {
       await storeService.delete(deleteId);
       loadStores();
     } catch (error) {
-      console.error('Failed to delete store:', error);
+      handleError(error, { showToast: true });
     } finally {
       setDeleting(false);
       setDeleteId(null);
@@ -215,7 +216,7 @@ export function StoreListPage() {
         });
       })
       .catch((error) => {
-        console.error(error);
+        handleError(error, { showToast: true });
       });
 
     return () => {
@@ -258,7 +259,7 @@ export function StoreListPage() {
       setDialogOpen(false);
       loadStores();
     } catch (error) {
-      console.error('Failed to save store:', error);
+      handleError(error, { showToast: true });
     } finally {
       setSaving(false);
     }

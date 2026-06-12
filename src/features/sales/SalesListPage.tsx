@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { salesService } from '../../services/salesService';
 import { useAuthStore } from '../../app/store';
 import { formatCurrency, formatDate } from '../../utils';
+import { handleError } from '../../utils/errorHandler';
 import type { Sale } from '../../types';
 
 type SaleRow = Sale & { id: string; rowNumber: number };
@@ -42,7 +43,7 @@ export function SalesListPage() {
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
-      console.error('Failed to load sales:', error);
+      handleError(error, { showToast: true, logData: 'Failed to load sales' });
       setSales([]);
     } finally {
       setLoading(false);

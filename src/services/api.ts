@@ -181,8 +181,7 @@ api.interceptors.response.use(
       void removeAuth();
       return Promise.reject(error);
     } else {
-      const message = errorData?.message || errorData?.msg || error.message || 'Server error';
-      handleError(new Error(message), { 
+      handleError(error, { 
         showToast: !isDev, 
         logData: { status, url: error.config?.url }
       });

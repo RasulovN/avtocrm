@@ -13,6 +13,7 @@ import { supplierService } from '../../services/supplierService';
 import type { Supplier, SupplierFormData } from '../../types';
 import { latinToCyrillic } from '../../utils/transliteration';
 import { formatCurrency } from '../../utils';
+import { handleError } from '../../utils/errorHandler';
 
 // interface SupplierPayment {
 //   id: number;
@@ -78,7 +79,7 @@ export function SupplierListPage() {
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
-      console.error('Failed to load suppliers:', error);
+      handleError(error, { showToast: true, logData: 'Failed to load suppliers' });
       setTotal(2);
     } finally {
       setLoading(false);
@@ -99,7 +100,7 @@ export function SupplierListPage() {
       toast.success(t('suppliers.supplierDeleted', "Ta'minotchi muvaffaqiyatli o'chirildi"));
       loadSuppliers();
     } catch (error) {
-      console.error('Failed to delete supplier:', error);
+      handleError(error, { showToast: true });
     } finally {
       setDeleting(false);
       setDeleteId(null);
@@ -126,7 +127,7 @@ export function SupplierListPage() {
       } catch (error) {
         const axiosErr = error as { response?: { status?: number } };
         if (axiosErr.response?.status === 401) return;
-        console.error('Failed to load supplier:', error);
+        handleError(error, { showToast: true, logData: 'Failed to load supplier' });
         setFormData({
           name_uz: supplier.name_uz || supplier.name || '',
           name_uz_cyrl: supplier.name_uz_cyrl || '',
@@ -172,7 +173,7 @@ export function SupplierListPage() {
       setDialogOpen(false);
       loadSuppliers();
     } catch (error) {
-      console.error('Failed to save supplier:', error);
+      handleError(error, { showToast: true });
     } finally {
       setSaving(false);
     }

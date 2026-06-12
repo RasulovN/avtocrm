@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useCallback, type ChangeEvent, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
 import { Plus, Edit, Trash2, Eye } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
@@ -12,6 +13,7 @@ import { userService } from '../../services/userService';
 import { storeService } from '../../services/storeService';
 import type { User, UserFormData, UserRole, Store } from '../../types';
 import { formatDate } from '../../utils';
+import { handleError } from '../../utils/errorHandler';
 
 export function UserListPage() {
   const { t } = useTranslation();
@@ -57,7 +59,7 @@ export function UserListPage() {
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
-      console.error('Failed to load users:', error);
+      handleError(error, { showToast: true, logData: 'Failed to load users' });
       setUsers([]);
       setTotal(0);
     } finally {
@@ -72,7 +74,7 @@ export function UserListPage() {
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
-      console.error('Failed to load stores:', error);
+      handleError(error, { showToast: true, logData: 'Failed to load stores' });
     }
   }, []);
 
@@ -88,7 +90,7 @@ export function UserListPage() {
       await userService.delete(deleteId);
       await loadUsers();
     } catch (error) {
-      console.error('Failed to delete user:', error);
+      handleError(error, { showToast: true });
     } finally {
       setDeleting(false);
       setDeleteId(null);
@@ -130,22 +132,22 @@ export function UserListPage() {
   const handleSave = async () => {
     try {
       if (!formData.full_name || !formData.phone_number || !formData.email) {
-        console.error('Missing required fields');
+        toast.error(t('errors.requiredFields', 'Majburiy maydonlarni to\'ldiring'));
         return;
       }
       if (!editingUser && (!formData.password || !formData.confirm_password)) {
-        console.error('Password and confirm password are required');
+        toast.error(t('errors.requiredFields', 'Parol va tasdiqlash maydonlarini to\'ldiring'));
         return;
       }
       if (!editingUser && formData.password && formData.confirm_password && formData.password !== formData.confirm_password) {
-        console.error('Passwords do not match');
+        toast.error(t('errors.passwordMismatch', 'Parollar mos kelmadi'));
         return;
       }
       setSaving(true);
       if (editingUser) {
         const id = editingUser.id ?? editingUser.user_id;
         if (!id) {
-          console.error('Missing user id for update');
+          toast.error(t('errors.generic', 'Xatolik yuz berdi'));
           return;
         }
         const updateData = {
@@ -156,7 +158,7 @@ export function UserListPage() {
         await userService.update(String(id), updateData);
       } else {
         if (!formData.store_id) {
-          console.error('Store is required');
+          toast.error(t('errors.requiredFields', 'Dokonni tanlang'));
           return;
         }
         await userService.create(formData);
@@ -164,7 +166,7 @@ export function UserListPage() {
       setDialogOpen(false);
       await loadUsers();
     } catch (error) {
-      console.error('Failed to save user:', error);
+      handleError(error, { showToast: true });
     } finally {
       setSaving(false);
     }

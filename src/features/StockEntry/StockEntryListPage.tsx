@@ -18,6 +18,7 @@ import { inventoryService, type InventoryFilters } from '../../services/inventor
 import { productService } from '../../services/productService';
 import { supplierService } from '../../services/supplierService';
 import { formatCurrency, formatDate } from '../../utils';
+import { handleError } from '../../utils/errorHandler';
 import type { InventoryItem, Supplier } from '../../types';
 export interface SupplierPayment {
   id: number;
@@ -86,7 +87,7 @@ export function StockEntryListPage() {
         const suppliersRes = await supplierService.getAll();
         setSuppliers(Array.isArray(suppliersRes.data) ? suppliersRes.data : []);
       } catch (err) {
-        console.error('Failed to load filter data', err);
+        handleError(err, { showToast: true, logData: 'Failed to load filter data' });
       }
     };
     loadReferences();
@@ -181,7 +182,7 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
-      console.error('Failed to load inventory:', error);
+      handleError(error, { showToast: true, logData: 'Failed to load inventory' });
       setInventory([]);
       setTotalCount(0);
     } finally {
@@ -328,7 +329,7 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
       setPaymentAmount('');
       loadData();
     } catch (error) {
-      console.error('Failed to create payment:', error);
+      handleError(error, { showToast: true });
     } finally {
       setPaying(false);
     }

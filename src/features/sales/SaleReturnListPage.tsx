@@ -14,6 +14,7 @@ import {
 } from '../../components/ui/Dialog';
 import { saleReturnService } from '../../services/salesService';
 import { formatCurrency } from '../../utils';
+import { handleError } from '../../utils/errorHandler';
 import type { SaleReturn } from '../../types';
 
 type ReturnRow = Omit<SaleReturn, 'id'> & { id: string; rowNumber: number };
@@ -39,7 +40,7 @@ export function SaleReturnListPage() {
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
-      console.error('Failed to load sale returns:', error);
+      handleError(error, { showToast: true, logData: 'Failed to load sale returns' });
       setReturns([]);
     } finally {
       setLoading(false);

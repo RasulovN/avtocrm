@@ -18,6 +18,7 @@ import {
 import { DataTable, type Column } from '../../components/shared/DataTable';
 import { customerApiService } from '../../services/customerService';
 import { formatDate, formatCurrency } from '../../utils';
+import { handleError } from '../../utils/errorHandler';
 
 interface CustomerFromApi {
   id: number;
@@ -60,7 +61,7 @@ export function CustomerListPage() {
       setCustomers(response.data || []);
       setTotal(response.total || 0);
     } catch (error) {
-      console.error('Error loading customers:', error);
+      handleError(error, { showToast: true, logData: 'Error loading customers' });
     } finally {
       setLoading(false);
     }
@@ -257,7 +258,7 @@ export function CustomerListPage() {
       await loadData();
       closeDialog();
     } catch (error) {
-      console.error('Error saving customer:', error);
+      handleError(error, { showToast: true });
     } finally {
       setSubmitting(false);
     }
@@ -269,7 +270,7 @@ export function CustomerListPage() {
       await customerApiService.delete(customerId);
       await loadData();
     } catch (error) {
-      console.error('Error deleting customer:', error);
+      handleError(error, { showToast: true });
     } finally {
       setSubmitting(false);
     }

@@ -14,6 +14,7 @@ import { formatDate } from '../../../utils';
 import type { Transfer, Store } from '../../../types';
 import { useProducts } from '../../../context/ProductContext';
 import { useAuthStore } from '../../../app/store';
+import { handleError } from '../../../utils/errorHandler';
 
 export function TransferListPage() {
   const { t } = useTranslation();
@@ -53,7 +54,7 @@ export function TransferListPage() {
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
-      console.error('Failed to load stores:', error);
+      handleError(error, { showToast: true, logData: 'Failed to load stores' });
       setStores([]);
     }
   };
@@ -66,7 +67,7 @@ export function TransferListPage() {
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
-      console.error('Failed to load transfers:', error);
+      handleError(error, { showToast: true, logData: 'Failed to load transfers' });
     } finally {
       setLoading(false);
     }
@@ -84,7 +85,7 @@ export function TransferListPage() {
         prev.map((t) => (t.id === id ? { ...t, status: 'a' } : t))
       );
     } catch (error) {
-      console.error('Failed to approve transfer:', error);
+      handleError(error, { showToast: true });
     }
   };
 
@@ -95,7 +96,7 @@ export function TransferListPage() {
         prev.map((t) => (t.id === id ? { ...t, status: 'r' } : t))
       );
     } catch (error) {
-      console.error('Failed to reject transfer:', error);
+      handleError(error, { showToast: true });
     }
   };
 

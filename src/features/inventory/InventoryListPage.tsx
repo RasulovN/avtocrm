@@ -14,6 +14,7 @@ import { storeService } from '../../services/storeService';
 import { useAuthStore } from '../../app/store';
 import type { Store } from '../../types';
 import { formatDate } from '../../utils';
+import { handleError } from '../../utils/errorHandler';
 
 interface InventorySessionsListPageProps {
   defaultCreateDialogOpen?: boolean;
@@ -62,7 +63,7 @@ export function InventorySessionsListPage({
       const res = await storeService.getAll();
       setStores(Array.isArray(res.data) ? res.data : []);
     } catch {
-      console.error('Failed to load stores:');
+      handleError(new Error('Failed to load stores:'), { showToast: true });
     }
   }, [isAdmin, userStoreId, user?.stores]);
 

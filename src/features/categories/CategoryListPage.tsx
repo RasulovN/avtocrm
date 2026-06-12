@@ -2,6 +2,7 @@ import { useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { handleError } from '../../utils/errorHandler';
 import { useAuthStore } from '../../app/store';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
@@ -62,7 +63,7 @@ export function CategoryListPage() {
       setCategories(response.data || []);
       setTotal(response.total || 0);
     } catch (error) {
-      console.error('Failed to load categories:', error);
+      handleError(error, { showToast: true, logData: 'Failed to load categories' });
       toast.error(t('errors.generic') || 'Xatolik yuz berdi');
     } finally {
       setLoading(false);
@@ -137,7 +138,7 @@ export function CategoryListPage() {
         const fileLabel = fresh.image ? fresh.image.split('/').pop() || '' : '';
         setImageFileName(fileLabel);
       } catch (error) {
-        console.error('Failed to load category by id:', error);
+        handleError(error, { showToast: true, logData: 'Failed to load category by id' });
         const nameValue = category.name_uz ?? category.name ?? '';
         const descriptionValue = category.description_uz ?? category.description ?? '';
         setFormData({
@@ -203,7 +204,7 @@ export function CategoryListPage() {
       await fetchCategories();
       handleCloseDialog();
     } catch (error) {
-      console.error('Failed to save category:', error);
+      handleError(error, { showToast: true });
     } finally {
       setSaving(false);
     }
@@ -218,7 +219,7 @@ export function CategoryListPage() {
       refreshCategories();
       fetchCategories();
     } catch (error) {
-      console.error('Failed to delete category:', error);
+      handleError(error, { showToast: true });
     } finally {
       setDeleting(false);
       setDeleteId(null);

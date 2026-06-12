@@ -35,6 +35,7 @@ import type { Product, ProductFormData, ProductFilters, ProductUnit, CategoryFor
 import { formatCurrency, cn } from '../../utils';
 import { escapeHtml } from '../../utils/xss';
 import { latinToCyrillic } from '../../utils/transliteration';
+import { handleError } from '../../utils/errorHandler';
 
 export function ProductListPage() {
   const { t, i18n } = useTranslation();
@@ -81,7 +82,7 @@ export function ProductListPage() {
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
-      console.error('Failed to load products:', error);
+      handleError(error, { showToast: true, logData: 'Failed to load products' });
     } finally {
       setLoading(false);
     }
@@ -125,7 +126,7 @@ export function ProductListPage() {
       await productService.delete(deleteId);
       loadProducts();
     } catch (error) {
-      console.error('Failed to delete product:', error);
+      handleError(error, { showToast: true });
     } finally {
       setDeleting(false);
       setDeleteId(null);
@@ -175,7 +176,7 @@ export function ProductListPage() {
           });
           dataUrl = canvas.toDataURL('image/png');
         } catch (error) {
-          console.error('Failed to generate barcode data URL:', error);
+          handleError(error, { showToast: true });
         }
       }
 
@@ -277,7 +278,7 @@ export function ProductListPage() {
       setSelectedProductIds([]);
       await loadProducts();
     } catch (error) {
-      console.error('Failed to deactivate products:', error);
+      handleError(error, { showToast: true });
     } finally {
       setDeactivating(false);
     }
@@ -1008,7 +1009,7 @@ function ProductDetailModal({ product, onClose, onEdit, stores, warehouseStore, 
         background: 'transparent',
       });
     } catch (err) {
-      console.error('Barcode generation failed:', err);
+      handleError(err, { showToast: true });
     }
   }, [product, isShtrixUrl]);
 
@@ -1331,7 +1332,7 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
         setUnits(unitList);
         setLocations(locationList?.data || []);
       } catch (error) {
-        console.error('Failed to load product form options:', error);
+        handleError(error, { showToast: true, logData: 'Failed to load product form options' });
       }
     };
     void loadOptions();
@@ -1415,7 +1416,7 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
       toast.success(t('products.productAdded'));
       onSuccess();
     } catch (error) {
-      console.error('Failed to create product:', error);
+      handleError(error, { showToast: true });
       toast.error(t('errors.generic'));
     } finally {
       setSaving(false);
@@ -1439,7 +1440,7 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
       handleChange('category', created.id);
       setIsCategoryDialogOpen(false);
     } catch (error) {
-      console.error('Failed to save category:', error);
+      handleError(error, { showToast: true });
       toast.error(t('errors.generic'));
     } finally {
       setSavingCategory(false);
@@ -1464,7 +1465,7 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
       handleChange('unit_measurement', created.id);
       setIsUnitDialogOpen(false);
     } catch (error) {
-      console.error('Failed to save unit:', error);
+      handleError(error, { showToast: true });
       toast.error(t('errors.generic'));
     } finally {
       setSavingUnit(false);
