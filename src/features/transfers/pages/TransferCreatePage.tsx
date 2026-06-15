@@ -141,7 +141,7 @@ export function TransferCreatePage() {
                 <Label className="text-sm font-semibold text-foreground">{t('transfers.fromStore', 'Qayerdan')}</Label>
                 <Select value={fromStoreId} onValueChange={setFromStoreId} disabled={!isAdmin}>
                   <SelectTrigger className="bg-muted/40 border-border/60 h-11 shadow-none">
-                    <SelectValue placeholder={t('transfers.selectProduct', 'Tanlang')} />
+                    <SelectValue placeholder={t('transfers.selectStore', 'Do‘konni tanlang')} />
                   </SelectTrigger>
                   <SelectContent>
                     {safeStores.map(s => (
@@ -154,7 +154,7 @@ export function TransferCreatePage() {
                 <Label className="text-sm font-semibold text-foreground">{t('transfers.toStore', 'Qayerga')}</Label>
                 <Select value={toStoreId} onValueChange={setToStoreId}>
                   <SelectTrigger className="bg-muted/40 border-border/60 h-11 shadow-none">
-                    <SelectValue placeholder={t('transfers.selectProduct', 'Tanlang')} />
+                    <SelectValue placeholder={t('transfers.selectStore', 'Do‘konni tanlang')} />
                   </SelectTrigger>
                   <SelectContent>
                     {safeStores.filter(s => String(s.id) !== String(fromStoreId)).map(s => (

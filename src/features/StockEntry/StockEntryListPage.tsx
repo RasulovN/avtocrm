@@ -595,7 +595,7 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
             </DialogDescription>
           </DialogHeader>
           {selectedInventory && (
-            <div className="space-y-4 px-1 pb-1">
+            <div className="space-y-4 px-1 pb-1 overflow-y-auto max-h-[calc(90vh-7rem)]">
               <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
                 <div>
                   <span className="text-muted-foreground">{t('inventory.supplier')}:</span>
@@ -736,7 +736,7 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
                       </Card>
                     ))}
                   </div>
-                  <div className="hidden rounded border md:block">
+                  <div className="hidden rounded border md:block overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
