@@ -310,6 +310,69 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
     }
   };
 
+  const handlePrintEntry = (inv: DisplayInventory) => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const dateStr = `${now.getFullYear()}.${pad(now.getMonth() + 1)}.${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const storeName = inv.store_name || inv.store_id;
+
+    const rows = inv.items.map((item, idx) => `
+      <tr>
+        <td>${idx + 1}</td>
+        <td>${item.product_name}</td>
+        <td>${item.product_sku || item.product_barcode || '-'}</td>
+        <td>${item.purchase_price.toLocaleString('ru-RU')}</td>
+        <td>${item.quantity}</td>
+      </tr>
+    `).join('');
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>Utkazma</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; font-size: 12px; padding: 16px; }
+  .header { font-size: 12px; margin-bottom: 8px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid #000; padding: 4px 6px; text-align: left; font-size: 12px; }
+  th { font-weight: bold; background: #fff; }
+  td:first-child, th:first-child { width: 30px; text-align: center; }
+  @media print { body { padding: 8px; } }
+</style>
+</head>
+<body>
+  <div class="header">${dateStr} ${storeName}</div>
+  <table>
+    <thead>
+      <tr>
+        <th>№</th>
+        <th>Наименование</th>
+        <th>Артикул</th>
+        <th>Цена пост</th>
+        <th>Отправлено</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rows}
+    </tbody>
+  </table>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+      setTimeout(() => {
+        win.focus();
+        win.print();
+      }, 500);
+    }
+  };
+
   const handlePayDebt = () => {
     if (!selectedInventory || !selectedInventory.debt) return;
     setPaymentAmount(String(selectedInventory.debt));
@@ -589,10 +652,25 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
         <DialogContent className="max-w-3xl pb-6">
           <DialogHeader>
-            <DialogTitle>{t('inventory.detailsTitle')}</DialogTitle>
-            <DialogDescription>
-              {formatDate(selectedInventory?.created_at || '')}
-            </DialogDescription>
+            <div className="flex items-center justify-between pr-6">
+              <div>
+                <DialogTitle>{t('inventory.detailsTitle')}</DialogTitle>
+                <DialogDescription>
+                  {formatDate(selectedInventory?.created_at || '')}
+                </DialogDescription>
+              </div>
+              {selectedInventory && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePrintEntry(selectedInventory)}
+                  className="flex items-center gap-1.5"
+                >
+                  <Printer className="h-4 w-4" />
+                  Chop etish
+                </Button>
+              )}
+            </div>
           </DialogHeader>
           {selectedInventory && (
             <div className="space-y-4 px-1 pb-1 overflow-y-auto max-h-[calc(90vh-7rem)]">

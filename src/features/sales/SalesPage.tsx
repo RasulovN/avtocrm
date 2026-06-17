@@ -1558,15 +1558,15 @@ export function SalesPage() {
                       {selectedProduct.inventory_by_store.map((inv) => (
                         <div
                           key={inv.store_id}
-                          className="flex items-center justify-between rounded-xl border bg-background p-3 text-sm"
+                          className="rounded-xl border bg-background p-3 text-sm space-y-2"
                         >
-                          <div className="flex flex-col">
-                            <span className="font-medium">{inv.store_name}</span>
-                            {inv.location_name && (
-                              <span className="text-xs text-muted-foreground">{inv.location_name}</span>
-                            )}
-                          </div>
-                          <div className="flex flex-col items-end gap-1">
+                          <div className="flex items-center justify-between">
+                            <div className="flex flex-col">
+                              <span className="font-medium">{inv.store_name}</span>
+                              {inv.location_name && (
+                                <span className="text-xs text-muted-foreground">{inv.location_name}</span>
+                              )}
+                            </div>
                             <span
                               className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${inv.quantity > 0
                                 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
@@ -1575,11 +1575,26 @@ export function SalesPage() {
                             >
                               {inv.quantity} {t('common.pcs', 'дона')}
                             </span>
-                            {inv.selling_price && inv.selling_price > 0 && (
-                              <span className="text-xs font-medium text-muted-foreground">
-                                {formatCurrency(inv.selling_price)}
-                              </span>
-                            )}
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 pt-1 border-t border-border/40">
+                            <div>
+                              <p className="text-[10px] text-muted-foreground mb-0.5">Sotish narxi</p>
+                              <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                                {formatCurrency(inv.selling_price ?? 0)}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-muted-foreground mb-0.5">Olish narxi</p>
+                              <p className="text-xs font-semibold tabular-nums">
+                                {formatCurrency(inv.purchase_price ?? 0)}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-muted-foreground mb-0.5">Ulgurji narx</p>
+                              <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 tabular-nums">
+                                {formatCurrency(inv.wholesale_price ?? 0)}
+                              </p>
+                            </div>
                           </div>
                         </div>
                       ))}

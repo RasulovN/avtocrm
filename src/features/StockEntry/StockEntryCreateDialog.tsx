@@ -158,7 +158,7 @@ export function StockEntryCreateDialog({
   }, [imagePreviews]);
 
   const handleProductSubmit = async () => {
-    if (!newProductData.name || !newProductData.category || !newProductData.unit_measurement) {
+    if (!newProductData.name || !newProductData.unit_measurement) {
       toast.error(t('errors.validationError', 'Barcha majdonlarni to\'ldiring'));
       return;
     }

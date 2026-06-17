@@ -329,6 +329,7 @@ export interface TransferItem {
   id: string;
   product: number;
   product_name?: string;
+  sku?: string;
   product_sku?: string;
   product_barcode?: string;
   quantity: number;

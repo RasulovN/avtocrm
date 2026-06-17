@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { Plus, ArrowRight, Eye, Search, Check, X, Package, CheckCircle2 } from 'lucide-react';
+import { Plus, ArrowRight, Eye, Search, Check, X, Package, CheckCircle2, Printer } from 'lucide-react';
 import { PageHeader } from '../../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../../components/shared/DataTable';
 import { Button } from '../../../components/ui/Button';
@@ -97,6 +97,85 @@ export function TransferListPage() {
       );
     } catch (error) {
       handleError(error, { showToast: true });
+    }
+  };
+
+  const handlePrintTransfer = (transfer: Transfer) => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const dateStr = `${now.getFullYear()}.${pad(now.getMonth() + 1)}.${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const fromStore = fromStoreLabel(transfer);
+    const toStore = toStoreLabel(transfer);
+
+    let rows = '';
+    if (transfer.items && transfer.items.length > 0) {
+      rows = transfer.items.map((item, idx) => `
+        <tr>
+          <td>${idx + 1}</td>
+          <td>${item.product_name || '-'}</td>
+          <td>${item.sku || item.product_sku || item.product_barcode || '-'}</td>
+          <td>${item.purchase_price ?? '-'}</td>
+          <td>${item.quantity}</td>
+          <td style="width:40px;text-align:center;"></td>
+        </tr>
+      `).join('');
+    } else {
+      rows = `<tr>
+        <td>1</td>
+        <td>${transfer.product_name || '-'}</td>
+        <td>-</td>
+        <td>${transfer.purchase_price ?? '-'}</td>
+        <td>${transfer.quantity ?? '-'}</td>
+        <td style="width:40px;text-align:center;"></td>
+      </tr>`;
+    }
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>O'tkazma</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; font-size: 12px; padding: 16px; }
+  .header { font-size: 12px; margin-bottom: 8px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid #000; padding: 4px 6px; text-align: left; font-size: 12px; }
+  th { font-weight: bold; background: #fff; }
+  td:first-child, th:first-child { width: 30px; text-align: center; }
+  td:last-child, th:last-child { width: 40px; text-align: center; }
+  @media print { body { padding: 8px; } }
+</style>
+</head>
+<body>
+  <div class="header">${dateStr} &nbsp; ${fromStore} → ${toStore}</div>
+  <table>
+    <thead>
+      <tr>
+        <th>№</th>
+        <th>Наименование</th>
+        <th>Артикул</th>
+        <th>Цена пост</th>
+        <th>Отправлено</th>
+        <th>✓</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rows}
+    </tbody>
+  </table>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+      setTimeout(() => {
+        win.focus();
+        win.print();
+      }, 500);
     }
   };
 
@@ -409,10 +488,25 @@ export function TransferListPage() {
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
         <DialogContent className="max-w-2xl sm:max-w-2xl pb-6">
           <DialogHeader>
-            <DialogTitle>{t('transfers.detailsTitle')}</DialogTitle>
-            <DialogDescription>
-              {formatDate(selectedTransfer?.created_at || '')}
-            </DialogDescription>
+            <div className="flex items-center justify-between pr-6">
+              <div>
+                <DialogTitle>{t('transfers.detailsTitle')}</DialogTitle>
+                <DialogDescription>
+                  {formatDate(selectedTransfer?.created_at || '')}
+                </DialogDescription>
+              </div>
+              {selectedTransfer && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePrintTransfer(selectedTransfer)}
+                  className="flex items-center gap-1.5"
+                >
+                  <Printer className="h-4 w-4" />
+                  Chop etish
+                </Button>
+              )}
+            </div>
           </DialogHeader>
           {selectedTransfer && (
             <div className="space-y-4">
