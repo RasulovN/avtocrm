@@ -6,7 +6,7 @@ import App from './App.tsx'
 import { CategoryProvider } from './context/CategoryContext.tsx'
 import { ProductProvider } from './context/ProductContext.tsx'
 
-// Suppress console logging in development for network requests
+// Suppress console logging in development for network requests 2
 if (import.meta.env.DEV) {
   const originalConsoleLog = console.log;
   const originalConsoleDebug = console.debug;
