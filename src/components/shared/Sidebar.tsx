@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -19,6 +19,7 @@ import {
   ChevronRight,
   ClipboardCheck, 
   TriangleAlert,
+  AlertTriangle,
   Plus,
   List,
 } from 'lucide-react';
@@ -45,6 +46,7 @@ const navItems: NavItem[] = [
     children: [
       { titleKey: 'inventory.inventoryList', href: '/inventory', icon: List },
       // { titleKey: 'inventory.shortages', href: '/inventory/kamomat', icon: TriangleAlert },
+      { titleKey: 'inventory.lowStock', href: '/inventory/low-stock', icon: AlertTriangle },
       { titleKey: 'inventory.newInventory', href: '/inventory/new', icon: Plus },
     ],
   },
@@ -86,13 +88,25 @@ export function Sidebar({ className }: SidebarProps) {
            (location.pathname === `/${item.href}` && item.href === '/dashboard');
   };
 
-  const getInitialExpandedMenus = () => {
-    return navItems
+  const getActiveMenus = () =>
+    navItems
       .filter(item => item.children && isMenuActive(item))
       .map(item => item.titleKey);
-  };
 
-  const [expandedMenus, setExpandedMenus] = useState<string[]>(getInitialExpandedMenus);
+  // Always keep 'nav.inventory' expanded by default
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(() => {
+    const active = getActiveMenus();
+    return Array.from(new Set([...active, 'nav.inventory']));
+  });
+
+  // Re-expand menus when route changes (e.g. direct navigation to /inventory/low-stock)
+  useEffect(() => {
+    const active = getActiveMenus();
+    if (active.length > 0) {
+      setExpandedMenus(prev => Array.from(new Set([...prev, ...active])));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
 
   const toggleMenu = (titleKey: string) => {
     setExpandedMenus(prev => 

@@ -66,6 +66,7 @@
     "stockentry": "Kirim",
     "inventory": "Inventarizatsiya",
     "inventorySessions": "Inventarizatsiya",
+    "lowStock": "Kam Zaxira",
     "saleReturns": "Qaytarishlar",
     "storeInfo": "Do‘kon ma’lumotlari",
     "logout": "Chiqish"
@@ -327,7 +328,23 @@
     "transferOut": "O‘tkazma (chiqim)",
     "transferIn": "O‘tkazma (kirim)",
     "entry": "Kirim",
-    "createdAt": "Yaratilgan sana"
+    "createdAt": "Yaratilgan sana",
+    "lowStock": "Kam Zaxira",
+    "lowStockDesc": "Minimal zaxira chegarasidan past tushgan mahsulotlar ro'yxati",
+    "purchaseNeeded": "Xarid kerak",
+    "transferNeeded": "Transfer kerak",
+    "lowStockHistory": "Tarix",
+    "currentQty": "Joriy miqdor",
+    "minStock": "Min zaxira",
+    "resolvedAt": "Yopilgan vaqt",
+    "noLowStock": "Kam zaxirali mahsulotlar yo'q",
+    "noLowStockHistory": "Tarix yo'q",
+    "lowStockOpen": "Ochiq",
+    "lowStockResolved": "Yopilgan",
+    "allStores": "Barcha do'konlar",
+    "orderingLabel": "Tartiblash",
+    "newLowStockNotification": "Mahsulot tugayapti",
+    "shortage": "Kamomad"
   },
   "stockentry": {
     "title": "Kirim",

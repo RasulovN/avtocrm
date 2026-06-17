@@ -66,6 +66,7 @@
     "stockentry": "Кирим",
     "inventory": "Инвенторизация",
     "inventorySessions": "Инвентаризация",
+    "lowStock": "Кам Захира",
     "saleReturns": "Қайтаришлар",
     "storeInfo": "Дўкон маълумотлари",
     "logout": "Чиқиш"
@@ -328,7 +329,23 @@
     "transferOut": "Ўтказма (чиқим)",
     "transferIn": "Ўтказма (кирим)",
     "entry": "Кирим",
-    "createdAt": "Яратилган сана"
+    "createdAt": "Яратилган сана",
+    "lowStock": "Кам Захира",
+    "lowStockDesc": "Минимал захира чегарасидан паст тушган маҳсулотлар рўйхати",
+    "purchaseNeeded": "Харид керак",
+    "transferNeeded": "Трансфер керак",
+    "lowStockHistory": "Тарих",
+    "currentQty": "Жорий миқдор",
+    "minStock": "Мин захира",
+    "resolvedAt": "Ёпилган вақт",
+    "noLowStock": "Кам захирали маҳсулотлар йўқ",
+    "noLowStockHistory": "Тарих йўқ",
+    "lowStockOpen": "Очиқ",
+    "lowStockResolved": "Ёпилган",
+    "allStores": "Барча дўконлар",
+    "orderingLabel": "Тартиблаш",
+    "newLowStockNotification": "Маҳсулот тугаяпти",
+    "shortage": "Камомад"
   },
   "stockentry": {
     "title": "Кирим",

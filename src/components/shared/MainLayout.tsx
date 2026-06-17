@@ -31,6 +31,7 @@ import {
   Ruler,
   Undo2,
   X,
+  AlertTriangle,
 } from 'lucide-react';
 import { NotificationProvider } from '../../context/NotificationProvider';
 import { NotificationToast } from './NotificationToast';
@@ -60,6 +61,7 @@ const navItems: NavItem[] = [
   // { titleKey: 'nav.categories', href: '/categories', icon: Tags, access: 'all' },
   { titleKey: 'nav.stockentry', href: '/stockentry', icon: ArrowDownToLine, access: 'superuser' },
   { titleKey: 'nav.inventory', href: '/inventory', icon: ClipboardCheck, access: 'all' },
+  { titleKey: 'nav.lowStock', href: '/inventory/low-stock', icon: AlertTriangle, access: 'all' },
   { titleKey: 'nav.customers', href: '/customers', icon: Users, access: 'all' },
   { titleKey: 'nav.suppliers', href: '/suppliers', icon: Truck, access: 'superuser' },
   { titleKey: 'nav.stores', href: '/stores', icon: Store, access: 'superuser' },
@@ -74,11 +76,7 @@ const subNavs: Record<string, SubNavItem[]> = {
     // { titleKey: 'stockentry.list', href: '/stockentry', icon: List },
     // { titleKey: 'stockentry.createIncomingStock', href: '/stockentry/new', icon: Plus },
   // ],
-  // '/inventory': [
-    // { titleKey: 'inventory.inventoryList', href: '/inventory', icon: List },
-    // { titleKey: 'inventory.shortages', href: '/inventory/kamomat', icon: TriangleAlert },
-    // { titleKey: 'inventory.newInventory', href: '/inventory/new', icon: Plus },
-  // ],
+  // '/inventory': removed — standalone link, no submenu
   // '/transfers': [
   //   { titleKey: 'transfers.list', href: '/transfers', icon: List },
   //   { titleKey: 'transfers.createTransfer', href: '/transfers/new', icon: Plus },
@@ -367,8 +365,17 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
                   ? filteredSubNavs[item.href][0].href
                   : item.href;
                 const href = `/${lang}${defaultHref}`;
-                const isActive = location.pathname.startsWith(`/${lang}${item.href}`) ||
+                const currentPath = `/${lang}${item.href}`;
+                const pathMatches = location.pathname.startsWith(currentPath) ||
                   (item.href === '/dashboard' && location.pathname === `/${lang}`);
+                // Don't mark active if a more specific nav item also matches this path
+                const hasMoreSpecificMatch = pathMatches && navItems.some(
+                  (other) =>
+                    other.href !== item.href &&
+                    other.href.startsWith(item.href + '/') &&
+                    location.pathname.startsWith(`/${lang}${other.href}`)
+                );
+                const isActive = pathMatches && !hasMoreSpecificMatch;
 
                 return (
                   <Link
