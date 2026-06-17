@@ -49,6 +49,9 @@ const InventoryDetailPage = lazy(() =>
 const InventoryShortagesPage = lazy(() =>
   import('./features/inventory/InventoryShortagesPage').then((module) => ({ default: module.InventoryShortagesPage }))
 );
+const LowStockPage = lazy(() =>
+  import('./features/inventory/LowStockPage').then((module) => ({ default: module.LowStockPage }))
+);
 const TransferListPage = lazy(() =>
   import('./features/transfers/pages/TransferListPage').then((module) => ({ default: module.TransferListPage }))
 );
@@ -290,6 +293,11 @@ function App() {
 
           <Route path={`/:lang/inventory/kamomat`} element={
             withLayoutNoSeller(<InventoryShortagesPage />)
+          } />
+
+          {/* Low Stock — Kam Zaxira */}
+          <Route path={`/:lang/inventory/low-stock`} element={
+            withLayoutNoSeller(<LowStockPage />)
           } />
 
           {/* Inventory Sessions - List */}

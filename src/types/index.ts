@@ -324,6 +324,30 @@ export interface ContractEntry {
   debt?: number;
 }
 
+// Low Stock Types
+export interface LowStockItem {
+  id: number;
+  store: number;
+  store_name: string;
+  product: number;
+  product_name: string;
+  current_quantity: number;
+  min_stock: number;
+  action_type: 'purchase' | 'transfer';
+  status: 'open' | 'resolved';
+  resolved_at: string | null;
+  created_at: string;
+}
+
+export interface LowStockPaginatedResponse {
+  count: number;
+  total_pages: number;
+  current_page: number;
+  next: string | null;
+  previous: string | null;
+  results: LowStockItem[];
+}
+
 // Transfer Types
 export interface TransferItem {
   id: string;
