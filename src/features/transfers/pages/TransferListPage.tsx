@@ -11,6 +11,7 @@ import { Input } from '../../../components/ui/Input';
 import { transferService } from '../../../services/transferService';
 import { storeService } from '../../../services/storeService';
 import { formatDate } from '../../../utils';
+import { escapeHtml } from '../../../utils/xss';
 import type { Transfer, Store } from '../../../types';
 import { useProducts } from '../../../context/ProductContext';
 import { useAuthStore } from '../../../app/store';
@@ -112,20 +113,20 @@ export function TransferListPage() {
       rows = transfer.items.map((item, idx) => `
         <tr>
           <td>${idx + 1}</td>
-          <td>${item.product_name || '-'}</td>
-          <td>${item.sku || item.product_sku || item.product_barcode || '-'}</td>
-          <td>${item.purchase_price ?? '-'}</td>
-          <td>${item.quantity}</td>
+          <td>${escapeHtml(item.product_name || '-')}</td>
+          <td>${escapeHtml(item.sku || item.product_sku || item.product_barcode || '-')}</td>
+          <td>${escapeHtml(String(item.purchase_price ?? '-'))}</td>
+          <td>${escapeHtml(String(item.quantity))}</td>
           <td style="width:40px;text-align:center;"></td>
         </tr>
       `).join('');
     } else {
       rows = `<tr>
         <td>1</td>
-        <td>${transfer.product_name || '-'}</td>
+        <td>${escapeHtml(transfer.product_name || '-')}</td>
         <td>-</td>
-        <td>${transfer.purchase_price ?? '-'}</td>
-        <td>${transfer.quantity ?? '-'}</td>
+        <td>${escapeHtml(String(transfer.purchase_price ?? '-'))}</td>
+        <td>${escapeHtml(String(transfer.quantity ?? '-'))}</td>
         <td style="width:40px;text-align:center;"></td>
       </tr>`;
     }
@@ -148,7 +149,7 @@ export function TransferListPage() {
 </style>
 </head>
 <body>
-  <div class="header">${dateStr} &nbsp; ${fromStore} → ${toStore}</div>
+  <div class="header">${escapeHtml(dateStr)} &nbsp; ${escapeHtml(fromStore)} → ${escapeHtml(toStore)}</div>
   <table>
     <thead>
       <tr>

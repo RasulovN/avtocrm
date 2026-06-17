@@ -13,10 +13,10 @@ describe('Card', () => {
     expect(screen.getByText('Content').className).toContain('custom-card');
   });
 
-  it('has rounded-lg and border classes', () => {
+  it('has rounded-2xl and border classes', () => {
     render(<Card>Test</Card>);
     const card = screen.getByText('Test');
-    expect(card.className).toContain('rounded-lg');
+    expect(card.className).toContain('rounded-2xl');
     expect(card.className).toContain('border');
   });
 
@@ -51,11 +51,11 @@ describe('CardTitle', () => {
     expect(title.tagName).toBe('H3');
   });
 
-  it('has text-2xl font-semibold classes', () => {
+  it('has text-xl font-bold classes', () => {
     render(<CardTitle>Styled</CardTitle>);
     const title = screen.getByText('Styled');
-    expect(title.className).toContain('text-2xl');
-    expect(title.className).toContain('font-semibold');
+    expect(title.className).toContain('text-xl');
+    expect(title.className).toContain('font-bold');
   });
 });
 

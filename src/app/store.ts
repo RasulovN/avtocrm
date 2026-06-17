@@ -85,7 +85,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   isStoreScopedUser: () => {
     const user = get().user;
-    return Boolean(user) && !Boolean(user?.is_superuser || user?.role === 'superuser');
+    return Boolean(user) && !(user?.is_superuser || user?.role === 'superuser');
   },
 }));
 

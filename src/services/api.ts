@@ -14,6 +14,7 @@ export interface ApiRequestConfig extends AxiosRequestConfig {
   expectedErrorStatuses?: number[];
   skipGlobalErrorHandler?: boolean;
   _retry?: boolean;
+  _refreshFailed?: boolean;
 }
 
 const removeAuth = async () => {
@@ -143,7 +144,7 @@ api.interceptors.response.use(
       }
 
       const originalRequest = error.config as ApiRequestConfig;
-      if (originalRequest && !originalRequest._retry) {
+      if (originalRequest && !originalRequest._retry && !originalRequest._refreshFailed) {
         originalRequest._retry = true;
 
         if (isRefreshing) {
@@ -168,6 +169,7 @@ api.interceptors.response.use(
               resolve(api(originalRequest));
             })
             .catch((err) => {
+              originalRequest._refreshFailed = true;
               processQueue(err);
               void removeAuth();
               reject(err);

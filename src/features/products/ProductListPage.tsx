@@ -33,7 +33,6 @@ import { useAuthStore } from '../../app/store';
 import { useCategories } from '../../context/CategoryContext';
 import type { Product, ProductFormData, ProductFilters, ProductUnit, CategoryFormData, ProductUnitFormData, Store, Category } from '../../types';
 import { formatCurrency, cn } from '../../utils';
-import { escapeHtml } from '../../utils/xss';
 import { latinToCyrillic } from '../../utils/transliteration';
 import { handleError } from '../../utils/errorHandler';
 
@@ -511,7 +510,17 @@ export function ProductListPage() {
                         onError={(e) => {
                           const img = e.target as HTMLImageElement;
                           img.style.display = 'none';
-                          img.parentElement!.innerHTML = '<div class="h-16 w-16 rounded-xl border border-dashed border-border bg-muted/30 flex items-center justify-center"><span class="text-muted-foreground text-xs">—</span></div>';
+                          const parent = img.parentElement;
+                          if (parent && !parent.querySelector('[data-img-fallback]')) {
+                            const ph = document.createElement('div');
+                            ph.setAttribute('data-img-fallback', '');
+                            ph.className = 'h-16 w-16 rounded-xl border border-dashed border-border bg-muted/30 flex items-center justify-center';
+                            const span = document.createElement('span');
+                            span.className = 'text-muted-foreground text-xs';
+                            span.textContent = '—';
+                            ph.appendChild(span);
+                            parent.appendChild(ph);
+                          }
                         }}
                       />
                     ) : (
@@ -770,7 +779,17 @@ export function ProductListPage() {
                           onError={(e) => {
                             const img = e.target as HTMLImageElement;
                             img.style.display = 'none';
-                            img.parentElement!.innerHTML = '<div class="h-11 w-11 rounded-lg border border-dashed border-border bg-muted/30 flex items-center justify-center"><span class="text-muted-foreground text-xs">—</span></div>';
+                            const parent = img.parentElement;
+                            if (parent && !parent.querySelector('[data-img-fallback]')) {
+                              const ph = document.createElement('div');
+                              ph.setAttribute('data-img-fallback', '');
+                              ph.className = 'h-11 w-11 rounded-lg border border-dashed border-border bg-muted/30 flex items-center justify-center';
+                              const span = document.createElement('span');
+                              span.className = 'text-muted-foreground text-xs';
+                              span.textContent = '—';
+                              ph.appendChild(span);
+                              parent.appendChild(ph);
+                            }
                           }}
                         />
                       ) : (

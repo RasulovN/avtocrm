@@ -23,6 +23,11 @@ export default defineConfig([
       'react-hooks/set-state-in-effect': 'off',
       'react-refresh/only-export-components': ['error', { allowConstantExport: true }],
        '@typescript-eslint/no-explicit-any': 'off',
+      // Security hardening rules
+      'no-eval': 'error',
+      'no-implied-eval': 'error',
+      'no-new-func': 'error',
+      'no-script-url': 'error',
     },
   },
 ])

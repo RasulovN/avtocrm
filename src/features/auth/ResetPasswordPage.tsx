@@ -24,6 +24,11 @@ export function ResetPasswordPage() {
       return;
     }
 
+    if (newPassword.length < 8) {
+      toast.error(t('messages.passwordTooShort', "Parol kamida 8 ta belgidan iborat bo'lishi kerak"));
+      return;
+    }
+
     if (newPassword !== confirmPassword) {
       toast.error(t('messages.passwordsNotMatch'));
       return;

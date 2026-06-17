@@ -203,7 +203,8 @@ describe('DataTable', () => {
         quantityKey="value"
       />
     );
-    expect(screen.getByText('Total:')).toBeInTheDocument();
+    // i18n test muhitida init qilinmagani uchun t() kalitni qaytaradi
+    expect(screen.getByText('products.productTotalCount')).toBeInTheDocument();
     expect(screen.getByText('600')).toBeInTheDocument();
   });
 });

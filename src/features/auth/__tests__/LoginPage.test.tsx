@@ -11,6 +11,7 @@ vi.mock('react-i18next', () => ({
         'auth.password': 'Parol',
         'auth.loginButton': 'Kirish',
         'auth.phoneNumber': 'Telefon raqami',
+        'auth.forgotPassword': 'Parolni unutdingizmi?',
         'common.loading': 'Yuklanmoqda...',
         'stores.phone': 'Telefon',
       };
@@ -20,7 +21,7 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-vi.mock('../../app/store', () => ({
+vi.mock('../../../app/store', () => ({
   useAuthStore: vi.fn(() => ({
     login: vi.fn().mockResolvedValue({}),
     isLoading: false,

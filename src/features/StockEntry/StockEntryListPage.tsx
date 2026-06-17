@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import { Plus, FileText, Eye, Search, X, ChevronLeft, ChevronRight, CreditCard, Printer } from 'lucide-react';
-import { generateBarcodePrintHtml, generateMultipleBarcodesPrintHtml } from '../../utils/xss';
+import { generateBarcodePrintHtml, generateMultipleBarcodesPrintHtml, escapeHtml } from '../../utils/xss';
 
 import { StockEntryCreateDialog } from './StockEntryCreateDialog';
 import { PageHeader } from '../../components/shared/PageHeader';
@@ -319,10 +319,10 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
     const rows = inv.items.map((item, idx) => `
       <tr>
         <td>${idx + 1}</td>
-        <td>${item.product_name}</td>
-        <td>${item.product_sku || item.product_barcode || '-'}</td>
-        <td>${item.purchase_price.toLocaleString('ru-RU')}</td>
-        <td>${item.quantity}</td>
+        <td>${escapeHtml(item.product_name)}</td>
+        <td>${escapeHtml(item.product_sku || item.product_barcode || '-')}</td>
+        <td>${escapeHtml(item.purchase_price.toLocaleString('ru-RU'))}</td>
+        <td>${escapeHtml(String(item.quantity))}</td>
       </tr>
     `).join('');
 
@@ -343,7 +343,7 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
 </style>
 </head>
 <body>
-  <div class="header">${dateStr} ${storeName}</div>
+  <div class="header">${escapeHtml(dateStr)} ${escapeHtml(String(storeName))}</div>
   <table>
     <thead>
       <tr>
