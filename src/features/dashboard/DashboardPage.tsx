@@ -204,7 +204,7 @@ export function DashboardPage() {
           }
           setIsLoading(false);
         }
-      } catch (err) {
+      } catch {
         if (active) {
           setError(t('errors.generic', 'Tizimda xatolik yuz berdi'));
           setData(initialDashboardData);

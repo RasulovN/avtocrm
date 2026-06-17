@@ -50,7 +50,7 @@ export class NotificationWebSocketService {
       try {
         const data = JSON.parse(event.data);
         this.listeners.forEach((cb) => cb(data));
-      } catch (e) {
+      } catch {
         this.log('Invalid JSON:', event.data);
       }
     };

@@ -26,7 +26,7 @@ interface InventoryState {
 
 const debouncedScans: Map<number, ReturnType<typeof setTimeout>> = new Map();
 
-export const useInventoryStore = create<InventoryState>((set, get) => ({
+export const useInventoryStore = create<InventoryState>((set) => ({
   sessions: [],
   currentSessionProducts: [],
   currentSessionChecked: [],

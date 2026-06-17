@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams } from 'react-router-dom';
 import { Plus, FileText, Eye, Search, X, ChevronLeft, ChevronRight, CreditCard, Printer } from 'lucide-react';
 import { generateBarcodePrintHtml, generateMultipleBarcodesPrintHtml, escapeHtml } from '../../utils/xss';
 
@@ -48,8 +47,6 @@ type DisplayInventoryRow = DisplayInventory & { rowNumber: number };
 
 export function StockEntryListPage() {
   const { t } = useTranslation();
-  const params = useParams();
-   params.lang || 'uz';
 
   const [inventory, setInventory] = useState<DisplayInventory[]>([]);
   const [loading, setLoading] = useState(true);

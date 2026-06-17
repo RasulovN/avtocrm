@@ -87,7 +87,7 @@ export function useBarcodeScanner({
       playSuccessSound();
       setStatus('success');
       setMessage(`${t('messages.success')}: ${trimmed}`);
-    } catch (error) {
+    } catch {
       playErrorSound();
       setStatus('not_found');
       setMessage(`${t('sales.noProducts')}: ${trimmed}`);

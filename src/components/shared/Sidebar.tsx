@@ -14,11 +14,9 @@ import {
   X,
   FileText,
   Settings,
-  Send,
   ChevronDown,
   ChevronRight,
-  ClipboardCheck, 
-  TriangleAlert,
+  ClipboardCheck,
   Plus,
   List,
 } from 'lucide-react';

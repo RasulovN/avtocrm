@@ -111,24 +111,6 @@ export function SalesDetailPage() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const styles = {
-      partial: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-      paid: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-      completed: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-    };
-    const labels = {
-      partial: t('common.pending'),
-      paid: t('sales.paid'),
-      completed: t('common.completed'),
-    };
-    return (
-      <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[status as keyof typeof styles] || styles.paid}`}>
-        {labels[status as keyof typeof labels] || status}
-      </span>
-    );
-  };
-
   const cashAmount = useMemo(() => {
     if (!sale?.payments) return 0;
     return sale.payments

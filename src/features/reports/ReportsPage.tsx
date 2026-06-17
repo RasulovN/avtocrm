@@ -171,7 +171,7 @@ const availableBranches = useMemo(() => {
           setData(res);
           setIsLoading(false);
         }
-      } catch (err) {
+      } catch {
         if (active) {
           setError(getTrans('Xatolik yuz berdi'));
           setIsLoading(false);

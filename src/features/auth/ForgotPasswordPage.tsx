@@ -8,7 +8,6 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
 import { Card, CardContent, CardDescription, CardHeader } from '../../components/ui/Card';
-import { t } from 'i18next';
 
 export function ForgotPasswordPage() {
   const { t } = useTranslation();

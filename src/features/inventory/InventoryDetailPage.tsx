@@ -768,7 +768,6 @@ function DesktopProductRow({
   product,
   onChange,
   isScanning,
-  t,
   readOnly = false,
 }: DesktopProductRowProps) {
   return (

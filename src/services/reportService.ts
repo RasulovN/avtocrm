@@ -450,7 +450,7 @@ export const reportService = {
         skipGlobalErrorHandler: true,
       });
       return normalizeDashboardReportData(response.data);
-    } catch (error: unknown) {
+    } catch {
       try {
         const fallback = await apiClient.get<unknown>('/reports/', {
           params: buildReportQueryParams(params),
@@ -470,7 +470,7 @@ export const reportService = {
         skipGlobalErrorHandler: true,
       });
       return normalizeDashboardData(response.data);
-    } catch (error: unknown) {
+    } catch {
       return null;
     }
   },
@@ -483,7 +483,7 @@ export const reportService = {
         skipGlobalErrorHandler: true,
       });
       return normalizeDashboardTopProducts(response.data);
-    } catch (error: unknown) {
+    } catch {
       try {
         const fallback = await apiClient.get<unknown>('/top-products/', {
           params: query,

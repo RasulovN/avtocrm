@@ -331,7 +331,7 @@ export function SalesPage() {
       } else {
         if (!isFromScan) setSearchResults([]);
       }
-    } catch (error) {
+    } catch {
       if (!isFromScan) setSearchResults([]);
     }
 
@@ -707,7 +707,7 @@ export function SalesPage() {
       addProduct(hydratedProduct);
       barcodeOnChange({ target: { value: '' } } as ChangeEvent<HTMLInputElement>);
       setSearchResults(null);
-    } catch (error) {
+    } catch {
       toast.error(t('messages.productAddError'));
     }
   };

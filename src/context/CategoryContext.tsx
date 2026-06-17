@@ -81,6 +81,7 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCategories() {
   const context = useContext(CategoryContext);
   if (!context) {

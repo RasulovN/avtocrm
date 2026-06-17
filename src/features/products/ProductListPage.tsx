@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState, useCallback, useRef, type MouseEvent, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, useCallback, type ChangeEvent, type FormEvent } from 'react';
 import JsBarcode from 'jsbarcode';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import toast from 'react-hot-toast';
-import { Plus, Edit, Trash2, Barcode, Search, Printer, Power, Eye, Package, Loader2, ChevronLeft, ChevronRight, X, Warehouse, Store as StoreIcon, Calendar, Tag, Hash, Layers, Upload, MapPin, DollarSign, Ruler, ImageIcon } from 'lucide-react';
+import { Plus, Edit, Barcode, Search, Printer, Power, Eye, Package, Loader2, ChevronLeft, ChevronRight, X, Warehouse, Store as StoreIcon, Calendar, Tag, Hash, Layers, Upload, MapPin, Ruler, ImageIcon } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 import { Button } from '../../components/ui/Button';
@@ -136,22 +136,6 @@ export function ProductListPage() {
     () => products.filter((product) => selectedProductIds.includes(product.id)),
     [products, selectedProductIds]
   );
-
-  const handleToggleProductSelection = (id: string) => {
-    setSelectedProductIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
-  };
-
-  const handleToggleAllProducts = () => {
-    const allIds = products.map((p) => p.id);
-    const allSelected = allIds.every((id) => selectedProductIds.includes(id));
-    if (allSelected) {
-      setSelectedProductIds((prev) => prev.filter((id) => !allIds.includes(id)));
-    } else {
-      setSelectedProductIds((prev) => Array.from(new Set([...prev, ...allIds])));
-    }
-  };
 
   const handlePrintSelected = () => {
     if (selectedProducts.length === 0) return;
@@ -293,11 +277,6 @@ export function ProductListPage() {
     return item.image || null;
   };
 
-  // Helper: get barcode/sku from product
-  const getArticle = (item: Product): string => {
-    return item.sku || item.barcode || (item.batches && item.batches.length > 0 ? item.batches[0].barcode : '') || '—';
-  };
-
   // Compute total quantity for a product
   const getTotalQuantity = (item: Product): number => {
     if (item.inventory_by_store && item.inventory_by_store.length > 0) {
@@ -315,7 +294,6 @@ export function ProductListPage() {
 
   // Pagination
   const totalPages = Math.ceil(total / limit);
-  const allCurrentSelected = products.length > 0 && products.every((p) => selectedProductIds.includes(p.id));
 
   // Determine which stores have inventory data in any product (for dynamic columns)
   const storeColumns = useMemo(() => {
@@ -482,7 +460,6 @@ export function ProductListPage() {
         ) : (
           filteredProducts.map((item) => {
             const imageUrl = getImageUrl(item);
-            const article = getArticle(item);
             const totalQty = getTotalQuantity(item);
             const stockStatus = getStockStatus(totalQty);
             const isActive = item.is_active !== false;
@@ -747,7 +724,6 @@ export function ProductListPage() {
             ) : (
               filteredProducts.map((item) => {
                 const imageUrl = getImageUrl(item);
-                const article = getArticle(item);
                 const totalQty = getTotalQuantity(item);
                 const stockStatus = getStockStatus(totalQty);
                 const isSelected = selectedProductIds.includes(item.id);
@@ -1006,7 +982,7 @@ interface ProductDetailModalProps {
   t: TFunction<'translation', undefined>;
 }
 
-function ProductDetailModal({ product, onClose, onEdit, stores, warehouseStore, t }: ProductDetailModalProps) {
+function ProductDetailModal({ product, onClose, onEdit, stores, t }: ProductDetailModalProps) {
   const isShtrixUrl = product && product.shtrix_code && (product.shtrix_code.startsWith('http://') || product.shtrix_code.startsWith('https://') || product.shtrix_code.startsWith('/media/'));
 
   // Use a callback ref to generate the barcode because Dialog portals mount asynchronously,
@@ -1091,7 +1067,7 @@ function ProductDetailModal({ product, onClose, onEdit, stores, warehouseStore, 
       </style></head>
       <body>
         <img src="${dataUrl}" />
-        <script>window.onload=function(){setTimeout(function(){window.print()},500)};<\/script>
+        <script>window.onload=function(){setTimeout(function(){window.print()},500)};</script>
       </body></html>`;
 
     const blob = new Blob([htmlContent], { type: 'text/html' });

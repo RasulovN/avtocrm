@@ -116,7 +116,6 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    const errorData = error.response?.data;
     const status = error.response?.status;
     const config = (error.config || {}) as ApiRequestConfig;
     const isExpectedStatus = typeof status === 'number' && config.expectedErrorStatuses?.includes(status);

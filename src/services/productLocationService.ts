@@ -43,13 +43,6 @@ const mapLocationPayload = (data: ProductLocationFormData): Record<string, unkno
   };
 };
 
-const parseLocations = (payload: unknown): ProductLocation[] => {
-  if (Array.isArray(payload)) {
-    return payload.map(normalizeLocation);
-  }
-  return [];
-};
-
 export const productLocationService = {
   getAll: async (params?: { page?: number; limit?: number; search?: string }): Promise<PaginatedResponse<ProductLocation>> => {
     const searchParams = new URLSearchParams();

@@ -31,6 +31,7 @@ export function escapeJsString(text: string | null | undefined): string {
   if (!text) return '';
   return String(text)
     .replace(/\\/g, '\\\\')
+    // eslint-disable-next-line no-control-regex -- null belgisini ataylab almashtiramiz
     .replace(/\u0000/g, '\\0')
     .replace(/'/g, "\\'")
     .replace(/"/g, '\\"')
@@ -55,7 +56,7 @@ export function createSafePrintWindow(htmlContent: string): Window | null {
  */
 export function extractBarcodeFromUrl(url: string): string {
   if (!url) return '';
-  const match = url.match(/\/([^\/]+)\.(?:png|jpg|jpeg|gif)$/i);
+  const match = url.match(/\/([^/]+)\.(?:png|jpg|jpeg|gif)$/i);
   return match ? match[1] : url;
 }
 
@@ -98,7 +99,7 @@ export function generateBarcodePrintHtml(
   return `<!DOCTYPE html>
 <html>
   <head>
-    <title>Print Barcode</title>
+    <title>${escapeHtml(title)}</title>
     <style>
       @page {
         size: 224px 128px;
