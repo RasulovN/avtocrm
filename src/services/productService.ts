@@ -139,6 +139,7 @@ const item = (raw ?? {}) as Partial<Product> & {
     location_id?: string | number;
     price?: number | string;
     quantity?: number | string;
+    min_stock?: number | string;
     image?: string;
     images?: string[] | string;
     supplier?: { id?: string | number; name?: string; name_uz?: string; name_uz_cyrl?: string };
@@ -248,6 +249,7 @@ const item = (raw ?? {}) as Partial<Product> & {
     image,
     images,
     total_count: quantity,
+    min_stock: normalizeNumber(item.min_stock),
     is_active: item.is_active,
     quantity,
     purchase_price: purchasePrice,
@@ -332,6 +334,9 @@ const mapProductPayload = (
     if (data.selling_price !== undefined && data.selling_price !== '') {
       payload.append('selling_price', String(data.selling_price));
     }
+    if (data.min_stock !== undefined && data.min_stock !== '') {
+      payload.append('min_stock', String(data.min_stock));
+    }
     imageFiles.forEach((file) => {
       payload.append('images', file);
     });
@@ -370,6 +375,9 @@ const mapProductPayload = (
   }
   if (data.selling_price !== undefined && data.selling_price !== '') {
     payload.selling_price = String(data.selling_price);
+  }
+  if (data.min_stock !== undefined && data.min_stock !== '') {
+    payload.min_stock = String(data.min_stock);
   }
   if (mode === 'create' && stringImages.length > 0) {
     payload.images = stringImages;
@@ -508,4 +516,22 @@ export const productService = {
     const response = await apiClient.get<unknown>(`/products/?search=${encodeURIComponent(query)}`);
     return parsePaginatedProducts(response.data).data;
   },
+
+  downloadImportTemplate: async (): Promise<Blob> => {
+    const response = await apiClient.get('/products/products/import/template/', {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  importProducts: async (file: File): Promise<void> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    await apiClient.post('/products/products/import/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
 };
+

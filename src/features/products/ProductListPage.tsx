@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import toast from 'react-hot-toast';
-import { Plus, Edit, Barcode, Search, Printer, Power, Eye, Package, Loader2, ChevronLeft, ChevronRight, X, Warehouse, Store as StoreIcon, Calendar, Tag, Hash, Layers, Upload, MapPin, Ruler, ImageIcon } from 'lucide-react';
+import { Plus, Edit, Barcode, Search, Printer, Power, Eye, Package, Loader2, ChevronLeft, ChevronRight, X, Warehouse, Store as StoreIcon, Calendar, Tag, Hash, Layers, Upload, Download, MapPin, Ruler, ImageIcon } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 import { Button } from '../../components/ui/Button';
@@ -129,6 +129,39 @@ export function ProductListPage() {
     } finally {
       setDeleting(false);
       setDeleteId(null);
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    try {
+      const blob = await productService.downloadImportTemplate();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'product_template.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      handleError(error, { showToast: true });
+    }
+  };
+
+  const handleExcelUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      await productService.importProducts(file);
+      toast.success(t('products.importSuccess', 'Mahsulotlar muvaffaqiyatli import qilindi'));
+      void loadProducts();
+    } catch (error) {
+      handleError(error, { showToast: true });
+    } finally {
+      if (event.target) {
+        event.target.value = '';
+      }
     }
   };
 
@@ -346,10 +379,27 @@ export function ProductListPage() {
         title={t('products.title')}
         description={t('products.productList')}
         actions={isAdmin ? (
-          <Button onClick={() => setIsAddModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            {t('products.addProduct')}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={handleDownloadTemplate}>
+              <Download className="h-4 w-4 mr-2" />
+              {t('products.downloadTemplate', 'Shablon yuklash')}
+            </Button>
+            <Button variant="outline" onClick={() => document.getElementById('excel-upload')?.click()}>
+              <Upload className="h-4 w-4 mr-2" />
+              {t('products.importExcel', 'Import qilish')}
+            </Button>
+            <input 
+              type="file" 
+              id="excel-upload" 
+              className="hidden" 
+              accept=".xlsx,.xls" 
+              onChange={handleExcelUpload} 
+            />
+            <Button onClick={() => setIsAddModalOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              {t('products.addProduct')}
+            </Button>
+          </div>
         ) : undefined}
       />
 
@@ -1283,6 +1333,7 @@ const addProductInitialForm: ProductFormData = {
   purchase_price: '',
   selling_price: '',
   images: [],
+  min_stock: undefined,
   is_active: true,
 };
 
@@ -1573,6 +1624,24 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
                   value={formData.description}
                   onChange={(e) => handleDescriptionChange(e.target.value)}
                   className="flex w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm ring-offset-background placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-primary/50 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 resize-none"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="add-min-stock" className="flex items-center gap-1.5">
+                  <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+                  {t('products.minStock', 'Minimal qoldiq')}
+                </Label>
+                <Input
+                  id="add-min-stock"
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  value={formData.min_stock === undefined ? '' : formData.min_stock}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                    const val = e.target.value;
+                    handleChange('min_stock', val === '' ? undefined : Number(val));
+                  }}
                 />
               </div>
 

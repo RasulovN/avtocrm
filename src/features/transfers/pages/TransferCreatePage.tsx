@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Trash2, Send } from 'lucide-react';
+import { Plus, Trash2, Send, ScanBarcode } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { PageHeader } from '../../../components/shared/PageHeader';
 import { Button } from '../../../components/ui/Button';
@@ -10,6 +10,7 @@ import { Label } from '../../../components/ui/Label';
 import { Card, CardContent, CardFooter } from '../../../components/ui/Card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/Select';
 import { SearchableSelect } from '../../../components/ui/SearchableSelect';
+import { ScannerModal } from '../../../components/ScannerModal';
 import { transferService } from '../../../services/transferService';
 import { storeService } from '../../../services/storeService';
 import { useProducts } from '../../../context/ProductContext';
@@ -36,6 +37,8 @@ export function TransferCreatePage() {
   const [fromStoreId, setFromStoreId] = useState(isAdmin ? '' : userStoreId);
   const [toStoreId, setToStoreId] = useState('');
   const [items, setItems] = useState<TransferItemForm[]>([]);
+  const [barcodeInput, setBarcodeInput] = useState('');
+  const [showScanner, setShowScanner] = useState(false);
 
   const safeStores = useMemo(() => (Array.isArray(stores) ? stores : []), [stores]);
   const safeProducts = useMemo(() => {
@@ -87,6 +90,51 @@ export function TransferCreatePage() {
 
   const handleRemoveItem = (index: number) => {
     setItems(items.filter((_, i) => i !== index));
+  };
+
+  const processBarcode = (code: string) => {
+    const foundProduct = safeProducts.find(p => p.barcode === code || p.shtrix_code === code || p.sku === code);
+    
+    if (foundProduct) {
+       const existingIndex = items.findIndex(i => String(i.product) === String(foundProduct.id));
+       const availableQty = getProductStock(String(foundProduct.id));
+
+       if (existingIndex >= 0) {
+         const newItems = [...items];
+         if (newItems[existingIndex].quantity + 1 > availableQty) {
+           toast.error(`${t('messages.insufficientStock', 'Maksimal qoldiq')}: ${availableQty}`);
+         } else {
+           newItems[existingIndex].quantity += 1;
+           setItems(newItems);
+           toast.success(`${foundProduct.name} +1`);
+         }
+       } else {
+         if (availableQty < 1) {
+           toast.error(`${t('messages.insufficientStock', 'Maksimal qoldiq')}: 0`);
+         } else {
+           setItems([...items, { product: String(foundProduct.id), quantity: 1, availableQuantity: availableQty }]);
+           toast.success(`${foundProduct.name} qo'shildi`);
+         }
+       }
+    } else {
+       toast.error(t('products.notFound', 'Mahsulot topilmadi!'));
+    }
+    
+    setBarcodeInput('');
+  };
+
+  const handleBarcodeScan = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const code = barcodeInput.trim();
+      if (!code) return;
+      processBarcode(code);
+    }
+  };
+
+  const handleScannerModalScan = (barcode: string) => {
+    processBarcode(barcode);
+    setShowScanner(false);
   };
 
   const handleSubmit = async (e: ChangeEvent<HTMLFormElement>) => {
@@ -169,16 +217,39 @@ export function TransferCreatePage() {
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <h3 className="text-sm font-bold text-foreground">{t('transfers.itemsToTransfer', "Jo'natiladigan tovarlar")}</h3>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="rounded-lg border border-border bg-card text-foreground hover:bg-muted flex items-center shrink-0 shadow-sm px-4 h-9"
-                  onClick={() => setItems([...items, { product: '', quantity: 1 }])}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  {t('transfers.addProduct', "Tovar qo'shish")}
-                </Button>
+                
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <div className="relative w-full sm:w-64">
+                    <Input
+                      placeholder={t('products.scanBarcode', 'Shtrixkod skanerlash...')}
+                      value={barcodeInput}
+                      onChange={(e) => setBarcodeInput(e.target.value)}
+                      onKeyDown={handleBarcodeScan}
+                      className="w-full h-10 pr-10"
+                      autoFocus
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-10 w-10 text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowScanner(true)}
+                      title={t('products.scanBarcode', 'Shtrixkod skanerlash...')}
+                    >
+                      <ScanBarcode className="h-5 w-5" />
+                    </Button>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-lg border border-border bg-card text-foreground hover:bg-muted flex items-center shrink-0 shadow-sm px-4 h-10"
+                    onClick={() => setItems([...items, { product: '', quantity: 1 }])}
+                  >
+                    <Plus className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">{t('transfers.addProduct', "Tovar qo'shish")}</span>
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-3">
@@ -270,6 +341,12 @@ export function TransferCreatePage() {
           </CardFooter>
         </Card>
       </form>
+
+      <ScannerModal
+        open={showScanner}
+        onOpenChange={setShowScanner}
+        onScan={handleScannerModalScan}
+      />
     </div>
   );
 }

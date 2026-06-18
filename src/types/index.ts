@@ -115,6 +115,7 @@ export interface Product {
   created_at: string;
   updated_at: string;
   batches?: ProductBatch[];
+  min_stock?: number;
   // Aggregated data (new format for list page)
   total_quantity?: number;
   min_purchase_price?: number;
@@ -144,6 +145,7 @@ export interface ProductFormData {
   description?: string;
   description_uz_cyrl?: string;
   images?: string[] | string | File[] | (string | File)[];
+  min_stock?: number;
   is_active?: boolean;
   sku?: string;
   barcode?: string;
