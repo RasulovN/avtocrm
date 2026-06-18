@@ -344,7 +344,14 @@
     "allStores": "Barcha do'konlar",
     "orderingLabel": "Tartiblash",
     "newLowStockNotification": "Mahsulot tugayapti",
-    "shortage": "Kamomad"
+    "shortage": "Kamomad",
+    "ordering": {
+      "resolvedAtDesc": "Yopilgan vaqt (yangi)",
+      "resolvedAtAsc": "Yopilgan vaqt (eski)",
+      "createdAtDesc": "Yaratilgan vaqt (yangi)",
+      "createdAtAsc": "Yaratilgan vaqt (eski)",
+      "currentQty": "Joriy miqdor (o'sish)"
+    }
   },
   "stockentry": {
     "title": "Kirim",

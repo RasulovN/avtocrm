@@ -345,7 +345,14 @@
     "allStores": "Барча дўконлар",
     "orderingLabel": "Тартиблаш",
     "newLowStockNotification": "Маҳсулот тугаяпти",
-    "shortage": "Камомад"
+    "shortage": "Камомад",
+    "ordering": {
+      "resolvedAtDesc": "Ёпилган вақт (янги)",
+      "resolvedAtAsc": "Ёпилган вақт (эски)",
+      "createdAtDesc": "Яратилган вақт (янги)",
+      "createdAtAsc": "Яратилган вақт (эски)",
+      "currentQty": "Жорий миқдор (ўсиш)"
+    }
   },
   "stockentry": {
     "title": "Кирим",

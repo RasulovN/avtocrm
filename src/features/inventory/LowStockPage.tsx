@@ -31,11 +31,11 @@ type TabType = 'purchase' | 'transfer' | 'history';
 const LIMIT = 20;
 
 const ORDERING_OPTIONS = [
-  { value: '-resolved_at', label: '-resolved_at' },
-  { value: 'resolved_at', label: 'resolved_at' },
-  { value: '-created_at', label: '-created_at' },
-  { value: 'created_at', label: 'created_at' },
-  { value: 'current_quantity', label: 'current_quantity' },
+  { value: '-resolved_at', labelKey: 'inventory.ordering.resolvedAtDesc' },
+  { value: 'resolved_at',  labelKey: 'inventory.ordering.resolvedAtAsc' },
+  { value: '-created_at', labelKey: 'inventory.ordering.createdAtDesc' },
+  { value: 'created_at',  labelKey: 'inventory.ordering.createdAtAsc' },
+  { value: 'current_quantity', labelKey: 'inventory.ordering.currentQty' },
 ];
 
 export function LowStockPage() {
@@ -273,7 +273,7 @@ export function LowStockPage() {
             <SelectContent>
               {ORDERING_OPTIONS.map((o) => (
                 <SelectItem key={o.value} value={o.value}>
-                  {o.value}
+                  {t(o.labelKey)}
                 </SelectItem>
               ))}
             </SelectContent>
