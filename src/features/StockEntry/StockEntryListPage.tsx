@@ -148,7 +148,7 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
             id: String(item.id),
             product_id: String(item.product),
             product_name: prod.name,
-            product_sku: prod.sku,
+            product_sku: item.sku || prod.sku,
             product_barcode: item.barcode || prod.barcode,
             shtrix_code: shtrixCode,
             quantity: item.quantity,
@@ -327,7 +327,7 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
 <html>
 <head>
 <meta charset="UTF-8" />
-<title>Utkazma</title>
+<title>${t('inventory.title')}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: Arial, sans-serif; font-size: 12px; padding: 16px; }
@@ -345,10 +345,10 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
     <thead>
       <tr>
         <th>№</th>
-        <th>Наименование</th>
-        <th>Артикул</th>
-        <th>Цена пост</th>
-        <th>Отправлено</th>
+        <th>${t('products.title')}</th>
+        <th>${t('products.barcode')}</th>
+        <th>${t('products.purchasePrice')}</th>
+        <th>${t('sales.quantity')}</th>
       </tr>
     </thead>
     <tbody>
@@ -781,23 +781,14 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
                               <p className="mt-1 break-all font-mono text-xs">{item.product_barcode || '-'}</p>
                             </div>
                             <div className="rounded-lg bg-muted/30 p-3">
+                              <p className="text-xs text-muted-foreground">{t('products.sku')}</p>
+                              <p className="mt-1 font-mono text-xs">{item.product_sku || '-'}</p>
+                            </div>
+                            <div className="rounded-lg bg-muted/30 p-3">
                               <p className="text-xs text-muted-foreground">{t('sales.quantity')}</p>
                               <p className="mt-1 font-semibold">{item.quantity}</p>
                             </div>
-                            <div className="rounded-lg bg-muted/30 p-3">
-                              <p className="text-xs text-muted-foreground">Nusxa</p>
-                              <div className="mt-1 flex items-center gap-1">
-                                <button
-                                  onClick={() => handleDecreaseCount(item.id)}
-                                  className="w-6 h-6 flex items-center justify-center rounded border text-xs font-medium hover:bg-muted transition-colors"
-                                >-</button>
-                                <span className="w-7 text-center text-sm font-semibold tabular-nums">{printCounts[item.id] ?? item.quantity}</span>
-                                <button
-                                  onClick={() => handleIncreaseCount(item.id)}
-                                  className="w-6 h-6 flex items-center justify-center rounded border text-xs font-medium hover:bg-muted transition-colors"
-                                >+</button>
-                              </div>
-                            </div>
+
                             <div className="rounded-lg bg-muted/30 p-3">
                               <p className="text-xs text-muted-foreground">{t('sales.price')}</p>
                               <p className="mt-1 font-semibold">{formatCurrency(item.purchase_price)}</p>
@@ -824,9 +815,10 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
                             />
                           </TableHead>
                           <TableHead>{t('products.title')}</TableHead>
+                          <TableHead>{t('products.sku')}</TableHead>
                           <TableHead>{t('products.barcode')}</TableHead>
                           <TableHead>{t('sales.quantity')}</TableHead>
-                          <TableHead>Nusxa</TableHead>
+
                           <TableHead>{t('sales.price')}</TableHead>
                           <TableHead>{t('sales.total')}</TableHead>
                           <TableHead className="w-12"></TableHead>
@@ -844,21 +836,9 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
                               />
                             </TableCell>
                             <TableCell>{item.product_name}</TableCell>
+                            <TableCell className="font-mono text-xs text-muted-foreground">{item.product_sku || '-'}</TableCell>
                             <TableCell className="font-mono text-xs">{item.product_barcode || '-'}</TableCell>
                             <TableCell>{item.quantity}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <button
-                                  onClick={() => handleDecreaseCount(item.id)}
-                                  className="w-5 h-5 flex items-center justify-center rounded border text-xs font-medium hover:bg-muted transition-colors"
-                                >-</button>
-                                <span className="w-6 text-center text-xs font-semibold tabular-nums">{printCounts[item.id] ?? item.quantity}</span>
-                                <button
-                                  onClick={() => handleIncreaseCount(item.id)}
-                                  className="w-5 h-5 flex items-center justify-center rounded border text-xs font-medium hover:bg-muted transition-colors"
-                                >+</button>
-                              </div>
-                            </TableCell>
                             <TableCell>{formatCurrency(item.purchase_price)}</TableCell>
                             <TableCell className="font-medium">{formatCurrency(item.total)}</TableCell>
                             <TableCell>
