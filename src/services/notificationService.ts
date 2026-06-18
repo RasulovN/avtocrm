@@ -65,6 +65,24 @@ class NotificationSocketService {
         try {
           const data = JSON.parse(event.data);
 
+          // Handle low-stock WebSocket events (lp = purchase, lt = transfer)
+          if (data.type === 'lp' || data.type === 'lt') {
+            const notification: AppNotification = {
+              id: data.low_stock_item_id
+                ? `ls-${data.type}-${data.low_stock_item_id}`
+                : `ls-${data.type}-${Date.now()}`,
+              title: data.title || 'Mahsulot tugayapti',
+              message: data.message || '',
+              created_at: new Date().toISOString(),
+              read: false,
+              type: 'warning',
+              // Pass through extra low-stock fields so subscribers can inspect them
+              ...(data as object),
+            };
+            this.push(notification);
+            return;
+          }
+
           if (data.type === 'notification' || data.notification) {
             const notification: AppNotification = {
               id: data.id || `notif-${Date.now()}`,

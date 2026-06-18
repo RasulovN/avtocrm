@@ -19,6 +19,7 @@ import {
   ClipboardCheck,
   Plus,
   List,
+  AlertTriangle,
 } from 'lucide-react';
 import { cn } from '../../utils';
 import { useAuthStore } from '../../app/store';
@@ -42,7 +43,7 @@ const navItems: NavItem[] = [
     icon: ClipboardCheck,
     children: [
       { titleKey: 'inventory.inventoryList', href: '/inventory', icon: List },
-      // { titleKey: 'inventory.shortages', href: '/inventory/kamomat', icon: TriangleAlert },
+      { titleKey: 'nav.lowStock', href: '/inventory/low-stock', icon: AlertTriangle },
       { titleKey: 'inventory.newInventory', href: '/inventory/new', icon: Plus },
     ],
   },
