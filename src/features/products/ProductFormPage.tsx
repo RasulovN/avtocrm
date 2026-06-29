@@ -48,6 +48,7 @@ const initialFormData: ProductFormData = {
   location: '',
   item_id: '',
   images: [],
+  min_stock: undefined,
   is_active: true,
 };
 
@@ -117,6 +118,7 @@ export function ProductFormPage() {
         unit_measurement: product.unit_measurement ? String(product.unit_measurement) : '',
         location: product.location_id ? String(product.location_id) : '',
         item_id: product.item_id ? String(product.item_id) : '',
+        min_stock: product.min_stock,
         images: [],
         is_active: product.is_active ?? true,
       });
@@ -202,7 +204,7 @@ export function ProductFormPage() {
     }
   };
 
-  const handleChange = (field: keyof ProductFormData, value: string | boolean) => {
+  const handleChange = (field: keyof ProductFormData, value: string | boolean | number | undefined) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -474,6 +476,20 @@ export function ProductFormPage() {
                   id="description_cyrl"
                   value={formData.description_uz_cyrl || ''}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange('description_uz_cyrl', e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="min_stock">{t('products.minStock', 'Minimal qoldiq')}</Label>
+                <Input
+                  id="min_stock"
+                  type="number"
+                  min="0"
+                  value={formData.min_stock === undefined ? '' : formData.min_stock}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                    const val = e.target.value;
+                    handleChange('min_stock', val === '' ? undefined : Number(val));
+                  }}
                 />
               </div>
 

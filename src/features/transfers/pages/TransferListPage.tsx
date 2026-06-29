@@ -135,7 +135,7 @@ export function TransferListPage() {
 <html>
 <head>
 <meta charset="UTF-8" />
-<title>O'tkazma</title>
+<title>${t('transfers.title')}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: Arial, sans-serif; font-size: 12px; padding: 16px; }
@@ -154,10 +154,10 @@ export function TransferListPage() {
     <thead>
       <tr>
         <th>№</th>
-        <th>Наименование</th>
-        <th>Артикул</th>
-        <th>Цена пост</th>
-        <th>Отправлено</th>
+        <th>${t('products.title')}</th>
+        <th>${t('products.barcode')}</th>
+        <th>${t('products.purchasePrice')}</th>
+        <th>${t('products.quantity')}</th>
         <th>✓</th>
       </tr>
     </thead>
@@ -504,7 +504,7 @@ export function TransferListPage() {
                   className="flex items-center gap-1.5"
                 >
                   <Printer className="h-4 w-4" />
-                  Chop etish
+                  {t('common.print')}
                 </Button>
               )}
             </div>
