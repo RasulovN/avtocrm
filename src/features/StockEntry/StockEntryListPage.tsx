@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, FileText, Eye, Search, X, ChevronLeft, ChevronRight, CreditCard, Printer } from 'lucide-react';
+import { Plus, FileText, Eye, Search, X, ChevronLeft, ChevronRight, CreditCard, Printer, FileSpreadsheet } from 'lucide-react';
 import { generateBarcodePrintHtml, generateMultipleBarcodesPrintHtml, escapeHtml } from '../../utils/xss';
 
 import { StockEntryCreateDialog } from './StockEntryCreateDialog';
+import { StockEntryImportDialog } from './StockEntryImportDialog';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
 import { Button } from '../../components/ui/Button';
@@ -70,6 +71,7 @@ export function StockEntryListPage() {
   const [showDetails, setShowDetails] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paying, setPaying] = useState(false);
   const [paymentHistory, setPaymentHistory] = useState<SupplierPayment[]>([]);
@@ -474,10 +476,16 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
           title={t('inventory.title')}
           description={t('inventory.listDescription')}
         />
-        <Button className="w-full sm:w-auto mt-4 sm:mt-0" onClick={() => setShowCreateDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          {t('inventory.createIncomingStock')}
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-4 sm:mt-0">
+          <Button variant="outline" className="w-full sm:w-auto" onClick={() => setShowImportDialog(true)}>
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
+            {t('inventory.importFromExcel', 'Excel orqali kirim')}
+          </Button>
+          <Button className="w-full sm:w-auto" onClick={() => setShowCreateDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t('inventory.createIncomingStock')}
+          </Button>
+        </div>
       </div>
 
       {/* Filters Section */}
@@ -930,10 +938,16 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
         </DialogContent>
       </Dialog>
 
-      <StockEntryCreateDialog 
-        open={showCreateDialog} 
-        onOpenChange={setShowCreateDialog} 
-        onSuccess={loadData} 
+      <StockEntryCreateDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        onSuccess={loadData}
+      />
+
+      <StockEntryImportDialog
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
+        onSuccess={loadData}
       />
     </div>
   );
