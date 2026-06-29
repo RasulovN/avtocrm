@@ -2,6 +2,22 @@ import { apiClient } from './api';
 import type { Inventory, InventoryFormData, PaginatedResponse, ApiResponse, ContractEntry } from '../types';
 import type { SupplierPayment } from '../features/StockEntry/StockEntryListPage';
 
+export interface ImportSkippedRow {
+  row: number;
+  reason: string;
+}
+
+export interface ImportEntryResult {
+  detail?: string;
+  entry_id?: number | null;
+  created?: number;
+  skipped?: ImportSkippedRow[];
+  total_amount?: string;
+  paid_amount?: string;
+  debt_amount?: string;
+  payment_type?: string | null;
+}
+
 export interface InventoryFilters {
   page?: number;
   limit?: number;
@@ -89,6 +105,45 @@ export const inventoryService = {
   getSupplierPayment: async (id: string) => {
     const response = await apiClient.get<SupplierPayment[]>(`/contract/supplier-payments/${id}/`);
     return response.data;
+  },
+
+  // Excel orqali omborga kirim qilish
+  importEntry: async (data: {
+    supplier: number;
+    file: File;
+    cash_amount?: string | number;
+    card_amount?: string | number;
+  }): Promise<ImportEntryResult> => {
+    const formData = new FormData();
+    formData.append('supplier', String(data.supplier));
+    formData.append('file', data.file);
+    if (data.cash_amount !== undefined && data.cash_amount !== '') {
+      formData.append('cash_amount', String(data.cash_amount));
+    }
+    if (data.card_amount !== undefined && data.card_amount !== '') {
+      formData.append('card_amount', String(data.card_amount));
+    }
+    const response = await apiClient.post<ImportEntryResult>('/contract/entry/import/', formData);
+    return response.data;
+  },
+
+  // Kirim import shablonini yuklab olish (.xlsx)
+  downloadImportTemplate: async (): Promise<void> => {
+    const response = await apiClient.get<Blob>('/contract/entry/import/template/', {
+      responseType: 'blob',
+    });
+
+    const blob = new Blob([response.data], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'kirim_import_shablon.xlsx';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
   }
 };
 
