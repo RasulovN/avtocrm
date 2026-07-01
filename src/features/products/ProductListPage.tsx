@@ -695,7 +695,7 @@ export function ProductListPage() {
 
       {/* ═══════ Product Table ═══════ */}
       <div className="hidden md:block w-full overflow-x-auto rounded-2xl border border-border/60 bg-card">
-        <table className="w-full text-sm" style={{ minWidth: '1100px' }}>
+        <table className="w-full text-sm" style={{ minWidth: `${Math.max(1100, 800 + shopStores.length * 90)}px` }}>
           <thead>
             <tr className="border-b border-border/50 bg-muted/30">
               {/* ID */}
