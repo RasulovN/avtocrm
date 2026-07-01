@@ -22,6 +22,8 @@ import {
   Barcode,
   ClipboardCheck,
   Camera,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { Button } from '../../components/ui/Button';
@@ -38,7 +40,6 @@ export function InventoryDetailPage() {
   const sessionId = Number(params.id);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [showChecked, setShowChecked] = useState(true);
   const [showScanner, setShowScanner] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'shortage' | 'excess'>('all');
 
@@ -46,6 +47,11 @@ export function InventoryDetailPage() {
     sessions,
     currentSessionProducts,
     currentSessionChecked,
+    currentPage,
+    totalPages,
+    totalCount,
+    checkedCount,
+    statusFilter,
     currentSessionShorts,
     currentSessionOvers,
     itemsLoading,
@@ -53,6 +59,8 @@ export function InventoryDetailPage() {
     error,
     fetchSessions,
     fetchSessionProducts,
+    setPage,
+    setStatusFilter,
     fetchSessionShorts,
     fetchSessionOvers,
     scanProduct,
@@ -76,11 +84,11 @@ export function InventoryDetailPage() {
 
   useEffect(() => {
     if (sessionId) {
-      fetchSessionProducts(sessionId);
+      fetchSessionProducts(sessionId, { page: currentPage, limit: 20, status: statusFilter });
       fetchSessionShorts(sessionId);
       fetchSessionOvers(sessionId);
     }
-  }, [sessionId, fetchSessionProducts, fetchSessionShorts, fetchSessionOvers]);
+  }, [sessionId, currentPage, statusFilter, fetchSessionProducts, fetchSessionShorts, fetchSessionOvers]);
 
   useEffect(() => {
     if (error) {
@@ -140,30 +148,20 @@ export function InventoryDetailPage() {
     }
   }, [sessionId, cancelSession, navigate, t, params.lang]);
 
-  const allProducts = useMemo(() => {
-    const checkedMap = new Map<number, boolean>();
-    currentSessionChecked.forEach((p) => checkedMap.set(p.product_id, true));
-    return currentSessionProducts.map((p) => ({
-      ...p,
-      is_check: checkedMap.has(p.product_id) || p.is_check,
-    }));
-  }, [currentSessionProducts, currentSessionChecked]);
+  const allProducts = currentSessionProducts;
 
   const filteredProducts = useMemo(() => {
     let list = allProducts;
-    if (!showChecked) {
-      list = list.filter((p) => !p.is_check);
-    }
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       list = list.filter(
         (p) =>
-          p.product_name.toLowerCase().includes(q) ||
+          p.product_name?.toLowerCase().includes(q) ||
           p.barcode?.toLowerCase().includes(q)
       );
     }
     return list;
-  }, [allProducts, showChecked, searchQuery]);
+  }, [allProducts, searchQuery]);
 
   const filteredShorts = useMemo(() => {
     let list = currentSessionShorts;
@@ -184,12 +182,11 @@ export function InventoryDetailPage() {
   }, [currentSessionOvers, searchQuery]);
 
   const stats = useMemo(() => {
-    const total = allProducts.length;
-    const checked = allProducts.filter((p) => p.is_check).length;
+    const total = totalCount;
+    const checked = checkedCount;
     const pending = total - checked;
-    const withDifference = allProducts.filter((p) => p.difference !== 0).length;
-    return { total, checked, pending, withDifference };
-  }, [allProducts]);
+    return { total, checked, pending };
+  }, [totalCount, checkedCount]);
 
   const progressPercent =
     stats.total > 0 ? Math.round((stats.checked / stats.total) * 100) : 0;
@@ -364,10 +361,13 @@ export function InventoryDetailPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setShowChecked((v) => !v)}
+                onClick={() => {
+                  setStatusFilter(statusFilter === 'all' ? 'unchecked' : 'all');
+                  setPage(1);
+                }}
                 className="w-full sm:w-auto"
               >
-                {showChecked
+                {statusFilter === 'all'
                   ? t('inventory.hideChecked')
                   : t('inventory.showChecked')}
               </Button>
@@ -389,10 +389,10 @@ export function InventoryDetailPage() {
         <div className="-mx-1 flex gap-2 px-1 pb-1 overflow-x-auto no-scrollbar scrollbar-none">
           <button
             type="button"
-            onClick={() => setShowChecked(true)}
+            onClick={() => { setStatusFilter('all'); setPage(1); }}
             className={cn(
               'shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-colors',
-              showChecked
+              statusFilter === 'all'
                 ? 'border-primary bg-primary text-primary-foreground'
                 : 'border-border bg-background text-foreground hover:bg-accent'
             )}
@@ -401,15 +401,27 @@ export function InventoryDetailPage() {
           </button>
           <button
             type="button"
-            onClick={() => setShowChecked(false)}
+            onClick={() => { setStatusFilter('unchecked'); setPage(1); }}
             className={cn(
               'shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-colors',
-              !showChecked
+              statusFilter === 'unchecked'
                 ? 'border-primary bg-primary text-primary-foreground'
                 : 'border-border bg-background text-foreground hover:bg-accent'
             )}
           >
             {t('inventory.uncheckedOnly')} ({stats.pending})
+          </button>
+          <button
+            type="button"
+            onClick={() => { setStatusFilter('checked'); setPage(1); }}
+            className={cn(
+              'shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+              statusFilter === 'checked'
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border bg-background text-foreground hover:bg-accent'
+            )}
+          >
+            Teksherilgan ({stats.checked})
           </button>
         </div>
       )}
@@ -589,6 +601,34 @@ export function InventoryDetailPage() {
         {itemsLoading && (
           <div className="text-center py-4 text-muted-foreground text-sm">
             {t('common.loading')}
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between p-4 border-t border-border">
+            <div className="text-sm text-muted-foreground">
+              {t('common.page')} {currentPage} / {totalPages}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(currentPage - 1)}
+                disabled={currentPage === 1 || itemsLoading}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                {t('common.previous')}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(currentPage + 1)}
+                disabled={currentPage >= totalPages || itemsLoading}
+              >
+                {t('common.next')}
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
           </div>
         )}
       </Card>
