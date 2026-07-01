@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { Plus, FileText, Eye, EyeOff } from 'lucide-react';
+import { Plus, FileText, Eye, EyeOff, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
 import { Button } from '../../components/ui/Button';
@@ -23,15 +23,19 @@ export function SalesListPage() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [showStats, setShowStats] = useState(() => localStorage.getItem('sales_list_show_stats') !== 'false');
+  
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [page, limit]);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const res = await salesService.getAll();
+      const res = await salesService.getAll({ page, limit });
       const allSales = res.data || [];
       
       let scopedSales = allSales;
@@ -40,11 +44,13 @@ export function SalesListPage() {
       }
       
       setSales(scopedSales);
+      setTotal(res.total ?? scopedSales.length);
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
       handleError(error, { showToast: true, logData: 'Failed to load sales' });
       setSales([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
@@ -267,7 +273,45 @@ export function SalesListPage() {
               emptyMessage={t('sales.noData')}
               loadingMessage={t('common.loading')}
               minWidth="900px"
+              pagination={{
+                page,
+                limit,
+                total,
+                onPageChange: setPage,
+                onLimitChange: setLimit,
+              }}
             />
+          </div>
+
+          {/* Mobile Pagination */}
+          <div className="md:hidden flex flex-col gap-4 py-4 border-t border-border mt-4">
+            <div className="text-sm text-muted-foreground font-medium text-center">
+              {(page - 1) * limit + 1}-{Math.min(page * limit, total)} / {total}
+            </div>
+            
+            <div className="flex items-center justify-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 p-0"
+                onClick={() => setPage(page - 1)}
+                disabled={page === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="text-sm font-medium px-2">
+                Sahifa {page} / {Math.ceil(total / limit) || 1}
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 p-0"
+                onClick={() => setPage(page + 1)}
+                disabled={page === Math.ceil(total / limit) || total === 0}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </>
       )}

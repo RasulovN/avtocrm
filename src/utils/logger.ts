@@ -30,6 +30,22 @@ class Logger {
   }
 
   private log(level: LogLevel, message: string, data?: unknown) {
+    // In production we skip all bookkeeping. Previously this method always ran
+    // `formatEntry` (which does JSON.stringify(data, null, 2)) and pushed every
+    // entry into an in-memory array even in production, which was expensive on
+    // hot paths (e.g. per-product normalization over 2000 products).
+    if (environment !== 'development') {
+      return;
+    }
+
+    // Suppress 404 network errors in console before doing any work
+    if (level === 'error' && data && typeof data === 'object' && 'additionalData' in data) {
+      const additionalData = (data as { additionalData?: { status?: number; url?: string } }).additionalData;
+      if (additionalData?.status === 404) {
+        return; // Don't log 404 errors to console
+      }
+    }
+
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
       level,
@@ -44,16 +60,8 @@ class Logger {
     }
 
     const formatted = this.formatEntry(entry);
-    
-    if (environment === 'development') {
-      // Suppress 404 network errors in console
-      if (level === 'error' && data && typeof data === 'object' && 'additionalData' in data) {
-        const additionalData = (data as { additionalData?: { status?: number; url?: string } }).additionalData;
-        if (additionalData?.status === 404) {
-          return; // Don't log 404 errors to console
-        }
-      }
-      
+
+    {
       switch (level) {
         case 'error':
           console.error(formatted);

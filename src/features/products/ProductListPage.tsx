@@ -51,7 +51,7 @@ export function ProductListPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const limit = 10;
+  const [limit, setLimit] = useState(10);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
@@ -326,6 +326,24 @@ export function ProductListPage() {
   };
 
   // Pagination
+  const getPageNumbers = (currentPage: number, totalPagesCount: number) => {
+    const pages: (number | string)[] = [];
+    const delta = 2;
+
+    for (let i = 1; i <= totalPagesCount; i++) {
+      if (
+        i === 1 ||
+        i === totalPagesCount ||
+        (i >= currentPage - delta && i <= currentPage + delta)
+      ) {
+        pages.push(i);
+      } else if (pages[pages.length - 1] !== '...') {
+        pages.push('...');
+      }
+    }
+    return pages;
+  };
+
   const totalPages = Math.ceil(total / limit);
 
   // Determine which stores have inventory data in any product (for dynamic columns)
@@ -953,30 +971,88 @@ export function ProductListPage() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-sm text-muted-foreground">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between py-4 border-t border-border mt-4">
+          <div className="text-sm text-muted-foreground font-medium order-2 sm:order-1">
             {(page - 1) * limit + 1}-{Math.min(page * limit, total)} / {total}
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage(page - 1)}
-              disabled={page === 1}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-sm font-medium">
-              {page} / {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage(page + 1)}
-              disabled={page === totalPages}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+          
+          <div className="flex items-center gap-4 flex-wrap order-1 sm:order-2 justify-end w-full sm:w-auto">
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 p-0 hover:bg-accent text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
+                onClick={() => setPage(page - 1)}
+                disabled={page === 1}
+                title="Previous Page"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+
+              {getPageNumbers(page, totalPages).map((p, idx) => {
+                if (p === '...') {
+                  return (
+                    <span
+                      key={`ellipsis-${idx}`}
+                      className="w-8 h-8 flex items-center justify-center text-muted-foreground text-sm select-none"
+                    >
+                      ...
+                    </span>
+                  );
+                }
+
+                const isCurrent = p === page;
+                return (
+                  <Button
+                    key={`page-${p}`}
+                    variant={isCurrent ? 'outline' : 'ghost'}
+                    size="icon"
+                    className={`h-8 w-8 p-0 font-medium transition-all duration-150 rounded-lg ${
+                      isCurrent 
+                        ? "border border-primary text-primary hover:bg-transparent hover:text-primary font-bold shadow-sm" 
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                    }`}
+                    onClick={() => setPage(p as number)}
+                  >
+                    {p}
+                  </Button>
+                );
+              })}
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 p-0 hover:bg-accent text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
+                onClick={() => setPage(page + 1)}
+                disabled={page === totalPages}
+                title="Next Page"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+
+
+
+
+            <div className="flex items-center gap-1.5 text-sm text-muted-foreground font-medium">
+              <span>Go to</span>
+              <input
+                type="number"
+                min={1}
+                max={totalPages}
+                defaultValue={page}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const val = Number((e.target as HTMLInputElement).value);
+                    if (val >= 1 && val <= totalPages) {
+                      setPage(val);
+                    }
+                  }
+                }}
+                className="w-12 h-8 px-1.5 text-center bg-background border border-input rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <span>Page</span>
+            </div>
           </div>
         </div>
       )}

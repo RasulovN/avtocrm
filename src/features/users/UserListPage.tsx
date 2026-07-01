@@ -22,7 +22,7 @@ export function UserListPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const limit = 10;
+  const [limit, setLimit] = useState(10);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -304,7 +304,16 @@ export function UserListPage() {
           data={safeUsers}
           columns={columns}
           loading={loading}
-          pagination={{ page, limit, total, onPageChange: setPage }}
+          pagination={{
+            page,
+            limit,
+            total,
+            onPageChange: setPage,
+            onLimitChange: (newLimit) => {
+              setPage(1);
+              setLimit(newLimit);
+            }
+          }}
         />
       </div>
 

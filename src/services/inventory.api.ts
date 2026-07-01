@@ -30,9 +30,24 @@ export interface InventoryProduct {
   difference: number;
 }
 
+export interface CheckedInventoryProduct {
+  product_id: number;
+  product_name?: string;
+  barcode?: string;
+  scanned?: number;
+  status?: string;
+  is_check: boolean;
+}
+
 export interface InventorySessionDetail {
-  products: InventoryProduct[];
-  checked: InventoryProduct[];
+  count: number;
+  total_pages: number;
+  current_page: number;
+  next: string | null;
+  previous: string | null;
+  results: InventoryProduct[];
+  checked: CheckedInventoryProduct[];
+  checked_count: number;
 }
 
 export interface ShortageExcessProduct {
@@ -104,10 +119,23 @@ export const inventoryApi = {
   },
 
   /** GET /api/inventory/inventory/list/{session_id}/ — session products */
-  getSessionProducts: async (sessionId: number): Promise<InventorySessionDetail> => {
-    const response = await apiClient.get<InventorySessionDetail>(
-      `${INVENTORY_ENDPOINT}/list/${sessionId}/`
-    );
+  getSessionProducts: async (
+    sessionId: number,
+    params?: { page?: number; limit?: number; status?: 'checked' | 'unchecked' | 'all' }
+  ): Promise<InventorySessionDetail> => {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append('page', params.page.toString());
+    if (params?.limit) searchParams.append('limit', params.limit.toString());
+    if (params?.status && params.status !== 'all') {
+      searchParams.append('status', params.status);
+    }
+    
+    const queryString = searchParams.toString();
+    const url = queryString 
+      ? `${INVENTORY_ENDPOINT}/list/${sessionId}/?${queryString}` 
+      : `${INVENTORY_ENDPOINT}/list/${sessionId}/`;
+      
+    const response = await apiClient.get<InventorySessionDetail>(url);
     return response.data;
   },
 

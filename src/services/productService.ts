@@ -1,7 +1,6 @@
 import { apiClient, API_ORIGIN } from './api';
 import { latinToCyrillic } from '../utils/transliteration';
 import type { Product, ProductFormData, ProductFilters, PaginatedResponse, ApiResponse, ProductStoreInventory } from '../types';
-import { logger } from '../utils/logger';
 
 const BACKEND_FALLBACK_URL = 'https://api.avtoyon.uz';
 
@@ -101,7 +100,6 @@ const normalizeImages = (images?: unknown[] | string | unknown, image?: unknown)
       }
       return null;
     }).filter((item): item is { image: string; product: number } => item !== null && item.image !== '');
-    logger.info('normalizeImages result:', resolved); // Debug
     return resolved.length > 0 ? resolved : undefined;
   }
   if (typeof images === 'string' && images.trim() !== '') {

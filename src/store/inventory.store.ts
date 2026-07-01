@@ -1,11 +1,16 @@
 import { create } from 'zustand';
-import type { InventorySession, InventoryProduct, ShortageExcessProduct } from '../services/inventory.api';
+import type { InventorySession, InventoryProduct, ShortageExcessProduct, CheckedInventoryProduct } from '../services/inventory.api';
 import { inventoryApi } from '../services/inventory.api';
 
 interface InventoryState {
   sessions: InventorySession[];
   currentSessionProducts: InventoryProduct[];
-  currentSessionChecked: InventoryProduct[];
+  currentSessionChecked: CheckedInventoryProduct[];
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  checkedCount: number;
+  statusFilter: 'checked' | 'unchecked' | 'all';
   currentSessionShorts: ShortageExcessProduct[];
   currentSessionOvers: ShortageExcessProduct[];
   loading: boolean;
@@ -15,7 +20,9 @@ interface InventoryState {
 
   fetchSessions: () => Promise<void>;
   startSession: (storeId: number) => Promise<number>;
-  fetchSessionProducts: (sessionId: number) => Promise<void>;
+  fetchSessionProducts: (sessionId: number, params?: { page?: number; limit?: number; status?: 'checked' | 'unchecked' | 'all' }) => Promise<void>;
+  setPage: (page: number) => void;
+  setStatusFilter: (status: 'checked' | 'unchecked' | 'all') => void;
   fetchSessionShorts: (sessionId: number) => Promise<void>;
   fetchSessionOvers: (sessionId: number) => Promise<void>;
   scanProduct: (sessionId: number, productId: number, quantity: number) => Promise<void>;
@@ -30,6 +37,11 @@ export const useInventoryStore = create<InventoryState>((set) => ({
   sessions: [],
   currentSessionProducts: [],
   currentSessionChecked: [],
+  currentPage: 1,
+  totalPages: 1,
+  totalCount: 0,
+  checkedCount: 0,
+  statusFilter: 'all',
   currentSessionShorts: [],
   currentSessionOvers: [],
   loading: false,
@@ -61,13 +73,17 @@ export const useInventoryStore = create<InventoryState>((set) => ({
     }
   },
 
-  fetchSessionProducts: async (sessionId) => {
+  fetchSessionProducts: async (sessionId, params) => {
     set({ itemsLoading: true, error: null });
     try {
-      const detail = await inventoryApi.getSessionProducts(sessionId);
+      const detail = await inventoryApi.getSessionProducts(sessionId, params);
       set({
-        currentSessionProducts: detail.products,
+        currentSessionProducts: detail.results,
         currentSessionChecked: detail.checked,
+        currentPage: detail.current_page,
+        totalPages: detail.total_pages,
+        totalCount: detail.count,
+        checkedCount: detail.checked_count,
         itemsLoading: false,
       });
     } catch (error) {
@@ -75,6 +91,9 @@ export const useInventoryStore = create<InventoryState>((set) => ({
       set({ error: message, itemsLoading: false });
     }
   },
+
+  setPage: (page) => set({ currentPage: page }),
+  setStatusFilter: (status) => set({ statusFilter: status }),
 
   fetchSessionShorts: async (sessionId) => {
     set({ itemsLoading: true, error: null });
@@ -122,20 +141,30 @@ export const useInventoryStore = create<InventoryState>((set) => ({
         set({ scanningProductId: productId });
         await inventoryApi.scanProduct({ session_id: sessionId, product_id: productId, quantity });
         // Refresh list after successful scan
-        const detail = await inventoryApi.getSessionProducts(sessionId);
+        const state = useInventoryStore.getState();
+        const detail = await inventoryApi.getSessionProducts(sessionId, { page: state.currentPage, limit: 20, status: state.statusFilter });
         set({
-          currentSessionProducts: detail.products,
+          currentSessionProducts: detail.results,
           currentSessionChecked: detail.checked,
+          currentPage: detail.current_page,
+          totalPages: detail.total_pages,
+          totalCount: detail.count,
+          checkedCount: detail.checked_count,
           scanningProductId: null,
         });
       } catch {
         set({ scanningProductId: null });
         // Re-fetch to restore correct state
         try {
-          const detail = await inventoryApi.getSessionProducts(sessionId);
+          const state = useInventoryStore.getState();
+          const detail = await inventoryApi.getSessionProducts(sessionId, { page: state.currentPage, limit: 20, status: state.statusFilter });
           set({
-            currentSessionProducts: detail.products,
+            currentSessionProducts: detail.results,
             currentSessionChecked: detail.checked,
+            currentPage: detail.current_page,
+            totalPages: detail.total_pages,
+            totalCount: detail.count,
+            checkedCount: detail.checked_count,
           });
         } catch {
           // Ignore secondary error
