@@ -79,7 +79,28 @@ export const userService = {
   },
 
   getByStore: async (storeId: string): Promise<User[]> => {
-    const response = await apiClient.get<ApiResponse<User[]>>(`/users/?store_id=${storeId}`);
-    return response.data.data;
+    const response = await apiClient.get<any>(`/users/?store_id=${storeId}`);
+    const payload = response.data;
+    if (payload && typeof payload === 'object') {
+      if (Array.isArray(payload.results)) {
+        return payload.results;
+      }
+      if (Array.isArray(payload.data)) {
+        return payload.data;
+      }
+      if (payload.data && typeof payload.data === 'object') {
+        const nested = payload.data as { data?: unknown; results?: unknown };
+        if (Array.isArray(nested.results)) {
+          return nested.results as User[];
+        }
+        if (Array.isArray(nested.data)) {
+          return nested.data as User[];
+        }
+      }
+    }
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+    return [];
   },
 };

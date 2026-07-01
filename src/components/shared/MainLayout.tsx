@@ -506,7 +506,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
 
       {/* ═══════ Main Content Area ═══════ */}
       <div className={cn(
-        'flex-1 flex flex-col transition-all duration-300',
+        'flex-1 flex flex-col min-w-0 transition-all duration-300',
         isCollapsed ? 'lg:ml-[68px]' : 'lg:ml-[260px]'
       )}>
         {/* ═══════ Top Header Bar ═══════ */}
@@ -645,7 +645,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* ═══════ Page Content ═══════ */}
-        <main id="main-content" className="flex-1 p-4 lg:p-6" tabIndex={-1}>
+        <main id="main-content" className="flex-1 p-4 lg:p-6 min-w-0" tabIndex={-1}>
           <div className="animate-fade-in-up">
             {children}
           </div>

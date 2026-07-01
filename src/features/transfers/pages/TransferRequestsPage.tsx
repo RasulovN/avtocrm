@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check, X, Search } from 'lucide-react';
+import { Check, X, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PageHeader } from '../../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../../components/shared/DataTable';
 import { Button } from '../../../components/ui/Button';
@@ -35,6 +35,9 @@ export function TransferRequestsPage(): ReactElement {
   const [requests, setRequests] = useState<Transfer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const limit = 20;
   const safeRequests = useMemo(() => (Array.isArray(requests) ? requests : []), [requests]);
 
   const productNameById = useMemo(() => {
@@ -155,12 +158,13 @@ export function TransferRequestsPage(): ReactElement {
     },
   ];
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (pageToLoad = page) => {
     try {
       setLoading(true);
-      const res = await transferService.getAll();
+      const res = await transferService.getAll({ page: pageToLoad, limit });
       const pending = (res.data || []).filter((item) => item.status === 'pending' || item.status === 'p');
       setRequests(pending);
+      setTotal(res.total || 0);
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
@@ -169,11 +173,11 @@ export function TransferRequestsPage(): ReactElement {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, limit]);
 
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    void loadData(page);
+  }, [page, loadData]);
 
   useEffect(() => {
     void loadStores();
@@ -297,6 +301,35 @@ export function TransferRequestsPage(): ReactElement {
             )}
           </div>
 
+          {!loading && filteredRequests.length > 0 && Math.ceil(total / limit) > 1 && (
+            <div className="flex items-center justify-between mt-4 p-4 bg-muted/20 border border-border/60 rounded-xl md:hidden">
+              <span className="text-xs text-muted-foreground">
+                {(page - 1) * limit + 1}-{Math.min(page * limit, total)} / {total}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm">
+                  {page} / {Math.ceil(total / limit)}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(p => Math.min(Math.ceil(total / limit), p + 1))}
+                  disabled={page === Math.ceil(total / limit)}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="hidden md:block">
             <DataTable
               data={filteredRequests}
@@ -305,6 +338,7 @@ export function TransferRequestsPage(): ReactElement {
               emptyMessage={t('transfers.noData')}
               loadingMessage={t('common.loading')}
               minWidth="900px"
+              pagination={{ page, limit, total, onPageChange: setPage }}
             />
           </div>
         </CardContent>
