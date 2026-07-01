@@ -147,7 +147,9 @@ describe('DataTable', () => {
         }}
       />
     );
-    expect(screen.getByText('1 / 3')).toBeInTheDocument();
+    expect(screen.getByText('1')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText('3')).toBeInTheDocument();
   });
 
   it('disables previous button on first page', () => {
@@ -163,9 +165,8 @@ describe('DataTable', () => {
         }}
       />
     );
-    const buttons = screen.getAllByRole('button');
-    const prevButton = buttons.find((b) => b.querySelector('svg'));
-    expect(prevButton).toBeDefined();
+    const prevButton = screen.getByTitle('Previous Page');
+    expect(prevButton).toBeDisabled();
   });
 
   it('handles page change', async () => {
@@ -184,8 +185,7 @@ describe('DataTable', () => {
       />
     );
 
-    const buttons = screen.getAllByRole('button');
-    const nextButton = buttons[buttons.length - 1];
+    const nextButton = screen.getByTitle('Next Page');
     await user.click(nextButton);
     expect(handlePageChange).toHaveBeenCalledWith(2);
   });

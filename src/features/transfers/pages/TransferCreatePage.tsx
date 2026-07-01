@@ -43,18 +43,19 @@ export function TransferCreatePage() {
   const safeStores = useMemo(() => (Array.isArray(stores) ? stores : []), [stores]);
   const safeProducts = useMemo(() => {
     if (productsLoading) return [];
-    if (!fromStoreId) return allProducts;
-    // Better to show products that actually have inventory in that store
-    return allProducts.filter(p => {
-      const inv = p.inventory_by_store?.find(i => String(i.store_id) === String(fromStoreId));
-      return inv && inv.quantity > 0;
-    });
-  }, [allProducts, productsLoading, fromStoreId]);
+    // Always show all products — quantity will be shown in label, validation happens on submit
+    return allProducts;
+  }, [allProducts, productsLoading]);
 
   const productOptions = useMemo(() => {
     return safeProducts.map(p => {
-      const inv = p.inventory_by_store?.find(i => String(i.store_id) === String(fromStoreId));
-      const q = inv ? inv.quantity : 0;
+      let q: number | string = 0;
+      if (fromStoreId && p.inventory_by_store && p.inventory_by_store.length > 0) {
+        const inv = p.inventory_by_store.find(i => String(i.store_id) === String(fromStoreId));
+        q = inv !== undefined ? inv.quantity : '—';
+      } else {
+        q = p.quantity ?? 0;
+      }
       return {
         value: String(p.id),
         label: `${p.name} (Omborda: ${q})`
@@ -62,11 +63,16 @@ export function TransferCreatePage() {
     });
   }, [safeProducts, fromStoreId]);
 
+
   const getProductStock = (productId: string) => {
-    if (!fromStoreId || !productId) return 0;
+    if (!productId) return 0;
     const p = allProducts.find(prod => String(prod.id) === String(productId));
     if (!p) return 0;
-    const inv = p.inventory_by_store?.find(i => String(i.store_id) === String(fromStoreId));
+    if (!fromStoreId) return p.quantity ?? 0;
+    if (!p.inventory_by_store || p.inventory_by_store.length === 0) {
+      return p.quantity ?? 0; // Fallback to total quantity if no store data
+    }
+    const inv = p.inventory_by_store.find(i => String(i.store_id) === String(fromStoreId));
     return inv ? inv.quantity : 0;
   };
 

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ChevronDown, Search, X } from 'lucide-react';
+import { ChevronDown, Search, X, Loader2 } from 'lucide-react';
 import { cn } from '../../utils';
 
 interface Option {
@@ -16,6 +16,7 @@ interface SearchableSelectProps {
   emptyMessage?: string;
   className?: string;
   disabled?: boolean;
+  pageSize?: number;
 }
 
 export function SearchableSelect({
@@ -27,13 +28,24 @@ export function SearchableSelect({
   emptyMessage = 'No options found',
   className,
   disabled = false,
+  pageSize = 50,
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
+  const [visibleCount, setVisibleCount] = React.useState(pageSize);
+  const [isLoadingMore, setIsLoadingMore] = React.useState(false);
+
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const listRef = React.useRef<HTMLDivElement>(null);
+  const sentinelRef = React.useRef<HTMLDivElement>(null);
 
   const selectedOption = options.find((opt) => opt.value === value);
+
+  // Reset visible count when search changes or dropdown opens/closes
+  React.useEffect(() => {
+    setVisibleCount(pageSize);
+  }, [searchQuery, isOpen, pageSize]);
 
   // Close dropdown on click outside
   React.useEffect(() => {
@@ -72,11 +84,45 @@ export function SearchableSelect({
     };
   }, [isOpen]);
 
+  // IntersectionObserver for infinite scroll sentinel
+  React.useEffect(() => {
+    if (!isOpen || !sentinelRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting && !isLoadingMore) {
+          setIsLoadingMore(true);
+          // Small delay to prevent rapid firing
+          setTimeout(() => {
+            setVisibleCount((prev) => prev + pageSize);
+            setIsLoadingMore(false);
+          }, 150);
+        }
+      },
+      {
+        root: listRef.current,
+        rootMargin: '0px',
+        threshold: 0.1,
+      }
+    );
+
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [isOpen, isLoadingMore, pageSize]);
+
   const filteredOptions = React.useMemo(() => {
     if (!searchQuery) return options;
     const query = searchQuery.toLowerCase().trim();
     return options.filter((opt) => opt.label.toLowerCase().includes(query));
   }, [options, searchQuery]);
+
+  const visibleOptions = React.useMemo(
+    () => filteredOptions.slice(0, visibleCount),
+    [filteredOptions, visibleCount]
+  );
+
+  const hasMore = visibleCount < filteredOptions.length;
 
   const handleSelect = (val: string) => {
     onValueChange(val);
@@ -98,12 +144,13 @@ export function SearchableSelect({
         <span className={cn('truncate block', !selectedOption && 'text-muted-foreground/60')}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
-        <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+        <ChevronDown className={cn('h-4 w-4 opacity-50 shrink-0 ml-2 transition-transform duration-200', isOpen && 'rotate-180')} />
       </button>
 
       {isOpen && (
         <div className="absolute left-0 right-0 z-50 mt-1 max-h-64 overflow-hidden rounded-xl border border-border/60 bg-popover text-popover-foreground shadow-xl flex flex-col">
-          <div className="flex items-center border-b border-border/40 px-3 bg-muted/20">
+          {/* Search input */}
+          <div className="flex items-center border-b border-border/40 px-3 bg-muted/20 shrink-0">
             <Search className="h-4 w-4 shrink-0 opacity-50 mr-2" />
             <input
               ref={inputRef}
@@ -123,28 +170,54 @@ export function SearchableSelect({
               </button>
             )}
           </div>
-          <div className="overflow-y-auto max-h-48 p-1">
+
+          {/* Count info */}
+          {filteredOptions.length > 0 && (
+            <div className="px-3 py-1 text-xs text-muted-foreground bg-muted/10 border-b border-border/20 shrink-0">
+              {visibleOptions.length} / {filteredOptions.length} ta mahsulot
+            </div>
+          )}
+
+          {/* Scrollable list */}
+          <div ref={listRef} className="overflow-y-auto flex-1 p-1">
             {filteredOptions.length === 0 ? (
               <div className="py-6 text-center text-sm text-muted-foreground">
                 {emptyMessage}
               </div>
             ) : (
-              filteredOptions.map((opt) => {
-                const isSelected = opt.value === value;
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => handleSelect(opt.value)}
-                    className={cn(
-                      'relative flex w-full cursor-default select-none items-center rounded-lg py-2 px-3 text-sm outline-none transition-colors text-left',
-                      isSelected ? 'bg-primary text-primary-foreground font-medium' : 'hover:bg-accent hover:text-accent-foreground text-foreground'
+              <>
+                {visibleOptions.map((opt) => {
+                  const isSelected = opt.value === value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => handleSelect(opt.value)}
+                      className={cn(
+                        'relative flex w-full cursor-default select-none items-center rounded-lg py-2 px-3 text-sm outline-none transition-colors text-left',
+                        isSelected
+                          ? 'bg-primary text-primary-foreground font-medium'
+                          : 'hover:bg-accent hover:text-accent-foreground text-foreground'
+                      )}
+                    >
+                      <span className="truncate">{opt.label}</span>
+                    </button>
+                  );
+                })}
+
+                {/* Sentinel div for IntersectionObserver */}
+                {hasMore && (
+                  <div ref={sentinelRef} className="flex items-center justify-center py-3">
+                    {isLoadingMore ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        Ko'proq yuklash uchun pastga suring...
+                      </span>
                     )}
-                  >
-                    <span className="truncate">{opt.label}</span>
-                  </button>
-                );
-              })
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
