@@ -838,7 +838,8 @@
     "insufficientStock": "Омборда етарли маҳсулот йўқ",
     "invalidQuantity": "Нотўғри миқдор киритилди",
     "success": "Муваффақиятли",
-    "notInYourStore": "Сизнинг дўконингизда йўқ"
+    "notInYourStore": "Сизнинг дўконингизда йўқ",
+    "customerNotFound": "Мижоз топилмади"
   },
   "placeholders": {
     "enterAmount": "Суммани киритинг",
@@ -850,6 +851,7 @@
     "selectStore": "Дўконни танланг",
     "selectCategory": "Категорияни танланг",
     "selectCustomer": "Мижозни танланг",
+    "searchCustomer": "Мижозни қидириш (исм ёки телефон)...",
     "customerName": "Мижоз исми",
     "statType": "Статистика тури",
     "selectBranch": "Филиални танланг",

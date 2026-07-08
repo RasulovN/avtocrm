@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo, useCallback, type ChangeEvent, type KeyboardEvent } from 'react';
 import toast from 'react-hot-toast';
-import { ScanBarcode, Trash2, DollarSign, Search, X, UserPlus, Eye, Package, Barcode, MapPin, Image as ImageIcon, Loader2, ArrowLeftRight } from 'lucide-react';
+import { ScanBarcode, Trash2, DollarSign, Search, X, UserPlus, Eye, Package, Barcode, MapPin, Image as ImageIcon, Loader2, ArrowLeftRight, Banknote, CreditCard } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/Dialog';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
+import { SearchableSelect } from '../../components/ui/SearchableSelect';
 import { ScannerModal } from '../../components/ScannerModal';
 import { storeService } from '../../services/storeService';
 import { productService } from '../../services/productService';
@@ -379,6 +380,17 @@ export function SalesPage() {
   const totalPaid = useMemo(() => cashAmount + cardAmount, [cashAmount, cardAmount]);
   const change = useMemo(() => Math.max(0, totalPaid - totalWithDiscount), [totalPaid, totalWithDiscount]);
   const debt = useMemo(() => Math.max(0, totalWithDiscount - totalPaid), [totalPaid, totalWithDiscount]);
+
+  // Tezkor to'lov rejimi tanlangan bo'lsa, summa savat o'zgarishiga qarab avtomatik hisoblanadi
+  useEffect(() => {
+    if (activePayment === 'cash') {
+      setCashAmount(totalWithDiscount);
+      setCardAmount(0);
+    } else if (activePayment === 'card') {
+      setCardAmount(totalWithDiscount);
+      setCashAmount(0);
+    }
+  }, [activePayment, totalWithDiscount]);
   const productImages = getProductImages(selectedProduct);
   const filteredProducts = useMemo(() => {
     let result = allProducts;
@@ -589,14 +601,21 @@ export function SalesPage() {
   };
 
   const handleQuickCash = () => {
-    setCashAmount(totalWithDiscount);
-    setCardAmount(0);
-    setActivePayment('cash');
+    if (activePayment === 'cash') {
+      // Qayta bosilsa avto rejim o'chadi
+      setActivePayment(null);
+      setCashAmount(0);
+    } else {
+      setActivePayment('cash');
+    }
   };
   const handleQuickCard = () => {
-    setCardAmount(totalWithDiscount);
-    setCashAmount(0);
-    setActivePayment('card');
+    if (activePayment === 'card') {
+      setActivePayment(null);
+      setCardAmount(0);
+    } else {
+      setActivePayment('card');
+    }
   };
 
   const handleCreateCustomer = async () => {
@@ -683,7 +702,7 @@ export function SalesPage() {
     setCardAmount(0);
     setDiscount(0);
     setDiscountType('f');
-    setActivePayment(null);
+    setActivePayment('cash');
     setNewCustomerName('');
     setNewCustomerPhone('');
     setDebtDueDate('');
@@ -944,9 +963,11 @@ export function SalesPage() {
                         </div>
                         <div className="mt-2 pt-2 border-t border-border/40 grid grid-cols-3 gap-2 text-xs">
                           <div>
-                            <div className="text-muted-foreground mb-0.5">Kirish narxi</div>
-                            <div className="font-semibold tabular-nums text-foreground">
-                              {formatCurrency(product.purchase_price ?? 0)}
+                            <div className="text-muted-foreground mb-0.5 flex items-center gap-1">
+                              <Barcode className="h-3 w-3" /> Shtrix kod
+                            </div>
+                            <div className="font-semibold tabular-nums text-foreground truncate">
+                              {(product.shtrix_code ? extractBarcodeFromUrl(product.shtrix_code) : '') || product.barcode || product.sku || '-'}
                             </div>
                           </div>
                           <div>
@@ -1129,25 +1150,26 @@ export function SalesPage() {
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground dark:text-gray-400">{t('sales.customer')}</Label>
                   <div className="flex gap-2">
-                    <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-                      <SelectTrigger className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white">
-                        <SelectValue placeholder={t('placeholders.selectCustomer')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {customers.map((customer) => (
-                          <SelectItem key={customer.id} value={String(customer.id)}>
-                            {customer.full_name} - {customer.phone_number}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <SearchableSelect
+                      value={selectedCustomerId}
+                      onValueChange={setSelectedCustomerId}
+                      options={customers.map((customer) => ({
+                        value: String(customer.id),
+                        label: `${customer.full_name} - ${customer.phone_number}`,
+                      }))}
+                      placeholder={t('placeholders.selectCustomer')}
+                      searchPlaceholder={t('placeholders.searchCustomer', 'Mijozni qidirish...')}
+                      emptyMessage={t('messages.customerNotFound', 'Mijoz topilmadi')}
+                      countLabel="ta mijoz"
+                      className="flex-1 min-w-0"
+                    />
                     <div>
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => setShowNewCustomerDialog(true)}
-                        className="h-9 text-sm dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900"
+                        className="h-10 text-sm dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900"
                       >
                         <UserPlus className="h-4 w-4 mr-1" />
                       </Button>
@@ -1185,20 +1207,38 @@ export function SalesPage() {
                     <Button
                       type="button"
                       variant={activePayment === 'cash' ? 'default' : 'outline'}
-                      className={`h-10 text-xs ${activePayment === 'cash' ? '' : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'
+                      className={`h-12 text-xs flex-col gap-0.5 ${activePayment === 'cash'
+                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-600 dark:hover:bg-emerald-700'
+                        : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'
                         }`}
                       onClick={handleQuickCash}
                     >
-                      {t('sales.cash')}
+                      <span className="flex items-center gap-1.5">
+                        <Banknote className="h-4 w-4" /> {t('sales.cash')}
+                      </span>
+                      {activePayment === 'cash' && (
+                        <span className="text-[10px] font-normal opacity-90 tabular-nums">
+                          {formatCurrency(totalWithDiscount)}
+                        </span>
+                      )}
                     </Button>
                     <Button
                       type="button"
                       variant={activePayment === 'card' ? 'default' : 'outline'}
-                      className={`h-10 text-xs ${activePayment === 'card' ? '' : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'
+                      className={`h-12 text-xs flex-col gap-0.5 ${activePayment === 'card'
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700'
+                        : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'
                         }`}
                       onClick={handleQuickCard}
                     >
-                      {t('sales.card')}
+                      <span className="flex items-center gap-1.5">
+                        <CreditCard className="h-4 w-4" /> {t('sales.card')}
+                      </span>
+                      {activePayment === 'card' && (
+                        <span className="text-[10px] font-normal opacity-90 tabular-nums">
+                          {formatCurrency(totalWithDiscount)}
+                        </span>
+                      )}
                     </Button>
                   </div>
                 </div>
@@ -1212,6 +1252,7 @@ export function SalesPage() {
                       value={cashAmount || ''}
                       onChange={(e: ChangeEvent<HTMLInputElement>) => {
                         const val = e.target.value;
+                        setActivePayment(null);
                         setCashAmount(val === '' ? 0 : Number(val));
                       }}
                       className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white"
@@ -1226,6 +1267,7 @@ export function SalesPage() {
                       value={cardAmount || ''}
                       onChange={(e: ChangeEvent<HTMLInputElement>) => {
                         const val = e.target.value;
+                        setActivePayment(null);
                         setCardAmount(val === '' ? 0 : Number(val));
                       }}
                       className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white"

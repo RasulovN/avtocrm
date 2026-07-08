@@ -17,6 +17,7 @@ interface SearchableSelectProps {
   className?: string;
   disabled?: boolean;
   pageSize?: number;
+  countLabel?: string;
 }
 
 export function SearchableSelect({
@@ -29,6 +30,7 @@ export function SearchableSelect({
   className,
   disabled = false,
   pageSize = 50,
+  countLabel = 'ta mahsulot',
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -174,7 +176,7 @@ export function SearchableSelect({
           {/* Count info */}
           {filteredOptions.length > 0 && (
             <div className="px-3 py-1 text-xs text-muted-foreground bg-muted/10 border-b border-border/20 shrink-0">
-              {visibleOptions.length} / {filteredOptions.length} ta mahsulot
+              {visibleOptions.length} / {filteredOptions.length} {countLabel}
             </div>
           )}
 

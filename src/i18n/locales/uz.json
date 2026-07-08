@@ -837,7 +837,8 @@
     "insufficientStock": "Omborlarda yetarli mahsulot yo‘q",
     "invalidQuantity": "Noto‘g‘ri miqdor kiritildi",
     "success": "Muvaffaqiyatli",
-    "notInYourStore": "Sizning do‘koningizda yo‘q"
+    "notInYourStore": "Sizning do‘koningizda yo‘q",
+    "customerNotFound": "Mijoz topilmadi"
   },
   "placeholders": {
     "enterAmount": "Summni kiriting",
@@ -849,6 +850,7 @@
     "selectStore": "Do‘konni tanlang",
     "selectCategory": "Kategoriyani tanlang",
     "selectCustomer": "Mijozni tanlang",
+    "searchCustomer": "Mijozni qidirish (ism yoki telefon)...",
     "customerName": "Mijoz ismi",
     "statType": "Statistika turi",
     "selectBranch": "Filialni tanlang",
