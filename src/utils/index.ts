@@ -26,6 +26,16 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+export function formatAmountInput(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return '';
+  return String(Math.trunc(value)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
+export function parseAmountInput(raw: string): number {
+  const digits = raw.replace(/\D/g, '');
+  return digits === '' ? 0 : Number(digits);
+}
+
 export function formatDate(date: string | Date | undefined | null): string {
   if (!date) return '-';
   const d = new Date(date);

@@ -533,6 +533,8 @@
     "discount": "Chegirma",
     "uzs": "So‘m",
     "change": "Qaytim:",
+    "overpaid": "Ortiqcha summa",
+    "overpaidWarning": "To‘lov summasi jami summadan oshib ketdi. Ortiqcha summani kamaytiring.",
     "print": "Chop etish",
     "addCustomer": "Yangi mijoz qo‘shish",
     "productDetails": "Mahsulot tafsilotlari",

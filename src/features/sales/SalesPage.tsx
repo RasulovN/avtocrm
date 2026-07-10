@@ -16,7 +16,7 @@ import { useAuthStore } from '../../app/store';
 import { useProducts } from '../../context/ProductContext';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import type { Store, Product } from '../../types';
-import { formatCurrency } from '../../utils';
+import { formatCurrency, formatAmountInput, parseAmountInput } from '../../utils';
 import { logger } from '../../utils/logger';
 import { useTranslation } from 'react-i18next';
 import { extractBarcodeFromUrl } from '../../utils/xss';
@@ -377,20 +377,22 @@ export function SalesPage() {
     return discount;
   }, [subtotal, discount, discountType]);
   const totalWithDiscount = subtotal - calculatedDiscount;
+  const roundedTotal = Math.round(totalWithDiscount);
   const totalPaid = useMemo(() => cashAmount + cardAmount, [cashAmount, cardAmount]);
   const change = useMemo(() => Math.max(0, totalPaid - totalWithDiscount), [totalPaid, totalWithDiscount]);
   const debt = useMemo(() => Math.max(0, totalWithDiscount - totalPaid), [totalPaid, totalWithDiscount]);
+  // Kiritilgan to'lov jami summadan oshsa, sotuvni yakunlash bloklanadi
+  const isOverpaid = totalPaid > roundedTotal;
 
-  // Tezkor to'lov rejimi tanlangan bo'lsa, summa savat o'zgarishiga qarab avtomatik hisoblanadi
+  // Tezkor to'lov rejimi tanlangan usul jami summaning qolgan qismini avtomatik qoplaydi
+  // (masalan, karta rejimida naqd kiritilsa, karta summasi qoldiqqa moslashadi — aralash to'lov)
   useEffect(() => {
     if (activePayment === 'cash') {
-      setCashAmount(totalWithDiscount);
-      setCardAmount(0);
+      setCashAmount(Math.max(0, roundedTotal - cardAmount));
     } else if (activePayment === 'card') {
-      setCardAmount(totalWithDiscount);
-      setCashAmount(0);
+      setCardAmount(Math.max(0, roundedTotal - cashAmount));
     }
-  }, [activePayment, totalWithDiscount]);
+  }, [activePayment, roundedTotal, cashAmount, cardAmount]);
   const productImages = getProductImages(selectedProduct);
   const filteredProducts = useMemo(() => {
     let result = allProducts;
@@ -606,6 +608,8 @@ export function SalesPage() {
       setActivePayment(null);
       setCashAmount(0);
     } else {
+      // Karta rejimidan o'tilsa, avvalgi avto to'ldirilgan karta summasi tozalanadi
+      if (activePayment === 'card') setCardAmount(0);
       setActivePayment('cash');
     }
   };
@@ -614,6 +618,7 @@ export function SalesPage() {
       setActivePayment(null);
       setCardAmount(0);
     } else {
+      if (activePayment === 'cash') setCashAmount(0);
       setActivePayment('card');
     }
   };
@@ -645,6 +650,11 @@ export function SalesPage() {
     // Check for zero quantities
     if (items.some(item => item.quantity <= 0)) {
       toast.error(t('messages.invalidQuantity'));
+      return;
+    }
+
+    if (isOverpaid) {
+      toast.error(t('sales.overpaidWarning', 'To‘lov summasi jami summadan oshib ketdi'));
       return;
     }
 
@@ -1094,12 +1104,11 @@ export function SalesPage() {
                             </button>
                           </div>
                           <Input
-                            type="number"
-                            min="0"
-                            value={item.use_wholesale ? item.wholesale_price || '' : item.selling_price || ''}
+                            type="text"
+                            inputMode="numeric"
+                            value={formatAmountInput(item.use_wholesale ? item.wholesale_price : item.selling_price)}
                             onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                              const val = e.target.value;
-                              updatePrice(index, val === '' ? 0 : Number(val));
+                              updatePrice(index, parseAmountInput(e.target.value));
                             }}
                             className="h-7 text-center text-xs dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                           />
@@ -1188,17 +1197,31 @@ export function SalesPage() {
                         <SelectItem value="p">%</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Input
-                      type="number"
-                      min="0"
-                      placeholder="0"
-                      value={discount || ''}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                        const val = e.target.value;
-                        setDiscount(val === '' ? 0 : Number(val));
-                      }}
-                      className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white flex-1"
-                    />
+                    {discountType === 'p' ? (
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        placeholder="0"
+                        value={discount || ''}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                          const val = e.target.value;
+                          setDiscount(val === '' ? 0 : Number(val));
+                        }}
+                        className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white flex-1"
+                      />
+                    ) : (
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="0"
+                        value={formatAmountInput(discount)}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                          setDiscount(parseAmountInput(e.target.value));
+                        }}
+                        className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white flex-1"
+                      />
+                    )}
                   </div>
                 </div>
                 <div className="space-y-1.5">
@@ -1218,7 +1241,7 @@ export function SalesPage() {
                       </span>
                       {activePayment === 'cash' && (
                         <span className="text-[10px] font-normal opacity-90 tabular-nums">
-                          {formatCurrency(totalWithDiscount)}
+                          {formatCurrency(cashAmount)}
                         </span>
                       )}
                     </Button>
@@ -1236,7 +1259,7 @@ export function SalesPage() {
                       </span>
                       {activePayment === 'card' && (
                         <span className="text-[10px] font-normal opacity-90 tabular-nums">
-                          {formatCurrency(totalWithDiscount)}
+                          {formatCurrency(cardAmount)}
                         </span>
                       )}
                     </Button>
@@ -1246,31 +1269,33 @@ export function SalesPage() {
                   <div>
                     <Label className="text-xs dark:text-gray-300">{t('sales.cash')}</Label>
                     <Input
-                      type="number"
-                      min="0"
+                      type="text"
+                      inputMode="numeric"
                       placeholder="0"
-                      value={cashAmount || ''}
+                      value={formatAmountInput(cashAmount)}
                       onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                        const val = e.target.value;
-                        setActivePayment(null);
-                        setCashAmount(val === '' ? 0 : Number(val));
+                        if (activePayment === 'cash') setActivePayment(null);
+                        setCashAmount(parseAmountInput(e.target.value));
                       }}
-                      className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white"
+                      className={`h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white ${
+                        isOverpaid ? 'border-red-500 dark:border-red-500 focus-visible:ring-red-500/30' : ''
+                      }`}
                     />
                   </div>
                   <div>
                     <Label className="text-xs dark:text-gray-300">{t('sales.card')}</Label>
                     <Input
-                      type="number"
-                      min="0"
+                      type="text"
+                      inputMode="numeric"
                       placeholder="0"
-                      value={cardAmount || ''}
+                      value={formatAmountInput(cardAmount)}
                       onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                        const val = e.target.value;
-                        setActivePayment(null);
-                        setCardAmount(val === '' ? 0 : Number(val));
+                        if (activePayment === 'card') setActivePayment(null);
+                        setCardAmount(parseAmountInput(e.target.value));
                       }}
-                      className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white"
+                      className={`h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white ${
+                        isOverpaid ? 'border-red-500 dark:border-red-500 focus-visible:ring-red-500/30' : ''
+                      }`}
                     />
                   </div>
                 </div>
@@ -1304,10 +1329,10 @@ export function SalesPage() {
                     <span className="text-muted-foreground dark:text-gray-400">{t('inventory.paid')}:</span>
                     <span className="font-bold dark:text-white">{formatCurrency(totalPaid)}</span>
                   </div>
-                  {change > 0 && (
+                  {isOverpaid && (
                     <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground dark:text-gray-400">{t('sales.change')}</span>
-                      <span className="font-bold text-blue-600 dark:text-blue-400">{formatCurrency(change)}</span>
+                      <span className="font-medium text-red-600 dark:text-red-400">{t('sales.overpaid', 'Ortiqcha summa')}</span>
+                      <span className="font-bold text-red-600 dark:text-red-400">+{formatCurrency(totalPaid - roundedTotal)}</span>
                     </div>
                   )}
                   {debt > 0 && (
@@ -1317,11 +1342,16 @@ export function SalesPage() {
                     </div>
                   )}
                 </div>
+                {isOverpaid && (
+                  <p className="text-[11px] leading-snug text-red-600 dark:text-red-400">
+                    {t('sales.overpaidWarning', 'To‘lov summasi jami summadan oshib ketdi')}
+                  </p>
+                )}
                 <Button
                   type="button"
                   className="w-full h-11 text-sm font-semibold dark:bg-green-600 dark:hover:bg-green-700"
                   onClick={handleFinishSale}
-                  disabled={saving || items.length === 0}
+                  disabled={saving || items.length === 0 || isOverpaid}
                 >
                   {saving ? t('common.loading') : `${t('common.submit')} — ${formatCurrency(totalWithDiscount)}`}
                 </Button>
