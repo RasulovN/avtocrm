@@ -427,6 +427,7 @@ export interface BankCard {
 export interface BankCardFormData {
   name: string;
   is_default?: boolean;
+  is_active?: boolean;
 }
 
 export interface Sale {

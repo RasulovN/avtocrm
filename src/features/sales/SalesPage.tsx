@@ -161,13 +161,31 @@ export function SalesPage() {
   const [cardAmount, setCardAmount] = useState(0);
   const [bankCards, setBankCards] = useState<BankCard[]>([]);
   const [selectedBankCardId, setSelectedBankCardId] = useState<string>('');
+  const [cardType, setCardType] = useState('Uzcard');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'mixed'>('cash');
   const [discount, setDiscount] = useState(0);
   const [discountType, setDiscountType] = useState<'p' | 'f'>('f');
+  const [customerMode, setCustomerMode] = useState<'customer' | 'guest'>('guest');
   const [showReceipt, setShowReceipt] = useState(false);
-  const [activePayment, setActivePayment] = useState<'cash' | 'card' | null>('cash');
+  type PaymentMode = 'cash' | 'card' | 'mixed' | null;
+  const [activePayment, setActivePayment] = useState<PaymentMode>('cash');
   const [showScanner, setShowScanner] = useState(false);
   const [customers, setCustomers] = useState<{ id: number; full_name: string; phone_number: string }[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+
+  useEffect(() => {
+    if (cashAmount > 0 && cardAmount > 0) setPaymentMethod('mixed');
+    else if (cardAmount > 0) setPaymentMethod('card');
+    else setPaymentMethod('cash');
+  }, [cashAmount, cardAmount]);
+
+  useEffect(() => {
+    if (selectedCustomerId) {
+      setCustomerMode('customer');
+    } else {
+      setCustomerMode('guest');
+    }
+  }, [selectedCustomerId]);
   const [debtDueDate, setDebtDueDate] = useState('');
   const [showNewCustomerDialog, setShowNewCustomerDialog] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState('');
@@ -384,8 +402,16 @@ export function SalesPage() {
   const totalPaid = useMemo(() => cashAmount + cardAmount, [cashAmount, cardAmount]);
   const change = useMemo(() => Math.max(0, totalPaid - totalWithDiscount), [totalPaid, totalWithDiscount]);
   const debt = useMemo(() => Math.max(0, totalWithDiscount - totalPaid), [totalPaid, totalWithDiscount]);
+  const isDebtSale = debt > 0;
+  const submitAmount = useMemo(() => (isDebtSale ? debt : totalWithDiscount), [debt, isDebtSale, totalWithDiscount]);
   // Kiritilgan to'lov jami summadan oshsa, sotuvni yakunlash bloklanadi
   const isOverpaid = totalPaid > roundedTotal;
+
+  useEffect(() => {
+    if (isDebtSale && customerMode === 'guest') {
+      setCustomerMode('customer');
+    }
+  }, [customerMode, isDebtSale]);
 
   // Tezkor to'lov rejimi tanlangan usul jami summaning qolgan qismini avtomatik qoplaydi
   // (masalan, karta rejimida naqd kiritilsa, karta summasi qoldiqqa moslashadi — aralash to'lov)
@@ -645,6 +671,18 @@ export function SalesPage() {
     }
   };
 
+  const handleQuickMixed = () => {
+    if (activePayment === 'mixed') {
+      setActivePayment(null);
+      setCashAmount(0);
+      setCardAmount(0);
+    } else {
+      if (activePayment === 'cash') setCashAmount(0);
+      if (activePayment === 'card') setCardAmount(0);
+      setActivePayment('mixed');
+    }
+  };
+
   const handleCreateCustomer = async () => {
     if (!newCustomerName.trim() || !newCustomerPhone.trim()) return;
     try {
@@ -677,6 +715,12 @@ export function SalesPage() {
 
     if (isOverpaid) {
       toast.error(t('sales.overpaidWarning', 'To‘lov summasi jami summadan oshib ketdi'));
+      return;
+    }
+
+    if (isDebtSale && !selectedCustomerId) {
+      setCustomerMode('customer');
+      toast.error('Qarzga sotuv uchun mijoz tanlang');
       return;
     }
 
@@ -868,7 +912,7 @@ export function SalesPage() {
           </div>
         </div>
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-12 xl:gap-3 xl:h-[calc(100vh-11rem)]">
-          <div className="flex flex-col space-y-2 xl:col-span-5 overflow-y-scroll">
+          <div className="flex min-h-0 flex-col space-y-2 xl:col-span-5 overflow-y-auto">
             <div className="bg-card border border-gray-900 rounded-lg flex min-h-80 flex-col p-3 xl:min-h-0 xl:flex-1">
               <div className="mb-3">
                 <h4 className="text-base font-semibold flex items-center gap-2 dark:text-white mb-2">
@@ -1029,7 +1073,7 @@ export function SalesPage() {
               </div>
             </div>
           </div>
-          <div className="flex flex-col space-y-2 xl:col-span-4 overflow-y-scroll">
+          <div className="flex min-h-0 flex-col space-y-2 xl:col-span-4 overflow-y-auto">
             <div className="bg-card border border-gray-900 rounded-lg flex min-h-80 flex-col xl:flex-1">
               <div className="p-3 pb-2">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -1179,29 +1223,63 @@ export function SalesPage() {
               </div>
             </div>
           </div>
-          <div className="flex flex-col space-y-2 xl:col-span-3">
+          <div className="flex min-h-0 flex-col space-y-2 xl:col-span-3 overflow-y-auto">
             <div className="bg-card border border-gray-900 rounded-lg flex min-h-80 flex-col xl:flex-1">
               <div className="p-3 pb-2">
                 <h4 className="text-base font-semibold dark:text-white">{t('sales.payment', 'Тўлов')}</h4>
               </div>
               <div className="px-3 flex-1 space-y-3">
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground dark:text-gray-400">{t('sales.customer')}</Label>
-                  <div className="flex gap-2">
-                    <SearchableSelect
-                      value={selectedCustomerId}
-                      onValueChange={setSelectedCustomerId}
-                      options={customers.map((customer) => ({
-                        value: String(customer.id),
-                        label: `${customer.full_name} - ${customer.phone_number}`,
-                      }))}
-                      placeholder={t('placeholders.selectCustomer')}
-                      searchPlaceholder={t('placeholders.searchCustomer', 'Mijozni qidirish...')}
-                      emptyMessage={t('messages.customerNotFound', 'Mijoz topilmadi')}
-                      countLabel="ta mijoz"
-                      className="flex-1 min-w-0"
-                    />
-                    <div>
+                <div className="rounded-xl border border-dashed border-gray-300/80 bg-gray-50/80 p-3 dark:border-gray-700 dark:bg-gray-900/60">
+                  <div className="mb-2 flex items-center justify-between">
+                    <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground dark:text-gray-400">{t('sales.customer')}</Label>
+                    <span className="text-[11px] text-muted-foreground dark:text-gray-400">
+                      {customerMode === 'guest' ? 'Mijozsiz (oddiy sotuv)' : 'Mijoz'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      variant={customerMode === 'guest' ? 'default' : 'outline'}
+                      size="sm"
+                      disabled={isDebtSale}
+                      onClick={() => {
+                        setCustomerMode('guest');
+                        setSelectedCustomerId('');
+                      }}
+                      className={customerMode === 'guest' ? 'bg-slate-800 hover:bg-slate-900 text-white' : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'}
+                    >
+                      Mijozsiz
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={customerMode === 'customer' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setCustomerMode('customer')}
+                      className={customerMode === 'customer' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'}
+                    >
+                      Mijoz
+                    </Button>
+                  </div>
+                  {isDebtSale && (
+                    <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400">
+                      Qarzga sotuv uchun mijoz tanlash majburiy.
+                    </p>
+                  )}
+                  {customerMode === 'customer' && (
+                    <div className="mt-3 flex gap-2">
+                      <SearchableSelect
+                        value={selectedCustomerId}
+                        onValueChange={setSelectedCustomerId}
+                        options={customers.map((customer) => ({
+                          value: String(customer.id),
+                          label: `${customer.full_name} - ${customer.phone_number}`,
+                        }))}
+                        placeholder={t('placeholders.selectCustomer')}
+                        searchPlaceholder={t('placeholders.searchCustomer', 'Mijozni qidirish...')}
+                        emptyMessage={t('messages.customerNotFound', 'Mijoz topilmadi')}
+                        countLabel="ta mijoz"
+                        className="flex-1 min-w-0"
+                      />
                       <Button
                         type="button"
                         variant="outline"
@@ -1212,11 +1290,11 @@ export function SalesPage() {
                         <UserPlus className="h-4 w-4 mr-1" />
                       </Button>
                     </div>
-                  </div>
+                  )}
                 </div>
-                <div>
-                  <Label className="text-xs dark:text-gray-300">{t('sales.discount')}</Label>
-                  <div className="flex gap-1">
+                <div className="rounded-xl border border-dashed border-gray-300/80 bg-gray-50/80 p-3 dark:border-gray-700 dark:bg-gray-900/60">
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground dark:text-gray-400">{t('sales.discount')}</Label>
+                  <div className="mt-2 flex gap-1">
                     <Select value={discountType} onValueChange={(val: 'p' | 'f') => setDiscountType(val)}>
                       <SelectTrigger className="h-9 w-20 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white">
                         <SelectValue />
@@ -1253,13 +1331,13 @@ export function SalesPage() {
                     )}
                   </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground dark:text-gray-400">{t('sales.quickPayment')}</Label>
-                  <div className="grid grid-cols-2 gap-1.5">
+                <div className="rounded-xl border border-dashed border-gray-300/80 bg-gray-50/80 p-3 dark:border-gray-700 dark:bg-gray-900/60 space-y-3">
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground dark:text-gray-400">{t('sales.quickPayment')}</Label>
+                  <div className="grid grid-cols-3 gap-1.5">
                     <Button
                       type="button"
-                      variant={activePayment === 'cash' ? 'default' : 'outline'}
-                      className={`h-12 text-xs flex-col gap-0.5 ${activePayment === 'cash'
+                      variant={paymentMethod === 'cash' ? 'default' : 'outline'}
+                      className={`h-12 text-xs flex-col gap-0.5 ${paymentMethod === 'cash'
                         ? 'bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-600 dark:hover:bg-emerald-700'
                         : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'
                         }`}
@@ -1268,7 +1346,7 @@ export function SalesPage() {
                       <span className="flex items-center gap-1.5">
                         <Banknote className="h-4 w-4" /> {t('sales.cash')}
                       </span>
-                      {activePayment === 'cash' && (
+                      {paymentMethod === 'cash' && (
                         <span className="text-[10px] font-normal opacity-90 tabular-nums">
                           {formatCurrency(cashAmount)}
                         </span>
@@ -1276,8 +1354,8 @@ export function SalesPage() {
                     </Button>
                     <Button
                       type="button"
-                      variant={activePayment === 'card' ? 'default' : 'outline'}
-                      className={`h-12 text-xs flex-col gap-0.5 ${activePayment === 'card'
+                      variant={paymentMethod === 'card' ? 'default' : 'outline'}
+                      className={`h-12 text-xs flex-col gap-0.5 ${paymentMethod === 'card'
                         ? 'bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700'
                         : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'
                         }`}
@@ -1292,62 +1370,104 @@ export function SalesPage() {
                         </span>
                       )}
                     </Button>
+                    <Button
+                      type="button"
+                      variant={paymentMethod === 'mixed' || activePayment === 'mixed' ? 'default' : 'outline'}
+                      className={`h-12 text-xs flex-col gap-0.5 ${paymentMethod === 'mixed' || activePayment === 'mixed'
+                        ? 'bg-violet-600 hover:bg-violet-700 text-white dark:bg-violet-600 dark:hover:bg-violet-700'
+                        : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'
+                        }`}
+                      onClick={handleQuickMixed}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <ArrowLeftRight className="h-4 w-4" /> Aralash
+                      </span>
+                      {(paymentMethod === 'mixed' || activePayment === 'mixed') && (
+                        <span className="text-[10px] font-normal opacity-90 tabular-nums">
+                          {formatCurrency(cashAmount + cardAmount)}
+                        </span>
+                      )}
+                    </Button>
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <div>
+                      <Label className="text-xs dark:text-gray-300">{t('sales.cash')}</Label>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="0"
+                        value={formatAmountInput(cashAmount)}
+                        disabled={isOverpaid && cashAmount === 0}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                          if (activePayment === 'cash') setActivePayment(null);
+                          const val = parseAmountInput(e.target.value);
+                          if (cardAmount + val > roundedTotal) return;
+                          setCashAmount(val);
+                        }}
+                        className={`h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white ${
+                          isOverpaid ? 'border-red-500 dark:border-red-500 focus-visible:ring-red-500/30' : ''
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs dark:text-gray-300">{t('sales.card')}</Label>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="0"
+                        value={formatAmountInput(cardAmount)}
+                        disabled={isOverpaid && cardAmount === 0}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                          if (activePayment === 'card') setActivePayment(null);
+                          const val = parseAmountInput(e.target.value);
+                          if (cashAmount + val > roundedTotal) return;
+                          setCardAmount(val);
+                        }}
+                        className={`h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white ${
+                          isOverpaid ? 'border-red-500 dark:border-red-500 focus-visible:ring-red-500/30' : ''
+                        }`}
+                      />
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <div>
-                    <Label className="text-xs dark:text-gray-300">{t('sales.cash')}</Label>
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      placeholder="0"
-                      value={formatAmountInput(cashAmount)}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                        if (activePayment === 'cash') setActivePayment(null);
-                        setCashAmount(parseAmountInput(e.target.value));
-                      }}
-                      className={`h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white ${
-                        isOverpaid ? 'border-red-500 dark:border-red-500 focus-visible:ring-red-500/30' : ''
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs dark:text-gray-300">{t('sales.card')}</Label>
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      placeholder="0"
-                      value={formatAmountInput(cardAmount)}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                        if (activePayment === 'card') setActivePayment(null);
-                        setCardAmount(parseAmountInput(e.target.value));
-                      }}
-                      className={`h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white ${
-                        isOverpaid ? 'border-red-500 dark:border-red-500 focus-visible:ring-red-500/30' : ''
-                      }`}
-                    />
-                  </div>
-                </div>
-                {cardAmount > 0 && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs dark:text-gray-300">{t('sales.bankCard', 'Bank kartasi')}</Label>
+                {(cardAmount > 0 || paymentMethod === 'card' || paymentMethod === 'mixed' || activePayment === 'mixed') && (
+                  <div className="rounded-xl border border-dashed border-gray-300/80 bg-gray-50/80 p-3 dark:border-gray-700 dark:bg-gray-900/60 space-y-2">
+                    <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground dark:text-gray-400">Karta turi</Label>
                     {bankCards.length === 0 ? (
-                      <p className="text-xs text-red-600 dark:text-red-400">
-                        {t('sales.noBankCards', 'Faol bank kartasi yo‘q — sozlamalardan qo‘shing')}
-                      </p>
+                      <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-800/50 dark:bg-red-900/20 px-3 py-2">
+                        <p className="text-xs text-red-600 dark:text-red-400">
+                          {t('sales.noBankCards', "Faol bank kartasi yo'q — sozlamalardan qo'shing")}
+                        </p>
+                      </div>
                     ) : (
-                      <Select value={selectedBankCardId} onValueChange={setSelectedBankCardId}>
-                        <SelectTrigger className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white">
-                          <SelectValue placeholder={t('sales.selectCard', 'Kartani tanlang')} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {bankCards.map((card) => (
-                            <SelectItem key={card.id} value={String(card.id)}>
-                              {card.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <>
+                        <Select value={selectedBankCardId} onValueChange={setSelectedBankCardId}>
+                          <SelectTrigger className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white">
+                            <SelectValue placeholder={t('sales.selectCard', 'Kartani tanlang')} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {bankCards.map((card) => (
+                              <SelectItem key={card.id} value={String(card.id)}>
+                                {card.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select value={cardType} onValueChange={setCardType}>
+                          <SelectTrigger className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white">
+                            <SelectValue placeholder="Karta turini tanlang" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Uzcard">Uzcard</SelectItem>
+                            <SelectItem value="Humo">Humo</SelectItem>
+                            <SelectItem value="Visa">Visa</SelectItem>
+                            <SelectItem value="Mastercard">Mastercard</SelectItem>
+                            <SelectItem value="Payme">Payme</SelectItem>
+                            <SelectItem value="Click">Click</SelectItem>
+                            <SelectItem value="Uzum Bank">Uzum Bank</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </>
                     )}
                   </div>
                 )}
@@ -1364,7 +1484,7 @@ export function SalesPage() {
                   </div>
                 )}
 
-                <div className="rounded-lg p-2.5 bg-muted/50 dark:bg-gray-900 space-y-1.5">
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 p-2.5 dark:border-emerald-800/60 dark:bg-emerald-950/20 space-y-1.5">
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground dark:text-gray-400">{t('sales.total')}:</span>
                     <span className="font-bold dark:text-white">{formatCurrency(subtotal)}</span>
@@ -1403,9 +1523,9 @@ export function SalesPage() {
                   type="button"
                   className="w-full h-11 text-sm font-semibold dark:bg-green-600 dark:hover:bg-green-700"
                   onClick={handleFinishSale}
-                  disabled={saving || items.length === 0 || isOverpaid}
+                  disabled={saving || items.length === 0 || isOverpaid || (isDebtSale && !selectedCustomerId) || (cardAmount > 0 && bankCards.length === 0)}
                 >
-                  {saving ? t('common.loading') : `${t('common.submit')} — ${formatCurrency(totalWithDiscount)}`}
+                  {saving ? t('common.loading') : `${t('common.submit')} — ${formatCurrency(submitAmount)}`}
                 </Button>
               </div>
             </div>

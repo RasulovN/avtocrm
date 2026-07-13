@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { CreditCard, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { CreditCard, Pencil, Plus, Search, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
@@ -27,14 +27,20 @@ export function BankCardsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCard, setEditingCard] = useState<BankCard | null>(null);
-  const [formData, setFormData] = useState<BankCardFormData>({ name: '', is_default: false });
+  const [formData, setFormData] = useState<BankCardFormData>({
+    name: '',
+    is_default: false,
+    is_active: true,
+  });
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [togglingId, setTogglingId] = useState<number | null>(null);
 
   const loadCards = async () => {
     try {
       setLoading(true);
+      // Barcha kartalarni olish (faol va faol emaslarni)
       const data = await bankCardService.getAll();
       setCards(data);
     } catch (error) {
@@ -58,10 +64,14 @@ export function BankCardsPage() {
   const handleOpenDialog = (card?: BankCard) => {
     if (card) {
       setEditingCard(card);
-      setFormData({ name: card.name, is_default: card.is_default });
+      setFormData({
+        name: card.name,
+        is_default: card.is_default,
+        is_active: card.is_active,
+      });
     } else {
       setEditingCard(null);
-      setFormData({ name: '', is_default: false });
+      setFormData({ name: '', is_default: false, is_active: true });
     }
     setIsDialogOpen(true);
   };
@@ -72,17 +82,21 @@ export function BankCardsPage() {
     try {
       setSaving(true);
       if (editingCard) {
-        await bankCardService.update(editingCard.id, {
+        // Tahrirlashda to'liq yangilash (PUT)
+        await bankCardService.updateFull(editingCard.id, {
           name: formData.name.trim(),
           is_default: formData.is_default,
+          is_active: formData.is_active !== false,
         });
-        toast.success(t('bankCards.cardUpdated', 'Karta yangilandi'));
+        toast.success(t('bankCards.cardUpdated', "Karta yangilandi"));
       } else {
+        // Yangi karta yaratish
         await bankCardService.create({
           name: formData.name.trim(),
           is_default: formData.is_default,
+          is_active: true,
         });
-        toast.success(t('bankCards.cardAdded', 'Karta qo‘shildi'));
+        toast.success(t('bankCards.cardAdded', "Karta qo'shildi"));
       }
       setIsDialogOpen(false);
       await loadCards();
@@ -93,11 +107,28 @@ export function BankCardsPage() {
     }
   };
 
+  const handleToggleActive = async (card: BankCard) => {
+    try {
+      setTogglingId(card.id);
+      await bankCardService.toggleActive(card.id, !card.is_active);
+      toast.success(
+        card.is_active
+          ? t('bankCards.cardDeactivated', "Karta faolsizlantirildi")
+          : t('bankCards.cardActivated', "Karta faollashtirildi")
+      );
+      await loadCards();
+    } catch (error) {
+      handleError(error, { showToast: true });
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
   const handleDelete = async (id: number) => {
     try {
       setDeleting(true);
       await bankCardService.remove(id);
-      toast.success(t('bankCards.cardDeleted', 'Karta o‘chirildi (faolsizlantirildi)'));
+      toast.success(t('bankCards.cardDeleted', "Karta o'chirildi"));
       await loadCards();
     } catch (error) {
       handleError(error, { showToast: true });
@@ -149,7 +180,24 @@ export function BankCardsPage() {
       header: t('common.actions'),
       className: 'text-right',
       render: (item) => (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-end gap-1">
+          {/* Faollashtirish / o'chirish toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            title={item.is_active ? "Faolsizlashtirish" : "Faollashtirish"}
+            disabled={togglingId === item.id}
+            onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+              e.stopPropagation();
+              void handleToggleActive(item);
+            }}
+          >
+            {item.is_active ? (
+              <ToggleRight className="h-4 w-4 text-emerald-500" />
+            ) : (
+              <ToggleLeft className="h-4 w-4 text-gray-400" />
+            )}
+          </Button>
           <Button
             variant="ghost"
             size="icon"
@@ -160,18 +208,16 @@ export function BankCardsPage() {
           >
             <Pencil className="h-4 w-4" />
           </Button>
-          {item.is_active && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                e.stopPropagation();
-                setDeleteId(item.id);
-              }}
-            >
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+              e.stopPropagation();
+              setDeleteId(item.id);
+            }}
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
         </div>
       ),
     });
@@ -181,12 +227,12 @@ export function BankCardsPage() {
     <div className="space-y-6">
       <PageHeader
         title={t('bankCards.title', 'Bank kartalari')}
-        description={t('bankCards.description', 'To‘lov qabul qilinadigan bank kartalari ro‘yxati')}
+        description={t('bankCards.description', "To'lov qabul qilinadigan bank kartalari ro'yxati")}
         actions={
           isSuperUser ? (
             <Button onClick={() => handleOpenDialog()}>
               <Plus className="h-4 w-4 mr-2" />
-              {t('bankCards.addCard', 'Karta qo‘shish')}
+              {t('bankCards.addCard', "Karta qo'shish")}
             </Button>
           ) : undefined
         }
@@ -212,11 +258,11 @@ export function BankCardsPage() {
           </div>
         ) : filteredCards.length === 0 ? (
           <div className="rounded-lg border bg-card px-4 py-10 text-center text-sm text-muted-foreground">
-            {t('bankCards.noCards', 'Bank kartalari yo‘q')}
+            {t('bankCards.noCards', "Bank kartalari yo'q")}
           </div>
         ) : (
           filteredCards.map((card) => (
-            <Card key={card.id}>
+            <Card key={card.id} className={!card.is_active ? 'opacity-60' : ''}>
               <CardContent className="space-y-3 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
@@ -237,16 +283,26 @@ export function BankCardsPage() {
                 </div>
                 {isSuperUser && (
                   <div className="flex gap-2">
-                    <Button variant="outline" className="flex-1" onClick={() => handleOpenDialog(card)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      disabled={togglingId === card.id}
+                      onClick={() => void handleToggleActive(card)}
+                    >
+                      {card.is_active ? (
+                        <><ToggleRight className="mr-1 h-4 w-4 text-emerald-500" /> Faolsizlashtirish</>
+                      ) : (
+                        <><ToggleLeft className="mr-1 h-4 w-4" /> Faollashtirish</>
+                      )}
+                    </Button>
+                    <Button variant="outline" size="sm" className="flex-1" onClick={() => handleOpenDialog(card)}>
                       <Pencil className="mr-2 h-4 w-4" />
                       {t('common.edit')}
                     </Button>
-                    {card.is_active && (
-                      <Button variant="outline" className="flex-1" onClick={() => setDeleteId(card.id)}>
-                        <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-                        {t('common.delete')}
-                      </Button>
-                    )}
+                    <Button variant="outline" size="sm" onClick={() => setDeleteId(card.id)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
                   </div>
                 )}
               </CardContent>
@@ -261,7 +317,7 @@ export function BankCardsPage() {
           data={filteredCards}
           columns={columns}
           loading={loading}
-          emptyMessage={t('bankCards.noCards', 'Bank kartalari yo‘q')}
+          emptyMessage={t('bankCards.noCards', "Bank kartalari yo'q")}
           loadingMessage={t('common.loading')}
           onRowClick={isSuperUser ? (item: BankCard) => handleOpenDialog(item) : undefined}
         />
@@ -276,7 +332,7 @@ export function BankCardsPage() {
             title={t('common.delete')}
             description={t(
               'bankCards.deleteConfirm',
-              'Karta o‘chirilmaydi, faolsizlantiriladi: yangi to‘lovda tanlab bo‘lmaydi, eski hisobotlarda ko‘rinaveradi.'
+              "Karta o'chiriladimi? Eski hisobotlarda ko'rinaveradi."
             )}
             confirmText={t('common.delete')}
             variant="destructive"
@@ -289,11 +345,12 @@ export function BankCardsPage() {
                 <DialogTitle>
                   {editingCard
                     ? t('bankCards.editCard', 'Kartani tahrirlash')
-                    : t('bankCards.addCard', 'Karta qo‘shish')}
+                    : t('bankCards.addCard', "Karta qo'shish")}
                 </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit}>
                 <div className="space-y-4 py-4">
+                  {/* Karta nomi */}
                   <div className="space-y-2">
                     <Label htmlFor="card-name">{t('bankCards.cardName', 'Karta nomi')}</Label>
                     <Input
@@ -302,10 +359,12 @@ export function BankCardsPage() {
                       onChange={(e: ChangeEvent<HTMLInputElement>) =>
                         setFormData((prev) => ({ ...prev, name: e.target.value }))
                       }
-                      placeholder="Uzcard, Humo..."
+                      placeholder="Uzcard, Humo, Payme..."
                       required
                     />
                   </div>
+
+                  {/* Asosiy karta */}
                   <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
                     <input
                       type="checkbox"
@@ -317,9 +376,30 @@ export function BankCardsPage() {
                     />
                     {t('bankCards.setDefault', 'Asosiy karta qilish')}
                   </label>
-                  <p className="text-xs text-muted-foreground">
-                    {t('bankCards.defaultHint', 'Asosiy karta kassada avtomatik tanlanadi. Bir vaqtda faqat bitta asosiy karta bo‘ladi.')}
+                  <p className="text-xs text-muted-foreground -mt-2">
+                    {t(
+                      'bankCards.defaultHint',
+                      'Asosiy karta kassada avtomatik tanlanadi. Bir vaqtda faqat bitta asosiy karta bo\'ladi.'
+                    )}
                   </p>
+
+                  {/* Faol holat — faqat tahrirlashda */}
+                  {editingCard && (
+                    <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.is_active !== false}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                          setFormData((prev) => ({ ...prev, is_active: e.target.checked }))
+                        }
+                        className="h-4 w-4 rounded border-input"
+                      />
+                      {t('bankCards.active', 'Faol')}
+                      <span className="text-xs text-muted-foreground font-normal ml-1">
+                        (faolsiz karta kassada tanlanmaydi)
+                      </span>
+                    </label>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <Button

@@ -13,6 +13,7 @@ const normalizeBankCard = (raw: unknown): BankCard => {
 };
 
 export const bankCardService = {
+  /** GET /api/sales/bank-cards/ — barcha yoki filtr bilan */
   getAll: async (params?: { is_active?: boolean }): Promise<BankCard[]> => {
     const searchParams = new URLSearchParams();
     if (params?.is_active !== undefined) searchParams.append('is_active', String(params.is_active));
@@ -32,19 +33,53 @@ export const bankCardService = {
     return [];
   },
 
-  create: async (data: BankCardFormData): Promise<BankCard> => {
-    const response = await apiClient.post<unknown>('/sales/bank-cards/', data);
-    const payload = response.data as { data?: unknown };
-    return normalizeBankCard(payload?.data ?? response.data);
+  /** GET /api/sales/bank-cards/{id}/ — bitta karta */
+  getById: async (id: number): Promise<BankCard> => {
+    const response = await apiClient.get<unknown>(`/sales/bank-cards/${id}/`);
+    return normalizeBankCard(response.data);
   },
 
+  /** POST /api/sales/bank-cards/ — yangi karta yaratish */
+  create: async (data: BankCardFormData): Promise<BankCard> => {
+    const payload: Record<string, unknown> = {
+      name: data.name,
+      is_default: data.is_default ?? false,
+      is_active: data.is_active !== false, // default: true
+    };
+    const response = await apiClient.post<unknown>('/sales/bank-cards/', payload);
+    const res = response.data as { data?: unknown };
+    return normalizeBankCard(res?.data ?? response.data);
+  },
+
+  /** PATCH /api/sales/bank-cards/{id}/ — qisman yangilash */
   update: async (id: number, data: Partial<BankCardFormData>): Promise<BankCard> => {
     const response = await apiClient.patch<unknown>(`/sales/bank-cards/${id}/`, data);
-    const payload = response.data as { data?: unknown };
-    return normalizeBankCard(payload?.data ?? response.data);
+    const res = response.data as { data?: unknown };
+    return normalizeBankCard(res?.data ?? response.data);
   },
 
-  // Soft delete: backend kartani o'chirmaydi, is_active=false qiladi
+  /** PUT /api/sales/bank-cards/{id}/ — to'liq yangilash */
+  updateFull: async (id: number, data: BankCardFormData): Promise<BankCard> => {
+    const payload: Record<string, unknown> = {
+      name: data.name,
+      is_default: data.is_default ?? false,
+      is_active: data.is_active !== false,
+    };
+    const response = await apiClient.put<unknown>(`/sales/bank-cards/${id}/`, payload);
+    const res = response.data as { data?: unknown };
+    return normalizeBankCard(res?.data ?? response.data);
+  },
+
+  /** Kartani faollashtirish / faolsizlashtirish toggle (PATCH is_active) */
+  toggleActive: async (id: number, isActive: boolean): Promise<BankCard> => {
+    const response = await apiClient.patch<unknown>(`/sales/bank-cards/${id}/`, {
+      is_active: isActive,
+    });
+    const res = response.data as { data?: unknown };
+    return normalizeBankCard(res?.data ?? response.data);
+  },
+
+  /** DELETE /api/sales/bank-cards/{id}/ — soft delete (is_active=false bo'ladi) */
   remove: async (id: number): Promise<void> => {
     await apiClient.delete(`/sales/bank-cards/${id}/`);
   },

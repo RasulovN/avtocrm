@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Package, Loader2, Building2, Eye } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight,  Package, Loader2, Building2, Eye } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Button } from '../ui';
 import { cn } from '../../utils';
@@ -73,7 +73,7 @@ interface DataTableProps<T extends { id: string | number }> {
   onToggleAllRows?: (ids: string[]) => void;
 }
 
-export function DataTable<T extends { id: string }>({
+export function DataTable<T extends { id: string | number }>({
   data = [],
   columns = [],
   loading = false,
@@ -103,7 +103,7 @@ export function DataTable<T extends { id: string }>({
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedInventory, setSelectedInventory] = useState<StoreInventory[]>([]);
   const [selectedItemName, setSelectedItemName] = useState('');
-  const allSelected = selectableRows && safeData.length > 0 && safeData.every((item) => selectedRowIds.includes(item.id));
+  const allSelected = selectableRows && safeData.length > 0 && safeData.every((item) => selectedRowIds.includes(String(item.id)));
 
   useEffect(() => {
     const checkMobile = () => {
@@ -277,8 +277,8 @@ export function DataTable<T extends { id: string }>({
                       <input
                         type="checkbox"
                         aria-label="Select row"
-                        checked={selectedRowIds.includes(item.id)}
-                        onChange={() => onToggleRowSelection?.(item.id)}
+                        checked={selectedRowIds.includes(String(item.id))}
+                        onChange={() => onToggleRowSelection?.(String(item.id))}
                         onClick={(e) => e.stopPropagation()}
                         className="h-4 w-4 rounded border-border mt-1"
                       />
@@ -310,7 +310,7 @@ export function DataTable<T extends { id: string }>({
                         type="checkbox"
                         aria-label="Select all rows"
                         checked={allSelected}
-                        onChange={() => onToggleAllRows?.(safeData.map((item) => item.id))}
+                        onChange={() => onToggleAllRows?.(safeData.map((item) => String(item.id)))}
                         className="h-4 w-4 rounded border-border"
                       />
                     </TableHead>
@@ -364,8 +364,8 @@ export function DataTable<T extends { id: string }>({
                           <input
                             type="checkbox"
                             aria-label="Select row"
-                            checked={selectedRowIds.includes(item.id)}
-                            onChange={() => onToggleRowSelection?.(item.id)}
+                            checked={selectedRowIds.includes(String(item.id))}
+                            onChange={() => onToggleRowSelection?.(String(item.id))}
                             onClick={(e) => e.stopPropagation()}
                             className="h-4 w-4 rounded border-border"
                           />
