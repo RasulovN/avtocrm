@@ -8,9 +8,11 @@ import { Input } from '../../components/ui/Input';
 import { salesService } from '../../services/salesService';
 import { customerApiService } from '../../services/customerService';
 import { productService } from '../../services/productService';
+import { bankCardService } from '../../services/bankCardService';
+import { PaymentTypeBadge } from '../../components/shared/PaymentTypeBadge';
 import { formatCurrency, formatDate } from '../../utils';
 import { extractBarcodeFromUrl } from '../../utils/xss';
-import type { Product, Sale, SaleItem } from '../../types';
+import type { Product, Sale, SaleItem, BankCard } from '../../types';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/Dialog';
 import {
   Select,
@@ -50,6 +52,8 @@ export function SalesDetailPage() {
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentType, setPaymentType] = useState<'cash' | 'card'>('cash');
+  const [bankCards, setBankCards] = useState<BankCard[]>([]);
+  const [selectedBankCardId, setSelectedBankCardId] = useState<string>('');
   const [paying, setPaying] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
   const [showProductDialog, setShowProductDialog] = useState(false);
@@ -84,10 +88,21 @@ export function SalesDetailPage() {
     setPaymentAmount(String(sale.debt));
     setPaymentType('cash');
     setShowPaymentDialog(true);
+    if (bankCards.length === 0) {
+      bankCardService
+        .getAll({ is_active: true })
+        .then((cards) => {
+          setBankCards(cards);
+          const defaultCard = cards.find((card) => card.is_default) ?? cards[0];
+          setSelectedBankCardId(defaultCard ? String(defaultCard.id) : '');
+        })
+        .catch(() => setBankCards([]));
+    }
   };
 
   const handleDebtPayment = async () => {
     if (!sale || !paymentAmount || !saleId) return;
+    if (paymentType === 'card' && !selectedBankCardId) return;
     try {
       setPaying(true);
       const parsedAmount = Number(paymentAmount);
@@ -98,6 +113,7 @@ export function SalesDetailPage() {
         sale: Number(saleId),
         amount: normalizedAmount,
         type: paymentType,
+        ...(paymentType === 'card' ? { bank_card: Number(selectedBankCardId) } : {}),
       });
       setShowPaymentDialog(false);
       setPaymentAmount('');
@@ -111,18 +127,19 @@ export function SalesDetailPage() {
     }
   };
 
+  // NET summalar: qaytarimlar (is_refund) tushumdan ayiriladi
   const cashAmount = useMemo(() => {
     if (!sale?.payments) return 0;
     return sale.payments
       .filter(p => p.type === 'cash')
-      .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+      .reduce((sum, p) => sum + (p.is_refund ? -1 : 1) * parseFloat(p.amount), 0);
   }, [sale]);
 
   const cardAmount = useMemo(() => {
     if (!sale?.payments) return 0;
     return sale.payments
       .filter(p => p.type === 'card')
-      .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+      .reduce((sum, p) => sum + (p.is_refund ? -1 : 1) * parseFloat(p.amount), 0);
   }, [sale]);
 
   if (loading) {
@@ -319,10 +336,13 @@ export function SalesDetailPage() {
           </div>
 
           <div className="bg-card dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-            <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
-              <CreditCard className="h-5 w-5" />
-              {t('sales.payment')}
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                {t('sales.payment')}
+              </h3>
+              <PaymentTypeBadge type={sale.payment_type} />
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20">
                 <p className="text-sm text-muted-foreground mb-1">{t('inventory.paid')}</p>
@@ -346,6 +366,28 @@ export function SalesDetailPage() {
                 )}
               </div>
             </div>
+            {sale.payments && sale.payments.length > 0 && (
+              <div className="mt-4 pt-4 border-t dark:border-gray-700 space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">{t('sales.paymentHistory', 'To‘lovlar tarixi')}</p>
+                {sale.payments.map((payment) => (
+                  <div
+                    key={payment.id}
+                    className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm ${
+                      payment.is_refund ? 'bg-red-50 dark:bg-red-900/20' : 'bg-muted/40'
+                    }`}
+                  >
+                    <span className="text-muted-foreground">
+                      {payment.type === 'cash' ? t('payment.cash', 'Naqd') : t('payment.card', 'Karta')}
+                      {payment.bank_card_name ? ` — ${payment.bank_card_name}` : ''}
+                      {payment.is_refund ? ` (${t('sales.refund', 'Qaytarim')})` : ''}
+                    </span>
+                    <span className={`font-semibold ${payment.is_refund ? 'text-red-600' : ''}`}>
+                      {payment.is_refund ? '-' : ''}{formatCurrency(parseFloat(payment.amount))}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
             {sale.debt && sale.debt > 0 && (
               <Button className="w-full mt-4" onClick={openPaymentDialog}>
                 <Wallet className="mr-2 h-4 w-4" />
@@ -467,11 +509,38 @@ export function SalesDetailPage() {
                 </SelectContent>
               </Select>
             </div>
+            {paymentType === 'card' && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t('sales.bankCard', 'Bank kartasi')}</label>
+                {bankCards.length === 0 ? (
+                  <p className="text-sm text-red-600 dark:text-red-400">
+                    {t('sales.noBankCards', 'Faol bank kartasi yo‘q — sozlamalardan qo‘shing')}
+                  </p>
+                ) : (
+                  <Select value={selectedBankCardId} onValueChange={setSelectedBankCardId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('sales.selectCard', 'Kartani tanlang')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {bankCards.map((card) => (
+                        <SelectItem key={card.id} value={String(card.id)}>
+                          {card.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            )}
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setShowPaymentDialog(false)}>
                 {t('common.cancel')}
               </Button>
-              <Button className="flex-1" onClick={handleDebtPayment} disabled={paying || !paymentAmount}>
+              <Button
+                className="flex-1"
+                onClick={handleDebtPayment}
+                disabled={paying || !paymentAmount || (paymentType === 'card' && !selectedBankCardId)}
+              >
                 {paying ? t('common.loading') : t('customers.payNow')}
               </Button>
             </div>

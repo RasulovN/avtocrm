@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 import { Plus, FileText, Eye, EyeOff, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
+import { PaymentTypeBadge } from '../../components/shared/PaymentTypeBadge';
 import { Button } from '../../components/ui/Button';
 import { salesService } from '../../services/salesService';
 import { useAuthStore } from '../../app/store';
@@ -106,6 +107,11 @@ export function SalesListPage() {
       render: (item) => item.debt_due_date ? (
         <span className="text-muted-foreground text-xs">{formatDate(item.debt_due_date)}</span>
       ) : '—',
+    },
+    {
+      key: 'payment_type',
+      header: t('sales.paymentType', 'To‘lov turi'),
+      render: (item) => <PaymentTypeBadge type={item.payment_type} />,
     },
     {
       key: 'status',
@@ -227,10 +233,13 @@ export function SalesListPage() {
                     </Link>
                     <p className="mt-1 text-sm text-muted-foreground">{formatDate(item.created_at)}</p>
                   </div>
-                  <span className={`shrink-0 rounded-full px-2 py-1 text-xs ${item.status === 'partial' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
-                    }`}>
-                    {item.status === 'partial' ? t('common.pending') : (item.status === 'paid' ? t('sales.paid') : t('common.completed'))}
-                  </span>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <span className={`rounded-full px-2 py-1 text-xs ${item.status === 'partial' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+                      }`}>
+                      {item.status === 'partial' ? t('common.pending') : (item.status === 'paid' ? t('sales.paid') : t('common.completed'))}
+                    </span>
+                    <PaymentTypeBadge type={item.payment_type} />
+                  </div>
                 </div>
 
                 <div className="mt-4 grid grid-cols-2 gap-3 text-sm">

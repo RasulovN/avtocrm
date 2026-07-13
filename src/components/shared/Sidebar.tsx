@@ -20,6 +20,7 @@ import {
   Plus,
   List,
   AlertTriangle,
+  CreditCard,
 } from 'lucide-react';
 import { cn } from '../../utils';
 import { useAuthStore } from '../../app/store';
@@ -63,6 +64,7 @@ const navItems: NavItem[] = [
     ]
   },
   { titleKey: 'nav.reports', href: '/reports', icon: FileText, roles: ['admin'] },
+  { titleKey: 'nav.bankCards', href: '/bank-cards', icon: CreditCard },
   { titleKey: 'nav.settings', href: '/settings', icon: Settings },
 ];
 

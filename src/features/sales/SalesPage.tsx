@@ -12,10 +12,11 @@ import { storeService } from '../../services/storeService';
 import { productService } from '../../services/productService';
 import { salesService } from '../../services/salesService';
 import { customerApiService } from '../../services/customerService';
+import { bankCardService } from '../../services/bankCardService';
 import { useAuthStore } from '../../app/store';
 import { useProducts } from '../../context/ProductContext';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
-import type { Store, Product } from '../../types';
+import type { Store, Product, BankCard, SalePaymentInput } from '../../types';
 import { formatCurrency, formatAmountInput, parseAmountInput } from '../../utils';
 import { logger } from '../../utils/logger';
 import { useTranslation } from 'react-i18next';
@@ -158,6 +159,8 @@ export function SalesPage() {
 
   const [cashAmount, setCashAmount] = useState(0);
   const [cardAmount, setCardAmount] = useState(0);
+  const [bankCards, setBankCards] = useState<BankCard[]>([]);
+  const [selectedBankCardId, setSelectedBankCardId] = useState<string>('');
   const [discount, setDiscount] = useState(0);
   const [discountType, setDiscountType] = useState<'p' | 'f'>('f');
   const [showReceipt, setShowReceipt] = useState(false);
@@ -454,6 +457,25 @@ export function SalesPage() {
   }, [loadData, focusBarcodeInput]);
 
   useEffect(() => {
+    let cancelled = false;
+    const loadBankCards = async () => {
+      try {
+        const cards = await bankCardService.getAll({ is_active: true });
+        if (cancelled) return;
+        setBankCards(cards);
+        const defaultCard = cards.find((card) => card.is_default) ?? cards[0];
+        setSelectedBankCardId(defaultCard ? String(defaultCard.id) : '');
+      } catch (error) {
+        logger.error('Failed to load bank cards:', error);
+      }
+    };
+    loadBankCards();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
   }, [scanStatus, scanMessage]);
 
   useEffect(() => {
@@ -658,15 +680,20 @@ export function SalesPage() {
       return;
     }
 
+    if (cardAmount > 0 && !selectedBankCardId) {
+      toast.error(t('sales.cardRequired', 'Karta to‘lovi uchun bank kartasini tanlang'));
+      return;
+    }
+
     try {
       setSaving(true);
 
-      const payments: { type: 'cash' | 'card'; amount: string }[] = [];
+      const payments: SalePaymentInput[] = [];
       if (cashAmount > 0) {
         payments.push({ type: 'cash', amount: String(cashAmount) });
       }
       if (cardAmount > 0) {
-        payments.push({ type: 'card', amount: String(cardAmount) });
+        payments.push({ type: 'card', amount: String(cardAmount), bank_card: Number(selectedBankCardId) });
       }
 
       const selectedStoreId = items.length > 0 ? items[0].store_id : activeStoreId || '1';
@@ -710,6 +737,8 @@ export function SalesPage() {
     setItems([]);
     setCashAmount(0);
     setCardAmount(0);
+    const defaultCard = bankCards.find((card) => card.is_default) ?? bankCards[0];
+    setSelectedBankCardId(defaultCard ? String(defaultCard.id) : '');
     setDiscount(0);
     setDiscountType('f');
     setActivePayment('cash');
@@ -1299,6 +1328,29 @@ export function SalesPage() {
                     />
                   </div>
                 </div>
+                {cardAmount > 0 && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs dark:text-gray-300">{t('sales.bankCard', 'Bank kartasi')}</Label>
+                    {bankCards.length === 0 ? (
+                      <p className="text-xs text-red-600 dark:text-red-400">
+                        {t('sales.noBankCards', 'Faol bank kartasi yo‘q — sozlamalardan qo‘shing')}
+                      </p>
+                    ) : (
+                      <Select value={selectedBankCardId} onValueChange={setSelectedBankCardId}>
+                        <SelectTrigger className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white">
+                          <SelectValue placeholder={t('sales.selectCard', 'Kartani tanlang')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {bankCards.map((card) => (
+                            <SelectItem key={card.id} value={String(card.id)}>
+                              {card.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                )}
                 {debt > 0 && selectedCustomerId && (
                   <div className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground dark:text-gray-400">Qarz muddati</Label>
@@ -1432,7 +1484,13 @@ export function SalesPage() {
                   <span>{formatCurrency(cashAmount)}</span>
                 </div>
                 <div className="flex justify-between dark:text-gray-300 print:text-black">
-                  <span>{t('sales.card')}:</span>
+                  <span>
+                    {t('sales.card')}
+                    {cardAmount > 0 && selectedBankCardId
+                      ? ` (${bankCards.find((card) => String(card.id) === selectedBankCardId)?.name ?? ''})`
+                      : ''}
+                    :
+                  </span>
                   <span>{formatCurrency(cardAmount)}</span>
                 </div>
                 <div className="flex justify-between dark:text-gray-300 print:text-black">

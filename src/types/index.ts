@@ -395,10 +395,7 @@ export interface TransferFormData {
 }
 
 // Sales Types
-export interface SalePayment {
-  type: 'cash' | 'card';
-  amount: number;
-}
+export type SalePaymentType = 'cash' | 'card' | 'mixed' | 'debt';
 
 export interface SaleItem {
   id: number;
@@ -413,7 +410,23 @@ export interface SalePayment {
   id: number;
   amount: string;
   type: 'cash' | 'card';
+  bank_card?: number | null;
+  bank_card_name?: string | null;
+  is_refund?: boolean;
   created_at: string;
+}
+
+export interface BankCard {
+  id: number;
+  name: string;
+  is_default: boolean;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface BankCardFormData {
+  name: string;
+  is_default?: boolean;
 }
 
 export interface Sale {
@@ -426,6 +439,7 @@ export interface Sale {
   customer_name?: string | null;
   payments: SalePayment[];
   status: 'partial' | 'paid' | 'completed';
+  payment_type?: SalePaymentType;
   total_amount: string;
   paid_amount: string;
   debt?: number | null;
@@ -439,6 +453,12 @@ export interface Sale {
   created_at: string;
 }
 
+export interface SalePaymentInput {
+  type: 'cash' | 'card';
+  amount: string;
+  bank_card?: number;
+}
+
 export interface SaleFormData {
   store: number;
   customer?: number;
@@ -447,10 +467,7 @@ export interface SaleFormData {
     quantity: number;
     price: string;
   }[];
-  payments: {
-    type: 'cash' | 'card';
-    amount: string;
-  }[];
+  payments: SalePaymentInput[];
   discount_type?: 'p' | 'f';
   discount_value?: string;
 }
@@ -546,6 +563,7 @@ export interface SaleReturnFormItem {
 export interface SaleReturnFormData {
   sale: number;
   items: SaleReturnFormItem[];
+  payments?: SalePaymentInput[];
   comment?: string;
 }
 

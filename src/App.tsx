@@ -87,6 +87,9 @@ const UserListPage = lazy(() => import('./features/users/UserListPage').then((mo
 const SettingsPage = lazy(() =>
   import('./features/settings/SettingsPage').then((module) => ({ default: module.SettingsPage }))
 );
+const BankCardsPage = lazy(() =>
+  import('./features/settings/BankCardsPage').then((module) => ({ default: module.BankCardsPage }))
+);
 const ReportsPage = lazy(() =>
   import('./features/reports/ReportsPage').then((module) => ({ default: module.ReportsPage }))
 );
@@ -382,6 +385,11 @@ function App() {
           {/* Settings */}
           <Route path={`/:lang/settings`} element={
             withLayout(<SettingsPage />)
+          } />
+
+          {/* Bank Cards */}
+          <Route path={`/:lang/bank-cards`} element={
+            withLayout(<BankCardsPage />)
           } />
           
           {/* Default route - redirect to /uz/dashboard */}

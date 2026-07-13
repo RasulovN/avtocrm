@@ -68,6 +68,9 @@ const TRANSLATIONS: Record<string, { uz: string; cyrl: string }> = {
   'Naqd': { uz: 'Naqd', cyrl: 'Нақд' },
   'Karta': { uz: 'Karta', cyrl: 'Карта' },
   'Nasiya': { uz: 'Nasiya', cyrl: 'Насия' },
+  'Aralash': { uz: 'Aralash', cyrl: 'Аралаш' },
+  'Kartalar kesimi': { uz: 'Kartalar kesimi', cyrl: 'Карталар кесими' },
+  "Noma'lum karta": { uz: "Noma'lum karta", cyrl: 'Номаълум карта' },
   'Tozalash': { uz: 'Tozalash', cyrl: 'Тозалаш' }
 };
 
@@ -108,11 +111,12 @@ const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? 
     return TRANSLATIONS[key]?.[lang === 'cyrl' ? 'cyrl' : 'uz'] || key;
   };
 
-  const getPaymentMethodLabel = (method: string) => {
-    const m = method.toLowerCase();
+  const getPaymentMethodLabel = (method: string, type?: string) => {
+    const m = (type || method).toLowerCase();
     if (m === 'cash' || m === 'naqd') return getTrans('Naqd');
     if (m === 'card' || m === 'karta') return getTrans('Karta');
-    if (m === 'debt' || m === 'nasiya') return getTrans('Nasiya');
+    if (m === 'debt' || m === 'nasiya' || m === 'qarz') return getTrans('Nasiya');
+    if (m === 'mixed' || m === 'aralash') return getTrans('Aralash');
     return getTrans(method);
   };
 
@@ -265,6 +269,18 @@ const getStoreName = (id: number | string, defaultName: string) => {
   const totalPaymentsAmount = useMemo(() => {
     return paymentStructure.reduce((sum, p) => sum + p.amount, 0);
   }, [paymentStructure]);
+
+  const cardBreakdown = useMemo(() => {
+    return data?.cardBreakdown || [];
+  }, [data?.cardBreakdown]);
+
+  const totalCardBreakdownCount = useMemo(() => {
+    return cardBreakdown.reduce((sum, c) => sum + c.count, 0);
+  }, [cardBreakdown]);
+
+  const totalCardBreakdownAmount = useMemo(() => {
+    return cardBreakdown.reduce((sum, c) => sum + c.amount, 0);
+  }, [cardBreakdown]);
 
   const customerDebts = useMemo(() => {
     return data?.debts?.customerDebts || [];
@@ -691,6 +707,7 @@ formatter={(value: any, props: any) => [
 
         {/* Payments Tab */}
         {activeTab === 'tolovlar' && (
+          <div className="space-y-4 sm:space-y-6">
           <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden animate-in fade-in-50 duration-200">
             <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
@@ -728,7 +745,7 @@ formatter={(value: any, props: any) => [
                       {paymentStructure.map((pay, i) => (
                         <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                           <td className="px-3 sm:px-6 py-2.5 sm:py-4 font-medium text-slate-900 dark:text-white">
-                            {getPaymentMethodLabel(pay.method)}
+                            {getPaymentMethodLabel(pay.method, pay.type)}
                           </td>
                           <td className="px-3 sm:px-6 py-2.5 sm:py-4 text-right font-medium text-slate-900 dark:text-white">
                             {pay.count.toLocaleString()}
@@ -761,6 +778,79 @@ formatter={(value: any, props: any) => [
               </table>
             </div>
           </Card>
+
+          {/* Card Breakdown — har bir bank kartasi bo'yicha NET tushum */}
+          <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden animate-in fade-in-50 duration-200">
+            <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                {getTrans('Kartalar kesimi')}
+              </h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs sm:text-sm text-left">
+                <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-semibold text-[10px] sm:text-xs uppercase tracking-wider">
+                  <tr>
+                    <th className="px-3 sm:px-6 py-2.5 sm:py-4 rounded-tl-xl">{getTrans('Karta')}</th>
+                    <th className="px-3 sm:px-6 py-2.5 sm:py-4 text-right">{getTrans('Sotuvlar soni')}</th>
+                    <th className="px-3 sm:px-6 py-2.5 sm:py-4 text-right">{getTrans('Summa')}</th>
+                    <th className="px-3 sm:px-6 py-2.5 sm:py-4 text-right rounded-tr-xl">{getTrans('Ulushi')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
+                  {isLoading ? (
+                    Array.from({ length: 2 }).map((_, idx) => (
+                      <tr key={idx}>
+                        <td className="px-3 sm:px-6 py-3.5"><Skeleton className="h-4 w-24" /></td>
+                        <td className="px-3 sm:px-6 py-3.5 text-right"><Skeleton className="h-4 w-12 ml-auto" /></td>
+                        <td className="px-3 sm:px-6 py-3.5 text-right"><Skeleton className="h-4 w-24 ml-auto" /></td>
+                        <td className="px-3 sm:px-6 py-3.5 text-right"><Skeleton className="h-4 w-12 ml-auto" /></td>
+                      </tr>
+                    ))
+                  ) : cardBreakdown.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-3 sm:px-6 py-6 text-center text-slate-400">
+                        {getTrans("Hech qanday ma'lumot topilmadi")}
+                      </td>
+                    </tr>
+                  ) : (
+                    <>
+                      {cardBreakdown.map((card, i) => (
+                        <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                          <td className="px-3 sm:px-6 py-2.5 sm:py-4 font-medium text-slate-900 dark:text-white">
+                            {card.bankCardId === null ? getTrans("Noma'lum karta") : card.name}
+                          </td>
+                          <td className="px-3 sm:px-6 py-2.5 sm:py-4 text-right font-medium text-slate-900 dark:text-white">
+                            {card.count.toLocaleString()}
+                          </td>
+                          <td className="px-3 sm:px-6 py-2.5 sm:py-4 text-right font-bold text-slate-900 dark:text-white">
+                            {formatCurrency(card.amount)}
+                          </td>
+                          <td className="px-3 sm:px-6 py-2.5 sm:py-4 text-right font-medium text-slate-900 dark:text-white">
+                            {card.percent}
+                          </td>
+                        </tr>
+                      ))}
+                      <tr className="bg-slate-50 dark:bg-slate-800/30 font-bold">
+                        <td className="px-3 sm:px-6 py-2.5 sm:py-4 text-slate-900 dark:text-white">
+                          {getTrans('Jami')}
+                        </td>
+                        <td className="px-3 sm:px-6 py-2.5 sm:py-4 text-right text-slate-900 dark:text-white">
+                          {totalCardBreakdownCount.toLocaleString()}
+                        </td>
+                        <td className="px-3 sm:px-6 py-2.5 sm:py-4 text-right text-slate-900 dark:text-white">
+                          {formatCurrency(totalCardBreakdownAmount)}
+                        </td>
+                        <td className="px-3 sm:px-6 py-2.5 sm:py-4 text-right text-slate-900 dark:text-white">
+                          100%
+                        </td>
+                      </tr>
+                    </>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+          </div>
         )}
 
         {/* Debts Tab */}

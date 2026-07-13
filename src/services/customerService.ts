@@ -123,12 +123,12 @@ export const customerApiService = {
     await apiClient.delete(`/users/customers/${id}/`);
   },
 
-  createDebtPayment: async (data: { customer: number; amount: string; type: 'cash' | 'card' }) => {
+  createDebtPayment: async (data: { customer: number; amount: string; type: 'cash' | 'card'; bank_card?: number }) => {
     const response = await apiClient.post('/debts/create/', data);
     return response.data;
   },
 
-  createDebtPaymentForSale: async (data: { sale: number; amount: string; type: 'cash' | 'card' }) => {
+  createDebtPaymentForSale: async (data: { sale: number; amount: string; type: 'cash' | 'card'; bank_card?: number }) => {
     const response = await apiClient.post('/debts/create/', data);
     return response.data;
   },

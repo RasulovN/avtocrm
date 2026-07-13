@@ -63,6 +63,7 @@
     "users": "Foydalanuvchilar",
     "reports": "Hisobotlar",
     "settings": "Sozlamalar",
+    "bankCards": "Bank kartalari",
     "stockentry": "Kirim",
     "inventory": "Inventarizatsiya",
     "inventorySessions": "Inventarizatsiya",
@@ -559,12 +560,19 @@
     "name": "Nomi",
     "storeStock": "Do‘kondagi qoldiq",
     "autoSpareParts": "Avto ehtiyot qismlar",
-    "paymentType": "To‘lov turi"
+    "paymentType": "To‘lov turi",
+    "bankCard": "Bank kartasi",
+    "selectCard": "Kartani tanlang",
+    "cardRequired": "Karta to‘lovi uchun bank kartasini tanlang",
+    "noBankCards": "Faol bank kartasi yo‘q — sozlamalardan qo‘shing",
+    "paymentHistory": "To‘lovlar tarixi",
+    "refund": "Qaytarim"
   },
   "payment": {
     "cash": "Naqd",
     "card": "Karta",
-    "debt": "Nasiya"
+    "debt": "Nasiya",
+    "mixed": "Aralash"
   },
   "saleReturns": {
     "title": "Qaytarishlar",
@@ -581,7 +589,29 @@
     "createSuccess": "Qaytarish muvaffaqiyatli yaratildi",
     "createError": "Qaytarish yaratishda xatolik",
     "invalidQuantity": "Miqdor sotilgan miqdordan oshmasligi kerak",
-    "returnSale": "Sotuvni qaytarish"
+    "returnSale": "Sotuvni qaytarish",
+    "refundMethod": "Pul qaytarish usuli",
+    "refundRemainder": "Mijozga qaytariladigan pul",
+    "refundMismatch": "Naqd va karta yig‘indisi qaytariladigan pulga teng bo‘lishi kerak",
+    "debtCovered": "Avval qarz yopiladi"
+  },
+  "bankCards": {
+    "title": "Bank kartalari",
+    "description": "To‘lov qabul qilinadigan bank kartalari ro‘yxati",
+    "addCard": "Karta qo‘shish",
+    "editCard": "Kartani tahrirlash",
+    "cardName": "Karta nomi",
+    "isDefault": "Asosiy",
+    "default": "Asosiy",
+    "setDefault": "Asosiy karta qilish",
+    "defaultHint": "Asosiy karta kassada avtomatik tanlanadi. Bir vaqtda faqat bitta asosiy karta bo‘ladi.",
+    "active": "Faol",
+    "inactive": "Faol emas",
+    "noCards": "Bank kartalari yo‘q",
+    "cardAdded": "Karta qo‘shildi",
+    "cardUpdated": "Karta yangilandi",
+    "cardDeleted": "Karta o‘chirildi (faolsizlantirildi)",
+    "deleteConfirm": "Karta o‘chirilmaydi, faolsizlantiriladi: yangi to‘lovda tanlab bo‘lmaydi, eski hisobotlarda ko‘rinaveradi."
   },
   "customers": {
     "title": "Mijozlar",

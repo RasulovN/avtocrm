@@ -1,14 +1,16 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Undo2, ShoppingCart, AlertCircle, Search, Check, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Undo2, ShoppingCart, AlertCircle, Search, Check, ChevronDown, Wallet } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
 import { salesService, saleReturnService } from '../../services/salesService';
-import { formatCurrency, cn } from '../../utils';
-import type { Sale, SaleItem, SaleReturnFormItem } from '../../types';
+import { bankCardService } from '../../services/bankCardService';
+import { formatCurrency, formatAmountInput, parseAmountInput, cn } from '../../utils';
+import type { Sale, SaleItem, SaleReturnFormItem, SalePaymentInput, BankCard } from '../../types';
 
 
 export function SaleReturnCreatePage() {
@@ -28,6 +30,10 @@ export function SaleReturnCreatePage() {
   const [loadingSale, setLoadingSale] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [bankCards, setBankCards] = useState<BankCard[]>([]);
+  const [selectedBankCardId, setSelectedBankCardId] = useState<string>('');
+  const [refundCash, setRefundCash] = useState(0);
+  const [refundCard, setRefundCard] = useState(0);
 
   const saleOptions = useMemo(() => {
     return sales.map((sale) => ({
@@ -38,6 +44,22 @@ export function SaleReturnCreatePage() {
 
   useEffect(() => {
     loadSales();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    bankCardService
+      .getAll({ is_active: true })
+      .then((cards) => {
+        if (cancelled) return;
+        setBankCards(cards);
+        const defaultCard = cards.find((card) => card.is_default) ?? cards[0];
+        setSelectedBankCardId(defaultCard ? String(defaultCard.id) : '');
+      })
+      .catch(() => setBankCards([]));
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -100,23 +122,58 @@ export function SaleReturnCreatePage() {
       }));
   }, [selectedSale, returnQuantities]);
 
+  const returnTotal = useMemo(() => {
+    if (!selectedSale) return 0;
+    return selectedSale.items.reduce(
+      (sum, item) => sum + (returnQuantities[item.id] || 0) * parseFloat(item.unit_price),
+      0
+    );
+  }, [selectedSale, returnQuantities]);
+
+  // Backend avval qaytarim summasidan sotuv qarzini yopadi — mijozga faqat qolgan pul qaytariladi
+  const debtCovered = useMemo(() => {
+    const debt = Number(selectedSale?.debt) || 0;
+    return Math.min(returnTotal, debt);
+  }, [returnTotal, selectedSale]);
+
+  const moneyRemainder = useMemo(() => Math.max(0, returnTotal - debtCovered), [returnTotal, debtCovered]);
+
+  // Qaytarim summasi o'zgarganda taqsimot defaultga (hammasi naqd) qaytariladi
+  useEffect(() => {
+    setRefundCash(moneyRemainder);
+    setRefundCard(0);
+  }, [moneyRemainder]);
+
+  const refundMismatch = moneyRemainder > 0 && refundCash + refundCard !== moneyRemainder;
+
   const isValid = useMemo(() => {
     if (!selectedSale || returnItems.length === 0) return false;
     for (const item of selectedSale.items) {
       const qty = returnQuantities[item.id] || 0;
       if (qty > item.quantity) return false;
     }
+    if (refundMismatch) return false;
+    if (refundCard > 0 && !selectedBankCardId) return false;
     return true;
-  }, [selectedSale, returnQuantities, returnItems]);
+  }, [selectedSale, returnQuantities, returnItems, refundMismatch, refundCard, selectedBankCardId]);
 
   const handleSubmit = async () => {
     if (!selectedSale || returnItems.length === 0) return;
     setSubmitting(true);
     setError('');
     try {
+      // payments[] faqat karta ishlatilganda yuboriladi;
+      // yuborilmasa backend eski xatti-harakatni saqlaydi (to'liq naqd)
+      let payments: SalePaymentInput[] | undefined;
+      if (refundCard > 0) {
+        payments = [];
+        if (refundCash > 0) payments.push({ type: 'cash', amount: String(refundCash) });
+        payments.push({ type: 'card', amount: String(refundCard), bank_card: Number(selectedBankCardId) });
+      }
       await saleReturnService.create({
         sale: Number(selectedSale.id),
         items: returnItems,
+        payments,
         comment: comment.trim() || undefined,
       });
       navigate(`/${lang}/sales-returns`);
@@ -203,6 +260,76 @@ export function SaleReturnCreatePage() {
                 <p className="text-muted-foreground text-center py-4">{t('sales.noProducts')}</p>
               )}
             </div>
+
+            {moneyRemainder > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Wallet className="h-5 w-5" />
+                  {t('saleReturns.refundMethod', 'Pul qaytarish usuli')}
+                </h3>
+                {debtCovered > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    {t('saleReturns.debtCovered', 'Avval qarz yopiladi')}: {formatCurrency(debtCovered)}
+                  </p>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  {t('saleReturns.refundRemainder', 'Mijozga qaytariladigan pul')}:{' '}
+                  <span className="font-semibold text-foreground">{formatCurrency(moneyRemainder)}</span>
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">{t('sales.cash')}</Label>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="0"
+                      value={formatAmountInput(refundCash)}
+                      onChange={(e) => setRefundCash(parseAmountInput(e.target.value))}
+                      className={refundMismatch ? 'border-red-300 focus-visible:ring-red-300' : ''}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">{t('sales.card')}</Label>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="0"
+                      value={formatAmountInput(refundCard)}
+                      onChange={(e) => setRefundCard(parseAmountInput(e.target.value))}
+                      className={refundMismatch ? 'border-red-300 focus-visible:ring-red-300' : ''}
+                    />
+                  </div>
+                </div>
+                {refundCard > 0 && (
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">{t('sales.bankCard', 'Bank kartasi')}</Label>
+                    {bankCards.length === 0 ? (
+                      <p className="text-sm text-red-600">
+                        {t('sales.noBankCards', 'Faol bank kartasi yo‘q — sozlamalardan qo‘shing')}
+                      </p>
+                    ) : (
+                      <Select value={selectedBankCardId} onValueChange={setSelectedBankCardId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder={t('sales.selectCard', 'Kartani tanlang')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {bankCards.map((card) => (
+                            <SelectItem key={card.id} value={String(card.id)}>
+                              {card.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                )}
+                {refundMismatch && (
+                  <p className="text-xs text-red-600">
+                    {t('saleReturns.refundMismatch', 'Naqd va karta yig‘indisi qaytariladigan pulga teng bo‘lishi kerak')}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>{t('saleReturns.comment')}</Label>

@@ -72,6 +72,15 @@ export interface CategoryStatistic {
 
 export interface PaymentStructureItem {
   method: string;
+  type: string;
+  count: number;
+  amount: number;
+  percent: string;
+}
+
+export interface CardBreakdownItem {
+  bankCardId: number | null;
+  name: string;
   count: number;
   amount: number;
   percent: string;
@@ -83,6 +92,7 @@ export interface DetailedReportsResponse {
   branchStatistics: BranchStatistic[];
   categoryStatistics: CategoryStatistic[];
   paymentStructure: PaymentStructureItem[];
+  cardBreakdown: CardBreakdownItem[];
   charts: {
     profitTrend: ChartSeries;
   };
@@ -178,6 +188,7 @@ const normalizeDetailedReportsResponse = (payload: unknown): DetailedReportsResp
     branchStatistics?: unknown;
     categoryStatistics?: unknown;
     paymentStructure?: unknown;
+    cardBreakdown?: unknown;
     charts?: unknown;
     topSellingProducts?: unknown;
     debts?: unknown;
@@ -187,6 +198,7 @@ const normalizeDetailedReportsResponse = (payload: unknown): DetailedReportsResp
   const branchStatisticsRaw = Array.isArray(source.branchStatistics) ? source.branchStatistics : [];
   const categoryStatisticsRaw = Array.isArray(source.categoryStatistics) ? source.categoryStatistics : [];
   const paymentStructureRaw = Array.isArray(source.paymentStructure) ? source.paymentStructure : [];
+  const cardBreakdownRaw = Array.isArray(source.cardBreakdown) ? source.cardBreakdown : [];
   const chartsRaw = (source.charts ?? {}) as { profitTrend?: unknown };
   const topProductsRaw = Array.isArray(source.topSellingProducts) ? source.topSellingProducts : [];
   const debtsRaw = (source.debts ?? {}) as { customerDebts?: unknown; supplierDebts?: unknown };
@@ -226,9 +238,20 @@ const normalizeDetailedReportsResponse = (payload: unknown): DetailedReportsResp
       const pay = (item ?? {}) as Record<string, unknown>;
       return {
         method: String(pay.method ?? ''),
+        type: String(pay.type ?? ''),
         count: toNumber(pay.count),
         amount: toNumber(pay.amount),
         percent: String(pay.percent ?? ''),
+      };
+    }),
+    cardBreakdown: cardBreakdownRaw.map((item) => {
+      const card = (item ?? {}) as Record<string, unknown>;
+      return {
+        bankCardId: card.bankCardId === null || card.bankCardId === undefined ? null : toNumber(card.bankCardId),
+        name: String(card.name ?? ''),
+        count: toNumber(card.count),
+        amount: toNumber(card.amount),
+        percent: String(card.percent ?? ''),
       };
     }),
     charts: {
