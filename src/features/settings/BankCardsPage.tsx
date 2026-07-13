@@ -328,7 +328,11 @@ export function BankCardsPage() {
           <ConfirmDialog
             open={deleteId !== null}
             onOpenChange={(open: boolean) => !open && setDeleteId(null)}
-            onConfirm={() => deleteId !== null && handleDelete(deleteId)}
+            onConfirm={() => {
+              if (deleteId !== null) {
+                void handleDelete(deleteId);
+              }
+            }}
             title={t('common.delete')}
             description={t(
               'bankCards.deleteConfirm',
