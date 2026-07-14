@@ -94,9 +94,10 @@ const ReportsPage = lazy(() =>
   import('./features/reports/ReportsPage').then((module) => ({ default: module.ReportsPage }))
 );
 
+const InventoryPage = lazy(() => import('./features/inventory/InventoryPage'));
+
 // Styles
-import './i18n/index'; 
-import InventoryPage from './features/inventory/InventoryPage';
+import './i18n/index';
 
 // const DEFAULT_META = {
 //   title: 'AvtoCRM - Avto ehtiyot qismlar boshqaruv tizimi',

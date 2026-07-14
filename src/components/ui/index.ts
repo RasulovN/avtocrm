@@ -16,5 +16,6 @@ export {
   SelectTrigger,
   SelectValue,
 } from './Select';
-export { BarcodePrint, BarcodePrintAll } from './BarcodePrint';
+// BarcodePrint ataylab barrel'dan chiqarilmagan: jsbarcode'ni boshlang'ich
+// bundle'ga tortmaslik uchun to'g'ridan-to'g'ri './BarcodePrint' dan import qiling.
 export { SearchableSelect } from './SearchableSelect';

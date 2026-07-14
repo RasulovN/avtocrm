@@ -4,11 +4,20 @@ import { handleError } from '../utils/errorHandler';
 import { isDev } from '../config/environment';
 import { useAuthStore } from '../app/store';
 
-const BaSE_URL = isDev ? '/api' : 'https://api.avtoyon.uz/api';
-export const URL = isDev ? '/' : 'https://api.avtoyon.uz';
-export const MEDIA_URL = 'https://api.avtoyon.uz/';
+const ENV_API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
+
+const apiOriginFromEnv = (ENV_API_BASE_URL && ENV_API_BASE_URL.trim() !== '')
+  ? ENV_API_BASE_URL.trim().replace(/\/$/, '')
+  : 'http://127.0.0.1:8000/';
+
+// Backend endpointlar: http://HOST:8001/api/*
+const BaSE_URL = isDev ? '/api' : `${apiOriginFromEnv}/api`;
+
+export const URL = isDev ? '/' : apiOriginFromEnv;
+export const MEDIA_URL = apiOriginFromEnv;
 export const API_BASE_URL = BaSE_URL;
-export const API_ORIGIN = isDev ? '' : BaSE_URL.replace(/\/api\/?$/, '');
+export const API_ORIGIN = isDev ? '' : `${apiOriginFromEnv}/api`.replace(/\/api\/?$/, '');
+
 
 export interface ApiRequestConfig extends AxiosRequestConfig {
   expectedErrorStatuses?: number[];
@@ -161,7 +170,7 @@ api.interceptors.response.use(
         isRefreshing = true;
 
         return new Promise((resolve, reject) => {
-          api.post('/users/auth/refresh/', undefined, { skipGlobalErrorHandler: true })
+          api.post('/users/auth/refresh/', undefined, )
             .then(() => {
               localStorage.setItem('crm_auth_time', Date.now().toString());
               processQueue(null);

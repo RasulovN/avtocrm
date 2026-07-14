@@ -450,7 +450,7 @@ export function ProductListPage() {
           </SelectContent>
         </Select>
 
-        <Select
+        {/* <Select
           value={filters.stock_status || 'all'}
           onValueChange={(value) => handleFilterChange('stock_status', value === 'all' ? '' : value)}
         >
@@ -478,7 +478,7 @@ export function ProductListPage() {
               </span>
             </SelectItem>
           </SelectContent>
-        </Select>
+        </Select> */}
 
         {filters.stock_status && (
           <div className="flex items-center text-xs text-muted-foreground bg-muted/50 px-3 py-1 rounded-lg">

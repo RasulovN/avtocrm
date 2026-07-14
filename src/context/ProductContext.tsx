@@ -10,6 +10,7 @@ interface ProductContextValue {
   loading: boolean;
   error: string | null;
   refreshProducts: () => Promise<void>;
+  ensureLoaded: () => void;
 }
 
 const ProductContext = createContext<ProductContextValue | undefined>(undefined);
@@ -24,7 +25,8 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
   const isAdmin = Boolean(user?.is_superuser || user?.role === 'superuser');
   const userStoreId = user?.store_id;
   const prevLangRef = useRef(i18n.language);
-  const initialLoadRef = useRef(true);
+  // Mahsulotlar faqat birinchi iste'molchi sahifa mount bo'lganda yuklanadi
+  const [requested, setRequested] = useState(false);
 
    const refreshProducts = useCallback(async () => {
     // logger.info('refreshProducts called, isAdmin:', isAdmin, 'userStoreId:', userStoreId);
@@ -50,19 +52,13 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isAdmin, userStoreId]);
 
-   useEffect(() => {
-     logger.info('ProductContext useEffect triggered', {
-       hasSession,
-       initialLoad: initialLoadRef.current,
-       language: i18n.language,
-       userId: user?.id,
-       userStoreId: user?.store_id,
-       isAdmin: isAdmin,
-     });
+   const ensureLoaded = useCallback(() => {
+     setRequested(true);
+   }, []);
 
+   useEffect(() => {
      if (!hasSession) {
        logger.info('No session, resetting products');
-       initialLoadRef.current = true;
        prevLangRef.current = i18n.language;
        setProducts([]);
        setError(null);
@@ -70,19 +66,21 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
        return;
      }
 
-     // Always refresh when store_id or admin status changes
+     // Hech bir sahifa mahsulot so'ramagan bo'lsa, yuklamaymiz
+     if (!requested) return;
+
+     // Refresh when store_id, admin status or language changes
      logger.info('Fetching products due to user/store change');
      void refreshProducts();
-
-     // Note: We don't use initialLoadRef anymore since we want to refresh on every user/store change
-   }, [hasSession, i18n.language, userStoreId, isAdmin, refreshProducts]);
+   }, [hasSession, requested, i18n.language, userStoreId, isAdmin, refreshProducts]);
 
   const value = useMemo(() => ({
     products,
     loading,
     error,
     refreshProducts,
-  }), [products, loading, error, refreshProducts]);
+    ensureLoaded,
+  }), [products, loading, error, refreshProducts, ensureLoaded]);
 
   return (
     <ProductContext.Provider value={value}>
@@ -97,6 +95,10 @@ export function useProducts() {
   if (!context) {
     throw new Error('useProducts must be used within ProductProvider');
   }
+  const { ensureLoaded } = context;
+  useEffect(() => {
+    ensureLoaded();
+  }, [ensureLoaded]);
   // logger.info('[useProducts] Hook called, returning:', {
   //   productsCount: context.products.length,
   //   loading: context.loading,

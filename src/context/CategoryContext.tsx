@@ -10,6 +10,7 @@ interface CategoryContextValue {
   error: string | null;
   refreshCategories: () => Promise<void>;
   setCategories: (categories: Category[]) => void;
+  ensureLoaded: () => void;
 }
 
 const CategoryContext = createContext<CategoryContextValue | undefined>(undefined);
@@ -21,7 +22,8 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
   const { i18n } = useTranslation();
   const hasSession = useAuthStore((state) => Boolean(state.user || state.token));
   const prevLangRef = useRef(i18n.language);
-  const initialLoadRef = useRef(true);
+  // Kategoriyalar faqat birinchi iste'molchi sahifa mount bo'lganda yuklanadi
+  const [requested, setRequested] = useState(false);
 
   const refreshCategories = useCallback(async () => {
     try {
@@ -43,9 +45,12 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const ensureLoaded = useCallback(() => {
+    setRequested(true);
+  }, []);
+
   useEffect(() => {
     if (!hasSession) {
-      initialLoadRef.current = true;
       prevLangRef.current = i18n.language;
       setCategories([]);
       setError(null);
@@ -53,18 +58,12 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (initialLoadRef.current) {
-      initialLoadRef.current = false;
-      void refreshCategories();
-      return;
-    }
-    
-    const currentLang = i18n.language;
-    if (prevLangRef.current !== currentLang) {
-      prevLangRef.current = currentLang;
-      void refreshCategories();
-    }
-  }, [hasSession, i18n.language, refreshCategories]);
+    // Hech bir sahifa kategoriya so'ramagan bo'lsa, yuklamaymiz
+    if (!requested) return;
+
+    prevLangRef.current = i18n.language;
+    void refreshCategories();
+  }, [hasSession, requested, i18n.language, refreshCategories]);
 
   const value = useMemo(() => ({
     categories,
@@ -72,7 +71,8 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
     error,
     refreshCategories,
     setCategories,
-  }), [categories, loading, error, refreshCategories]);
+    ensureLoaded,
+  }), [categories, loading, error, refreshCategories, ensureLoaded]);
 
   return (
     <CategoryContext.Provider value={value}>
@@ -87,5 +87,9 @@ export function useCategories() {
   if (!context) {
     throw new Error('useCategories must be used within CategoryProvider');
   }
+  const { ensureLoaded } = context;
+  useEffect(() => {
+    ensureLoaded();
+  }, [ensureLoaded]);
   return context;
 }

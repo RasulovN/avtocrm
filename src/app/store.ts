@@ -37,21 +37,52 @@ interface AuthStore {
   isStoreScopedUser: () => boolean;
 }
 
+const USER_CACHE_KEY = 'crm_user_cache';
+
+const readCachedUser = (): User | null => {
+  try {
+    // Faqat auth sessiya belgisi bo'lganda keshdan foydalanamiz
+    if (!localStorage.getItem('crm_auth_time')) return null;
+    const raw = localStorage.getItem(USER_CACHE_KEY);
+    return raw ? (JSON.parse(raw) as User) : null;
+  } catch {
+    return null;
+  }
+};
+
+const writeCachedUser = (user: User | null) => {
+  try {
+    if (user) {
+      localStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
+    } else {
+      localStorage.removeItem(USER_CACHE_KEY);
+    }
+  } catch {
+    // storage to'lgan/bloklangan bo'lsa e'tiborsiz qoldiramiz
+  }
+};
+
+const cachedUser = readCachedUser();
+const hasAuthMarker = typeof window !== 'undefined' && Boolean(localStorage.getItem('crm_auth_time'));
+
 export const useAuthStore = create<AuthStore>((set, get) => ({
-  user: null,
-  token: null,
-  isLoading: true,
+  // Keshlangan user bilan darhol render qilamiz; profil fonda qayta tekshiriladi.
+  user: cachedUser,
+  token: cachedUser ? 'session' : null,
+  // Faqat sessiya belgisi bor-u kesh yo'q bo'lgandagina bloklaymiz
+  isLoading: !cachedUser && hasAuthMarker,
   error: null,
 
   login: async (phone_number: string, password: string) => {
     set({ isLoading: true, error: null });
     try {
       const user = await authService.login(phone_number, password);
+      writeCachedUser(user);
       set({ user, token: 'session', isLoading: false });
     } catch (error) {
-      set({ 
-        isLoading: false, 
-        error: error instanceof Error ? error.message : 'Login failed' 
+      set({
+        isLoading: false,
+        error: error instanceof Error ? error.message : 'Login failed'
       });
       throw error;
     }
@@ -59,13 +90,28 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   logout: () => {
     void authService.logout();
+    writeCachedUser(null);
     set({ user: null, token: null });
   },
 
   checkAuth: async () => {
-    set({ isLoading: true });
+    const hadUser = Boolean(get().user);
+    // Keshlangan user bo'lsa UI ni bloklamaymiz — fonda yangilaymiz
+    if (!hadUser) {
+      set({ isLoading: true });
+    }
     const user = await authService.fetchProfile();
-    set({ user, token: user ? 'session' : null, isLoading: false });
+    if (user) {
+      writeCachedUser(user);
+      set({ user, token: 'session', isLoading: false });
+    } else if (!hadUser || !localStorage.getItem('crm_auth_time')) {
+      // Sessiya haqiqatan tugagan — chiqib ketamiz
+      writeCachedUser(null);
+      set({ user: null, token: null, isLoading: false });
+    } else {
+      // Tarmoq xatosi bo'lishi mumkin: keshlangan sessiyani saqlab qolamiz
+      set({ isLoading: false });
+    }
   },
 
   isAuthenticated: () => {

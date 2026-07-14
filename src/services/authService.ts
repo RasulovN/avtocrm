@@ -51,7 +51,11 @@ export const authService = {
   fetchProfile: async (): Promise<User | null> => {
     try {
       const authTime = localStorage.getItem('crm_auth_time');
-      if (authTime && (Date.now() - parseInt(authTime) > 7 * 24 * 60 * 60 * 1000)) {
+      // Hech qachon login qilinmagan bo'lsa, tarmoq so'rovisiz darhol chiqamiz
+      if (!authTime) {
+        return null;
+      }
+      if (Date.now() - parseInt(authTime) > 7 * 24 * 60 * 60 * 1000) {
         localStorage.removeItem('crm_auth_time');
         return null;
       }

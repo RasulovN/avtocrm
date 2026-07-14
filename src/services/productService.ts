@@ -1,8 +1,12 @@
 import { apiClient, API_ORIGIN } from './api';
+
+
 import { latinToCyrillic } from '../utils/transliteration';
 import type { Product, ProductFormData, ProductFilters, PaginatedResponse, ApiResponse, ProductStoreInventory } from '../types';
 
-const BACKEND_FALLBACK_URL = 'https://api.avtoyon.uz';
+const BACKEND_FALLBACK_URL = 'http://192.168.1.41:8001/api';
+
+
 
 const resolveImageUrl = (image?: string | unknown) => {
   if (typeof image !== 'string' || !image) return '';
