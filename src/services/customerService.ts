@@ -18,6 +18,32 @@ interface CustomerFormData {
   phone_number: string;
 }
 
+export interface CustomerPayDebtAllocation {
+  sale: number;
+  payment_id: number;
+  amount: string;
+  closed: boolean;
+  sale_debt_left: string;
+}
+
+export interface CustomerPayDebtResult {
+  message: string;
+  paid: string;
+  remaining_debt: string;
+  allocations: CustomerPayDebtAllocation[];
+}
+
+export interface CustomerPaymentRow {
+  id: number;
+  sale: number | null;
+  amount: string;
+  type: 'cash' | 'card';
+  bank_card: number | null;
+  bank_card_name?: string;
+  is_refund: boolean;
+  created_at: string;
+}
+
 const parsePaginatedCustomers = (
   payload: unknown,
   params?: { page?: number; limit?: number }
@@ -121,6 +147,32 @@ export const customerApiService = {
 
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/users/customers/${id}/`);
+  },
+
+  /**
+   * Mijozning umumiy qarzini FIFO tartibida to'lash — to'lov eng eski qarzli
+   * buyurtmadan boshlab taqsimlanadi. Umumiy qarzdan ortiq summa rad etiladi.
+   */
+  payCustomerDebt: async (data: {
+    customer: number;
+    amount: string;
+    type: 'cash' | 'card';
+    bank_card?: number | null;
+  }): Promise<CustomerPayDebtResult> => {
+    const response = await apiClient.post<CustomerPayDebtResult>('/debts/customer/pay/', data);
+    return response.data;
+  },
+
+  /** Mijozning to'lovlar tarixi (eng yangilari birinchi) */
+  getCustomerPayments: async (customerId: number): Promise<CustomerPaymentRow[]> => {
+    const response = await apiClient.get<unknown>(`/debts/customer/${customerId}/payments/?limit=50`);
+    const payload = response.data;
+    if (Array.isArray(payload)) return payload as CustomerPaymentRow[];
+    if (payload && typeof payload === 'object') {
+      const obj = payload as { results?: unknown };
+      if (Array.isArray(obj.results)) return obj.results as CustomerPaymentRow[];
+    }
+    return [];
   },
 
   createDebtPayment: async (data: { customer: number; amount: string; type: 'cash' | 'card'; bank_card?: number }) => {

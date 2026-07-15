@@ -2,7 +2,7 @@ import { apiClient, API_ORIGIN } from './api';
 
 
 import { latinToCyrillic } from '../utils/transliteration';
-import type { Product, ProductFormData, ProductFilters, PaginatedResponse, ApiResponse, ProductStoreInventory } from '../types';
+import type { Product, ProductFormData, ProductFilters, ProductStockStats, PaginatedResponse, ApiResponse, ProductStoreInventory } from '../types';
 
 const BACKEND_FALLBACK_URL = 'http://192.168.1.41:8001/api';
 
@@ -453,18 +453,24 @@ const parsePaginatedProducts = (
 };
 
 export const productService = {
-  getAll: async (filters?: ProductFilters & { page?: number; limit?: number }): Promise<PaginatedResponse<Product>> => {
+  getAll: async (
+    filters?: ProductFilters & { page?: number; limit?: number }
+  ): Promise<PaginatedResponse<Product> & { stats?: ProductStockStats }> => {
     const params = new URLSearchParams();
     if (filters?.search) params.append('search', filters.search);
     if (filters?.category) params.append('category', filters.category);
     if (filters?.store_id) params.append('store_id', filters.store_id);
+    if (filters?.stock_status) params.append('stock_status', filters.stock_status);
     if (filters?.page) params.append('page', filters.page.toString());
     if (filters?.limit) params.append('limit', filters.limit.toString());
 
     const queryString = params.toString();
     const url = queryString ? `/products/?${queryString}` : '/products/';
     const response = await apiClient.get(url);
-    return parsePaginatedProducts(response.data, filters);
+    const parsed = parsePaginatedProducts(response.data, filters);
+    // Backend joriy filtrlar bo'yicha status statistikasini ham qaytaradi
+    const stats = (response.data as { stats?: ProductStockStats })?.stats;
+    return stats ? { ...parsed, stats } : parsed;
   },
 
   getById: async (id: string): Promise<Product> => {

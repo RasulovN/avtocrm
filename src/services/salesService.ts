@@ -1,11 +1,33 @@
 import { apiClient } from './api';
 import type { Sale, SaleFormData, PaginatedResponse, ApiResponse, DashboardStats, SaleReturn, SaleReturnFormData } from '../types';
 
+export interface SaleListFilters {
+  page?: number;
+  limit?: number;
+  search?: string;
+  // YYYY-MM-DD — ro'yxat va statistikani sana oralig'i bo'yicha filtrlaydi
+  date_from?: string;
+  date_to?: string;
+  // Do'kon ID (superadmin uchun; oddiy user baribir o'z do'konini ko'radi)
+  store?: string;
+}
+
+export interface SaleStatistics {
+  total_sales: number;
+  total_amount: string;
+  total_paid: string;
+  total_debt: string;
+}
+
 export const salesService = {
-  getAll: async (params?: { page?: number; limit?: number }): Promise<PaginatedResponse<Sale>> => {
+  getAll: async (params?: SaleListFilters): Promise<PaginatedResponse<Sale>> => {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.append('page', params.page.toString());
     if (params?.limit) searchParams.append('limit', params.limit.toString());
+    if (params?.search) searchParams.append('search', params.search);
+    if (params?.date_from) searchParams.append('date_from', params.date_from);
+    if (params?.date_to) searchParams.append('date_to', params.date_to);
+    if (params?.store) searchParams.append('store', params.store);
 
     const response = await apiClient.get<{ results: Sale[]; count?: number }>(`/sales/list/?${searchParams.toString()}`);
     const payload = response.data;
@@ -26,6 +48,17 @@ export const salesService = {
       page: params?.page ?? 1,
       limit: params?.limit ?? data.length,
     };
+  },
+
+  // Filtrlangan davr bo'yicha JAMI statistika (paginatsiyaga bog'liq emas)
+  getStatistics: async (params?: Pick<SaleListFilters, 'date_from' | 'date_to' | 'store'>): Promise<SaleStatistics> => {
+    const searchParams = new URLSearchParams();
+    if (params?.date_from) searchParams.append('date_from', params.date_from);
+    if (params?.date_to) searchParams.append('date_to', params.date_to);
+    if (params?.store) searchParams.append('store', params.store);
+    const query = searchParams.toString();
+    const response = await apiClient.get<SaleStatistics>(`/sales/statistics/${query ? `?${query}` : ''}`);
+    return response.data;
   },
 
   getById: async (id: string): Promise<Sale> => {

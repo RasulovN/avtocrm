@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useState, useCallback, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, useCallback, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import JsBarcode from 'jsbarcode';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import toast from 'react-hot-toast';
-import { Plus, Edit, Barcode, Search, Printer, Power, Eye, Package, Loader2, ChevronLeft, ChevronRight, X, Warehouse, Store as StoreIcon, Calendar, Tag, Hash, Layers, Upload, Download, MapPin, Ruler, ImageIcon } from 'lucide-react';
+import { Plus, Edit, Barcode, Search, Printer, Power, Eye, Package, Loader2, ChevronLeft, ChevronRight, X, Warehouse, Store as StoreIcon, Calendar, Tag, Hash, Layers, Upload, Download, MapPin, Ruler, ImageIcon, Copy, Check } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
+import { ExportButton } from '../../components/shared/ExportButton';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
@@ -31,10 +32,34 @@ import { productLocationService, type ProductLocation } from '../../services/pro
 import { categoryService } from '../../services/categoryService';
 import { useAuthStore } from '../../app/store';
 import { useCategories } from '../../context/CategoryContext';
-import type { Product, ProductFormData, ProductFilters, ProductUnit, CategoryFormData, ProductUnitFormData, Store, Category } from '../../types';
-import { formatCurrency, cn } from '../../utils';
+import type { Product, ProductFormData, ProductFilters, ProductStockStats, ProductUnit, CategoryFormData, ProductUnitFormData, Store, Category } from '../../types';
+import { formatCurrency, cn, copyToClipboard } from '../../utils';
 import { latinToCyrillic } from '../../utils/transliteration';
 import { handleError } from '../../utils/errorHandler';
+
+// Qidiruv so'zlarini natija matnida (nom/SKU/barcode) sariq bilan belgilaydi.
+// Backend qidiruvi token-bazali bo'lgani uchun har bir so'z alohida belgilanadi.
+const highlightMatch = (text: string | number | null | undefined, query: string): ReactNode => {
+  const value = String(text ?? '');
+  if (!value) return value;
+  const tokens = query
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((tok) => tok.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  if (tokens.length === 0) return value;
+  const parts = value.split(new RegExp(`(${tokens.join('|')})`, 'ig'));
+  if (parts.length === 1) return value;
+  return parts.map((part, i) =>
+    i % 2 === 1 ? (
+      <mark key={i} className="rounded-sm bg-yellow-200 px-0.5 text-inherit dark:bg-yellow-500/40">
+        {part}
+      </mark>
+    ) : (
+      part
+    )
+  );
+};
 
 export function ProductListPage() {
   const { t, i18n } = useTranslation();
@@ -54,6 +79,8 @@ export function ProductListPage() {
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ProductFilters>({});
+  // Joriy filtrlar (do'kon/kategoriya/qidiruv) bo'yicha status statistikasi — backenddan
+  const [stats, setStats] = useState<ProductStockStats | null>(null);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,6 +91,21 @@ export function ProductListPage() {
   const [deactivating, setDeactivating] = useState(false);
   const [viewProduct, setViewProduct] = useState<Product | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  // Nomni nusxalash feedbacki: qaysi mahsulot nomi hozirgina nusxalangani
+  const [copiedProductId, setCopiedProductId] = useState<string | null>(null);
+
+  const handleCopyName = async (item: Product) => {
+    const ok = await copyToClipboard(item.name);
+    if (ok) {
+      setCopiedProductId(item.id);
+      toast.success(`${t('common.copied', 'Nusxalandi')}: ${item.name}`);
+      setTimeout(() => {
+        setCopiedProductId((prev) => (prev === item.id ? null : prev));
+      }, 1600);
+    } else {
+      toast.error(t('common.copyFailed', 'Nusxalab bo\'lmadi'));
+    }
+  };
 
   // Load stores list for dynamic column headers
   useEffect(() => {
@@ -84,6 +126,7 @@ export function ProductListPage() {
       const response = await productService.getAll({ ...filters, store_id: !isAdmin ? userStoreId : filters.store_id, page, limit });
       setProducts(response.data);
       setTotal(response.total);
+      setStats(response.stats ?? null);
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
@@ -113,11 +156,23 @@ export function ProductListPage() {
     }
   }, [navigate]);
 
+  // Qidiruv debounce: har tugmada emas, yozish to'xtagach 400ms dan keyin so'rov ketadi
   const handleSearch = (value: string) => {
     setSearchQuery(value);
-    setFilters((prev) => ({ ...prev, search: value }));
-    setPage(1);
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const next = searchQuery.trim();
+      setFilters((prev) => {
+        if ((prev.search || '') === next) return prev;
+        return { ...prev, search: next || undefined };
+      });
+      setPage((prev) => ((filters.search || '') === next ? prev : 1));
+    }, 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
 
   const handleFilterChange = (key: keyof ProductFilters, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value || undefined }));
@@ -331,6 +386,13 @@ export function ProductListPage() {
     return inv?.quantity ?? 0;
   };
 
+  // Do'kon filtri tanlangan bo'lsa — barcha hisob-kitob (qoldiq, status)
+  // faqat shu do'kon bo'yicha; admin bo'lmagan user doim o'z do'koni kesimida ko'radi
+  const effectiveStoreId = isAdmin ? (filters.store_id || '') : (userStoreId || '');
+
+  const getDisplayQuantity = (item: Product): number =>
+    effectiveStoreId ? getStoreQuantity(item, effectiveStoreId) : getTotalQuantity(item);
+
   // Pagination
   const getPageNumbers = (currentPage: number, totalPagesCount: number) => {
     const pages: (number | string)[] = [];
@@ -376,8 +438,16 @@ export function ProductListPage() {
   }, [stores]);
 
   const shopStores = useMemo(() => {
+    // Do'kon kesimida faqat tanlangan do'kon ustuni ko'rinadi —
+    // boshqa do'konlarning qoldiqlari ko'rsatilmaydi
+    if (effectiveStoreId) {
+      const own = storeColumns.filter((c) => String(c.id) === String(effectiveStoreId));
+      if (own.length > 0) return own;
+      const store = stores.find((s) => String(s.id) === String(effectiveStoreId));
+      return store ? [{ id: String(store.id), name: store.name }] : [];
+    }
     return storeColumns;
-  }, [storeColumns]);
+  }, [storeColumns, effectiveStoreId, stores]);
 
   const LOW_STOCK_THRESHOLD = 5;
 
@@ -387,23 +457,30 @@ export function ProductListPage() {
     return 'in_stock';
   }, []);
 
-  const filteredProducts = useMemo(() => {
-    if (!filters.stock_status) return products;
-    return products.filter(p => {
-      const qty = getTotalQuantity(p);
-      if (filters.stock_status === 'out_of_stock') return qty === 0;
-      if (filters.stock_status === 'low_stock') return qty > 0 && qty <= LOW_STOCK_THRESHOLD;
-      return true;
-    });
-  }, [products, filters.stock_status]);
+  // Status bo'yicha filtrlash endi backendda (stock_status param) bajariladi —
+  // pagination va tab sonlari to'g'ri ishlashi uchun
+  const filteredProducts = products;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={t('products.title')}
         description={t('products.productList')}
-        actions={canCreateProduct ? (
+        actions={(
           <div className="flex flex-wrap gap-2">
+            <ExportButton
+              direct
+              endpoint="/products/export/"
+              filename="mahsulotlar.xlsx"
+              params={{
+                search: filters.search || undefined,
+                category: filters.category || undefined,
+                // Admin bo'lmagan user doim o'z do'koni kesimida eksport qiladi
+                store_id: !isAdmin ? userStoreId : filters.store_id || undefined,
+                stock_status: filters.stock_status || undefined,
+              }}
+            />
+            {canCreateProduct && (<>
             <Button variant="outline" onClick={handleDownloadTemplate}>
               <Download className="h-4 w-4 mr-2" />
               {t('products.downloadTemplate', 'Shablon yuklash')}
@@ -423,8 +500,9 @@ export function ProductListPage() {
               <Plus className="h-4 w-4 mr-2" />
               {t('products.addProduct')}
             </Button>
+            </>)}
           </div>
-        ) : undefined}
+        )}
       />
 
       {/* Filters */}
@@ -456,40 +534,76 @@ export function ProductListPage() {
           </SelectContent>
         </Select>
 
-        {/* <Select
-          value={filters.stock_status || 'all'}
-          onValueChange={(value) => handleFilterChange('stock_status', value === 'all' ? '' : value)}
-        >
-          <SelectTrigger className="w-full sm:w-44">
-            <SelectValue placeholder={t('products.stockStatus', 'Qoldiq holati')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('common.all')}</SelectItem>
-            <SelectItem value="in_stock">
-              <span className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-green-500" />
-                {t('products.inStock', 'Omborda bor')}
-              </span>
-            </SelectItem>
-            <SelectItem value="low_stock">
-              <span className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-yellow-500" />
-                {t('products.lowStock', 'Kam qolgan')}
-              </span>
-            </SelectItem>
-            <SelectItem value="out_of_stock">
-              <span className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-red-500" />
-                {t('products.outOfStock', 'Tugagan')}
-              </span>
-            </SelectItem>
-          </SelectContent>
-        </Select> */}
+        {/* Do'kon filtri (faqat admin): tanlanganda ro'yxat, qoldiqlar va
+            statistika faqat shu do'kon kesimida ko'rsatiladi */}
+        {isAdmin && (
+          <Select
+            value={filters.store_id || 'all'}
+            onValueChange={(value) => handleFilterChange('store_id', value === 'all' ? '' : value)}
+          >
+            <SelectTrigger className="w-full sm:w-52">
+              <SelectValue placeholder={t('products.filterByStore', "Do'kon bo'yicha filtr")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">
+                <span className="flex items-center gap-2">
+                  <Warehouse className="h-3.5 w-3.5 text-muted-foreground" />
+                  {t('products.allStores', 'Barcha do\'konlar')}
+                </span>
+              </SelectItem>
+              {stores.map((store) => (
+                <SelectItem key={store.id} value={String(store.id)}>
+                  <span className="flex items-center gap-2">
+                    <StoreIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                    {store.name}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
 
-        {filters.stock_status && (
-          <div className="flex items-center text-xs text-muted-foreground bg-muted/50 px-3 py-1 rounded-lg">
-            {filteredProducts.length} / {products.length}
-          </div>
+      {/* ═══════ Qoldiq holati tablari + statistika ═══════ */}
+      <div className="flex flex-wrap items-center gap-2">
+        {([
+          { key: '', label: t('products.tabAll', 'Barchasi'), count: stats?.all, dot: 'bg-primary' },
+          { key: 'in_stock', label: t('products.tabInStock', 'Borlari'), count: stats?.in_stock, dot: 'bg-green-500' },
+          { key: 'low_stock', label: t('products.tabLowStock', 'Kam qolganlar'), count: stats?.low_stock, dot: 'bg-yellow-500' },
+          { key: 'out_of_stock', label: t('products.tabOutOfStock', 'Tugaganlar'), count: stats?.out_of_stock, dot: 'bg-red-500' },
+        ] as const).map((tab) => {
+          const isActiveTab = (filters.stock_status || '') === tab.key;
+          return (
+            <button
+              key={tab.key || 'all'}
+              type="button"
+              onClick={() => handleFilterChange('stock_status', tab.key)}
+              className={cn(
+                'flex items-center gap-2 rounded-xl border px-3.5 py-2 text-sm font-medium transition-colors',
+                isActiveTab
+                  ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+                  : 'border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground'
+              )}
+            >
+              <span className={cn('h-2 w-2 rounded-full', isActiveTab ? 'bg-primary-foreground/80' : tab.dot)} />
+              {tab.label}
+              <span
+                className={cn(
+                  'min-w-[1.5rem] rounded-full px-1.5 py-0.5 text-center text-xs font-bold tabular-nums',
+                  isActiveTab ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-muted text-foreground'
+                )}
+              >
+                {tab.count ?? '—'}
+              </span>
+            </button>
+          );
+        })}
+        {effectiveStoreId && (
+          <span className="ml-auto flex items-center gap-1.5 rounded-lg bg-muted/60 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+            <StoreIcon className="h-3.5 w-3.5" />
+            {stores.find((s) => String(s.id) === String(effectiveStoreId))?.name || `#${effectiveStoreId}`}
+            {' — '}{t('products.storeScopedHint', "qoldiqlar shu do'kon bo'yicha")}
+          </span>
         )}
       </div>
 
@@ -534,14 +648,14 @@ export function ProductListPage() {
         ) : (
           filteredProducts.map((item) => {
             const imageUrl = getImageUrl(item);
-            const totalQty = getTotalQuantity(item);
+            const totalQty = getDisplayQuantity(item);
             const stockStatus = getStockStatus(totalQty);
             const isActive = item.is_active !== false;
 
             return (
               <div
                 key={item.id}
-                onClick={() => canEditProduct && navigate(`/${lang}/products/${item.id}/edit`)}
+                onClick={() => setViewProduct(item)}
                 className={cn(
                   "rounded-2xl bg-card p-4 shadow-sm space-y-4 active:scale-[0.99] transition-transform cursor-pointer relative",
                   !isActive && "opacity-60",
@@ -584,7 +698,7 @@ export function ProductListPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
                       <h4 className="font-bold text-slate-900 dark:text-white text-sm leading-snug line-clamp-2">
-                        {item.name}
+                        {highlightMatch(item.name, searchQuery)}
                       </h4>
                       <span className="text-[10px] font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
                         #{item.id}
@@ -600,12 +714,12 @@ export function ProductListPage() {
                       )}
                       {item.sku && (
                         <span className="text-slate-500 font-mono bg-slate-100 dark:bg-slate-800/60 px-1.5 py-0.5 rounded text-[10px]">
-                          SKU: {item.sku}
+                          SKU: {highlightMatch(item.sku, searchQuery)}
                         </span>
                       )}
                       {item.barcode && (
                         <span className="text-slate-500 font-mono bg-slate-100 dark:bg-slate-800/60 px-1.5 py-0.5 rounded text-[10px]">
-                          Barcode: {item.barcode}
+                          Barcode: {highlightMatch(item.barcode, searchQuery)}
                         </span>
                       )}
                     </div>
@@ -709,6 +823,21 @@ export function ProductListPage() {
                       <Eye className="h-3.5 w-3.5 mr-1" />
                       {t('common.view', "Ko'rish")}
                     </Button>
+                    {canEditProduct && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-3 rounded-lg flex items-center text-xs shadow-sm bg-card hover:bg-muted border border-border"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/${lang}/products/${item.id}/edit`);
+                        }}
+                      >
+                        <Edit className="h-3.5 w-3.5 mr-1" />
+                        {t('common.edit', 'Tahrirlash')}
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -798,7 +927,7 @@ export function ProductListPage() {
             ) : (
               filteredProducts.map((item) => {
                 const imageUrl = getImageUrl(item);
-                const totalQty = getTotalQuantity(item);
+                const totalQty = getDisplayQuantity(item);
                 const stockStatus = getStockStatus(totalQty);
                 const isSelected = selectedProductIds.includes(item.id);
                 const isActive = item.is_active !== false;
@@ -806,8 +935,9 @@ export function ProductListPage() {
                 return (
                   <tr
                     key={item.id}
+                    onClick={() => setViewProduct(item)}
                     className={cn(
-                      'border-b border-border/40 transition-colors hover:bg-muted/20',
+                      'border-b border-border/40 transition-colors hover:bg-muted/20 cursor-pointer',
                       isSelected && 'bg-primary/5',
                       !isActive && 'opacity-60',
                       stockStatus === 'out_of_stock' && 'border-l-2 border-l-red-500',
@@ -849,15 +979,27 @@ export function ProductListPage() {
                       )}
                     </td>
 
-                    {/* Product Name + barcode underneath */}
-                    <td
-                      className="px-3 py-2 cursor-pointer"
-                      onClick={() => canEditProduct && navigate(`/${lang}/products/${item.id}/edit`)}
-                    >
+                    {/* Product Name (bosilganda nusxalanadi) + ID underneath */}
+                    <td className="px-3 py-2">
                       <div className="min-w-0">
-                        <p className="font-semibold text-foreground truncate max-w-[220px] leading-tight">
-                          {item.name}
-                        </p>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void handleCopyName(item);
+                          }}
+                          title={t('common.copy', 'Nusxalash')}
+                          className="group/name flex items-center gap-1.5 max-w-[240px] text-left"
+                        >
+                          <span className="font-semibold text-foreground truncate leading-tight group-hover/name:text-primary transition-colors">
+                            {highlightMatch(item.name, searchQuery)}
+                          </span>
+                          {copiedProductId === item.id ? (
+                            <Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                          ) : (
+                            <Copy className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 group-hover/name:opacity-100 transition-opacity" />
+                          )}
+                        </button>
                         <p className="text-[11px] text-muted-foreground font-mono mt-0.5">
                           ID: {item.id}
                         </p>
@@ -867,7 +1009,7 @@ export function ProductListPage() {
                     {/* SKU */}
                     <td className="px-3 py-2">
                       <code className="text-xs font-mono bg-muted/40 px-2 py-0.5 rounded-md text-muted-foreground">
-                        {item.sku || '—'}
+                        {item.sku ? highlightMatch(item.sku, searchQuery) : '—'}
                       </code>
                     </td>
 
@@ -875,7 +1017,7 @@ export function ProductListPage() {
                     <td className="px-3 py-2">
                       {item.barcode ? (
                         <div className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
-                          <span>{item.barcode}</span>
+                          <span>{highlightMatch(item.barcode, searchQuery)}</span>
                           {item.shtrix_code && (
                             <a
                               href={item.shtrix_code}
@@ -883,6 +1025,7 @@ export function ProductListPage() {
                               rel="noopener noreferrer"
                               className="text-primary hover:text-primary/80 transition-colors"
                               title={t('titles.printBarcode', 'Barcode chop etish')}
+                              onClick={(e) => e.stopPropagation()}
                             >
                               <Barcode className="h-3.5 w-3.5" />
                             </a>
@@ -954,18 +1097,32 @@ export function ProductListPage() {
                       )}
                     </td> */}
 
-                    {/* Action: View */}
+                    {/* Actions: View + Edit */}
                     <td className="px-2 py-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setViewProduct(item);
-                        }}
-                        className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                        title={t('common.view', "Ko'rish")}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </button>
+                      <div className="flex items-center gap-0.5">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setViewProduct(item);
+                          }}
+                          className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                          title={t('common.view', "Ko'rish")}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        {canEditProduct && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/${lang}/products/${item.id}/edit`);
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                            title={t('common.edit', 'Tahrirlash')}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -1078,7 +1235,7 @@ export function ProductListPage() {
       <ProductDetailModal
         product={viewProduct}
         onClose={() => setViewProduct(null)}
-        onEdit={(id) => navigate(`/${lang}/products/${id}/edit`)}
+        onEdit={canEditProduct ? (id) => navigate(`/${lang}/products/${id}/edit`) : undefined}
         stores={stores}
         warehouseStore={warehouseStore ?? null}
         t={t}
@@ -1108,7 +1265,8 @@ export function ProductListPage() {
 interface ProductDetailModalProps {
   product: Product | null;
   onClose: () => void;
-  onEdit: (id: string) => void;
+  // Tahrirlash huquqi bo'lmasa undefined — tugma ko'rsatilmaydi
+  onEdit?: (id: string) => void;
   stores: Store[];
   warehouseStore: Store | null;
   t: TFunction<'translation', undefined>;
@@ -1116,6 +1274,21 @@ interface ProductDetailModalProps {
 
 function ProductDetailModal({ product, onClose, onEdit, stores, t }: ProductDetailModalProps) {
   const isShtrixUrl = product && product.shtrix_code && (product.shtrix_code.startsWith('http://') || product.shtrix_code.startsWith('https://') || product.shtrix_code.startsWith('/media/'));
+
+  // Nom nusxalash feedbacki
+  const [nameCopied, setNameCopied] = useState(false);
+
+  const handleCopyName = async () => {
+    if (!product) return;
+    const ok = await copyToClipboard(product.name);
+    if (ok) {
+      setNameCopied(true);
+      toast.success(`${t('common.copied', 'Nusxalandi')}: ${product.name}`);
+      setTimeout(() => setNameCopied(false), 1600);
+    } else {
+      toast.error(t('common.copyFailed', "Nusxalab bo'lmadi"));
+    }
+  };
 
   // Use a callback ref to generate the barcode because Dialog portals mount asynchronously,
   // meaning the SVG element may not be present in the DOM during the first render/useEffect run.
@@ -1214,12 +1387,14 @@ function ProductDetailModal({ product, onClose, onEdit, stores, t }: ProductDeta
           <DialogHeader className="p-0">
             <DialogTitle className="text-lg">{t('products.productDetails', "Mahsulot ma'lumotlari")}</DialogTitle>
           </DialogHeader>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => onEdit(product.id)}>
-              <Edit className="h-3.5 w-3.5 mr-1.5" />
-              {t('common.edit', 'Tahrirlash')}
-            </Button>
-          </div>
+          {onEdit && (
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => onEdit(product.id)}>
+                <Edit className="h-3.5 w-3.5 mr-1.5" />
+                {t('common.edit', 'Tahrirlash')}
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="p-6 space-y-6">
@@ -1245,7 +1420,28 @@ function ProductDetailModal({ product, onClose, onEdit, stores, t }: ProductDeta
 
             {/* Info Grid */}
             <div className="flex-1 min-w-0">
-              <h2 className="text-xl font-bold text-foreground mb-1 truncate">{product.name}</h2>
+              <div className="group/name flex items-center gap-2 mb-1 min-w-0">
+                <h2
+                  className="text-xl font-bold text-foreground truncate cursor-pointer hover:text-primary transition-colors"
+                  title={t('common.copy', 'Nusxalash')}
+                  onClick={() => void handleCopyName()}
+                >
+                  {product.name}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => void handleCopyName()}
+                  title={t('common.copy', 'Nusxalash')}
+                  className={cn(
+                    'shrink-0 p-1.5 rounded-lg border transition-colors',
+                    nameCopied
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-600 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400'
+                      : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground'
+                  )}
+                >
+                  {nameCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                </button>
+              </div>
               {product.name_uz_cyrl && (
                 <p className="text-sm text-muted-foreground mb-3">{product.name_uz_cyrl}</p>
               )}

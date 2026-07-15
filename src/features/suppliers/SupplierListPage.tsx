@@ -1,17 +1,20 @@
 import { useEffect, useState, useCallback, type ChangeEvent, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Edit, Trash2, Phone, Mail, MapPin, CheckCircle2 } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Plus, Edit, Trash2, Phone, Mail, MapPin, CheckCircle2, Eye, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { PageHeader } from '../../components/shared/PageHeader';
+import { ExportButton } from '../../components/shared/ExportButton';
 import { DataTable, type Column } from '../../components/shared/DataTable';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/Dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
 import { supplierService } from '../../services/supplierService';
 import type { Supplier, SupplierFormData } from '../../types';
-import { latinToCyrillic } from '../../utils/transliteration';
+import { latinToCyrillic, cyrillicToLatin } from '../../utils/transliteration';
 import { formatCurrency } from '../../utils';
 import { handleError } from '../../utils/errorHandler';
 
@@ -25,6 +28,9 @@ import { handleError } from '../../utils/errorHandler';
 
 export function SupplierListPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const params = useParams();
+  const lang = params.lang || 'uz';
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -32,6 +38,11 @@ export function SupplierListPage() {
   const limit = 10;
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  // Ro'yxat filtrlari — jadvalga ham, eksportga ham birdek qo'llanadi
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [orderingFilter, setOrderingFilter] = useState('name');
+  const [debtFilter, setDebtFilter] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [formData, setFormData] = useState<SupplierFormData>({
@@ -45,12 +56,24 @@ export function SupplierListPage() {
     inn: '',
   });
   const [saving, setSaving] = useState(false);
+  // Saqlashga urinishdan keyin bo'sh majburiy maydonlar qizil ko'rsatiladi
+  const [showErrors, setShowErrors] = useState(false);
 
+  // Lotin ↔ kirill ikki tomonlama sinxron: qaysi maydonga yozilsa,
+  // ikkinchisi avtomatik transliteratsiya qilinadi.
   const handleNameChange = (value: string) => {
     setFormData((prev) => ({
       ...prev,
       name_uz: value,
       name_uz_cyrl: latinToCyrillic(value),
+    }));
+  };
+
+  const handleNameCyrlChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      name_uz_cyrl: value,
+      name_uz: cyrillicToLatin(value),
     }));
   };
 
@@ -62,6 +85,14 @@ export function SupplierListPage() {
     }));
   };
 
+  const handleDescriptionCyrlChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      description_uz_cyrl: value,
+      description_uz: cyrillicToLatin(value),
+    }));
+  };
+
   const handleAddressChange = (value: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -70,10 +101,27 @@ export function SupplierListPage() {
     }));
   };
 
+  const handleAddressCyrlChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      address_uz_cyrl: value,
+      address_uz: cyrillicToLatin(value),
+    }));
+  };
+
+  const nameMissing = !formData.name_uz.trim() && !formData.name_uz_cyrl.trim();
+  const phoneMissing = !formData.phone_number.trim();
+
   const loadSuppliers = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await supplierService.getAll({ page, limit });
+      const response = await supplierService.getAll({
+        page,
+        limit,
+        search: debouncedSearch || undefined,
+        ordering: orderingFilter !== 'name' ? orderingFilter : undefined,
+        has_debt: debtFilter === 'true' ? 'true' : undefined,
+      });
       setSuppliers(response.data);
       setTotal(response.total);
     } catch (error) {
@@ -84,7 +132,16 @@ export function SupplierListPage() {
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, debouncedSearch, orderingFilter, debtFilter]);
+
+  // Qidiruv debounce: yozish tugagach 400ms kutib, 1-sahifadan qayta yuklaymiz
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      setDebouncedSearch(searchQuery.trim());
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const totalSupplierDebt = suppliers.reduce((sum, s) => sum + (typeof s.debt === 'number' ? s.debt : 0), 0);
 
@@ -108,6 +165,7 @@ export function SupplierListPage() {
   };
 
   const handleOpenDialog = async (supplier?: Supplier) => {
+    setShowErrors(false);
     if (supplier) {
       setEditingSupplier(supplier);
       setDialogOpen(true);
@@ -156,8 +214,9 @@ export function SupplierListPage() {
   };
 
   const handleSave = async () => {
-    if (!formData.name_uz.trim()) {
-      toast.error(t('suppliers.supplierNameRequired', 'Yetkazib beruvchi nomi kiritilishi shart!'));
+    if (nameMissing || phoneMissing) {
+      setShowErrors(true);
+      toast.error(t('suppliers.fillRequired', 'Majburiy (*) maydonlarni to‘ldiring'));
       return;
     }
 
@@ -274,10 +333,22 @@ export function SupplierListPage() {
         title={t('suppliers.title')}
         description={t('suppliers.title')}
         actions={
-          <Button onClick={() => handleOpenDialog()}>
-            <Plus className="h-4 w-4 mr-2" />
-            {t('suppliers.addSupplier')}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <ExportButton
+              direct
+              endpoint="/contract/supplier/export/"
+              filename="taminotchilar.xlsx"
+              params={{
+                search: debouncedSearch || undefined,
+                ordering: orderingFilter !== 'name' ? orderingFilter : undefined,
+                has_debt: debtFilter === 'true' ? 'true' : undefined,
+              }}
+            />
+            <Button onClick={() => handleOpenDialog()}>
+              <Plus className="h-4 w-4 mr-2" />
+              {t('suppliers.addSupplier')}
+            </Button>
+          </div>
         }
       />
 
@@ -294,6 +365,51 @@ export function SupplierListPage() {
           <p className="text-sm text-muted-foreground">{t('dashboard.totalDebt', 'Жами қарздорлик')}</p>
           <p className="text-2xl font-bold text-red-500">{formatCurrency(totalSupplierDebt)}</p>
         </div>
+      </div>
+
+      {/* Filtrlar — ro'yxatga ham, eksportga ham birdek qo'llanadi */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="relative w-full flex-1 sm:max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={t('suppliers.searchPlaceholder', 'Nomi, telefon yoki INN bo‘yicha qidirish...')}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Select
+          value={orderingFilter}
+          onValueChange={(value) => {
+            setOrderingFilter(value);
+            setPage(1);
+          }}
+        >
+          <SelectTrigger className="w-full sm:w-64">
+            <SelectValue placeholder={t('export.sortBy', 'Saralash')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="name">{t('export.byName', 'Nomi bo‘yicha')}</SelectItem>
+            <SelectItem value="-total_purchase_amount">{t('export.byTopPurchases', 'Eng ko‘p xarid qilinganlar')}</SelectItem>
+            <SelectItem value="-total_debt">{t('export.byTopDebt', 'Eng katta qarz')}</SelectItem>
+            <SelectItem value="-created_at">{t('export.byNewest', 'Eng yangilari')}</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select
+          value={debtFilter}
+          onValueChange={(value) => {
+            setDebtFilter(value);
+            setPage(1);
+          }}
+        >
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder={t('suppliers.debt', 'Qarz')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t('export.all', 'Hammasi')}</SelectItem>
+            <SelectItem value="true">{t('export.onlyDebtors', 'Faqat qarzdorlar')}</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {suppliers.length > 0 && (
@@ -325,6 +441,14 @@ export function SupplierListPage() {
               </div>
 
               <div className="mt-4 flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => navigate(`/${lang}/suppliers/${item.id}`)}
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  {t('common.view')}
+                </Button>
                 <Button variant="outline" className="flex-1" onClick={() => handleOpenDialog(item)}>
                   <Edit className="mr-2 h-4 w-4" />
                   {t('common.edit')}
@@ -344,6 +468,7 @@ export function SupplierListPage() {
           data={suppliers}
           columns={columns}
           loading={loading}
+          onRowClick={(item) => navigate(`/${lang}/suppliers/${item.id}`)}
           pagination={{ page, limit, total, onPageChange: setPage }}
         />
       </div>
@@ -365,64 +490,100 @@ export function SupplierListPage() {
             <DialogTitle>{editingSupplier ? t('suppliers.editSupplier') : t('suppliers.addSupplier')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>{t('suppliers.supplierName')}</Label>
-              <Input
-                value={formData.name_uz}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => handleNameChange(e.target.value)}
-                required
-              />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>
+                  {t('suppliers.supplierName')} (lotin) <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  value={formData.name_uz}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleNameChange(e.target.value)}
+                  className={showErrors && nameMissing ? 'border-red-500 focus-visible:ring-red-500' : ''}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>
+                  {t('suppliers.supplierName')} (kirill) <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  value={formData.name_uz_cyrl}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleNameCyrlChange(e.target.value)}
+                  className={showErrors && nameMissing ? 'border-red-500 focus-visible:ring-red-500' : ''}
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>{t('suppliers.supplierName')} (Cyrillic)</Label>
-              <Input
-                value={formData.name_uz_cyrl}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, name_uz_cyrl: e.target.value })}
-              />
+            {showErrors && nameMissing && (
+              <p className="-mt-2 text-xs text-red-600">
+                {t('suppliers.supplierNameRequired', 'Yetkazib beruvchi nomi kiritilishi shart!')}
+              </p>
+            )}
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>{t('common.description')} (lotin)</Label>
+                <Input
+                  value={formData.description_uz}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleDescriptionChange(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('common.description')} (kirill)</Label>
+                <Input
+                  value={formData.description_uz_cyrl}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleDescriptionCyrlChange(e.target.value)}
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>{t('common.description')}</Label>
-              <Input
-                value={formData.description_uz}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => handleDescriptionChange(e.target.value)}
-              />
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>
+                  {t('suppliers.phone')} <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  placeholder="+998901234567"
+                  value={formData.phone_number}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    setFormData({ ...formData, phone_number: e.target.value })
+                  }
+                  className={showErrors && phoneMissing ? 'border-red-500 focus-visible:ring-red-500' : ''}
+                />
+                {showErrors && phoneMissing && (
+                  <p className="text-xs text-red-600">
+                    {t('suppliers.phoneRequired', 'Telefon raqami kiritilishi shart!')}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>
+                  {t('suppliers.inn')}{' '}
+                  <span className="text-xs font-normal text-muted-foreground">
+                    ({t('common.optional', 'ixtiyoriy')})
+                  </span>
+                </Label>
+                <Input
+                  inputMode="numeric"
+                  value={formData.inn}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, inn: e.target.value })}
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>{t('common.description')} (Cyrillic)</Label>
-              <Input
-                value={formData.description_uz_cyrl}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, description_uz_cyrl: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('suppliers.phone')}</Label>
-              <Input
-                value={formData.phone_number}
-                onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  setFormData({ ...formData, phone_number: e.target.value })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('suppliers.inn')}</Label>
-              <Input
-                value={formData.inn}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, inn: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('suppliers.address')}</Label>
-              <Input
-                value={formData.address_uz}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => handleAddressChange(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('suppliers.address')} (Cyrillic)</Label>
-              <Input
-                value={formData.address_uz_cyrl}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, address_uz_cyrl: e.target.value })}
-              />
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>{t('suppliers.address')} (lotin)</Label>
+                <Input
+                  value={formData.address_uz}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleAddressChange(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('suppliers.address')} (kirill)</Label>
+                <Input
+                  value={formData.address_uz_cyrl}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleAddressCyrlChange(e.target.value)}
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>

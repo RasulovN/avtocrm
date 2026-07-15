@@ -18,7 +18,7 @@ interface InventoryState {
   scanningProductId: number | null;
   error: string | null;
 
-  fetchSessions: () => Promise<void>;
+  fetchSessions: (params?: { date_from?: string; date_to?: string }) => Promise<void>;
   startSession: (storeId: number) => Promise<number>;
   fetchSessionProducts: (sessionId: number, params?: { page?: number; limit?: number; status?: 'checked' | 'unchecked' | 'all' }) => Promise<void>;
   setPage: (page: number) => void;
@@ -49,10 +49,10 @@ export const useInventoryStore = create<InventoryState>((set) => ({
   scanningProductId: null,
   error: null,
 
-  fetchSessions: async () => {
+  fetchSessions: async (params) => {
     set({ loading: true, error: null });
     try {
-      const sessions = await inventoryApi.getSessions();
+      const sessions = await inventoryApi.getSessions(params);
       set({ sessions: sessions || [], loading: false });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to fetch sessions';

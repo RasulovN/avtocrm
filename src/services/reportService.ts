@@ -86,6 +86,14 @@ export interface CardBreakdownItem {
   percent: string;
 }
 
+export interface ExpenseItem {
+  method: string;
+  type: string;
+  count: number;
+  amount: number;
+  percent: string;
+}
+
 export interface DetailedReportsResponse {
   filters: Record<string, unknown>;
   summary: ReportsSummary;
@@ -93,6 +101,7 @@ export interface DetailedReportsResponse {
   categoryStatistics: CategoryStatistic[];
   paymentStructure: PaymentStructureItem[];
   cardBreakdown: CardBreakdownItem[];
+  expenses: ExpenseItem[];
   charts: {
     profitTrend: ChartSeries;
   };
@@ -189,6 +198,7 @@ const normalizeDetailedReportsResponse = (payload: unknown): DetailedReportsResp
     categoryStatistics?: unknown;
     paymentStructure?: unknown;
     cardBreakdown?: unknown;
+    expenses?: unknown;
     charts?: unknown;
     topSellingProducts?: unknown;
     debts?: unknown;
@@ -199,6 +209,7 @@ const normalizeDetailedReportsResponse = (payload: unknown): DetailedReportsResp
   const categoryStatisticsRaw = Array.isArray(source.categoryStatistics) ? source.categoryStatistics : [];
   const paymentStructureRaw = Array.isArray(source.paymentStructure) ? source.paymentStructure : [];
   const cardBreakdownRaw = Array.isArray(source.cardBreakdown) ? source.cardBreakdown : [];
+  const expensesRaw = Array.isArray(source.expenses) ? source.expenses : [];
   const chartsRaw = (source.charts ?? {}) as { profitTrend?: unknown };
   const topProductsRaw = Array.isArray(source.topSellingProducts) ? source.topSellingProducts : [];
   const debtsRaw = (source.debts ?? {}) as { customerDebts?: unknown; supplierDebts?: unknown };
@@ -252,6 +263,16 @@ const normalizeDetailedReportsResponse = (payload: unknown): DetailedReportsResp
         count: toNumber(card.count),
         amount: toNumber(card.amount),
         percent: String(card.percent ?? ''),
+      };
+    }),
+    expenses: expensesRaw.map((item) => {
+      const expense = (item ?? {}) as Record<string, unknown>;
+      return {
+        method: String(expense.method ?? ''),
+        type: String(expense.type ?? ''),
+        count: toNumber(expense.count),
+        amount: toNumber(expense.amount),
+        percent: String(expense.percent ?? ''),
       };
     }),
     charts: {

@@ -47,6 +47,20 @@ export function UserListPage() {
     role_id: null,
   });
   const [saving, setSaving] = useState(false);
+  // Saqlashga urinishdan keyin bo'sh majburiy maydonlar qizil ko'rsatiladi
+  const [showErrors, setShowErrors] = useState(false);
+
+  const fullNameMissing = !formData.full_name?.trim();
+  const emailMissing = !formData.email?.trim();
+  const phoneMissing = !formData.phone_number?.trim();
+  const passwordMissing = !editingUser && !formData.password;
+  const confirmMissing = !editingUser && !formData.confirm_password;
+  const passwordMismatch =
+    !editingUser &&
+    Boolean(formData.password) &&
+    Boolean(formData.confirm_password) &&
+    formData.password !== formData.confirm_password;
+
   const safeUsers = useMemo(() => (Array.isArray(users) ? users : []), [users]);
   const safeStores = useMemo(() => (Array.isArray(stores) ? stores : []), [stores]);
   const safeLogs = useMemo(() => {
@@ -140,6 +154,7 @@ export function UserListPage() {
         role_id: null,
       });
     }
+    setShowErrors(false);
     setDialogOpen(true);
   };
 
@@ -150,15 +165,18 @@ export function UserListPage() {
 
   const handleSave = async () => {
     try {
-      if (!formData.full_name || !formData.phone_number || !formData.email) {
-        toast.error(t('errors.requiredFields', 'Majburiy maydonlarni to\'ldiring'));
+      if (fullNameMissing || phoneMissing || emailMissing) {
+        setShowErrors(true);
+        toast.error(t('errors.requiredFields', 'Majburiy (*) maydonlarni to\'ldiring'));
         return;
       }
-      if (!editingUser && (!formData.password || !formData.confirm_password)) {
+      if (passwordMissing || confirmMissing) {
+        setShowErrors(true);
         toast.error(t('errors.requiredFields', 'Parol va tasdiqlash maydonlarini to\'ldiring'));
         return;
       }
-      if (!editingUser && formData.password && formData.confirm_password && formData.password !== formData.confirm_password) {
+      if (passwordMismatch) {
+        setShowErrors(true);
         toast.error(t('errors.passwordMismatch', 'Parollar mos kelmadi'));
         return;
       }
@@ -361,30 +379,46 @@ export function UserListPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>{t('users.fullName')}</Label>
+              <Label>
+                {t('users.fullName')} <span className="text-red-500">*</span>
+              </Label>
               <Input
                 value={formData.full_name}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, full_name: e.target.value })}
-                required
+                className={showErrors && fullNameMissing ? 'border-red-500 focus-visible:ring-red-500' : ''}
               />
+              {showErrors && fullNameMissing && (
+                <p className="text-xs text-red-600">{t('users.fullNameRequired', 'F.I.Sh kiritilishi shart!')}</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label>{t('users.email')}</Label>
+              <Label>
+                {t('users.email')} <span className="text-red-500">*</span>
+              </Label>
               <Input
                 type="email"
                 value={formData.email}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, email: e.target.value })}
-                required
+                className={showErrors && emailMissing ? 'border-red-500 focus-visible:ring-red-500' : ''}
               />
+              {showErrors && emailMissing && (
+                <p className="text-xs text-red-600">{t('users.emailRequired', 'Email kiritilishi shart!')}</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label>{t('users.phone')}</Label>
+              <Label>
+                {t('users.phone')} <span className="text-red-500">*</span>
+              </Label>
               <Input
                 type="tel"
+                placeholder="+998901234567"
                 value={formData.phone_number}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, phone_number: e.target.value })}
-                required
+                className={showErrors && phoneMissing ? 'border-red-500 focus-visible:ring-red-500' : ''}
               />
+              {showErrors && phoneMissing && (
+                <p className="text-xs text-red-600">{t('users.phoneRequired', 'Telefon raqami kiritilishi shart!')}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>{t('users.systemRole')}</Label>
@@ -404,12 +438,16 @@ export function UserListPage() {
             {!editingUser && (
               <>
                 <div className="space-y-2">
-                  <Label>{t('users.store')}</Label>
+                  <Label>
+                    {t('users.store')}{' '}
+                    <span className="text-xs font-normal text-muted-foreground">
+                      ({t('common.optional', 'ixtiyoriy')})
+                    </span>
+                  </Label>
                   <select
                     className="w-full px-3 py-2 border rounded-md bg-background"
                     value={formData.store_id || ''}
                     onChange={(e: ChangeEvent<HTMLSelectElement>) => setFormData({ ...formData, store_id: e.target.value })}
-                    required
                   >
                     <option value="">{t('common.select')}</option>
                     {safeStores.map((store) => (
@@ -418,22 +456,45 @@ export function UserListPage() {
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <Label>{t('users.password')}</Label>
+                  <Label>
+                    {t('users.password')} <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     type="password"
                     value={formData.password}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, password: e.target.value })}
-                    required
+                    className={
+                      showErrors && (passwordMissing || passwordMismatch)
+                        ? 'border-red-500 focus-visible:ring-red-500'
+                        : ''
+                    }
                   />
+                  {showErrors && passwordMissing && (
+                    <p className="text-xs text-red-600">{t('users.passwordRequired', 'Parol kiritilishi shart!')}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <Label>{t('users.confirmPassword')}</Label>
+                  <Label>
+                    {t('users.confirmPassword')} <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     type="password"
                     value={formData.confirm_password}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, confirm_password: e.target.value })}
-                    required
+                    className={
+                      showErrors && (confirmMissing || passwordMismatch)
+                        ? 'border-red-500 focus-visible:ring-red-500'
+                        : ''
+                    }
                   />
+                  {showErrors && confirmMissing && (
+                    <p className="text-xs text-red-600">
+                      {t('users.confirmPasswordRequired', 'Parol tasdig‘i kiritilishi shart!')}
+                    </p>
+                  )}
+                  {showErrors && passwordMismatch && (
+                    <p className="text-xs text-red-600">{t('errors.passwordMismatch', 'Parollar mos kelmadi')}</p>
+                  )}
                 </div>
               </>
             )}

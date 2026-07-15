@@ -17,6 +17,37 @@ export function generateBarcode(): string {
   return `${timestamp}${random}`;
 }
 
+/**
+ * Matnni buferga nusxalash. Zamonaviy Clipboard API ishlamasa
+ * (masalan, HTTPS bo'lmagan LAN muhitida) textarea fallback ishlatiladi.
+ * @returns nusxalash muvaffaqiyatli bo'lsa true
+ */
+export async function copyToClipboard(text: string): Promise<boolean> {
+  if (!text) return false;
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // Clipboard API rad etildi — fallback'ga o'tamiz
+  }
+  try {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    const ok = document.execCommand('copy');
+    textarea.remove();
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('uz-UZ', {
     style: 'currency',

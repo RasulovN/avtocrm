@@ -27,6 +27,8 @@ export interface InventoryFilters {
   date_from?: string;
   date_to?: string;
   ordering?: string;
+  // Kirim to'lov holati bo'yicha filtr (ta'minotchi detail sahifasi)
+  payment_status?: 'unpaid' | 'partial' | 'paid';
 }
 
 const parsePaginatedResponse = <T>(data: any, defaultLimit = 10): PaginatedResponse<T> => {
@@ -79,6 +81,7 @@ export const inventoryService = {
     if (filters?.date_from) params.append('date_from', filters.date_from);
     if (filters?.date_to) params.append('date_to', filters.date_to);
     if (filters?.ordering) params.append('ordering', filters.ordering);
+    if (filters?.payment_status) params.append('payment_status', filters.payment_status);
 
     const response = await apiClient.get('/contract/entry/list/', { params });
     return parsePaginatedResponse<ContractEntry>(response.data, filters?.limit || 10);

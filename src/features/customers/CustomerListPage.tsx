@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, type FocusEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pencil, Phone, Plus, Search, Trash2, User, CheckCircle2, Info } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { Pencil, Phone, Plus, Search, Trash2, User, CheckCircle2, Info, Banknote, CreditCard, Check, Loader2, Wallet } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
+import { ExportButton } from '../../components/shared/ExportButton';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { Label } from '../../components/ui/Label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
 import {
   Dialog,
@@ -16,9 +19,11 @@ import {
   DialogTitle,
 } from '../../components/ui/Dialog';
 import { DataTable, type Column } from '../../components/shared/DataTable';
-import { customerApiService } from '../../services/customerService';
-import { formatDate, formatCurrency } from '../../utils';
+import { customerApiService, type CustomerPaymentRow } from '../../services/customerService';
+import { bankCardService } from '../../services/bankCardService';
+import { formatDate, formatCurrency, cn } from '../../utils';
 import { handleError } from '../../utils/errorHandler';
+import type { BankCard } from '../../types';
 
 interface CustomerFromApi {
   id: number;
@@ -52,7 +57,18 @@ export function CustomerListPage() {
   const [dialogMode, setDialogMode] = useState<DialogMode>('closed');
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerFromApi | null>(null);
   const [formData, setFormData] = useState({ full_name: '', phone_number: '' });
+  // Maydon darajasidagi xatolar — qaysi input noto'g'ri to'ldirilganini ko'rsatadi
+  const [fieldErrors, setFieldErrors] = useState<{ full_name?: string; phone_number?: string }>({});
   const [submitting, setSubmitting] = useState(false);
+
+  // ─── Qarz to'lash (FIFO) va to'lovlar tarixi ───
+  const [payAmount, setPayAmount] = useState('');
+  const [payType, setPayType] = useState<'cash' | 'card'>('cash');
+  const [payBankCardId, setPayBankCardId] = useState('');
+  const [bankCards, setBankCards] = useState<BankCard[]>([]);
+  const [paying, setPaying] = useState(false);
+  const [payments, setPayments] = useState<CustomerPaymentRow[]>([]);
+  const [loadingPayments, setLoadingPayments] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -216,8 +232,33 @@ export function CustomerListPage() {
     },
   ];
 
+  // Telefon inputiga faqat raqam va boshida '+' kiritishga ruxsat beramiz
+  const sanitizePhone = (raw: string): string => {
+    let value = raw.replace(/[^\d+]/g, '');
+    value = value.startsWith('+')
+      ? '+' + value.slice(1).replace(/\+/g, '')
+      : value.replace(/\+/g, '');
+    return value.slice(0, 16);
+  };
+
+  const validateForm = (): boolean => {
+    const errors: { full_name?: string; phone_number?: string } = {};
+    if (!formData.full_name.trim()) {
+      errors.full_name = t('customers.nameRequired', "Ism-familiya kiritilishi shart");
+    }
+    const phone = formData.phone_number.trim();
+    if (!phone) {
+      errors.phone_number = t('customers.phoneRequired', "Telefon raqam kiritilishi shart");
+    } else if (!/^\+?\d{7,15}$/.test(phone)) {
+      errors.phone_number = t('customers.phoneInvalid', "Telefon raqam noto'g'ri (masalan: +998901234567)");
+    }
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const openCreateDialog = () => {
     setFormData({ full_name: '', phone_number: '' });
+    setFieldErrors({});
     setDialogMode('create');
     setSelectedCustomer(null);
   };
@@ -225,6 +266,7 @@ export function CustomerListPage() {
   const openEditDialog = (customer: CustomerFromApi) => {
     setSelectedCustomer(customer);
     setFormData({ full_name: customer.full_name, phone_number: customer.phone_number });
+    setFieldErrors({});
     setDialogMode('edit');
   };
 
@@ -237,10 +279,110 @@ export function CustomerListPage() {
     setSelectedCustomer(null);
     setDialogMode('closed');
     setFormData({ full_name: '', phone_number: '' });
+    setFieldErrors({});
+    setPayAmount('');
+    setPayType('cash');
+    setPayments([]);
+  };
+
+  // ─── Qarz to'lash (FIFO) ───
+
+  const loadPayments = useCallback(async (customerId: number) => {
+    try {
+      setLoadingPayments(true);
+      const rows = await customerApiService.getCustomerPayments(customerId);
+      setPayments(rows);
+    } catch (error) {
+      handleError(error, { showToast: false, logData: 'Failed to load customer payments' });
+      setPayments([]);
+    } finally {
+      setLoadingPayments(false);
+    }
+  }, []);
+
+  // Modal ochilganda to'lovlar tarixi yuklanadi
+  const selectedCustomerId = selectedCustomer?.id;
+  useEffect(() => {
+    if (dialogMode === 'view' && selectedCustomerId) {
+      void loadPayments(selectedCustomerId);
+    }
+  }, [dialogMode, selectedCustomerId, loadPayments]);
+
+  // Sotuv bo'limi uchun ruxsat etilgan to'lov usullari (bir marta yuklanadi)
+  useEffect(() => {
+    if (dialogMode !== 'view' || bankCards.length > 0) return;
+    bankCardService
+      .getAll({ is_active: true, scope: 'sale' })
+      .then((cards) => {
+        setBankCards(cards);
+        const def = cards.find((c) => c.is_default) ?? cards[0];
+        setPayBankCardId((prev) => prev || (def ? String(def.id) : ''));
+      })
+      .catch(() => {});
+  }, [dialogMode, bankCards.length]);
+
+  const totalDebt = Number(selectedCustomer?.total_debt) || 0;
+  const payAmountNum = Number(payAmount) || 0;
+  const payExceeds = payAmountNum > totalDebt;
+  const payInvalid =
+    payAmountNum <= 0 ||
+    payExceeds ||
+    (payType === 'card' && !payBankCardId);
+
+  // Qarzli sotuvlar — eng eskisidan (FIFO tartibi, backend bilan bir xil)
+  const debtSales = useMemo(() => {
+    return (selectedCustomer?.sales || [])
+      .filter((s: any) => s.status !== 'r' && Number(s.total_amount) - Number(s.paid_amount) > 0)
+      .sort(
+        (a: any, b: any) =>
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+  }, [selectedCustomer]);
+
+  // Jonli taqsimot ko'rinishi: kiritilgan summa qaysi buyurtmalarga bo'linadi
+  const allocationPreview = useMemo(() => {
+    let left = payAmountNum;
+    return debtSales.map((s: any) => {
+      const debt = Number(s.total_amount) - Number(s.paid_amount);
+      const alloc = Math.max(0, Math.min(debt, left));
+      left -= alloc;
+      return {
+        id: s.id,
+        store_name: s.store_name,
+        created_at: s.created_at,
+        debt,
+        alloc,
+        closed: alloc >= debt && debt > 0,
+      };
+    });
+  }, [debtSales, payAmountNum]);
+
+  const handlePayDebt = async () => {
+    if (!selectedCustomer || payInvalid || paying) return;
+    try {
+      setPaying(true);
+      await customerApiService.payCustomerDebt({
+        customer: selectedCustomer.id,
+        amount: payAmountNum.toFixed(2),
+        type: payType,
+        bank_card: payType === 'card' ? Number(payBankCardId) : undefined,
+      });
+      toast.success(t('customers.debtPaid', "Qarz to'lovi qabul qilindi"));
+      setPayAmount('');
+      // Modal ma'lumotlari (qarz, sotuvlar) va ro'yxatni yangilash
+      const fresh = await customerApiService.getById(selectedCustomer.id);
+      setSelectedCustomer(fresh);
+      void loadPayments(selectedCustomer.id);
+      void loadData();
+    } catch (error) {
+      handleError(error, { showToast: true });
+    } finally {
+      setPaying(false);
+    }
   };
 
   const handleSubmit = async () => {
-    if (!formData.full_name.trim() || !formData.phone_number.trim()) return;
+    if (!validateForm()) return;
 
     try {
       setSubmitting(true);
@@ -258,6 +400,15 @@ export function CustomerListPage() {
       await loadData();
       closeDialog();
     } catch (error) {
+      // Backend'dan kelgan maydon xatolarini tegishli inputlarga bog'laymiz
+      const data = (error as { response?: { data?: unknown } }).response?.data;
+      if (data && typeof data === 'object') {
+        const obj = data as Record<string, unknown>;
+        const apiErrors: { full_name?: string; phone_number?: string } = {};
+        if (Array.isArray(obj.full_name)) apiErrors.full_name = obj.full_name.map(String).join(' ');
+        if (Array.isArray(obj.phone_number)) apiErrors.phone_number = obj.phone_number.map(String).join(' ');
+        if (Object.keys(apiErrors).length > 0) setFieldErrors(apiErrors);
+      }
       handleError(error, { showToast: true });
     } finally {
       setSubmitting(false);
@@ -286,6 +437,17 @@ export function CustomerListPage() {
           description={t('customers.description')}
         />
           <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
+            <ExportButton
+              direct
+              endpoint="/users/customers/export/"
+              filename="mijozlar.xlsx"
+              params={{
+                search: search.trim() || undefined,
+                // Sahifadagi qarz filtri eksportga ham birdek qo'llanadi
+                has_debt:
+                  debtFilter === 'with_debt' ? 'true' : debtFilter === 'no_debt' ? 'false' : undefined,
+              }}
+            />
             <div className="relative flex-1 sm:min-w-[280px]">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -412,27 +574,49 @@ export function CustomerListPage() {
               </DialogHeader>
               <DialogBody className="space-y-4 p-0">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">{t('customers.fullName')}</label>
+                  <label className="text-sm font-medium">
+                    {t('customers.fullName')} <span className="text-red-500">*</span>
+                  </label>
                   <Input
                     value={formData.full_name}
-                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, full_name: e.target.value });
+                      if (fieldErrors.full_name) setFieldErrors((prev) => ({ ...prev, full_name: undefined }));
+                    }}
                     placeholder={t('customers.fullNamePlaceholder')}
+                    className={fieldErrors.full_name ? 'border-red-500 focus-visible:ring-red-500' : ''}
+                    aria-invalid={Boolean(fieldErrors.full_name)}
                   />
+                  {fieldErrors.full_name && (
+                    <p className="text-xs text-red-500">{fieldErrors.full_name}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">{t('customers.phone')}</label>
+                  <label className="text-sm font-medium">
+                    {t('customers.phone')} <span className="text-red-500">*</span>
+                  </label>
                   <Input
+                    type="tel"
+                    inputMode="tel"
                     value={formData.phone_number}
-                    onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, phone_number: sanitizePhone(e.target.value) });
+                      if (fieldErrors.phone_number) setFieldErrors((prev) => ({ ...prev, phone_number: undefined }));
+                    }}
                     placeholder={t('customers.phonePlaceholder')}
+                    className={fieldErrors.phone_number ? 'border-red-500 focus-visible:ring-red-500' : ''}
+                    aria-invalid={Boolean(fieldErrors.phone_number)}
                   />
+                  {fieldErrors.phone_number && (
+                    <p className="text-xs text-red-500">{fieldErrors.phone_number}</p>
+                  )}
                 </div>
               </DialogBody>
               <DialogFooter>
                 <Button variant="outline" onClick={closeDialog}>
                   {t('common.cancel')}
                 </Button>
-                <Button onClick={handleSubmit} disabled={submitting || !formData.full_name.trim() || !formData.phone_number.trim()}>
+                <Button onClick={handleSubmit} disabled={submitting}>
                   {submitting ? t('common.saving') : t('common.save')}
                 </Button>
               </DialogFooter>
@@ -447,27 +631,49 @@ export function CustomerListPage() {
               </DialogHeader>
               <DialogBody className="space-y-4 p-0">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">{t('customers.fullName')}</label>
+                  <label className="text-sm font-medium">
+                    {t('customers.fullName')} <span className="text-red-500">*</span>
+                  </label>
                   <Input
                     value={formData.full_name}
-                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, full_name: e.target.value });
+                      if (fieldErrors.full_name) setFieldErrors((prev) => ({ ...prev, full_name: undefined }));
+                    }}
                     placeholder={t('customers.fullNamePlaceholder')}
+                    className={fieldErrors.full_name ? 'border-red-500 focus-visible:ring-red-500' : ''}
+                    aria-invalid={Boolean(fieldErrors.full_name)}
                   />
+                  {fieldErrors.full_name && (
+                    <p className="text-xs text-red-500">{fieldErrors.full_name}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">{t('customers.phone')}</label>
+                  <label className="text-sm font-medium">
+                    {t('customers.phone')} <span className="text-red-500">*</span>
+                  </label>
                   <Input
+                    type="tel"
+                    inputMode="tel"
                     value={formData.phone_number}
-                    onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, phone_number: sanitizePhone(e.target.value) });
+                      if (fieldErrors.phone_number) setFieldErrors((prev) => ({ ...prev, phone_number: undefined }));
+                    }}
                     placeholder={t('customers.phonePlaceholder')}
+                    className={fieldErrors.phone_number ? 'border-red-500 focus-visible:ring-red-500' : ''}
+                    aria-invalid={Boolean(fieldErrors.phone_number)}
                   />
+                  {fieldErrors.phone_number && (
+                    <p className="text-xs text-red-500">{fieldErrors.phone_number}</p>
+                  )}
                 </div>
               </DialogBody>
               <DialogFooter>
                 <Button variant="outline" onClick={() => openViewDialog(selectedCustomer)}>
                   {t('common.cancel')}
                 </Button>
-                <Button onClick={handleSubmit} disabled={submitting || !formData.full_name.trim() || !formData.phone_number.trim()}>
+                <Button onClick={handleSubmit} disabled={submitting}>
                   {submitting ? t('common.saving') : t('common.save')}
                 </Button>
               </DialogFooter>
@@ -556,7 +762,181 @@ export function CustomerListPage() {
                   )}
                 </div>
 
+                {/* ─── Qarz to'lash (FIFO: eng eski buyurtmadan boshlab) ─── */}
+                {totalDebt > 0 && (
+                  <div className="rounded-lg border p-4 space-y-4 bg-muted/10">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <h4 className="text-sm font-semibold flex items-center gap-2">
+                        <Wallet className="h-4 w-4 text-muted-foreground" />
+                        {t('customers.payDebtTitle', "Qarz to'lash")}
+                      </h4>
+                      <button
+                        type="button"
+                        className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                        onClick={() => setPayAmount(String(totalDebt))}
+                      >
+                        {t('customers.payFullDebt', "To'liq to'lash")} ({formatCurrency(totalDebt)})
+                      </button>
+                    </div>
 
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">{t('customers.paymentAmount', "To'lov summasi")}</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          max={totalDebt}
+                          placeholder="0.00"
+                          value={payAmount}
+                          onFocus={(e: FocusEvent<HTMLInputElement>) => e.target.select()}
+                          onChange={(e) => setPayAmount(e.target.value)}
+                          className={payExceeds ? 'border-red-500 focus:border-red-500 focus:ring-red-500/30' : ''}
+                        />
+                        {payExceeds && (
+                          <p className="text-xs font-medium text-red-500">
+                            {t('customers.paymentExceedsDebt', "To'lov summasi qarzdan oshib ketdi")}
+                          </p>
+                        )}
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">{t('payment.title', "To'lov turi")}</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            type="button"
+                            variant={payType === 'cash' ? 'default' : 'outline'}
+                            className={cn('h-10 text-xs', payType === 'cash' && 'bg-emerald-600 hover:bg-emerald-700 text-white')}
+                            onClick={() => setPayType('cash')}
+                          >
+                            <Banknote className="h-4 w-4 mr-1.5" />
+                            {t('payment.cash', 'Naqd')}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={payType === 'card' ? 'default' : 'outline'}
+                            className={cn('h-10 text-xs', payType === 'card' && 'bg-blue-600 hover:bg-blue-700 text-white')}
+                            onClick={() => setPayType('card')}
+                          >
+                            <CreditCard className="h-4 w-4 mr-1.5" />
+                            {t('payment.card', 'Karta')}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Karta tanlash — tugmalar bilan */}
+                    {payType === 'card' && (
+                      bankCards.length === 0 ? (
+                        <p className="text-xs text-red-500">
+                          {t('sales.noBankCards', "Faol bank kartasi yo'q — sozlamalardan qo'shing")}
+                        </p>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {bankCards.map((card) => {
+                            const selected = payBankCardId === String(card.id);
+                            return (
+                              <button
+                                key={card.id}
+                                type="button"
+                                onClick={() => setPayBankCardId(String(card.id))}
+                                className={cn(
+                                  'flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors',
+                                  selected
+                                    ? 'border-blue-600 bg-blue-600 text-white shadow-sm'
+                                    : 'border-border bg-background hover:bg-accent hover:text-accent-foreground'
+                                )}
+                              >
+                                <CreditCard className="h-3 w-3" />
+                                {card.name}
+                                {selected && <Check className="h-3 w-3" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )
+                    )}
+
+                    {/* FIFO taqsimot ko'rinishi: to'lov qaysi buyurtmalarga bo'linadi */}
+                    {payAmountNum > 0 && !payExceeds && (
+                      <div className="rounded-lg border border-dashed p-3 space-y-1.5 bg-card">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          {t('customers.fifoHint', "To'lov eng eski qarzdan boshlab taqsimlanadi")}
+                        </p>
+                        {allocationPreview.filter((a) => a.alloc > 0).map((a) => (
+                          <div key={a.id} className="flex items-center justify-between gap-2 text-xs">
+                            <span className="text-muted-foreground truncate">
+                              #{a.id} — {a.store_name} ({formatDate(a.created_at)})
+                            </span>
+                            <span className="font-semibold whitespace-nowrap">
+                              {formatCurrency(a.alloc)}{' '}
+                              {a.closed ? (
+                                <span className="text-green-600">✓ {t('customers.willClose', 'yopiladi')}</span>
+                              ) : (
+                                <span className="text-[#ff6b00]">
+                                  {t('customers.willRemain', 'qoladi')}: {formatCurrency(a.debt - a.alloc)}
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <Button
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                      onClick={handlePayDebt}
+                      disabled={paying || payInvalid}
+                    >
+                      {paying ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Check className="h-4 w-4 mr-2" />
+                      )}
+                      {t('customers.payNow', "To'lash")}
+                      {payAmountNum > 0 && !payExceeds ? ` — ${formatCurrency(payAmountNum)}` : ''}
+                    </Button>
+                  </div>
+                )}
+
+                {/* ─── To'lovlar tarixi ─── */}
+                {(payments.length > 0 || loadingPayments) && (
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-semibold">{t('customers.paymentsHistory', "To'lovlar tarixi")}</h4>
+                    {loadingPayments ? (
+                      <p className="text-xs text-muted-foreground">{t('common.loading', 'Yuklanmoqda...')}</p>
+                    ) : (
+                      <div className="space-y-2 max-h-[220px] overflow-y-auto pr-2">
+                        {payments.map((p) => (
+                          <div
+                            key={p.id}
+                            className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 bg-card text-sm"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              {p.type === 'card' ? (
+                                <CreditCard className="h-4 w-4 text-blue-500 shrink-0" />
+                              ) : (
+                                <Banknote className="h-4 w-4 text-emerald-500 shrink-0" />
+                              )}
+                              <div className="min-w-0">
+                                <p className="font-medium truncate">
+                                  {p.type === 'card'
+                                    ? `${t('payment.card', 'Karta')}${p.bank_card_name ? ` — ${p.bank_card_name}` : ''}`
+                                    : t('payment.cash', 'Naqd')}
+                                  {p.sale ? ` · #${p.sale}` : ''}
+                                </p>
+                                <p className="text-[11px] text-muted-foreground">
+                                  {p.created_at ? new Date(p.created_at).toLocaleString() : ''}
+                                </p>
+                              </div>
+                            </div>
+                            <span className={cn('font-semibold whitespace-nowrap', p.is_refund ? 'text-red-500' : 'text-green-600')}>
+                              {p.is_refund ? '-' : '+'}{formatCurrency(Number(p.amount))}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {selectedCustomer.sales && selectedCustomer.sales.length > 0 && (
                   <div className="space-y-3">

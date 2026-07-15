@@ -11,11 +11,12 @@ import { Card, CardContent } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/Dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
 import { bankCardService } from '../../services/bankCardService';
 import { useAuthStore } from '../../app/store';
 import { formatDate } from '../../utils';
 import { handleError } from '../../utils/errorHandler';
-import type { BankCard, BankCardFormData } from '../../types';
+import type { BankCard, BankCardFormData, BankCardScope } from '../../types';
 
 export function BankCardsPage() {
   const { t } = useTranslation();
@@ -31,7 +32,14 @@ export function BankCardsPage() {
     name: '',
     is_default: false,
     is_active: true,
+    scope: 'both',
   });
+
+  const scopeLabels: Record<BankCardScope, string> = {
+    sale: t('bankCards.scopeSale', 'Faqat sotuv'),
+    purchase: t('bankCards.scopePurchase', 'Faqat kirim'),
+    both: t('bankCards.scopeBoth', 'Sotuv va kirim'),
+  };
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -68,10 +76,11 @@ export function BankCardsPage() {
         name: card.name,
         is_default: card.is_default,
         is_active: card.is_active,
+        scope: card.scope || 'both',
       });
     } else {
       setEditingCard(null);
-      setFormData({ name: '', is_default: false, is_active: true });
+      setFormData({ name: '', is_default: false, is_active: true, scope: 'both' });
     }
     setIsDialogOpen(true);
   };
@@ -87,6 +96,7 @@ export function BankCardsPage() {
           name: formData.name.trim(),
           is_default: formData.is_default,
           is_active: formData.is_active !== false,
+          scope: formData.scope ?? 'both',
         });
         toast.success(t('bankCards.cardUpdated', "Karta yangilandi"));
       } else {
@@ -95,6 +105,7 @@ export function BankCardsPage() {
           name: formData.name.trim(),
           is_default: formData.is_default,
           is_active: true,
+          scope: formData.scope ?? 'both',
         });
         toast.success(t('bankCards.cardAdded', "Karta qo'shildi"));
       }
@@ -161,6 +172,15 @@ export function BankCardsPage() {
       header: t('bankCards.isDefault', 'Asosiy'),
       render: (item) =>
         item.is_default ? <Badge variant="info">{t('bankCards.default', 'Asosiy')}</Badge> : '—',
+    },
+    {
+      key: 'scope',
+      header: t('bankCards.scope', "Qayerda ko'rinadi"),
+      render: (item) => (
+        <Badge variant={item.scope === 'both' ? 'default' : 'info'}>
+          {scopeLabels[item.scope || 'both']}
+        </Badge>
+      ),
     },
     {
       key: 'is_active',
@@ -279,6 +299,7 @@ export function BankCardsPage() {
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     {statusBadge(card)}
                     {card.is_default && <Badge variant="info">{t('bankCards.default', 'Asosiy')}</Badge>}
+                    <Badge variant="outline">{scopeLabels[card.scope || 'both']}</Badge>
                   </div>
                 </div>
                 {isSuperUser && (
@@ -366,6 +387,32 @@ export function BankCardsPage() {
                       placeholder="Uzcard, Humo, Payme..."
                       required
                     />
+                  </div>
+
+                  {/* Qayerda ko'rinadi — sotuv / kirim / ikkalasi */}
+                  <div className="space-y-2">
+                    <Label>{t('bankCards.scope', "Qayerda ko'rinadi")}</Label>
+                    <Select
+                      value={formData.scope ?? 'both'}
+                      onValueChange={(v: string) =>
+                        setFormData((prev) => ({ ...prev, scope: v as BankCardScope }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="both">{scopeLabels.both}</SelectItem>
+                        <SelectItem value="sale">{scopeLabels.sale}</SelectItem>
+                        <SelectItem value="purchase">{scopeLabels.purchase}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {t(
+                        'bankCards.scopeHint',
+                        "Masalan: “Bank o'tkazmasi” faqat kirim bo'limida ko'rinishi uchun “Faqat kirim”ni tanlang."
+                      )}
+                    </p>
                   </div>
 
                   {/* Asosiy karta */}

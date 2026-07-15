@@ -4,6 +4,8 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Plus, FileText, Eye, CheckCircle2, Clock, CircleDot, Package, XCircle } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
+import { ExportButton } from '../../components/shared/ExportButton';
+import { DateRangeFilter } from '../../components/shared/DateRangeFilter';
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
@@ -14,6 +16,7 @@ import { storeService } from '../../services/storeService';
 import { useAuthStore } from '../../app/store';
 import type { Store } from '../../types';
 import { formatDate } from '../../utils';
+import { lastWeekRange } from '../../utils/dateRange';
 import { handleError } from '../../utils/errorHandler';
 
 interface InventorySessionsListPageProps {
@@ -35,6 +38,9 @@ export function InventorySessionsListPage({
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedStore, setSelectedStore] = useState(isAdmin ? '' : userStoreId);
   const [stores, setStores] = useState<Store[]>([]);
+  // Default — oxirgi 1 hafta; tozalansa yoki o'zgartirilsa boshqa sessiyalar ham chiqadi
+  const [dateFrom, setDateFrom] = useState(() => lastWeekRange().from);
+  const [dateTo, setDateTo] = useState(() => lastWeekRange().to);
 
   const { sessions, loading, fetchSessions, startSession } = useInventoryStore();
 
@@ -72,8 +78,8 @@ export function InventorySessionsListPage({
   }, [loadStores]);
 
   useEffect(() => {
-    fetchSessions();
-  }, [fetchSessions]);
+    fetchSessions({ date_from: dateFrom || undefined, date_to: dateTo || undefined });
+  }, [fetchSessions, dateFrom, dateTo]);
 
   useEffect(() => {
     if (defaultCreateDialogOpen) {
@@ -145,10 +151,30 @@ export function InventorySessionsListPage({
           title={t('inventory.sessions')}
           description={t('inventory.sessionsDescription')}
         />
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          {t('inventory.startInventory')}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <DateRangeFilter
+            from={dateFrom}
+            to={dateTo}
+            onChange={(newFrom, newTo) => {
+              setDateFrom(newFrom);
+              setDateTo(newTo);
+            }}
+            className="w-full sm:w-64"
+          />
+          <ExportButton
+            direct
+            endpoint="/inventory/export/"
+            filename="inventarizatsiya.xlsx"
+            params={{
+              date_from: dateFrom || undefined,
+              date_to: dateTo || undefined,
+            }}
+          />
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t('inventory.startInventory')}
+          </Button>
+        </div>
       </div>
 
       {loading ? (

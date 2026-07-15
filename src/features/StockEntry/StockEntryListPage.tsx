@@ -1,12 +1,15 @@
-import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
+import { useState, useEffect, useCallback, type ChangeEvent, type FocusEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, FileText, Eye, Search, X, ChevronLeft, ChevronRight, CreditCard, Printer, FileSpreadsheet } from 'lucide-react';
+import { Plus, FileText, Eye, Search, X, ChevronLeft, ChevronRight, CreditCard, Printer, FileSpreadsheet, Banknote, Star } from 'lucide-react';
 import { generateBarcodePrintHtml, generateMultipleBarcodesPrintHtml, escapeHtml } from '../../utils/xss';
 
 import { StockEntryCreateDialog } from './StockEntryCreateDialog';
 import { StockEntryImportDialog } from './StockEntryImportDialog';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
+import { ExportButton } from '../../components/shared/ExportButton';
+import { DateRangeFilter } from '../../components/shared/DateRangeFilter';
+import { lastWeekRange } from '../../utils/dateRange';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card, CardContent } from '../../components/ui/Card';
@@ -15,11 +18,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
 import { Label } from '../../components/ui/Label';
 import { inventoryService, type InventoryFilters } from '../../services/inventoryService';
+import { purchaseSessionService } from '../../services/purchaseSessionService';
+import type { PurchaseSession } from '../../types';
 import { productService } from '../../services/productService';
 import { supplierService } from '../../services/supplierService';
+import { bankCardService } from '../../services/bankCardService';
 import { formatCurrency, formatDate } from '../../utils';
 import { handleError } from '../../utils/errorHandler';
-import type { InventoryItem, Supplier } from '../../types';
+import type { InventoryItem, Supplier, BankCard } from '../../types';
 export interface SupplierPayment {
   id: number;
   supplier: number;
@@ -61,8 +67,10 @@ export function StockEntryListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [storeFilter, setStoreFilter] = useState<string>('');
   const [supplierFilter, setSupplierFilter] = useState<string>('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  // Default — oxirgi 1 hafta; foydalanuvchi oraliqni o'zgartirsa yoki tozalasa
+  // (dan-gacha bo'shatilsa) boshqa kirimlar ham chiqadi
+  const [dateFrom, setDateFrom] = useState(() => lastWeekRange().from);
+  const [dateTo, setDateTo] = useState(() => lastWeekRange().to);
 
   // Reference lists
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -74,6 +82,10 @@ export function StockEntryListPage() {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paying, setPaying] = useState(false);
+  // To'lov usuli: naqd yoki karta; karta bo'lsa to'lov turi (Uzcard/Humo/...) tanlanadi
+  const [paymentType, setPaymentType] = useState<'cash' | 'card'>('cash');
+  const [paymentCards, setPaymentCards] = useState<BankCard[]>([]);
+  const [selectedPaymentCardId, setSelectedPaymentCardId] = useState('');
   const [paymentHistory, setPaymentHistory] = useState<SupplierPayment[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
@@ -108,7 +120,13 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
         date_to: dateTo || undefined
       };
 
-      const response = await inventoryService.getEntries(filterParams);
+      // Yakunlanmagan (jarayondagi) sessiyalar ham 1-sahifada, ro'yxat tepasida ko'rinadi
+      const [response, activeSessions] = await Promise.all([
+        inventoryService.getEntries(filterParams),
+        page === 1
+          ? purchaseSessionService.getActive().catch(() => [] as PurchaseSession[])
+          : Promise.resolve([] as PurchaseSession[]),
+      ]);
       const entries = response.data || [];
       setTotalCount(response.total || 0);
 
@@ -171,13 +189,35 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
           paid: entry.paid_amount ? parseFloat(entry.paid_amount) : 0,
           debt: entry.debt ?? 0,
           status: 'completed',
-          created_at: new Date().toISOString(),
+          created_at: entry.created_at || new Date().toISOString(),
           items,
           full_name: entry.full_name || ''
         };
       });
-      
-      setInventory(mapped);
+
+      // Jarayondagi sessiyalar — hali StockEntry emas, "Jarayonda" statusi bilan chiqadi
+      const sessionRows: DisplayInventory[] = activeSessions.map((s) => {
+        const itemsTotal = (s.items || []).reduce(
+          (sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.purchase_price) || 0),
+          0,
+        );
+        return {
+          id: `session-${s.id}`,
+          supplier_id: String(s.supplier ?? ''),
+          supplier_name: s.supplier_name || `#${s.supplier ?? '—'}`,
+          store_id: String(s.store ?? ''),
+          store_name: s.store_name || '',
+          total: Number(s.total_amount) || itemsTotal,
+          paid: (Number(s.cash_amount) || 0) + (Number(s.card_amount) || 0),
+          debt: 0,
+          status: 'in_progress',
+          created_at: s.created_at || new Date().toISOString(),
+          items: [],
+          full_name: '',
+        };
+      });
+
+      setInventory(page === 1 ? [...sessionRows, ...mapped] : mapped);
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
@@ -203,6 +243,11 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
   };
 
   const handleShowDetails = async (item: DisplayInventory) => {
+    // Jarayondagi sessiya — tafsilot o'rniga wizard ochiladi (davom ettirish ro'yxati bilan)
+    if (item.status === 'in_progress') {
+      setShowCreateDialog(true);
+      return;
+    }
     setSelectedInventory(item);
     setShowDetails(true);
     setSelectedItems(new Set());
@@ -375,20 +420,44 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
   const handlePayDebt = () => {
     if (!selectedInventory || !selectedInventory.debt) return;
     setPaymentAmount(String(selectedInventory.debt));
+    setPaymentType('cash');
     setShowPaymentDialog(true);
+    // Kirim bo'limida ko'rinadigan to'lov turlari (scope: purchase + both)
+    if (paymentCards.length === 0) {
+      bankCardService
+        .getAll({ is_active: true, scope: 'purchase' })
+        .then((cards) => {
+          setPaymentCards(cards);
+          const defaultCard = cards.find((card) => card.is_default) ?? cards[0];
+          setSelectedPaymentCardId(defaultCard ? String(defaultCard.id) : '');
+        })
+        .catch(() => setPaymentCards([]));
+    }
   };
 
+  // To'lov validatsiyasi: 0 dan katta va qoldiq qarzdan oshmasligi kerak;
+  // karta usulida to'lov turi (karta) tanlangan bo'lishi shart
+  const paymentDebt = selectedInventory?.debt || 0;
+  const paymentAmountNum = Number(paymentAmount) || 0;
+  const paymentExceedsDebt = paymentAmountNum > paymentDebt;
+  const paymentCardMissing = paymentType === 'card' && !selectedPaymentCardId;
+  const paymentInvalid = !paymentAmount || paymentAmountNum <= 0 || paymentExceedsDebt || paymentCardMissing;
+  const paymentRemaining = Math.max(0, paymentDebt - paymentAmountNum);
+
   const handleSubmitPayment = async () => {
-    if (!selectedInventory || !paymentAmount) return;
+    if (!selectedInventory || paymentInvalid) return;
     try {
       setPaying(true);
       await supplierService.createPayment({
         supplier: parseInt(selectedInventory.supplier_id),
         entry: parseInt(selectedInventory.id),
         amount: paymentAmount,
+        payment_type: paymentType,
+        ...(paymentType === 'card' ? { bank_card: Number(selectedPaymentCardId) } : {}),
       });
       setShowPaymentDialog(false);
       setPaymentAmount('');
+      setPaymentType('cash');
       loadData();
     } catch (error) {
       handleError(error, { showToast: true });
@@ -447,10 +516,14 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
       key: 'status',
       header: t('common.status'),
       render: (item) => (
-        <span className={`px-2 py-1 rounded-full text-xs ${item.status === 'completed' ? 'bg-green-100 text-green-800' :
-          item.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+        <span className={`px-2 py-1 rounded-full text-xs ${
+          item.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+          item.status === 'in_progress' || item.status === 'pending'
+            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+            : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
           }`}>
           {item.status === 'completed' ? t('common.completed') :
+            item.status === 'in_progress' ? t('purchaseSession.inProgress', 'Jarayonda') :
             item.status === 'pending' ? t('common.pending') : t('common.cancelled')}
         </span>
       ),
@@ -461,7 +534,14 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
       className: 'text-right',
       render: (item) => (
         <div className="flex justify-end gap-1">
-          <Button variant="ghost" size="sm" onClick={() => handleShowDetails(item)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              void handleShowDetails(item);
+            }}
+          >
             <FileText className="h-4 w-4" />
           </Button>
         </div>
@@ -477,6 +557,19 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
           description={t('inventory.listDescription')}
         />
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-4 sm:mt-0">
+          <ExportButton
+            direct
+            endpoint="/contract/entry/export/"
+            filename="kirimlar.xlsx"
+            className="w-full sm:w-auto"
+            params={{
+              search: searchTerm || undefined,
+              store: storeFilter && storeFilter !== 'all' ? storeFilter : undefined,
+              supplier: supplierFilter && supplierFilter !== 'all' ? supplierFilter : undefined,
+              date_from: dateFrom || undefined,
+              date_to: dateTo || undefined,
+            }}
+          />
           <Button variant="outline" className="w-full sm:w-auto" onClick={() => setShowImportDialog(true)}>
             <FileSpreadsheet className="h-4 w-4 mr-2" />
             {t('inventory.importFromExcel', 'Excel orqali kirim')}
@@ -519,24 +612,17 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>{t('common.dateFrom')}</Label>
-              <Input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
-                onClick={(e) => e.currentTarget.showPicker?.()}
-                className="cursor-pointer"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('common.dateTo')}</Label>
+              <Label>{t('common.dateRange', 'Sana oralig‘i')}</Label>
               <div className="flex gap-2">
-                <Input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
-                  onClick={(e) => e.currentTarget.showPicker?.()}
-                  className="flex-1 cursor-pointer"
+                <DateRangeFilter
+                  from={dateFrom}
+                  to={dateTo}
+                  onChange={(newFrom, newTo) => {
+                    setDateFrom(newFrom);
+                    setDateTo(newTo);
+                    setPage(1);
+                  }}
+                  className="flex-1"
                 />
                 {(searchTerm || storeFilter || supplierFilter || dateFrom || dateTo) && (
                   <Button variant="outline" size="icon" onClick={handleClearFilters} title={t('common.clear')}>
@@ -566,17 +652,25 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
         <>
           <div className="space-y-3 md:hidden">
             {inventory.map((item) => (
-              <Card key={item.id} className="overflow-hidden">
+              <Card
+                key={item.id}
+                className="cursor-pointer overflow-hidden transition-colors hover:bg-accent/30"
+                onClick={() => void handleShowDetails(item)}
+              >
                 <CardContent className="space-y-4 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <p className="text-base font-semibold">{item.supplier_name || item.supplier_id}</p>
                       <p className="mt-1 text-sm text-muted-foreground">{item.store_name || item.store_id}</p>
                     </div>
-                    <span className={`rounded-full px-2 py-1 text-xs ${item.status === 'completed' ? 'bg-green-100 text-green-800' :
-                      item.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                    <span className={`rounded-full px-2 py-1 text-xs ${
+                      item.status === 'completed' ? 'bg-green-100 text-green-800' :
+                      item.status === 'in_progress' || item.status === 'pending'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-red-100 text-red-800'
                       }`}>
                       {item.status === 'completed' ? t('common.completed') :
+                        item.status === 'in_progress' ? t('purchaseSession.inProgress', 'Jarayonda') :
                         item.status === 'pending' ? t('common.pending') : t('common.cancelled')}
                     </span>
                   </div>
@@ -601,9 +695,17 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
                   </div>
 
                   <div className="flex flex-wrap gap-2">
-                    <Button variant="outline" size="sm" className="w-full" onClick={() => handleShowDetails(item)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void handleShowDetails(item);
+                      }}
+                    >
                       <Eye className="mr-2 h-4 w-4" />
-                      {t('common.actions')}
+                      {t('common.view', 'Ko‘rish')}
                     </Button>
                   </div>
                 </CardContent>
@@ -641,6 +743,7 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
               loading={loading}
               emptyMessage={t('inventory.noData')}
               loadingMessage={t('common.loading')}
+              onRowClick={(item) => void handleShowDetails(item)}
               minWidth="980px"
               pagination={{
                 page,
@@ -915,22 +1018,112 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
           <div className="space-y-4">
             <div className="p-4 rounded-lg bg-muted">
               <p className="text-sm text-muted-foreground">{t('dashboard.totalDebt')}</p>
-              <p className="text-xl font-bold text-red-500">{formatCurrency(selectedInventory?.debt || 0)}</p>
+              <p className="text-xl font-bold text-red-500">{formatCurrency(paymentDebt)}</p>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">{t('customers.paymentAmount')}</label>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">{t('customers.paymentAmount')}</label>
+                <button
+                  type="button"
+                  className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                  onClick={() => setPaymentAmount(String(paymentDebt))}
+                >
+                  {t('inventory.payFullDebt', "To'liq to'lash")} ({formatCurrency(paymentDebt)})
+                </button>
+              </div>
               <Input
                 type="number"
+                min="0"
+                max={paymentDebt}
                 value={paymentAmount}
+                onFocus={(e: FocusEvent<HTMLInputElement>) => e.target.select()}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setPaymentAmount(e.target.value)}
                 placeholder={t('placeholders.enterAmount')}
+                className={paymentExceedsDebt ? 'border-red-500 focus:border-red-500 focus:ring-red-500/30' : ''}
               />
+              {paymentExceedsDebt ? (
+                <p className="text-xs font-medium text-red-500">
+                  {t('inventory.paymentExceedsDebt', "To'lov summasi qoldiq qarzdan oshib ketdi")} —{' '}
+                  {t('suppliers.debt', 'Qarz')}: {formatCurrency(paymentDebt)}
+                </p>
+              ) : paymentAmountNum > 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  {t('inventory.remainingDebt', 'Qoladigan qarz')}:{' '}
+                  <span className={paymentRemaining > 0 ? 'font-semibold text-red-500' : 'font-semibold text-green-600'}>
+                    {formatCurrency(paymentRemaining)}
+                  </span>
+                  {paymentRemaining === 0 && ` — ${t('common.paid', "To'liq to'lanadi")}`}
+                </p>
+              ) : null}
             </div>
+
+            {/* To'lov usuli: naqd yoki karta */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t('sales.paymentType', "To'lov usuli")}</label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant={paymentType === 'cash' ? 'default' : 'outline'}
+                  onClick={() => setPaymentType('cash')}
+                >
+                  <Banknote className="h-4 w-4 mr-2" />
+                  {t('sales.cash', 'Naqd')}
+                </Button>
+                <Button
+                  type="button"
+                  variant={paymentType === 'card' ? 'default' : 'outline'}
+                  onClick={() => setPaymentType('card')}
+                >
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  {t('sales.card', 'Karta')}
+                </Button>
+              </div>
+            </div>
+
+            {/* Karta tanlanganda — to'lov turlari (Uzcard/Humo/...) */}
+            {paymentType === 'card' && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  {t('nav.paymentTypes', "To'lov turlari")} <span className="text-red-500">*</span>
+                </label>
+                {paymentCards.length === 0 ? (
+                  <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-800/50 dark:bg-red-900/20 px-3 py-2">
+                    <p className="text-xs text-red-600 dark:text-red-400">
+                      {t('sales.noBankCards', "Faol to'lov turi yo'q — Sozlamalar → To'lov turlaridan qo'shing")}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {paymentCards.map((card) => {
+                      const isSelected = String(card.id) === selectedPaymentCardId;
+                      return (
+                        <button
+                          key={card.id}
+                          type="button"
+                          onClick={() => setSelectedPaymentCardId(String(card.id))}
+                          aria-pressed={isSelected}
+                          className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-sm font-medium transition-colors ${
+                            isSelected
+                              ? 'border-emerald-500 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-500/40 dark:border-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300'
+                              : 'border-border bg-background text-foreground hover:bg-accent'
+                          }`}
+                        >
+                          <CreditCard className={`h-4 w-4 shrink-0 ${isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`} />
+                          <span className="truncate">{card.name}</span>
+                          {card.is_default && <Star className="h-3 w-3 shrink-0 text-amber-500" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setShowPaymentDialog(false)}>
                 {t('common.cancel')}
               </Button>
-              <Button className="flex-1" onClick={handleSubmitPayment} disabled={paying || !paymentAmount}>
+              <Button className="flex-1" onClick={handleSubmitPayment} disabled={paying || paymentInvalid}>
                 {paying ? t('common.loading') : t('customers.payNow')}
               </Button>
             </div>

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Search, ScrollText, Monitor } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
+import { DateRangeFilter } from '../../components/shared/DateRangeFilter';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/Dialog';
@@ -60,6 +61,8 @@ export function AuditLogPage() {
   const [actionFilter, setActionFilter] = useState('');
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [viewing, setViewing] = useState<AuditLogEntry | null>(null);
 
   const moduleLabels = useMemo(() => {
@@ -77,6 +80,8 @@ export function AuditLogPage() {
         module: moduleFilter || undefined,
         action: actionFilter || undefined,
         search: search || undefined,
+        date_from: dateFrom || undefined,
+        date_to: dateTo || undefined,
       });
       setLogs(response.data);
       setTotal(response.total);
@@ -89,7 +94,7 @@ export function AuditLogPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, moduleFilter, actionFilter, search]);
+  }, [page, limit, moduleFilter, actionFilter, search, dateFrom, dateTo]);
 
   useEffect(() => {
     void loadLogs();
@@ -216,6 +221,17 @@ export function AuditLogPage() {
             <option key={action} value={action}>{t(key)}</option>
           ))}
         </select>
+        {/* Dan–gacha: bitta kalendarda oraliq bo'yalgan holda tanlanadi */}
+        <DateRangeFilter
+          from={dateFrom}
+          to={dateTo}
+          onChange={(from, to) => {
+            setDateFrom(from);
+            setDateTo(to);
+            setPage(1);
+          }}
+          className="w-64"
+        />
       </div>
 
       <DataTable

@@ -98,10 +98,14 @@ export interface CancelInventoryRequest {
 const INVENTORY_ENDPOINT = '/inventory';
 
 export const inventoryApi = {
-  /** GET /api/inventory/list/ — all sessions */
-  getSessions: async (): Promise<InventorySession[]> => {
+  /** GET /api/inventory/list/ — sessiyalar (ixtiyoriy sana oralig'i bilan) */
+  getSessions: async (params?: { date_from?: string; date_to?: string }): Promise<InventorySession[]> => {
+    const searchParams = new URLSearchParams();
+    if (params?.date_from) searchParams.append('date_from', params.date_from);
+    if (params?.date_to) searchParams.append('date_to', params.date_to);
+    const query = searchParams.toString();
     const response = await apiClient.get<any>(
-      `${INVENTORY_ENDPOINT}/list/`
+      `${INVENTORY_ENDPOINT}/list/${query ? `?${query}` : ''}`
     );
     if (response.data && typeof response.data === 'object' && 'results' in response.data && Array.isArray(response.data.results)) {
       return response.data.results;

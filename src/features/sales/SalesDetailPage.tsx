@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, User, ShoppingCart, CreditCard, Calendar, Tag, DollarSign, Wallet, Printer, Eye, Package, Barcode, MapPin, Image as ImageIcon, Loader2, Undo2 } from 'lucide-react';
+import { ArrowLeft, User, ShoppingCart, CreditCard, Calendar, Tag, Wallet, Printer, Eye, Package, Barcode, MapPin, Image as ImageIcon, Loader2, Undo2, Banknote, CheckCircle2, Clock, Store as StoreIcon, Receipt as ReceiptIcon } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -11,6 +11,8 @@ import { productService } from '../../services/productService';
 import { bankCardService } from '../../services/bankCardService';
 import { PaymentTypeBadge } from '../../components/shared/PaymentTypeBadge';
 import { formatCurrency, formatDate } from '../../utils';
+import { handleError } from '../../utils/errorHandler';
+import { escapeHtml } from '../../utils/xss';
 import { extractBarcodeFromUrl } from '../../utils/xss';
 import type { Product, Sale, SaleItem, BankCard } from '../../types';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/Dialog';
@@ -100,28 +102,33 @@ export function SalesDetailPage() {
     }
   };
 
+  // Ortiqcha to'lov himoyasi: kiritilgan summa qarzdan oshsa to'lash bloklanadi
+  const saleDebt = Number(sale?.debt) || 0;
+  const paymentAmountNum = Number(paymentAmount) || 0;
+  const paymentExceedsDebt = paymentAmountNum > saleDebt;
+  const paymentInvalid =
+    !paymentAmount ||
+    paymentAmountNum <= 0 ||
+    paymentExceedsDebt ||
+    (paymentType === 'card' && !selectedBankCardId);
+
   const handleDebtPayment = async () => {
-    if (!sale || !paymentAmount || !saleId) return;
-    if (paymentType === 'card' && !selectedBankCardId) return;
+    if (!sale || !saleId || paymentInvalid) return;
     try {
       setPaying(true);
-      const parsedAmount = Number(paymentAmount);
-      const normalizedAmount = Number.isFinite(parsedAmount)
-        ? String(parsedAmount)
-        : paymentAmount;
       await customerApiService.createDebtPaymentForSale({
         sale: Number(saleId),
-        amount: normalizedAmount,
+        amount: String(paymentAmountNum),
         type: paymentType,
         ...(paymentType === 'card' ? { bank_card: Number(selectedBankCardId) } : {}),
       });
       setShowPaymentDialog(false);
       setPaymentAmount('');
-      
+
       const res = await salesService.getById(saleId);
       setSale(res);
-    } catch {
-      // Handle payment error silently
+    } catch (error) {
+      handleError(error, { showToast: true, logData: 'Debt payment failed' });
     } finally {
       setPaying(false);
     }
@@ -173,6 +180,86 @@ export function SalesDetailPage() {
   const handlePrint = () => {
     setShowReceipt(true);
     setTimeout(() => window.print(), 100);
+  };
+
+  // Mahsulotlar ro'yxatini jadval ko'rinishida chop etish (qaysi mahsulotdan nechta dona)
+  const handlePrintItems = () => {
+    if (!sale) return;
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const dateStr = `${now.getFullYear()}.${pad(now.getMonth() + 1)}.${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const items = sale.items || [];
+    const totalQty = items.reduce((sum, item) => sum + item.quantity, 0);
+
+    const rows = items
+      .map(
+        (item, idx) => `
+        <tr>
+          <td>${idx + 1}</td>
+          <td>${escapeHtml(item.product_name || `#${item.product}`)}</td>
+          <td>${escapeHtml(item.sku || '-')}</td>
+          <td style="text-align:right;">${escapeHtml(String(item.quantity))}</td>
+          <td style="width:40px;text-align:center;"></td>
+        </tr>`,
+      )
+      .join('');
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>${t('sales.title', 'Sotuv')} №${escapeHtml(String(sale.id))}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; font-size: 12px; padding: 16px; }
+  .header { font-size: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid #000; padding: 4px 6px; text-align: left; font-size: 12px; }
+  th { font-weight: bold; background: #fff; }
+  td:first-child, th:first-child { width: 30px; text-align: center; }
+  tfoot td { font-weight: bold; }
+  @media print { body { padding: 8px; } }
+</style>
+</head>
+<body>
+  <div class="header">
+    <span>${t('sales.title', 'Sotuv')} №${escapeHtml(String(sale.id))} &nbsp; ${escapeHtml(formatDate(sale.created_at))}</span>
+    <span>${escapeHtml(dateStr)}</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>№</th>
+        <th>${t('products.title', 'Mahsulot')}</th>
+        <th>${t('products.sku', 'SKU')}</th>
+        <th style="text-align:right;">${t('products.quantity', 'Miqdor')} (${t('common.pcs', 'dona')})</th>
+        <th>✓</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rows}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="3">${t('common.total', 'Jami')}</td>
+        <td style="text-align:right;">${escapeHtml(String(totalQty))} ${t('common.pcs', 'dona')}</td>
+        <td></td>
+      </tr>
+    </tfoot>
+  </table>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+      setTimeout(() => {
+        win.focus();
+        win.print();
+      }, 500);
+    }
   };
 
   const handleCloseReceipt = () => {
@@ -249,232 +336,394 @@ export function SalesDetailPage() {
         }
         }
       `}</style>
-      <PageHeader 
-        title={t('sales.saleDetails')} 
-        description={t('sales.receiptDescription')}
-        actions={
-          <Button variant="outline" onClick={handlePrint}>
-            <Printer className="mr-2 h-4 w-4" />
-            {t('sales.print')}
-          </Button>
-        }
-      />
-
-      <div className="flex justify-between gap-2">
-        <Link to={`/${lang}/sales`} className="w-full sm:w-auto">
-          <Button variant="outline" className="w-full sm:w-auto">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            {t('common.back')}
-          </Button>
-        </Link>
-        <Link to={`/${lang}/sales-returns/new?saleId=${sale.id}`} className="w-full sm:w-auto">
-          <Button variant="outline" className="w-full sm:w-auto">
-            <Undo2 className="mr-2 h-4 w-4" />
-            {t('saleReturns.returnSale')}
-          </Button>
-        </Link>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-card dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-            <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
-              <ShoppingCart className="h-5 w-5" />
-              {t('products.title')}
-            </h3>
-            <div className="space-y-3">
-              {sale.items?.length ? (
-                sale.items.map((item, index) => (
-                  <div key={item.id} className="flex items-center justify-between p-4 rounded-lg bg-muted/50 dark:bg-gray-800/50">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                        {index + 1}
-                      </div>
-                      <div>
-                        <p className="font-medium">{item.product_name || `${t('products.title')} #${item.product}`}</p>
-                        <p className="text-xs text-muted-foreground">SKU: {item.sku || '-'}</p>
-                        <p className="text-sm text-muted-foreground">{item.quantity} x {formatCurrency(parseFloat(item.unit_price))}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="h-10 w-10 shrink-0"
-                        onClick={() => void handleOpenProductDialog(item)}
-                        aria-label={t('sales.productDetails')}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <div className="text-right">
-                        <p className="font-semibold text-lg">{formatCurrency(parseFloat(item.total_price))}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-muted-foreground text-center py-4">{t('common.noData')}</p>
-              )}
-            </div>
-            
-            <div className="mt-6 pt-4 border-t dark:border-gray-700 space-y-2">
-              <div className="flex justify-between text-muted-foreground">
-                <span>{t('sales.total')}</span>
-                <span>{formatCurrency(parseFloat(sale.total_amount) + (sale.discount_amount ? parseFloat(sale.discount_amount) : 0))}</span>
+      {/* ─── Sarlavha: hujjat raqami dominant, holat va amallar bir qatorda ─── */}
+      <div className="rounded-xl border border-border bg-card p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-3">
+            <Link to={`/${lang}/sales`} aria-label={t('common.back')}>
+              <Button variant="outline" size="icon" className="h-10 w-10 shrink-0">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            </Link>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-2xl font-bold leading-tight tracking-tight">
+                  {t('sales.title', 'Sotuv')} №{sale.id}
+                </h2>
+                {(() => {
+                  const s = String(sale.status);
+                  if (s === 'paid')
+                    return (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        {t('sales.paid', 'To‘langan')}
+                      </span>
+                    );
+                  if (s === 'r')
+                    return (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+                        <Undo2 className="h-3.5 w-3.5" />
+                        {t('sales.returned', 'Qaytarilgan')}
+                      </span>
+                    );
+                  return (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-600/10 px-2.5 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                      <Clock className="h-3.5 w-3.5" />
+                      {s === 'partial' ? t('sales.partial', 'Qisman to‘langan') : t('sales.debt', 'Qarz')}
+                    </span>
+                  );
+                })()}
+                <PaymentTypeBadge type={sale.payment_type} />
               </div>
-              {sale.discount_amount && parseFloat(sale.discount_amount) > 0 && (
-                <div className="flex justify-between text-red-500">
-                  <span>{t('sales.discount')} ({sale.discount_type === 'p' ? `${sale.discount_value}%` : ''})</span>
-                  <span>-{formatCurrency(parseFloat(sale.discount_amount))}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-lg font-bold pt-2 border-t dark:border-gray-700">
-                <span>{t('inventory.paid')}</span>
-                <span className="text-green-600">{formatCurrency(parseFloat(sale.total_amount))}</span>
-              </div>
+              <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5" />
+                  {formatDate(sale.created_at)}
+                </span>
+                {sale.store_name && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <StoreIcon className="h-3.5 w-3.5" />
+                    {sale.store_name}
+                  </span>
+                )}
+                {sale.seller_name && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Tag className="h-3.5 w-3.5" />
+                    {sale.seller_name}
+                  </span>
+                )}
+              </p>
             </div>
           </div>
-
-          <div className="bg-card dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
-                {t('sales.payment')}
-              </h3>
-              <PaymentTypeBadge type={sale.payment_type} />
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20">
-                <p className="text-sm text-muted-foreground mb-1">{t('inventory.paid')}</p>
-                <p className="text-xl font-bold text-green-600">{formatCurrency(parseFloat(sale.paid_amount))}</p>
-              </div>
-              <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-900/20">
-                <p className="text-sm text-muted-foreground mb-1">{t('payment.cash', 'Naqt')}</p>
-                <p className="text-xl font-bold text-emerald-600">{formatCurrency(cashAmount)}</p>
-              </div>
-              <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20">
-                <p className="text-sm text-muted-foreground mb-1">{t('payment.card', 'Karta')}</p>
-                <p className="text-xl font-bold text-blue-600">{formatCurrency(cardAmount)}</p>
-              </div>
-              <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20">
-                <p className="text-sm text-muted-foreground mb-1">{t('sales.debt')}</p>
-                <p className="text-xl font-bold text-amber-600">{formatCurrency(Number(sale.debt) || 0)}</p>
-                {sale.debt_due_date && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {t('sales.debtDueDate', 'Qarz muddati')}: {formatDate(sale.debt_due_date)}
-                  </p>
-                )}
-              </div>
-            </div>
-            {sale.payments && sale.payments.length > 0 && (
-              <div className="mt-4 pt-4 border-t dark:border-gray-700 space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">{t('sales.paymentHistory', 'To‘lovlar tarixi')}</p>
-                {sale.payments.map((payment) => (
-                  <div
-                    key={payment.id}
-                    className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm ${
-                      payment.is_refund ? 'bg-red-50 dark:bg-red-900/20' : 'bg-muted/40'
-                    }`}
-                  >
-                    <span className="text-muted-foreground">
-                      {payment.type === 'cash' ? t('payment.cash', 'Naqd') : t('payment.card', 'Karta')}
-                      {payment.bank_card_name ? ` — ${payment.bank_card_name}` : ''}
-                      {payment.is_refund ? ` (${t('sales.refund', 'Qaytarim')})` : ''}
-                    </span>
-                    <span className={`font-semibold ${payment.is_refund ? 'text-red-600' : ''}`}>
-                      {payment.is_refund ? '-' : ''}{formatCurrency(parseFloat(payment.amount))}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-            {sale.debt && sale.debt > 0 && (
-              <Button className="w-full mt-4" onClick={openPaymentDialog}>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={handlePrint}>
+              <Printer className="mr-2 h-4 w-4" />
+              {t('sales.print')}
+            </Button>
+            <Link to={`/${lang}/sales-returns/new?saleId=${sale.id}`}>
+              <Button variant="outline">
+                <Undo2 className="mr-2 h-4 w-4" />
+                {t('saleReturns.returnSale')}
+              </Button>
+            </Link>
+            {Number(sale.debt) > 0 && (
+              <Button onClick={openPaymentDialog}>
                 <Wallet className="mr-2 h-4 w-4" />
                 {t('customers.payDebt')}
               </Button>
             )}
           </div>
         </div>
+      </div>
 
-        <div className="space-y-6">
-          <div className="bg-card dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-            <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
-              <User className="h-5 w-5" />
-              {t('sales.customer')}
-            </h3>
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <User className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="font-medium">{sale.customer_name || sale.customer}</p>
-                  <p className="text-sm text-muted-foreground">{t('sales.customer')}</p>
-                </div>
-              </div>
-            </div>
+      {/* ─── Asosiy ko'rsatkichlar ─── */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground">
+            <ReceiptIcon className="h-3.5 w-3.5" />
+            {t('sales.totalAmount', 'Jami summa')}
           </div>
-
-          <div className="bg-card dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-            <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
-              <Tag className="h-5 w-5" />
-              {t('users.seller')}
-            </h3>
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
-                  <User className="h-6 w-6 text-secondary-foreground" />
-                </div>
-                <div>
-                  <p className="font-medium">{sale.seller_name || sale.seller}</p>
-                  <p className="text-sm text-muted-foreground">{t('users.seller')}</p>
-                </div>
-              </div>
-            </div>
+          <p className="mt-2 text-xl font-bold tabular-nums leading-tight">
+            {formatCurrency(parseFloat(sale.total_amount))}
+          </p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground">
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+            {t('inventory.paid', 'To‘langan')}
           </div>
+          <p className="mt-2 text-xl font-bold tabular-nums leading-tight text-emerald-600">
+            {formatCurrency(parseFloat(sale.paid_amount))}
+          </p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground">
+            <Wallet className="h-3.5 w-3.5 text-amber-600" />
+            {t('sales.debt', 'Qarz')}
+          </div>
+          <p
+            className={`mt-2 text-xl font-bold tabular-nums leading-tight ${
+              Number(sale.debt) > 0 ? 'text-amber-600' : 'text-muted-foreground'
+            }`}
+          >
+            {formatCurrency(Number(sale.debt) || 0)}
+          </p>
+          {sale.debt_due_date && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t('sales.debtDueDate', 'Muddat')}: {formatDate(sale.debt_due_date)}
+            </p>
+          )}
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground">
+            <Package className="h-3.5 w-3.5" />
+            {t('products.title', 'Mahsulotlar')}
+          </div>
+          <p className="mt-2 text-xl font-bold tabular-nums leading-tight">
+            {sale.items?.length || 0}
+            <span className="ml-1 text-sm font-medium text-muted-foreground">
+              {t('saleReturns.kinds', 'xil')} ·{' '}
+              {(sale.items || []).reduce((sum, item) => sum + item.quantity, 0)} {t('common.pcs', 'dona')}
+            </span>
+          </p>
+        </div>
+      </div>
 
-          <div className="bg-card dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-            <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
-              <DollarSign className="h-5 w-5" />
-              {t('sales.discount')}
-            </h3>
-            {sale.discount_amount && parseFloat(sale.discount_amount) > 0 ? (
-              <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 rounded-lg bg-red-50 dark:bg-red-900/20">
-                  <span className="text-sm text-muted-foreground">{t('stores.type')}</span>
-                  <span className="font-medium">{sale.discount_type === 'p' ? 'Foiz (%)' : "So'm"}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 rounded-lg bg-red-50 dark:bg-red-900/20">
-                  <span className="text-sm text-muted-foreground">{t('sales.amount')}</span>
-                  <span className="font-medium">{sale.discount_type === 'p' ? sale.discount_value : formatCurrency(parseFloat(sale.discount_value || '0'))}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 rounded-lg bg-red-100 dark:bg-red-900/40">
-                  <span className="text-sm font-medium">{t('sales.discount')}</span>
-                  <span className="font-bold text-red-600">-{formatCurrency(parseFloat(sale.discount_amount))}</span>
-                </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <div className="rounded-xl border border-border bg-card">
+            <div className="flex items-center justify-between gap-2 border-b border-border p-5 pb-4">
+              <h3 className="flex items-center gap-2 text-base font-semibold">
+                <ShoppingCart className="h-4 w-4" />
+                {t('products.title')}
+                <span className="font-normal text-muted-foreground">({sale.items?.length || 0})</span>
+              </h3>
+              <Button variant="outline" size="sm" onClick={handlePrintItems}>
+                <Printer className="mr-2 h-4 w-4" />
+                {t('common.print', 'Chop etish')}
+              </Button>
+            </div>
+
+            {sale.items?.length ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground">
+                      <th className="w-12 px-5 py-3 font-semibold">№</th>
+                      <th className="px-3 py-3 font-semibold">{t('products.productName', 'Mahsulot')}</th>
+                      <th className="px-3 py-3 text-right font-semibold">{t('sales.price', 'Narx')}</th>
+                      <th className="px-3 py-3 text-right font-semibold">{t('products.quantity', 'Miqdor')}</th>
+                      <th className="px-3 py-3 text-right font-semibold">{t('common.total', 'Jami')}</th>
+                      <th className="w-14 px-5 py-3"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/60">
+                    {sale.items.map((item, index) => (
+                      <tr
+                        key={item.id}
+                        className="cursor-pointer transition-colors duration-150 hover:bg-accent/40"
+                        onClick={() => void handleOpenProductDialog(item)}
+                      >
+                        <td className="px-5 py-3 text-muted-foreground tabular-nums">{index + 1}</td>
+                        <td className="px-3 py-3">
+                          <p className="font-medium leading-tight">
+                            {item.product_name || `${t('products.title')} #${item.product}`}
+                          </p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">SKU: {item.sku || '-'}</p>
+                        </td>
+                        <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">
+                          {formatCurrency(parseFloat(item.unit_price))}
+                        </td>
+                        <td className="px-3 py-3 text-right tabular-nums">
+                          {item.quantity} {t('common.pcs', 'dona')}
+                          {(item.returned_quantity ?? 0) > 0 && (
+                            <p className="mt-0.5 text-xs text-amber-600">
+                              −{item.returned_quantity} {t('sales.refund', 'qaytarim')}
+                            </p>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-right font-semibold tabular-nums">
+                          {formatCurrency(parseFloat(item.total_price))}
+                        </td>
+                        <td className="px-5 py-3 text-right">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void handleOpenProductDialog(item);
+                            }}
+                            aria-label={t('sales.productDetails')}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             ) : (
-              <p className="text-muted-foreground text-center py-4">{t('sales.noDiscount')}</p>
-            )}
-          </div>
-
-          <div className="bg-card dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-            <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
-              <Calendar className="h-5 w-5" />
-              {t('common.date')}
-            </h3>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
-                <Calendar className="h-6 w-6 text-muted-foreground" />
+              <div className="flex flex-col items-center gap-3 py-12 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
+                  <Package className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <p className="text-sm font-medium">{t('sales.noProducts', 'Mahsulotlar yo‘q')}</p>
               </div>
-              <div>
-                <p className="font-medium">{formatDate(sale.created_at)}</p>
-                <p className="text-sm text-muted-foreground">{t('common.date')}</p>
+            )}
+
+            <div className="space-y-2 border-t border-border p-5 pt-4 text-sm">
+              <div className="flex justify-between text-muted-foreground">
+                <span>{t('sales.total')}</span>
+                <span className="tabular-nums">
+                  {formatCurrency(parseFloat(sale.total_amount) + (sale.discount_amount ? parseFloat(sale.discount_amount) : 0))}
+                </span>
+              </div>
+              {sale.discount_amount && parseFloat(sale.discount_amount) > 0 && (
+                <div className="flex justify-between text-red-600 dark:text-red-400">
+                  <span>
+                    {t('sales.discount')}
+                    {sale.discount_type === 'p' ? ` (${sale.discount_value}%)` : ''}
+                  </span>
+                  <span className="tabular-nums">-{formatCurrency(parseFloat(sale.discount_amount))}</span>
+                </div>
+              )}
+              <div className="flex justify-between border-t border-border pt-2 text-base font-bold">
+                <span>{t('sales.totalAmount', 'Yakuniy summa')}</span>
+                <span className="tabular-nums text-emerald-600">{formatCurrency(parseFloat(sale.total_amount))}</span>
               </div>
             </div>
           </div>
+
+          <div className="rounded-xl border border-border bg-card">
+            <div className="flex items-center justify-between border-b border-border p-5 pb-4">
+              <h3 className="flex items-center gap-2 text-base font-semibold">
+                <CreditCard className="h-4 w-4" />
+                {t('sales.payment')}
+              </h3>
+              <PaymentTypeBadge type={sale.payment_type} />
+            </div>
+            <div className="p-5">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg bg-emerald-600/10 p-4">
+                  <div className="flex items-center gap-2 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                    <Banknote className="h-3.5 w-3.5" />
+                    {t('payment.cash', 'Naqd')}
+                  </div>
+                  <p className="mt-1.5 text-lg font-bold tabular-nums text-emerald-600">{formatCurrency(cashAmount)}</p>
+                </div>
+                <div className="rounded-lg bg-blue-600/10 p-4">
+                  <div className="flex items-center gap-2 text-xs font-medium text-blue-700 dark:text-blue-400">
+                    <CreditCard className="h-3.5 w-3.5" />
+                    {t('payment.card', 'Karta')}
+                  </div>
+                  <p className="mt-1.5 text-lg font-bold tabular-nums text-blue-600">{formatCurrency(cardAmount)}</p>
+                </div>
+              </div>
+
+              {sale.payments && sale.payments.length > 0 && (
+                <div className="mt-4 space-y-1.5 border-t border-border pt-4">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    {t('sales.paymentHistory', 'To‘lovlar tarixi')}
+                  </p>
+                  {sale.payments.map((payment) => (
+                    <div
+                      key={payment.id}
+                      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${
+                        payment.is_refund ? 'bg-red-600/10' : 'bg-muted/40'
+                      }`}
+                    >
+                      {payment.is_refund ? (
+                        <Undo2 className="h-4 w-4 shrink-0 text-red-600" />
+                      ) : payment.type === 'cash' ? (
+                        <Banknote className="h-4 w-4 shrink-0 text-emerald-600" />
+                      ) : (
+                        <CreditCard className="h-4 w-4 shrink-0 text-blue-600" />
+                      )}
+                      <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                        {payment.type === 'cash' ? t('payment.cash', 'Naqd') : t('payment.card', 'Karta')}
+                        {payment.bank_card_name ? ` — ${payment.bank_card_name}` : ''}
+                        {payment.is_refund ? ` (${t('sales.refund', 'Qaytarim')})` : ''}
+                      </span>
+                      <span
+                        className={`shrink-0 font-semibold tabular-nums ${
+                          payment.is_refund ? 'text-red-600' : ''
+                        }`}
+                      >
+                        {payment.is_refund ? '−' : ''}
+                        {formatCurrency(parseFloat(payment.amount))}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {Number(sale.debt) > 0 && (
+                <Button className="mt-4 w-full" onClick={openPaymentDialog}>
+                  <Wallet className="mr-2 h-4 w-4" />
+                  {t('customers.payDebt')} · {formatCurrency(Number(sale.debt) || 0)}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          {/* Sotuv ma'lumotlari — bitta ixcham kartada */}
+          <div className="rounded-xl border border-border bg-card">
+            <h3 className="flex items-center gap-2 border-b border-border p-5 pb-4 text-base font-semibold">
+              <User className="h-4 w-4" />
+              {t('salesDetail.basicInfo', 'Sotuv ma’lumotlari')}
+            </h3>
+            <div className="divide-y divide-border/60">
+              <div className="flex items-center gap-3 p-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                  <User className="h-5 w-5 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate font-medium leading-tight">
+                    {sale.customer_name || sale.customer || t('sales.guest', 'Mehmon')}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{t('sales.customer')}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-600/10">
+                  <Tag className="h-5 w-5 text-violet-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate font-medium leading-tight">{sale.seller_name || sale.seller}</p>
+                  <p className="text-xs text-muted-foreground">{t('users.seller')}</p>
+                </div>
+              </div>
+              {sale.store_name && (
+                <div className="flex items-center gap-3 p-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600/10">
+                    <StoreIcon className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate font-medium leading-tight">{sale.store_name}</p>
+                    <p className="text-xs text-muted-foreground">{t('sales.store', 'Do‘kon')}</p>
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center gap-3 p-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
+                  <Calendar className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-medium leading-tight">{formatDate(sale.created_at)}</p>
+                  <p className="text-xs text-muted-foreground">{t('common.date')}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Chegirma — faqat mavjud bo'lsa ko'rsatiladi */}
+          {sale.discount_amount && parseFloat(sale.discount_amount) > 0 && (
+            <div className="rounded-xl border border-border bg-card p-5">
+              <h3 className="mb-3 flex items-center gap-2 text-base font-semibold">
+                <Tag className="h-4 w-4 text-red-600" />
+                {t('sales.discount')}
+              </h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">{t('stores.type')}</span>
+                  <span className="font-medium">
+                    {sale.discount_type === 'p' ? `${sale.discount_value}%` : t('sales.fixedAmount', 'So‘m')}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border-t border-border pt-2">
+                  <span className="font-medium">{t('sales.discount')}</span>
+                  <span className="font-bold tabular-nums text-red-600">
+                    −{formatCurrency(parseFloat(sale.discount_amount))}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -493,10 +742,18 @@ export function SalesDetailPage() {
               <label className="text-sm font-medium">{t('customers.paymentAmount')}</label>
               <Input
                 type="number"
+                min={0}
+                max={saleDebt}
                 value={paymentAmount}
                 onChange={(e) => setPaymentAmount(e.target.value)}
                 placeholder={t('placeholders.enterAmount')}
+                className={paymentExceedsDebt ? 'border-red-500 focus-visible:ring-red-500' : ''}
               />
+              {paymentExceedsDebt && (
+                <p className="text-xs font-medium text-red-600">
+                  {t('customers.amountExceedsDebt', 'Summa qarzdan oshib ketdi')} (max {formatCurrency(saleDebt)})
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">{t('sales.paymentMethod')}</label>
@@ -540,7 +797,7 @@ export function SalesDetailPage() {
               <Button
                 className="flex-1"
                 onClick={handleDebtPayment}
-                disabled={paying || !paymentAmount || (paymentType === 'card' && !selectedBankCardId)}
+                disabled={paying || paymentInvalid}
               >
                 {paying ? t('common.loading') : t('customers.payNow')}
               </Button>
@@ -701,25 +958,6 @@ export function SalesDetailPage() {
                   </div>
                 </div>
 
-                {/* Location section */}
-                <div className="rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4">
-                  <div className="mb-3 flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-primary" />
-                    <h5 className="font-semibold">{t('sales.location')}</h5>
-                  </div>
-                  {productLocation && productLocation.name ? (
-                    <div>
-                      <div className="rounded-xl bg-background p-3">
-                        <p className="text-xs text-muted-foreground">{t('sales.zone')}</p>
-                        <p className="mt-1 font-medium">{productLocation.name}</p>
-                      </div>
-                      <p className="mt-3 text-xs text-muted-foreground">{productLocation.description || t('sales.noDescription')}</p>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">{t('sales.noLocation')}</p>
-                  )}
-                </div>
-                {/* Location end */}
               </div>
             </div>
           )}

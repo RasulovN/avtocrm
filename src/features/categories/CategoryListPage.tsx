@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { handleError } from '../../utils/errorHandler';
 import { useAuthStore } from '../../app/store';
 import { PageHeader } from '../../components/shared/PageHeader';
+import { ExportButton } from '../../components/shared/ExportButton';
 import { DataTable, type Column } from '../../components/shared/DataTable';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 import { Button } from '../../components/ui/Button';
@@ -293,12 +294,22 @@ export function CategoryListPage() {
     <div className="space-y-6">
       <PageHeader
         title={t('categories.title')}
-        actions={isSuperUser ? (
-          <Button onClick={() => handleOpenDialog()}>
-            <Plus className="h-4 w-4 mr-2" />
-            {t('categories.addCategory')}
-          </Button>
-        ) : undefined}
+        actions={(
+          <div className="flex flex-wrap gap-2">
+            <ExportButton
+              direct
+              endpoint="/products/categories/export/"
+              filename="kategoriyalar.xlsx"
+              params={{ search: searchQuery.trim() || undefined }}
+            />
+            {isSuperUser && (
+              <Button onClick={() => handleOpenDialog()}>
+                <Plus className="h-4 w-4 mr-2" />
+                {t('categories.addCategory')}
+              </Button>
+            )}
+          </div>
+        )}
       />
 
       <div className="flex items-center gap-4">

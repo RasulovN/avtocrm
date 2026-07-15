@@ -20,6 +20,50 @@ interface SearchableSelectProps {
   countLabel?: string;
 }
 
+// Ro'yxat balandligi chegaralari: joy yetarli bo'lsa DESIRED, tor joyda MIN
+const DROPDOWN_DESIRED_HEIGHT = 340;
+const DROPDOWN_MIN_HEIGHT = 200;
+const DROPDOWN_MARGIN = 8;
+
+interface DropdownPlacement {
+  openUpward: boolean;
+  maxHeight: number;
+}
+
+/**
+ * Trigger atrofidagi bo'sh joyni o'lchaydi. Modal (scroll-konteyner) ichida
+ * bo'lsa, uning ko'rinadigan maydoni bilan viewport kesishmasi olinadi —
+ * shunda ro'yxat modal chegarasidan chiqib "kesilib" qolmaydi.
+ * Pastda joy kam, tepada ko'proq bo'lsa — ro'yxat tepaga ochiladi.
+ */
+function computePlacement(trigger: HTMLElement): DropdownPlacement {
+  const rect = trigger.getBoundingClientRect();
+
+  let boundTop = 0;
+  let boundBottom = window.innerHeight;
+  let node: HTMLElement | null = trigger.parentElement;
+  while (node && node !== document.body) {
+    const style = window.getComputedStyle(node);
+    if (/(auto|scroll|hidden)/.test(style.overflowY) || /(auto|scroll|hidden)/.test(style.overflow)) {
+      const r = node.getBoundingClientRect();
+      boundTop = Math.max(boundTop, r.top);
+      boundBottom = Math.min(boundBottom, r.bottom);
+      break;
+    }
+    node = node.parentElement;
+  }
+
+  const spaceBelow = boundBottom - rect.bottom - DROPDOWN_MARGIN;
+  const spaceAbove = rect.top - boundTop - DROPDOWN_MARGIN;
+  const openUpward = spaceBelow < DROPDOWN_MIN_HEIGHT && spaceAbove > spaceBelow;
+  const available = openUpward ? spaceAbove : spaceBelow;
+
+  return {
+    openUpward,
+    maxHeight: Math.max(DROPDOWN_MIN_HEIGHT, Math.min(DROPDOWN_DESIRED_HEIGHT, available)),
+  };
+}
+
 export function SearchableSelect({
   value,
   onValueChange,
@@ -36,6 +80,10 @@ export function SearchableSelect({
   const [searchQuery, setSearchQuery] = React.useState('');
   const [visibleCount, setVisibleCount] = React.useState(pageSize);
   const [isLoadingMore, setIsLoadingMore] = React.useState(false);
+  const [placement, setPlacement] = React.useState<DropdownPlacement>({
+    openUpward: false,
+    maxHeight: DROPDOWN_DESIRED_HEIGHT,
+  });
 
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -43,6 +91,13 @@ export function SearchableSelect({
   const sentinelRef = React.useRef<HTMLDivElement>(null);
 
   const selectedOption = options.find((opt) => opt.value === value);
+
+  const handleToggle = () => {
+    if (!isOpen && containerRef.current) {
+      setPlacement(computePlacement(containerRef.current));
+    }
+    setIsOpen((prev) => !prev);
+  };
 
   // Reset visible count when search changes or dropdown opens/closes
   React.useEffect(() => {
@@ -137,7 +192,7 @@ export function SearchableSelect({
       <button
         type="button"
         disabled={disabled}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         className={cn(
           'flex h-10 w-full items-center justify-between rounded-xl border border-input bg-background px-3.5 py-2 text-sm ring-offset-background placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-primary/50 disabled:cursor-not-allowed disabled:opacity-50 text-left transition-all duration-200 shadow-none',
           isOpen && 'ring-2 ring-ring/30 border-primary/50'
@@ -150,7 +205,13 @@ export function SearchableSelect({
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 right-0 z-50 mt-1 max-h-64 overflow-hidden rounded-xl border border-border/60 bg-popover text-popover-foreground shadow-xl flex flex-col">
+        <div
+          style={{ maxHeight: placement.maxHeight }}
+          className={cn(
+            'absolute left-0 right-0 z-50 overflow-hidden rounded-xl border border-border/60 bg-popover text-popover-foreground shadow-xl flex flex-col',
+            placement.openUpward ? 'bottom-full mb-1' : 'top-full mt-1'
+          )}
+        >
           {/* Search input */}
           <div className="flex items-center border-b border-border/40 px-3 bg-muted/20 shrink-0">
             <Search className="h-4 w-4 shrink-0 opacity-50 mr-2" />

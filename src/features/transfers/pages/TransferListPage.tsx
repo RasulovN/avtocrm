@@ -4,6 +4,10 @@ import { Link, useParams } from 'react-router-dom';
 import { Plus, ArrowRight, Eye, Search, Check, X, Package, CheckCircle2, Printer, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PageHeader } from '../../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../../components/shared/DataTable';
+import { ExportButton } from '../../../components/shared/ExportButton';
+import { DateRangeFilter } from '../../../components/shared/DateRangeFilter';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/Select';
+import { lastWeekRange } from '../../../utils/dateRange';
 import { Button } from '../../../components/ui/Button';
 import { Card, CardContent } from '../../../components/ui/Card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../../components/ui/Dialog';
@@ -32,6 +36,10 @@ export function TransferListPage() {
   const [showDetails, setShowDetails] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  // Default — oxirgi 1 hafta; tozalansa yoki o'zgartirilsa boshqa o'tkazmalar ham chiqadi
+  const [dateFrom, setDateFrom] = useState(() => lastWeekRange().from);
+  const [dateTo, setDateTo] = useState(() => lastWeekRange().to);
+  const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const limit = 20;
@@ -55,7 +63,7 @@ export function TransferListPage() {
 
   useEffect(() => {
     loadData(page, debouncedSearch);
-  }, [page, debouncedSearch]);
+  }, [page, debouncedSearch, statusFilter, dateFrom, dateTo]);
 
   useEffect(() => {
     loadStores();
@@ -76,7 +84,14 @@ export function TransferListPage() {
   const loadData = async (pageToLoad = page, search = debouncedSearch) => {
     try {
       setLoading(true);
-      const res = await transferService.getAll({ page: pageToLoad, limit, search: search || undefined });
+      const res = await transferService.getAll({
+        page: pageToLoad,
+        limit,
+        search: search || undefined,
+        status: statusFilter !== 'all' ? statusFilter : undefined,
+        date_from: dateFrom || undefined,
+        date_to: dateTo || undefined,
+      });
       setTransfers(res.data || []);
       setTotal(res.total || 0);
     } catch (error) {
@@ -370,22 +385,66 @@ export function TransferListPage() {
         description={t('transfers.listDescription')}
       />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full flex-1 sm:max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={t('transfers.searchPlaceholder')}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+      {/* Filtrlar sahifa tepasida — ro'yxatga ham, eksportga ham birdek qo'llanadi */}
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center xl:flex-1">
+          <div className="relative w-full flex-1 sm:max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={t('transfers.searchPlaceholder')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <DateRangeFilter
+            from={dateFrom}
+            to={dateTo}
+            onChange={(newFrom, newTo) => {
+              setDateFrom(newFrom);
+              setDateTo(newTo);
+              setPage(1);
+            }}
+            className="w-full sm:w-60"
           />
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => {
+              setStatusFilter(value);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-full sm:w-44">
+              <SelectValue placeholder={t('common.status', 'Holati')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('common.all', 'Hammasi')}</SelectItem>
+              <SelectItem value="p">{t('common.pending', 'Kutilmoqda')}</SelectItem>
+              <SelectItem value="a">{t('common.accepted', 'Qabul qilingan')}</SelectItem>
+              <SelectItem value="r">{t('common.rejected', 'Rad etilgan')}</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <Link to={`/${lang}/transfers/new`} className="w-full sm:w-auto">
-          <Button className="w-full sm:w-auto">
-            <Plus className="h-4 w-4 mr-2" />
-            {t('transfers.createTransfer')}
-          </Button>
-        </Link>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <ExportButton
+            direct
+            endpoint="/transfer/export/"
+            filename="otkazmalar.xlsx"
+            className="w-full sm:w-auto"
+            params={{
+              search: debouncedSearch || undefined,
+              status: statusFilter !== 'all' ? statusFilter : undefined,
+              date_from: dateFrom || undefined,
+              date_to: dateTo || undefined,
+            }}
+          />
+          <Link to={`/${lang}/transfers/new`} className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto">
+              <Plus className="h-4 w-4 mr-2" />
+              {t('transfers.createTransfer')}
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <Card className='border-none'>

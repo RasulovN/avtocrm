@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, type ChangeEvent, type KeyboardEvent } from 'react';
 import toast from 'react-hot-toast';
-import { ScanBarcode, Trash2, DollarSign, Search, X, UserPlus, Eye, Package, Barcode, MapPin, Image as ImageIcon, Loader2, ArrowLeftRight, Banknote, CreditCard } from 'lucide-react';
+import { ScanBarcode, Trash2, DollarSign, Search, X, UserPlus, Eye, Package, Barcode, MapPin, Image as ImageIcon, Loader2, ArrowLeftRight, Banknote, CreditCard, Star } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/Dialog';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -18,6 +18,7 @@ import { useProducts } from '../../context/ProductContext';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 import type { Store, Product, BankCard, SalePaymentInput } from '../../types';
 import { formatCurrency, formatAmountInput, parseAmountInput } from '../../utils';
+import { extractErrorMessage } from '../../utils/errorHandler';
 import { logger } from '../../utils/logger';
 import { useTranslation } from 'react-i18next';
 import { extractBarcodeFromUrl } from '../../utils/xss';
@@ -186,10 +187,8 @@ export function SalesPage() {
   const [cardAmount, setCardAmount] = useState(0);
   const [bankCards, setBankCards] = useState<BankCard[]>([]);
   const [selectedBankCardId, setSelectedBankCardId] = useState<string>('');
-  const [cardType, setCardType] = useState('Uzcard');
   const [discount, setDiscount] = useState(0);
   const [discountType, setDiscountType] = useState<'p' | 'f'>('f');
-  const [customerMode, setCustomerMode] = useState<'customer' | 'guest'>('guest');
   const [showReceipt, setShowReceipt] = useState(false);
   // Faqat naqd va karta rejimlari bor; ikkalasi birga kiritilsa to'lov
   // backendga alohida cash+card bo'lib ketadi (aralash tur yuborilmaydi)
@@ -198,15 +197,9 @@ export function SalesPage() {
   const [showScanner, setShowScanner] = useState(false);
   const [customers, setCustomers] = useState<{ id: number; full_name: string; phone_number: string }[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
-
-  useEffect(() => {
-    if (selectedCustomerId) {
-      setCustomerMode('customer');
-    } else {
-      setCustomerMode('guest');
-    }
-  }, [selectedCustomerId]);
   const [debtDueDate, setDebtDueDate] = useState('');
+  // Qarzga sotuvda sana belgilanmagan bo'lsa input qizarib turadi
+  const [debtDueDateError, setDebtDueDateError] = useState(false);
   const [showNewCustomerDialog, setShowNewCustomerDialog] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState('');
   const [newCustomerPhone, setNewCustomerPhone] = useState('');
@@ -432,12 +425,6 @@ export function SalesPage() {
   const cardSelected = activePayment === 'card' || cardAmount > 0;
   const isSplitPayment = cashAmount > 0 && cardAmount > 0;
 
-  useEffect(() => {
-    if (isDebtSale && customerMode === 'guest') {
-      setCustomerMode('customer');
-    }
-  }, [customerMode, isDebtSale]);
-
   // Tezkor to'lov rejimi tanlangan usul jami summaning qolgan qismini avtomatik qoplaydi
   // (masalan, karta rejimida naqd kiritilsa, karta summasi qoldiqqa moslashadi — aralash to'lov)
   useEffect(() => {
@@ -517,7 +504,8 @@ export function SalesPage() {
     let cancelled = false;
     const loadBankCards = async () => {
       try {
-        const cards = await bankCardService.getAll({ is_active: true });
+        // Kassada faqat sotuv bo'limi uchun ruxsat etilgan usullar (scope: sale/both)
+        const cards = await bankCardService.getAll({ is_active: true, scope: 'sale' });
         if (cancelled) return;
         setBankCards(cards);
         const defaultCard = cards.find((card) => card.is_default) ?? cards[0];
@@ -740,8 +728,14 @@ export function SalesPage() {
     }
 
     if (isDebtSale && !selectedCustomerId) {
-      setCustomerMode('customer');
       toast.error('Qarzga sotuv uchun mijoz tanlang');
+      return;
+    }
+
+    // Qarzga sotuvda qaytarish sanasi majburiy — backendga yubormasdan oldin tekshiramiz
+    if (isDebtSale && !debtDueDate) {
+      setDebtDueDateError(true);
+      toast.error("Qarzga sotuv uchun qaytarish sanasini belgilang");
       return;
     }
 
@@ -793,6 +787,14 @@ export function SalesPage() {
       setShowReceipt(true);
     } catch (error) {
       console.error('Failed to create sale:', error);
+      // Backend xatosini foydalanuvchiga aniq ko'rsatamiz (global handler dev rejimda toast bermaydi)
+      const data = (error as { response?: { data?: unknown } }).response?.data;
+      if (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>).debt_due_date)) {
+        setDebtDueDateError(true);
+        toast.error(((data as Record<string, unknown>).debt_due_date as unknown[]).map(String).join(' '));
+      } else {
+        toast.error(extractErrorMessage(error));
+      }
     } finally {
       setSaving(false);
     }
@@ -1252,64 +1254,49 @@ export function SalesPage() {
                 <div className="rounded-xl border border-dashed border-gray-300/80 bg-gray-50/80 p-3 dark:border-gray-700 dark:bg-gray-900/60">
                   <div className="mb-2 flex items-center justify-between">
                     <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground dark:text-gray-400">{t('sales.customer')}</Label>
-                    <span className="text-[11px] text-muted-foreground dark:text-gray-400">
-                      {customerMode === 'guest' ? 'Mijozsiz (oddiy sotuv)' : 'Mijoz'}
-                    </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  {/* Mijoz tanlash ixtiyoriy: tanlanmasa oddiy (mijozsiz) sotuv bo'ladi */}
+                  <div className="flex gap-2">
+                    <SearchableSelect
+                      value={selectedCustomerId}
+                      onValueChange={setSelectedCustomerId}
+                      options={customers.map((customer) => ({
+                        value: String(customer.id),
+                        label: `${customer.full_name} - ${customer.phone_number}`,
+                      }))}
+                      placeholder={t('placeholders.selectCustomer')}
+                      searchPlaceholder={t('placeholders.searchCustomer', 'Mijozni qidirish...')}
+                      emptyMessage={t('messages.customerNotFound', 'Mijoz topilmadi')}
+                      countLabel="ta mijoz"
+                      className="flex-1 min-w-0"
+                    />
+                    {selectedCustomerId && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={isDebtSale}
+                        onClick={() => setSelectedCustomerId('')}
+                        title="Mijozni bekor qilish"
+                        className="h-10 text-sm dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button
                       type="button"
-                      variant={customerMode === 'guest' ? 'default' : 'outline'}
+                      variant="outline"
                       size="sm"
-                      disabled={isDebtSale}
-                      onClick={() => {
-                        setCustomerMode('guest');
-                        setSelectedCustomerId('');
-                      }}
-                      className={customerMode === 'guest' ? 'bg-slate-800 hover:bg-slate-900 text-white' : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'}
+                      onClick={() => setShowNewCustomerDialog(true)}
+                      className="h-10 text-sm dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900"
                     >
-                      Mijozsiz
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={customerMode === 'customer' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setCustomerMode('customer')}
-                      className={customerMode === 'customer' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'}
-                    >
-                      Mijoz
+                      <UserPlus className="h-4 w-4 mr-1" />
                     </Button>
                   </div>
                   {isDebtSale && (
                     <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400">
                       Qarzga sotuv uchun mijoz tanlash majburiy.
                     </p>
-                  )}
-                  {customerMode === 'customer' && (
-                    <div className="mt-3 flex gap-2">
-                      <SearchableSelect
-                        value={selectedCustomerId}
-                        onValueChange={setSelectedCustomerId}
-                        options={customers.map((customer) => ({
-                          value: String(customer.id),
-                          label: `${customer.full_name} - ${customer.phone_number}`,
-                        }))}
-                        placeholder={t('placeholders.selectCustomer')}
-                        searchPlaceholder={t('placeholders.searchCustomer', 'Mijozni qidirish...')}
-                        emptyMessage={t('messages.customerNotFound', 'Mijoz topilmadi')}
-                        countLabel="ta mijoz"
-                        className="flex-1 min-w-0"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowNewCustomerDialog(true)}
-                        className="h-10 text-sm dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900"
-                      >
-                        <UserPlus className="h-4 w-4 mr-1" />
-                      </Button>
-                    </div>
                   )}
                 </div>
                 <div className="rounded-xl border border-dashed border-gray-300/80 bg-gray-50/80 p-3 dark:border-gray-700 dark:bg-gray-900/60">
@@ -1461,47 +1448,55 @@ export function SalesPage() {
                         </p>
                       </div>
                     ) : (
-                      <>
-                        <Select value={selectedBankCardId} onValueChange={setSelectedBankCardId}>
-                          <SelectTrigger className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white">
-                            <SelectValue placeholder={t('sales.selectCard', 'Kartani tanlang')} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {bankCards.map((card) => (
-                              <SelectItem key={card.id} value={String(card.id)}>
-                                {card.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Select value={cardType} onValueChange={setCardType}>
-                          <SelectTrigger className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white">
-                            <SelectValue placeholder="Karta turini tanlang" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Uzcard">Uzcard</SelectItem>
-                            <SelectItem value="Humo">Humo</SelectItem>
-                            <SelectItem value="Visa">Visa</SelectItem>
-                            <SelectItem value="Mastercard">Mastercard</SelectItem>
-                            <SelectItem value="Payme">Payme</SelectItem>
-                            <SelectItem value="Click">Click</SelectItem>
-                            <SelectItem value="Uzum Bank">Uzum Bank</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </>
+                      // Kartalar tugma ko'rinishida — bir bosishda tanlanadi
+                      <div className="grid grid-cols-2 gap-2">
+                        {bankCards.map((card) => {
+                          const isSelected = String(card.id) === selectedBankCardId;
+                          return (
+                            <button
+                              key={card.id}
+                              type="button"
+                              onClick={() => setSelectedBankCardId(String(card.id))}
+                              aria-pressed={isSelected}
+                              className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-sm font-medium transition-colors ${
+                                isSelected
+                                  ? 'border-emerald-500 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-500/40 dark:border-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300'
+                                  : 'border-gray-300 bg-background text-foreground hover:bg-accent dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800'
+                              }`}
+                            >
+                              <CreditCard className={`h-4 w-4 shrink-0 ${isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`} />
+                              <span className="truncate">{card.name}</span>
+                              {card.is_default && <Star className="h-3 w-3 shrink-0 text-amber-500" />}
+                            </button>
+                          );
+                        })}
+                      </div>
                     )}
                   </div>
                 )}
                 {debt > 0 && selectedCustomerId && (
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground dark:text-gray-400">Qarz muddati</Label>
+                    <Label className="text-xs text-muted-foreground dark:text-gray-400">
+                      Qarz muddati <span className="text-red-500">*</span>
+                    </Label>
                     <Input
                       type="date"
                       min={new Date().toISOString().split('T')[0]}
                       value={debtDueDate}
-                      onChange={(e) => setDebtDueDate(e.target.value)}
-                      className="h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white"
+                      onChange={(e) => {
+                        setDebtDueDate(e.target.value);
+                        if (e.target.value) setDebtDueDateError(false);
+                      }}
+                      aria-invalid={debtDueDateError}
+                      className={`h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white ${
+                        debtDueDateError ? 'border-red-500 dark:border-red-500 focus-visible:ring-red-500/40' : ''
+                      }`}
                     />
+                    {debtDueDateError && (
+                      <p className="text-[11px] text-red-500">
+                        Qarzga sotuv uchun qaytarish sanasi majburiy
+                      </p>
+                    )}
                   </div>
                 )}
 

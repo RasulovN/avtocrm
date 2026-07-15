@@ -342,6 +342,7 @@ export interface InventoryFormData {
   store: number;
   cash_amount: string;
   card_amount: string;
+  bank_card?: number | null;
   items: {
     product: number;
     quantity: number;
@@ -351,12 +352,56 @@ export interface InventoryFormData {
   }[];
 }
 
+// ─── Kirim sessiyasi (progressiv wizard) ───
+
+export type PurchaseSessionStatus = 'in_progress' | 'received' | 'completed' | 'cancelled';
+
+export interface PurchaseSessionItem {
+  product: number | null;
+  product_name: string;
+  quantity: string;
+  purchase_price: string;
+  selling_price: string;
+  wholesale_price: string;
+}
+
+export interface PurchaseSession {
+  id: number;
+  supplier: number;
+  supplier_name?: string;
+  store: number;
+  store_name?: string;
+  items: PurchaseSessionItem[];
+  items_count?: number;
+  total_amount?: string;
+  cash_amount: string;
+  card_amount: string;
+  bank_card: number | null;
+  status: PurchaseSessionStatus;
+  current_step: 1 | 2 | 3;
+  entry: number | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface PurchaseSessionPayload {
+  supplier?: number;
+  store?: number;
+  items?: PurchaseSessionItem[];
+  cash_amount?: string;
+  card_amount?: string;
+  bank_card?: number | null;
+  current_step?: 1 | 2 | 3;
+}
+
 export interface ContractEntryItem {
   id?: number;
   product: number;
+  product_name?: string | null;
   quantity: number;
   purchase_price: string;
   selling_price: string;
+  sku?: string | null;
   barcode?: string | null;
   shtrix_code?: string | null;
 }
@@ -370,8 +415,14 @@ export interface ContractEntry {
   created_by: number;
   full_name: string;
   items: ContractEntryItem[];
+  /** Kirimning to'liq summasi (StockEntry.total_amount) */
+  total_amount?: string;
+  /** Kirim paytida darhol to'langan summa */
   paid_amount?: string;
   debt?: number;
+  total_in?: string | number;
+  total_paid?: string | number;
+  created_at?: string;
 }
 
 // Low Stock Types
@@ -453,6 +504,7 @@ export interface SaleItem {
   quantity: number;
   unit_price: string;
   total_price: string;
+  returned_quantity?: number;
 }
 
 export interface SalePayment {
@@ -465,11 +517,20 @@ export interface SalePayment {
   created_at: string;
 }
 
+/**
+ * To'lov usuli qaysi bo'limda ko'rinishi:
+ *  - sale     → faqat sotuv (kassa)
+ *  - purchase → faqat kirim (masalan, "Bank o'tkazmasi")
+ *  - both     → ikkala bo'limda ham
+ */
+export type BankCardScope = 'sale' | 'purchase' | 'both';
+
 export interface BankCard {
   id: number;
   name: string;
   is_default: boolean;
   is_active: boolean;
+  scope: BankCardScope;
   created_at: string;
 }
 
@@ -477,6 +538,7 @@ export interface BankCardFormData {
   name: string;
   is_default?: boolean;
   is_active?: boolean;
+  scope?: BankCardScope;
 }
 
 export interface Sale {
@@ -629,6 +691,14 @@ export interface ProductFilters {
   category?: string;
   store_id?: string;
   stock_status?: string;
+}
+
+// Mahsulotlar ro'yxati statistikasi (joriy filtrlar bo'yicha, stock_status'siz)
+export interface ProductStockStats {
+  all: number;
+  in_stock: number;
+  low_stock: number;
+  out_of_stock: number;
 }
 
 export interface PaginationParams {

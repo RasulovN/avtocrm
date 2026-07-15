@@ -67,14 +67,15 @@ const navItems: NavItem[] = [
   { titleKey: 'nav.transfers', href: '/transfers', icon: ArrowRightLeft, access: 'all', permission: 'transfers.view' },
   { titleKey: 'nav.products', href: '/products', icon: Package, access: 'all', permission: 'products.view' },
   // { titleKey: 'nav.categories', href: '/categories', icon: Tags, access: 'all' },
-  { titleKey: 'nav.stockentry', href: '/stockentry', icon: ArrowDownToLine, access: 'superuser', permission: 'stockentry.view' },
+  // Kirim: do'kon paneli ham ko'radi — backend xodimni faqat o'z do'koniga kirim qilishiga cheklaydi
+  { titleKey: 'nav.stockentry', href: '/stockentry', icon: ArrowDownToLine, access: 'all', permission: 'stockentry.view' },
+  { titleKey: 'nav.reports', href: '/reports', icon: BarChart3, access: 'superuser', permission: 'reports.view' },
   { titleKey: 'nav.inventory', href: '/inventory', icon: ClipboardCheck, access: 'all', permission: 'inventory.view' },
   { titleKey: 'nav.lowStock', href: '/inventory/low-stock', icon: AlertTriangle, access: 'all', permission: 'inventory.view' },
   { titleKey: 'nav.customers', href: '/customers', icon: Users, access: 'all', permission: 'customers.view' },
   { titleKey: 'nav.suppliers', href: '/suppliers', icon: Truck, access: 'superuser', permission: 'suppliers.view' },
-  { titleKey: 'nav.stores', href: '/stores', icon: Store, access: 'superuser', permission: 'stores.view' },
+  // nav.stores (superuser) endi alohida menyu emas — Sozlamalar submenusi ichida
   { titleKey: 'nav.storeInfo', href: '/stores', icon: Store, access: 'store', permission: 'stores.view' },
-  { titleKey: 'nav.reports', href: '/reports', icon: BarChart3, access: 'superuser', permission: 'reports.view' },
   { titleKey: 'nav.settings', href: '/settings', icon: Settings, access: 'all' },
 ];
 
@@ -102,12 +103,10 @@ const subNavs: Record<string, SubNavItem[]> = {
     { titleKey: 'products.units', href: '/products/units', icon: Ruler, permission: 'products.view' },
     // { titleKey: 'products.addProduct', href: '/products/new', icon: Plus },
   ],
-  '/stores': [
-    { titleKey: 'stores.list', href: '/stores', icon: List, permission: 'stores.view', superuserOnly: true },
-  ],
-  // Sozlamalar submenu: to'lov turlari + foydalanuvchi/rol boshqaruvi + amallar jurnali
+  // Sozlamalar submenu: do'konlar + to'lov turlari + foydalanuvchi/rol boshqaruvi + amallar jurnali
   '/settings': [
     { titleKey: 'nav.settings', href: '/settings', icon: Settings },
+    { titleKey: 'nav.stores', href: '/stores', icon: Store, permission: 'stores.view', superuserOnly: true },
     { titleKey: 'nav.paymentTypes', href: '/settings/payments', icon: CreditCard },
     { titleKey: 'stores.manageUsers', href: '/settings/users', icon: Users, permission: 'users.view', superuserOnly: true },
     { titleKey: 'nav.roles', href: '/settings/roles', icon: ShieldCheck, permission: 'roles.view', superuserOnly: true },
@@ -180,9 +179,14 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
     return acc;
   }, {} as Record<string, SubNavItem[]>);
 
-  // Check if current path is part of a sub-nav module
-  const activeSubNavKey = Object.keys(filteredSubNavs).find(key =>
-    currentPath.includes(key) && currentPath.startsWith(`/${lang}${key}`)
+  // Check if current path is part of a sub-nav module.
+  // Submenu bandi o'z bo'limi yo'lidan tashqarida ham bo'lishi mumkin
+  // (masalan, Sozlamalar ichidagi Do'konlar → /stores) — shunda ham
+  // tegishli submenu ochiq qoladi va band aktiv belgilanadi.
+  const activeSubNavKey = Object.keys(filteredSubNavs).find(
+    (key) =>
+      currentPath.startsWith(`/${lang}${key}`) ||
+      filteredSubNavs[key].some((item) => currentPath.startsWith(`/${lang}${item.href}`))
   );
   const activeSubNav = activeSubNavKey ? filteredSubNavs[activeSubNavKey] : null;
 

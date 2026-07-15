@@ -1,5 +1,5 @@
 import { apiClient } from './api';
-import type { BankCard, BankCardFormData } from '../types';
+import type { BankCard, BankCardFormData, BankCardScope } from '../types';
 
 const normalizeBankCard = (raw: unknown): BankCard => {
   const item = (raw ?? {}) as Partial<BankCard> & { id?: string | number };
@@ -8,15 +8,17 @@ const normalizeBankCard = (raw: unknown): BankCard => {
     name: item.name ?? '',
     is_default: Boolean(item.is_default),
     is_active: item.is_active !== false,
+    scope: (item.scope as BankCardScope) || 'both',
     created_at: item.created_at ?? '',
   };
 };
 
 export const bankCardService = {
-  /** GET /api/sales/bank-cards/ — barcha yoki filtr bilan */
-  getAll: async (params?: { is_active?: boolean }): Promise<BankCard[]> => {
+  /** GET /api/sales/bank-cards/ — barcha yoki filtr bilan (scope: 'sale' | 'purchase') */
+  getAll: async (params?: { is_active?: boolean; scope?: 'sale' | 'purchase' }): Promise<BankCard[]> => {
     const searchParams = new URLSearchParams();
     if (params?.is_active !== undefined) searchParams.append('is_active', String(params.is_active));
+    if (params?.scope) searchParams.append('scope', params.scope);
 
     const queryString = searchParams.toString();
     const url = queryString ? `/sales/bank-cards/?${queryString}` : '/sales/bank-cards/';
@@ -45,6 +47,7 @@ export const bankCardService = {
       name: data.name,
       is_default: data.is_default ?? false,
       is_active: data.is_active !== false, // default: true
+      scope: data.scope ?? 'both',
     };
     const response = await apiClient.post<unknown>('/sales/bank-cards/', payload);
     const res = response.data as { data?: unknown };
@@ -64,6 +67,7 @@ export const bankCardService = {
       name: data.name,
       is_default: data.is_default ?? false,
       is_active: data.is_active !== false,
+      scope: data.scope ?? 'both',
     };
     const response = await apiClient.put<unknown>(`/sales/bank-cards/${id}/`, payload);
     const res = response.data as { data?: unknown };

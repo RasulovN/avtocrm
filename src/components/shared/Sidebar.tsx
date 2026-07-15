@@ -37,14 +37,22 @@ interface NavItem {
 const navItems: NavItem[] = [
   { titleKey: 'nav.dashboard', href: '/dashboard', icon: LayoutDashboard },
   { titleKey: 'nav.products', href: '/products', icon: Package }, 
-  { titleKey: 'nav.stockentry', href: '/stockentry', icon: ArrowDownToLine, roles: ['admin'] },
+  {
+    titleKey: 'nav.stockentry',
+    href: '/stockentry',
+    icon: ArrowDownToLine,
+    roles: ['admin'],
+    children: [
+      { titleKey: 'nav.stockentryList', href: '/stockentry', icon: List },
+      { titleKey: 'nav.lowStock', href: '/inventory/low-stock', icon: AlertTriangle },
+    ],
+  },
   {
     titleKey: 'nav.inventory',
     href: '/inventory',
     icon: ClipboardCheck,
     children: [
       { titleKey: 'inventory.inventoryList', href: '/inventory', icon: List },
-      { titleKey: 'nav.lowStock', href: '/inventory/low-stock', icon: AlertTriangle },
       { titleKey: 'inventory.newInventory', href: '/inventory/new', icon: Plus },
     ],
   },

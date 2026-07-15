@@ -72,10 +72,19 @@ const mapSupplierUpdatePayload = (data: Partial<SupplierFormData>): Record<strin
 };
 
 export const supplierService = {
-  getAll: async (params?: { page?: number; limit?: number }): Promise<PaginatedResponse<Supplier>> => {
+  getAll: async (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    ordering?: string;
+    has_debt?: string;
+  }): Promise<PaginatedResponse<Supplier>> => {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.append('page', params.page.toString());
     if (params?.limit) searchParams.append('limit', params.limit.toString());
+    if (params?.search) searchParams.append('search', params.search);
+    if (params?.ordering) searchParams.append('ordering', params.ordering);
+    if (params?.has_debt) searchParams.append('has_debt', params.has_debt);
 
     const response = await apiClient.get(`/contract/supplier/?${searchParams.toString()}`);
     const payload = response.data as unknown;
@@ -155,8 +164,112 @@ export const supplierService = {
     await apiClient.delete(`/contract/supplier/${id}/`);
   },
 
-  createPayment: async (data: { supplier: number; entry: number; amount: string; note?: string }) => {
+  createPayment: async (data: {
+    supplier: number;
+    entry: number;
+    amount: string;
+    note?: string;
+    // To'lov usuli: 'cash' (default) yoki 'card'; karta bo'lsa bank_card majburiy
+    payment_type?: 'cash' | 'card';
+    bank_card?: number;
+  }) => {
     const response = await apiClient.post('/contract/supplier-payments/create/', data);
     return response.data;
   },
+
+  // Bitta kirim bo'yicha tranzaksiyalar tarixi (kirim 'in' + to'lovlar 'pay')
+  getPayments: async (entryId: number): Promise<SupplierTransactionRecord[]> => {
+    const response = await apiClient.get<SupplierTransactionRecord[]>(`/contract/supplier-payments/${entryId}/`);
+    return Array.isArray(response.data) ? response.data : [];
+  },
+
+  // Detail sahifa dashboardi uchun jamlanma ko'rsatkichlar
+  getStats: async (id: string | number): Promise<SupplierStats> => {
+    const response = await apiClient.get<SupplierStats>(`/contract/supplier/${id}/stats/`);
+    return response.data;
+  },
+
+  // Ta'minotchining barcha to'lovlari (kirimlardan qat'i nazar), paginatsiyalangan
+  getAllPayments: async (
+    id: string | number,
+    params?: { page?: number; limit?: number },
+  ): Promise<PaginatedResponse<SupplierTransactionRecord>> => {
+    const response = await apiClient.get(`/contract/supplier/${id}/payments/`, { params });
+    const data = response.data as {
+      count?: number;
+      current_page?: number;
+      results?: SupplierTransactionRecord[];
+    };
+    return {
+      data: Array.isArray(data?.results) ? data.results : [],
+      total: Number(data?.count) || 0,
+      page: Number(data?.current_page) || params?.page || 1,
+      limit: params?.limit ?? 10,
+    };
+  },
+
+  // Ta'minotchidan kelgan tovarlar (kirimlar bo'yicha jamlangan), paginatsiyalangan
+  getProducts: async (
+    id: string | number,
+    params?: { page?: number; limit?: number; search?: string },
+  ): Promise<PaginatedResponse<SupplierProductRecord>> => {
+    const response = await apiClient.get(`/contract/supplier/${id}/products/`, { params });
+    const data = response.data as {
+      count?: number;
+      current_page?: number;
+      results?: SupplierProductRecord[];
+    };
+    return {
+      data: Array.isArray(data?.results) ? data.results : [],
+      total: Number(data?.count) || 0,
+      page: Number(data?.current_page) || params?.page || 1,
+      limit: params?.limit ?? 10,
+    };
+  },
 };
+
+export interface SupplierTransactionRecord {
+  id: number;
+  supplier: number;
+  entry: number;
+  amount: string;
+  type: 'in' | 'pay';
+  payment_method?: 'cash' | 'card' | '';
+  bank_card?: number | null;
+  bank_card_name?: string | null;
+  note?: string;
+  created_at?: string;
+}
+
+// GET /contract/supplier/<id>/stats/ javobi
+export interface SupplierStats {
+  supplier_id: number;
+  created_at?: string | null;
+  entries_count: number;
+  paid_entries_count: number;
+  partial_entries_count: number;
+  unpaid_entries_count: number;
+  total_purchase_amount: string;
+  total_paid_amount: string;
+  total_debt: string;
+  balance: string;
+  items_total_quantity: number;
+  orders_per_month: number;
+  first_entry_at?: string | null;
+  last_entry_at?: string | null;
+}
+
+// GET /contract/supplier/<id>/products/ qatori
+export interface SupplierProductRecord {
+  product: number;
+  product_name: string | null;
+  sku: string | null;
+  barcode: string | null;
+  category_name: string | null;
+  total_quantity: number;
+  entries_count: number;
+  last_entry_at: string | null;
+  last_purchase_price: string;
+  last_selling_price: string;
+  image: string | null;
+}

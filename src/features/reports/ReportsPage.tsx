@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { DollarSign, TrendingUp, ShoppingCart, Users, Loader2, AlertCircle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Card, CardContent } from '../../components/ui/Card';
+import { DateRangeFilter } from '../../components/shared/DateRangeFilter';
+import { ExportButton } from '../../components/shared/ExportButton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
 import { useThemeStore } from '../../app/themeStore';
 import { useAuthStore } from '../../app/store';
@@ -43,6 +45,7 @@ const TRANSLATIONS: Record<string, { uz: string; cyrl: string }> = {
   'Qarzdorlik': { uz: 'Qarzdorlik', cyrl: 'Қарздорлик' },
   'Davr': { uz: 'Davr', cyrl: 'Давр' },
   'Boshlanish sanasi': { uz: 'Boshlanish sanasi', cyrl: 'Бошланиш санаси' },
+  'Sana oralig‘i': { uz: 'Sana oralig‘i', cyrl: 'Сана оралиғи' },
   'Tugash sanasi': { uz: 'Tugash sanasi', cyrl: 'Тугаш санаси' },
   "Do'kon": { uz: "Do'kon", cyrl: 'Дўкон' },
   "Barcha do'konlar": { uz: "Barcha do'konlar", cyrl: 'Барча дўконлар' },
@@ -71,6 +74,13 @@ const TRANSLATIONS: Record<string, { uz: string; cyrl: string }> = {
   'Aralash': { uz: 'Naqd + karta', cyrl: 'Нақд + карта' },
   'Kartalar kesimi': { uz: 'Kartalar kesimi', cyrl: 'Карталар кесими' },
   "Noma'lum karta": { uz: "Noma'lum karta", cyrl: 'Номаълум карта' },
+  'Chiqimlar': { uz: 'Chiqimlar', cyrl: 'Чиқимлар' },
+  'Chiqim turi': { uz: 'Chiqim turi', cyrl: 'Чиқим тури' },
+  'Soni': { uz: 'Soni', cyrl: 'Сони' },
+  'Mijozga qaytarim (naqd)': { uz: 'Mijozga qaytarim (naqd)', cyrl: 'Мижозга қайтарим (нақд)' },
+  'Mijozga qaytarim (karta)': { uz: 'Mijozga qaytarim (karta)', cyrl: 'Мижозга қайтарим (карта)' },
+  "Ta'minotchilarga to'lov": { uz: "Ta'minotchilarga to'lov", cyrl: 'Таъминотчиларга тўлов' },
+  "Davr ichida chiqim yo'q": { uz: "Davr ichida chiqim yo'q", cyrl: 'Давр ичида чиқим йўқ' },
   'Tozalash': { uz: 'Tozalash', cyrl: 'Тозалаш' }
 };
 
@@ -282,6 +292,18 @@ const getStoreName = (id: number | string, defaultName: string) => {
     return cardBreakdown.reduce((sum, c) => sum + c.amount, 0);
   }, [cardBreakdown]);
 
+  const expenses = useMemo(() => {
+    return data?.expenses || [];
+  }, [data?.expenses]);
+
+  const totalExpensesCount = useMemo(() => {
+    return expenses.reduce((sum, e) => sum + e.count, 0);
+  }, [expenses]);
+
+  const totalExpensesAmount = useMemo(() => {
+    return expenses.reduce((sum, e) => sum + e.amount, 0);
+  }, [expenses]);
+
   const customerDebts = useMemo(() => {
     return data?.debts?.customerDebts || [];
   }, [data?.debts?.customerDebts]);
@@ -314,6 +336,18 @@ const getStoreName = (id: number | string, defaultName: string) => {
             {getTrans('Batafsil biznes tahlili')}
           </p>
         </div>
+        {/* Sahifadagi joriy filtrlar (davr/do'kon/sana) bilan darhol yuklab olinadi */}
+        <ExportButton
+          endpoint="/reports/export/"
+          filename="hisobot.xlsx"
+          direct
+          params={{
+            filter,
+            store_id: storeId,
+            from: from || undefined,
+            to: to || undefined,
+          }}
+        />
       </div>
 
       {/* Filters Panel */}
@@ -357,51 +391,18 @@ const getStoreName = (id: number | string, defaultName: string) => {
             </Select>
           </div>
 
-          {/* From Date */}
+          {/* Dan–gacha: bitta kalendarda oraliq bo'yalgan holda tanlanadi */}
           <div className="flex flex-col gap-1.5">
-            <div className="flex justify-between items-center">
-              <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                {getTrans('Boshlanish sanasi')}
-              </label>
-              {from && (
-                <button
-                  type="button"
-                  onClick={() => setFrom('')}
-                  className="text-[10px] font-semibold text-rose-600 dark:text-rose-400 hover:underline transition-all"
-                >
-                  {getTrans('Tozalash')}
-                </button>
-              )}
-            </div>
-            <input
-              type="date"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-              className="w-full h-10 px-3.5 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-primary/50 transition-all"
-            />
-          </div>
-
-          {/* To Date */}
-          <div className="flex flex-col gap-1.5">
-            <div className="flex justify-between items-center">
-              <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                {getTrans('Tugash sanasi')}
-              </label>
-              {to && (
-                <button
-                  type="button"
-                  onClick={() => setTo('')}
-                  className="text-[10px] font-semibold text-rose-600 dark:text-rose-400 hover:underline transition-all"
-                >
-                  {getTrans('Tozalash')}
-                </button>
-              )}
-            </div>
-            <input
-              type="date"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              className="w-full h-10 px-3.5 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-primary/50 transition-all"
+            <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+              {getTrans('Sana oralig‘i')}
+            </label>
+            <DateRangeFilter
+              from={from}
+              to={to}
+              onChange={(newFrom, newTo) => {
+                setFrom(newFrom);
+                setTo(newTo);
+              }}
             />
           </div>
         </div>
@@ -839,6 +840,78 @@ formatter={(value: any, props: any) => [
                         </td>
                         <td className="px-3 sm:px-6 py-2.5 sm:py-4 text-right text-slate-900 dark:text-white">
                           {formatCurrency(totalCardBreakdownAmount)}
+                        </td>
+                        <td className="px-3 sm:px-6 py-2.5 sm:py-4 text-right text-slate-900 dark:text-white">
+                          100%
+                        </td>
+                      </tr>
+                    </>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          {/* Chiqimlar — davr ichida chiqib ketgan pul (qaytarimlar + ta'minotchi to'lovlari) */}
+          <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden animate-in fade-in-50 duration-200">
+            <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                {getTrans('Chiqimlar')}
+              </h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs sm:text-sm text-left">
+                <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-semibold text-[10px] sm:text-xs uppercase tracking-wider">
+                  <tr>
+                    <th className="px-3 sm:px-6 py-2.5 sm:py-4 rounded-tl-xl">{getTrans('Chiqim turi')}</th>
+                    <th className="px-3 sm:px-6 py-2.5 sm:py-4 text-right">{getTrans('Soni')}</th>
+                    <th className="px-3 sm:px-6 py-2.5 sm:py-4 text-right">{getTrans('Summa')}</th>
+                    <th className="px-3 sm:px-6 py-2.5 sm:py-4 text-right rounded-tr-xl">{getTrans('Ulushi')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
+                  {isLoading ? (
+                    Array.from({ length: 2 }).map((_, idx) => (
+                      <tr key={idx}>
+                        <td className="px-3 sm:px-6 py-3.5"><Skeleton className="h-4 w-24" /></td>
+                        <td className="px-3 sm:px-6 py-3.5 text-right"><Skeleton className="h-4 w-12 ml-auto" /></td>
+                        <td className="px-3 sm:px-6 py-3.5 text-right"><Skeleton className="h-4 w-24 ml-auto" /></td>
+                        <td className="px-3 sm:px-6 py-3.5 text-right"><Skeleton className="h-4 w-12 ml-auto" /></td>
+                      </tr>
+                    ))
+                  ) : expenses.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-3 sm:px-6 py-6 text-center text-slate-400">
+                        {getTrans("Davr ichida chiqim yo'q")}
+                      </td>
+                    </tr>
+                  ) : (
+                    <>
+                      {expenses.map((expense, i) => (
+                        <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                          <td className="px-3 sm:px-6 py-2.5 sm:py-4 font-medium text-slate-900 dark:text-white">
+                            {getTrans(expense.method)}
+                          </td>
+                          <td className="px-3 sm:px-6 py-2.5 sm:py-4 text-right font-medium text-slate-900 dark:text-white">
+                            {expense.count.toLocaleString()}
+                          </td>
+                          <td className="px-3 sm:px-6 py-2.5 sm:py-4 text-right font-bold text-red-600 dark:text-red-400">
+                            −{formatCurrency(expense.amount)}
+                          </td>
+                          <td className="px-3 sm:px-6 py-2.5 sm:py-4 text-right font-medium text-slate-900 dark:text-white">
+                            {expense.percent}
+                          </td>
+                        </tr>
+                      ))}
+                      <tr className="bg-slate-50 dark:bg-slate-800/30 font-bold">
+                        <td className="px-3 sm:px-6 py-2.5 sm:py-4 text-slate-900 dark:text-white">
+                          {getTrans('Jami')}
+                        </td>
+                        <td className="px-3 sm:px-6 py-2.5 sm:py-4 text-right text-slate-900 dark:text-white">
+                          {totalExpensesCount.toLocaleString()}
+                        </td>
+                        <td className="px-3 sm:px-6 py-2.5 sm:py-4 text-right text-red-600 dark:text-red-400">
+                          −{formatCurrency(totalExpensesAmount)}
                         </td>
                         <td className="px-3 sm:px-6 py-2.5 sm:py-4 text-right text-slate-900 dark:text-white">
                           100%

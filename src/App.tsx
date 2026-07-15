@@ -80,6 +80,9 @@ const CustomerListPage = lazy(() =>
 const SupplierListPage = lazy(() =>
   import('./features/suppliers/SupplierListPage').then((module) => ({ default: module.SupplierListPage }))
 );
+const SupplierDetailPage = lazy(() =>
+  import('./features/suppliers/SupplierDetailPage').then((module) => ({ default: module.SupplierDetailPage }))
+);
 const StoreListPage = lazy(() =>
   import('./features/stores/StoreListPage').then((module) => ({ default: module.StoreListPage }))
 );
@@ -400,6 +403,11 @@ function App() {
           {/* Suppliers */}
           <Route path={`/:lang/suppliers`} element={
             withLayoutPermission(<SupplierListPage />, 'suppliers.view')
+          } />
+
+          {/* Supplier detail (dashboard / kirimlar / to'lovlar / ma'lumotlar / tovarlar) */}
+          <Route path={`/:lang/suppliers/:id`} element={
+            withLayoutPermission(<SupplierDetailPage />, 'suppliers.view')
           } />
 
           {/* Stores */}
