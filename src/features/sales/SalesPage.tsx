@@ -454,7 +454,11 @@ export function SalesPage() {
     // }
     return result;
   }, [allProducts, activeStoreId]);
-  const displayedProducts = searchResults ?? filteredProducts;
+  // Miqdori ko'p mahsulotlar ro'yxat tepasida chiqadi
+  const displayedProducts = useMemo(() => {
+    const source = searchResults ?? filteredProducts;
+    return [...source].sort((a, b) => (b.quantity ?? 0) - (a.quantity ?? 0));
+  }, [searchResults, filteredProducts]);
 
   const loadData = useCallback(async () => {
     try {

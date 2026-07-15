@@ -32,6 +32,8 @@ import {
   Undo2,
   X,
   AlertTriangle,
+  ShieldCheck,
+  CreditCard,
 } from 'lucide-react';
 import { NotificationProvider } from '../../context/NotificationProvider';
 import { NotificationToast } from './NotificationToast';
@@ -45,28 +47,33 @@ interface NavItem {
   href: string;
   icon: React.ElementType;
   access?: 'superuser' | 'store' | 'all';
+  // RBAC: roli bor user uchun shu permission bo'lmasa menyu ko'rinmaydi
+  permission?: string;
 }
 
 interface SubNavItem {
   titleKey: string;
   href: string;
   icon: React.ElementType;
+  permission?: string;
+  // Legacy rejimda (tizim rolisiz userlar) faqat superuser ko'radi
+  superuserOnly?: boolean;
 }
 
 const navItems: NavItem[] = [
-  { titleKey: 'nav.dashboard', href: '/dashboard', icon: LayoutDashboard, access: 'all' },
-  { titleKey: 'nav.sales', href: '/sales', icon: DollarSign, access: 'all' },
-  { titleKey: 'nav.transfers', href: '/transfers', icon: ArrowRightLeft, access: 'all' },
-  { titleKey: 'nav.products', href: '/products', icon: Package, access: 'all' },
+  { titleKey: 'nav.dashboard', href: '/dashboard', icon: LayoutDashboard, access: 'all', permission: 'dashboard.view' },
+  { titleKey: 'nav.sales', href: '/sales', icon: DollarSign, access: 'all', permission: 'sales.view' },
+  { titleKey: 'nav.transfers', href: '/transfers', icon: ArrowRightLeft, access: 'all', permission: 'transfers.view' },
+  { titleKey: 'nav.products', href: '/products', icon: Package, access: 'all', permission: 'products.view' },
   // { titleKey: 'nav.categories', href: '/categories', icon: Tags, access: 'all' },
-  { titleKey: 'nav.stockentry', href: '/stockentry', icon: ArrowDownToLine, access: 'superuser' },
-  { titleKey: 'nav.inventory', href: '/inventory', icon: ClipboardCheck, access: 'all' },
-  { titleKey: 'nav.lowStock', href: '/inventory/low-stock', icon: AlertTriangle, access: 'all' },
-  { titleKey: 'nav.customers', href: '/customers', icon: Users, access: 'all' },
-  { titleKey: 'nav.suppliers', href: '/suppliers', icon: Truck, access: 'superuser' },
-  { titleKey: 'nav.stores', href: '/stores', icon: Store, access: 'superuser' },
-  { titleKey: 'nav.storeInfo', href: '/stores', icon: Store, access: 'store' },
-  { titleKey: 'nav.reports', href: '/reports', icon: BarChart3, access: 'superuser' },
+  { titleKey: 'nav.stockentry', href: '/stockentry', icon: ArrowDownToLine, access: 'superuser', permission: 'stockentry.view' },
+  { titleKey: 'nav.inventory', href: '/inventory', icon: ClipboardCheck, access: 'all', permission: 'inventory.view' },
+  { titleKey: 'nav.lowStock', href: '/inventory/low-stock', icon: AlertTriangle, access: 'all', permission: 'inventory.view' },
+  { titleKey: 'nav.customers', href: '/customers', icon: Users, access: 'all', permission: 'customers.view' },
+  { titleKey: 'nav.suppliers', href: '/suppliers', icon: Truck, access: 'superuser', permission: 'suppliers.view' },
+  { titleKey: 'nav.stores', href: '/stores', icon: Store, access: 'superuser', permission: 'stores.view' },
+  { titleKey: 'nav.storeInfo', href: '/stores', icon: Store, access: 'store', permission: 'stores.view' },
+  { titleKey: 'nav.reports', href: '/reports', icon: BarChart3, access: 'superuser', permission: 'reports.view' },
   { titleKey: 'nav.settings', href: '/settings', icon: Settings, access: 'all' },
 ];
 
@@ -83,20 +90,26 @@ const subNavs: Record<string, SubNavItem[]> = {
   //   // { titleKey: 'transfers.requestTransfer', href: '/transfers/requests', icon: Download },
   // ],
   '/sales': [
-    { titleKey: 'sales.newSale', href: '/sales/new', icon: Plus },
-    { titleKey: 'sales.list', href: '/sales', icon: List },
-    { titleKey: 'nav.saleReturns', href: '/sales-returns', icon: Undo2 }
+    { titleKey: 'sales.newSale', href: '/sales/new', icon: Plus, permission: 'sales.create' },
+    { titleKey: 'sales.list', href: '/sales', icon: List, permission: 'sales.view' },
+    { titleKey: 'nav.saleReturns', href: '/sales-returns', icon: Undo2, permission: 'sales.view' }
   ],
   '/products': [
-    { titleKey: 'products.list', href: '/products', icon: List },
-    { titleKey: 'categories.title', href: '/products/categories', icon: Tags },
-    { titleKey: 'products.ProductLocatiion', href: '/products/location', icon: LocationEdit },
-    { titleKey: 'products.units', href: '/products/units', icon: Ruler },
+    { titleKey: 'products.list', href: '/products', icon: List, permission: 'products.view' },
+    { titleKey: 'categories.title', href: '/products/categories', icon: Tags, permission: 'categories.view' },
+    { titleKey: 'products.ProductLocatiion', href: '/products/location', icon: LocationEdit, permission: 'products.view' },
+    { titleKey: 'products.units', href: '/products/units', icon: Ruler, permission: 'products.view' },
     // { titleKey: 'products.addProduct', href: '/products/new', icon: Plus },
   ],
   '/stores': [
-    { titleKey: 'stores.list', href: '/stores', icon: List },
-    { titleKey: 'stores.manageUsers', href: '/stores/users', icon: Users },
+    { titleKey: 'stores.list', href: '/stores', icon: List, permission: 'stores.view', superuserOnly: true },
+  ],
+  // Sozlamalar submenu: to'lov turlari + foydalanuvchi/rol boshqaruvi
+  '/settings': [
+    { titleKey: 'nav.settings', href: '/settings', icon: Settings },
+    { titleKey: 'nav.paymentTypes', href: '/settings/payments', icon: CreditCard },
+    { titleKey: 'stores.manageUsers', href: '/settings/users', icon: Users, permission: 'users.view', superuserOnly: true },
+    { titleKey: 'nav.roles', href: '/settings/roles', icon: ShieldCheck, permission: 'roles.view', superuserOnly: true },
   ],
 };
 
@@ -126,8 +139,10 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
   const profileRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
   const { theme, toggleTheme } = useThemeStore();
-  const { user, logout } = useAuthStore();
+  const { user, logout, hasPermission } = useAuthStore();
   const isSuperUser = Boolean(user?.is_superuser || user?.role === 'superuser');
+  // RBAC: userga rol biriktirilgan bo'lsa, menyular permission bo'yicha filtrlanadi
+  const hasRbacRole = !isSuperUser && Array.isArray(user?.permissions);
   const { notifications, unreadCount, markAsRead } = useNotifications();
 
   useEffect(() => {
@@ -147,14 +162,18 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
   // Get current path without language prefix
   const currentPath = location.pathname;
 
-  // Filter subNavs based on user role
+  // Filter subNavs based on user role / RBAC permissions
   const filteredSubNavs = Object.entries(subNavs).reduce((acc, [key, items]) => {
-    if (key === '/stores') {
-      if (isSuperUser) {
-        acc[key] = items;
-      }
+    let visible: SubNavItem[];
+    if (hasRbacRole) {
+      // RBAC rejimi: har bir bandni permission bo'yicha filtrlaymiz
+      visible = items.filter((item) => !item.permission || hasPermission(item.permission));
     } else {
-      acc[key] = items;
+      // Legacy rejim: superuserOnly bandlar faqat superuserga ko'rinadi
+      visible = items.filter((item) => !item.superuserOnly || isSuperUser);
+    }
+    if (visible.length > 0) {
+      acc[key] = visible;
     }
     return acc;
   }, {} as Record<string, SubNavItem[]>);
@@ -354,6 +373,12 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
           ) : (
             navItems
               .filter((item) => {
+                if (hasRbacRole) {
+                  // RBAC rejimi: rol biriktirilgan user faqat permission'i bor menyularni ko'radi.
+                  // storeInfo varianti (access==='store') tashlab yuboriladi — dublikat bo'lmasligi uchun.
+                  if (item.access === 'store') return false;
+                  return !item.permission || hasPermission(item.permission);
+                }
                 if (item.href === '/inventory' && user?.role === 's') return false;
                 if (!item.access || item.access === 'all') return true;
                 if (item.access === 'superuser') return isSuperUser;

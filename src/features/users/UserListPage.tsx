@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback, type ChangeEvent, type MouseEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { Plus, Edit, Trash2, Eye } from 'lucide-react';
@@ -11,14 +12,21 @@ import { Label } from '../../components/ui/Label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/Dialog';
 import { userService } from '../../services/userService';
 import { storeService } from '../../services/storeService';
-import type { User, UserFormData, UserRole, Store } from '../../types';
+import { roleService } from '../../services/roleService';
+import type { User, UserFormData, Store, Role } from '../../types';
 import { formatDate } from '../../utils';
 import { handleError } from '../../utils/errorHandler';
+import { useAuthStore } from '../../app/store';
 
 export function UserListPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language || 'uz';
+  const { user: currentUser, hasPermission } = useAuthStore();
+  const isSuper = Boolean(currentUser?.is_superuser || currentUser?.role === 'superuser');
+  const canSeeRoles = isSuper || (Array.isArray(currentUser?.permissions) && hasPermission('roles.view'));
   const [users, setUsers] = useState<User[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
+  const [systemRoles, setSystemRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -34,9 +42,9 @@ export function UserListPage() {
     password: '',
     confirm_password: '',
     email: '',
-    role: 's',
     phone_number: '',
     store_id: '',
+    role_id: null,
   });
   const [saving, setSaving] = useState(false);
   const safeUsers = useMemo(() => (Array.isArray(users) ? users : []), [users]);
@@ -78,10 +86,21 @@ export function UserListPage() {
     }
   }, []);
 
+  const loadSystemRoles = useCallback(async () => {
+    try {
+      setSystemRoles(await roleService.getAll());
+    } catch (error) {
+      const axiosErr = error as { response?: { status?: number } };
+      if (axiosErr.response?.status === 401) return;
+      handleError(error, { showToast: false, logData: 'Failed to load roles' });
+    }
+  }, []);
+
   useEffect(() => {
     void loadUsers();
     void loadStores();
-  }, [loadUsers, loadStores]);
+    void loadSystemRoles();
+  }, [loadUsers, loadStores, loadSystemRoles]);
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -105,9 +124,9 @@ export function UserListPage() {
         password: '',
         confirm_password: '',
         email: user.email || '',
-        role: user.role as UserRole,
         phone_number: user.phone_number,
         store_id: user.store_id || '',
+        role_id: user.role_id ?? null,
       });
     } else {
       setEditingUser(null);
@@ -116,9 +135,9 @@ export function UserListPage() {
         password: '',
         confirm_password: '',
         email: '',
-        role: 's' as UserRole,
         phone_number: '',
         store_id: '',
+        role_id: null,
       });
     }
     setDialogOpen(true);
@@ -154,14 +173,14 @@ export function UserListPage() {
           full_name: formData.full_name,
           email: formData.email,
           phone_number: formData.phone_number,
+          role_id: formData.role_id ?? null,
         };
         await userService.update(String(id), updateData);
       } else {
-        if (!formData.store_id) {
-          toast.error(t('errors.requiredFields', 'Dokonni tanlang'));
-          return;
-        }
-        await userService.create(formData);
+        // store ixtiyoriy: do'konga bog'lanmagan (admin turidagi) user ham yaratish mumkin
+        const payload = { ...formData };
+        if (!payload.store_id) delete payload.store_id;
+        await userService.create(payload);
       }
       setDialogOpen(false);
       await loadUsers();
@@ -177,19 +196,11 @@ export function UserListPage() {
     { key: 'full_name', header: t('users.fullName') },
     { key: 'phone_number', header: t('users.phone') },
     {
-      key: 'role',
-      header: t('users.role'),
-      render: (item: User) => (
-        <span className={`px-2 py-1 rounded-full text-xs ${
-          item.role === 'admin' || item.role === 'superuser' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
-          item.role === 'm' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' :
-          item.role === 's' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
-          item.role === 'store_admin' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-          'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
-        }`}>
-          {item.role === 's' ? t('users.seller') : item.role === 'm' ? t('users.manager') : item.role === 'su' || item.role === 'superuser' ? t('users.superUser') : item.role === 'admin' ? t('users.admin') : item.role === 'store_admin' ? t('users.storeAdmin') : t('users.storeUser')}
-        </span>
-      ),
+      key: 'role_name',
+      header: t('users.systemRole'),
+      render: (item: User) => item.role_name
+        ? <span className="px-2 py-1 rounded-full text-xs bg-primary/10 text-primary">{item.role_name}</span>
+        : <span className="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200">{t('users.noRole')}</span>,
     },
     {
       key: 'store_name',
@@ -232,6 +243,24 @@ export function UserListPage() {
 
   return (
     <div className="space-y-6">
+      {/* Foydalanuvchilar / Rollar bo'lim tab'lari */}
+      <div className="flex items-center gap-1 border-b border-border">
+        <Link
+          to={`/${lang}/settings/users`}
+          className="px-4 py-2 -mb-px border-b-2 border-primary text-primary text-sm font-medium"
+        >
+          {t('users.title')}
+        </Link>
+        {canSeeRoles && (
+          <Link
+            to={`/${lang}/settings/roles`}
+            className="px-4 py-2 -mb-px border-b-2 border-transparent text-muted-foreground hover:text-foreground text-sm font-medium transition-colors"
+          >
+            {t('roles.title')}
+          </Link>
+        )}
+      </div>
+
       <PageHeader
         title={t('users.title')}
         description={t('users.title')}
@@ -257,13 +286,9 @@ export function UserListPage() {
                   </div>
                   <div className="flex flex-col items-end gap-2 shrink-0">
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ${
-                      item.role === 'admin' || item.role === 'superuser' ? 'bg-purple-100 text-purple-800' :
-                      item.role === 'm' ? 'bg-indigo-100 text-indigo-800' :
-                      item.role === 's' ? 'bg-emerald-100 text-emerald-800' :
-                      item.role === 'store_admin' ? 'bg-blue-100 text-blue-800' :
-                      'bg-gray-100 text-gray-800'
+                      item.role_name ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-800'
                     }`}>
-                      {item.role === 's' ? t('users.seller') : item.role === 'm' ? t('users.manager') : item.role === 'su' || item.role === 'superuser' ? t('users.superUser') : item.role === 'admin' ? t('users.admin') : item.role === 'store_admin' ? t('users.storeAdmin') : t('users.storeUser')}
+                      {item.role_name || t('users.noRole')}
                     </span>
                     <div className="flex items-center gap-1.5">
                       <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleViewLogs(item)} title={t('users.logs')}>
@@ -361,6 +386,21 @@ export function UserListPage() {
                 required
               />
             </div>
+            <div className="space-y-2">
+              <Label>{t('users.systemRole')}</Label>
+              <select
+                className="w-full px-3 py-2 border rounded-md bg-background"
+                value={formData.role_id ?? ''}
+                onChange={(e: ChangeEvent<HTMLSelectElement>) =>
+                  setFormData({ ...formData, role_id: e.target.value ? Number(e.target.value) : null })
+                }
+              >
+                <option value="">{t('users.noRole')}</option>
+                {systemRoles.map((role) => (
+                  <option key={role.id} value={role.id}>{role.name}</option>
+                ))}
+              </select>
+            </div>
             {!editingUser && (
               <>
                 <div className="space-y-2">
@@ -375,18 +415,6 @@ export function UserListPage() {
                     {safeStores.map((store) => (
                       <option key={store.id} value={store.id}>{store.name}</option>
                     ))}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('users.role')}</Label>
-                  <select
-                    className="w-full px-3 py-2 border rounded-md bg-background"
-                    value={formData.role || 's'}
-                    onChange={(e: ChangeEvent<HTMLSelectElement>) => setFormData({ ...formData, role: e.target.value as UserRole })}
-                    required
-                  >
-                    <option value="s">{t('users.seller')}</option>
-                    <option value="m">{t('users.manager')}</option>
                   </select>
                 </div>
                 <div className="space-y-2">

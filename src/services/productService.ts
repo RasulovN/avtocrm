@@ -386,6 +386,8 @@ const mapProductPayload = (
   }
   if (mode === 'update' && data.is_active !== undefined) {
     payload.is_active = data.is_active;
+    // Backend arxivlashni status maydoni orqali qiladi (a=faol, i=arxiv)
+    payload.status = data.is_active ? 'a' : 'i';
   }
   return payload;
 };

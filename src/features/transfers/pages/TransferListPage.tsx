@@ -31,6 +31,7 @@ export function TransferListPage() {
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const limit = 20;
@@ -43,9 +44,18 @@ export function TransferListPage() {
     return map;
   }, [products]);
 
+  // Qidiruv server tomonda bajariladi: yozish tugagach 400ms kutib, 1-sahifadan qayta yuklaymiz.
   useEffect(() => {
-    loadData(page);
-  }, [page]);
+    const timer = setTimeout(() => {
+      setPage(1);
+      setDebouncedSearch(searchQuery.trim());
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    loadData(page, debouncedSearch);
+  }, [page, debouncedSearch]);
 
   useEffect(() => {
     loadStores();
@@ -63,10 +73,10 @@ export function TransferListPage() {
     }
   };
 
-  const loadData = async (pageToLoad = page) => {
+  const loadData = async (pageToLoad = page, search = debouncedSearch) => {
     try {
       setLoading(true);
-      const res = await transferService.getAll({ page: pageToLoad, limit });
+      const res = await transferService.getAll({ page: pageToLoad, limit, search: search || undefined });
       setTransfers(res.data || []);
       setTotal(res.total || 0);
     } catch (error) {
@@ -245,23 +255,6 @@ export function TransferListPage() {
     return resolveStoreName(raw ? String(raw) : undefined);
   };
 
-  const filteredTransfers = useMemo(() => {
-    if (!searchQuery.trim()) return transfers;
-    const query = searchQuery.toLowerCase();
-    return transfers.filter((item) => {
-      const fromLabel = fromStoreLabel(item).toLowerCase();
-      const toLabel = toStoreLabel(item).toLowerCase();
-      const productLabel = resolveProductName(item).toLowerCase();
-      const statusLabel = getStatusLabel(item.status).toLowerCase();
-      return (
-        fromLabel.includes(query) ||
-        toLabel.includes(query) ||
-        productLabel.includes(query) ||
-        statusLabel.includes(query)
-      );
-    });
-  }, [searchQuery, transfers, storeNameById]);
-
   const columns: Column<Transfer>[] = [
     {
       key: 'id',
@@ -381,7 +374,7 @@ export function TransferListPage() {
         <div className="relative w-full flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder={t('common.search')}
+            placeholder={t('transfers.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -402,12 +395,12 @@ export function TransferListPage() {
               <div className="rounded-lg border bg-card px-4 py-10 text-center text-sm text-muted-foreground">
                 {t('common.loading')}
               </div>
-            ) : filteredTransfers.length === 0 ? (
+            ) : transfers.length === 0 ? (
               <div className="rounded-lg border bg-card px-4 py-10 text-center text-sm text-muted-foreground">
                 {t('transfers.noData')}
               </div>
             ) : (
-              filteredTransfers.map((item, index) => (
+              transfers.map((item, index) => (
                 <div key={item.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -475,7 +468,7 @@ export function TransferListPage() {
             )}
           </div>
 
-          {!loading && filteredTransfers.length > 0 && Math.ceil(total / limit) > 1 && (
+          {!loading && transfers.length > 0 && Math.ceil(total / limit) > 1 && (
             <div className="flex items-center justify-between mt-4 p-4 bg-muted/20 border border-border/60 rounded-xl md:hidden">
               <span className="text-xs text-muted-foreground">
                 {(page - 1) * limit + 1}-{Math.min(page * limit, total)} / {total}
@@ -506,7 +499,7 @@ export function TransferListPage() {
 
           <div className="hidden md:block">
             <DataTable
-              data={filteredTransfers}
+              data={transfers}
               columns={columns}
               loading={loading}
               emptyMessage={t('transfers.noData')}

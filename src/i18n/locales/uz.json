@@ -70,6 +70,8 @@
     "lowStock": "Kam Zaxira",
     "saleReturns": "Qaytarishlar",
     "storeInfo": "Do‘kon ma’lumotlari",
+    "roles": "Rollar",
+    "paymentTypes": "To‘lov turlari",
     "logout": "Chiqish"
   },
   "auth": {
@@ -459,6 +461,7 @@
   },
   "transfers": {
     "title": "O‘tkazmalar",
+    "searchPlaceholder": "ID yoki mahsulot nomi bo‘yicha qidirish...",
     "createTransfer": "O‘tkazma yaratish",
     "fromStore": "Jo‘natuvchi do‘kon",
     "toStore": "Qabul qiluvchi do‘kon",
@@ -742,7 +745,32 @@
     "userAdded": "Foydalanuvchi muvaffaqiyatli qo‘shildi",
     "userUpdated": "Foydalanuvchi muvaffaqiyatli yangilandi",
     "userDeleted": "Foydalanuvchi muvaffaqiyatli o‘chirildi",
-    "optional": "(ixtiyoriy)"
+    "optional": "(ixtiyoriy)",
+    "systemRole": "Tizim roli",
+    "noRole": "Rolsiz (cheklanmagan)"
+  },
+  "roles": {
+    "title": "Rollar",
+    "subtitle": "Rollar va ularning tizimdagi huquqlarini boshqarish",
+    "addRole": "Rol qo‘shish",
+    "editRole": "Rolni tahrirlash",
+    "name": "Rol nomi",
+    "namePlaceholder": "Masalan: Kassir",
+    "description": "Tavsif",
+    "descriptionPlaceholder": "Rol nima uchun ishlatilishi",
+    "permissions": "Huquqlar",
+    "permissionsHint": "Modul nomini belgilash — shu modulning barcha amallarini tanlaydi; yuqoridagi katak — hammasini birdan",
+    "selectAll": "Hammasini tanlash",
+    "module": "Bo‘lim",
+    "permissionCount": "ta huquq",
+    "usersCount": "Foydalanuvchilar",
+    "selectedCount": "Tanlandi: {{count}} ta huquq",
+    "nameRequired": "Rol nomini kiriting",
+    "roleAdded": "Rol muvaffaqiyatli qo‘shildi",
+    "roleUpdated": "Rol muvaffaqiyatli yangilandi",
+    "roleDeleted": "Rol o‘chirildi",
+    "deleteConfirm": "Bu rolni o‘chirishni tasdiqlaysizmi? Rol biriktirilgan foydalanuvchilar bo‘lsa, avval ularni boshqa rolga o‘tkazish kerak.",
+    "noAccess": "Bu sahifaga kirish uchun sizda ruxsat yo‘q"
   },
   "theme": {
     "lightMode": "Yorug‘ rejim",

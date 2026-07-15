@@ -35,6 +35,7 @@ interface AuthStore {
   hasRole: (roles: string[]) => boolean;
   isSuperUser: () => boolean;
   isStoreScopedUser: () => boolean;
+  hasPermission: (code: string) => boolean;
 }
 
 const USER_CACHE_KEY = 'crm_user_cache';
@@ -132,6 +133,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   isStoreScopedUser: () => {
     const user = get().user;
     return user != null && !(user.is_superuser || user.role === 'superuser');
+  },
+
+  // RBAC: permission kodini tekshirish ("products.create" kabi).
+  // permissions null/undefined — cheklanmagan (superuser yoki rolsiz user).
+  hasPermission: (code: string) => {
+    const user = get().user;
+    if (!user) return false;
+    if (user.is_superuser || user.role === 'superuser') return true;
+    if (user.permissions == null) return true;
+    return user.permissions.includes(code);
   },
 }));
 

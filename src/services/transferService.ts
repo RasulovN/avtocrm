@@ -63,10 +63,11 @@ const extractTransferList = (payload: unknown): Transfer[] => {
 };
 
 export const transferService = {
-  getAll: async (params?: { page?: number; limit?: number }): Promise<PaginatedResponse<Transfer>> => {
+  getAll: async (params?: { page?: number; limit?: number; search?: string }): Promise<PaginatedResponse<Transfer>> => {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.append('page', params.page.toString());
     if (params?.limit) searchParams.append('limit', params.limit.toString());
+    if (params?.search) searchParams.append('search', params.search);
 
     const response = await apiClient.get(`/transfer/?${searchParams.toString()}`);
     const payload = response.data as unknown;

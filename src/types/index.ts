@@ -33,6 +33,11 @@ export interface User {
   created_at?: string;
   updated_at?: string;
   history?: UserLog[];
+  // RBAC: tizim roli va amaldagi permission kodlari.
+  // permissions === null/undefined — cheklanmagan (superuser yoki rolsiz user)
+  role_id?: number | null;
+  role_name?: string | null;
+  permissions?: string[] | null;
 }
 
 export interface UserFormData {
@@ -40,9 +45,35 @@ export interface UserFormData {
   email: string;
   password?: string;
   confirm_password?: string;
-  role: UserRole;
+  // Legacy do'kon roli (m/s) — endi formada so'ralmaydi, backend default 's' qo'yadi
+  role?: UserRole;
   phone_number: string;
   store_id?: string;
+  // RBAC tizim roli
+  role_id?: number | null;
+}
+
+// RBAC: rol va permission katalogi
+export interface Role {
+  id: number;
+  name: string;
+  description: string;
+  permissions: string[];
+  users_count?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface PermissionCatalogAction {
+  action: string;
+  code: string;
+  label: string;
+}
+
+export interface PermissionCatalogModule {
+  module: string;
+  label: string;
+  actions: PermissionCatalogAction[];
 }
 
 export interface AuthState {
@@ -401,6 +432,7 @@ export interface SaleItem {
   id: number;
   product: number;
   product_name?: string;
+  sku?: string | null;
   quantity: number;
   unit_price: string;
   total_price: string;

@@ -292,6 +292,7 @@ export function SalesDetailPage() {
                       </div>
                       <div>
                         <p className="font-medium">{item.product_name || `${t('products.title')} #${item.product}`}</p>
+                        <p className="text-xs text-muted-foreground">SKU: {item.sku || '-'}</p>
                         <p className="text-sm text-muted-foreground">{item.quantity} x {formatCurrency(parseFloat(item.unit_price))}</p>
                       </div>
                     </div>
@@ -643,7 +644,7 @@ export function SalesDetailPage() {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between gap-4">
                         <span className="text-muted-foreground">SKU</span>
-                        <span className="font-medium">{selectedProduct?.sku || '-'}</span>
+                        <span className="font-medium">{selectedProduct?.sku || selectedSaleItem?.sku || '-'}</span>
                       </div>
                       <div className="flex justify-between gap-4">
                         <span className="text-muted-foreground">Barcode</span>

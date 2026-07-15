@@ -40,8 +40,14 @@ export function ProductListPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const lang = i18n.language || 'uz';
-  const { user } = useAuthStore();
+  const { user, hasPermission } = useAuthStore();
   const isAdmin = Boolean(user?.is_superuser || user?.role === 'superuser');
+  // RBAC: rol biriktirilgan user amallarni permission bo'yicha ko'radi;
+  // rolsiz userlar uchun eski qoida (faqat admin) saqlanadi
+  const hasRbacRole = !isAdmin && Array.isArray(user?.permissions);
+  const canCreateProduct = hasRbacRole ? hasPermission('products.create') : isAdmin;
+  const canEditProduct = hasRbacRole ? hasPermission('products.edit') : isAdmin;
+  const canArchiveProduct = hasRbacRole ? hasPermission('products.archive') : isAdmin;
   const userStoreId = user?.store_id;
   const { categories, refreshCategories } = useCategories();
   const [products, setProducts] = useState<Product[]>([]);
@@ -396,7 +402,7 @@ export function ProductListPage() {
       <PageHeader
         title={t('products.title')}
         description={t('products.productList')}
-        actions={isAdmin ? (
+        actions={canCreateProduct ? (
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={handleDownloadTemplate}>
               <Download className="h-4 w-4 mr-2" />
@@ -498,7 +504,7 @@ export function ProductListPage() {
               <Printer className="mr-2 h-4 w-4" />
               {t('products.printBarcode')}
             </Button>
-            {isAdmin && (
+            {canArchiveProduct && (
               <Button
                 variant="destructive"
                 size="sm"
@@ -535,7 +541,7 @@ export function ProductListPage() {
             return (
               <div
                 key={item.id}
-                onClick={() => isAdmin && navigate(`/${lang}/products/${item.id}/edit`)}
+                onClick={() => canEditProduct && navigate(`/${lang}/products/${item.id}/edit`)}
                 className={cn(
                   "rounded-2xl bg-card p-4 shadow-sm space-y-4 active:scale-[0.99] transition-transform cursor-pointer relative",
                   !isActive && "opacity-60",
@@ -846,7 +852,7 @@ export function ProductListPage() {
                     {/* Product Name + barcode underneath */}
                     <td
                       className="px-3 py-2 cursor-pointer"
-                      onClick={() => isAdmin && navigate(`/${lang}/products/${item.id}/edit`)}
+                      onClick={() => canEditProduct && navigate(`/${lang}/products/${item.id}/edit`)}
                     >
                       <div className="min-w-0">
                         <p className="font-semibold text-foreground truncate max-w-[220px] leading-tight">

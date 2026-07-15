@@ -84,6 +84,7 @@ const StoreListPage = lazy(() =>
   import('./features/stores/StoreListPage').then((module) => ({ default: module.StoreListPage }))
 );
 const UserListPage = lazy(() => import('./features/users/UserListPage').then((module) => ({ default: module.UserListPage })));
+const RolesPage = lazy(() => import('./features/roles/RolesPage').then((module) => ({ default: module.RolesPage })));
 const SettingsPage = lazy(() =>
   import('./features/settings/SettingsPage').then((module) => ({ default: module.SettingsPage }))
 );
@@ -204,7 +205,9 @@ function App() {
     if (!isAuthenticated()) {
       return <Navigate to="/login" replace />;
     }
-    if (user?.role === 's') {
+    // Legacy sotuvchi bloki faqat tizim roli YO'Q userlar uchun:
+    // tizim roli borlarni permission tekshiruvi boshqaradi
+    if (user?.role === 's' && !Array.isArray(user?.permissions)) {
       return <Navigate to={`/${currentLang}/dashboard`} replace />;
     }
     return element;
@@ -212,6 +215,36 @@ function App() {
 
   const withLayoutNoSeller = (page: React.ReactNode) =>
     requireNoSeller(<MainLayout key={currentLang}>{page}</MainLayout>);
+
+  // RBAC: rol biriktirilgan user faqat permission'i bor sahifalarga kira oladi.
+  // Superuser va rolsiz (legacy) userlar cheklanmaydi.
+  const userHasPermission = (code: string) => {
+    if (!user) return false;
+    if (isSuperUser) return true;
+    if (user.permissions == null) return true;
+    return user.permissions.includes(code);
+  };
+
+  const requirePermission = (element: React.ReactNode, code: string) => {
+    if (!isAuthenticated()) {
+      return <Navigate to="/login" replace />;
+    }
+    if (!userHasPermission(code)) {
+      return <Navigate to={`/${currentLang}/dashboard`} replace />;
+    }
+    return element;
+  };
+
+  const withLayoutPermission = (page: React.ReactNode, code: string) =>
+    requirePermission(<MainLayout key={currentLang}>{page}</MainLayout>, code);
+
+  // users/roles sahifalari uchun qat'iy tekshiruv: rolsiz oddiy user ham kira olmaydi
+  // (legacy'da bu sahifalar faqat superuser uchun edi)
+  const rbacAllows = (code: string) => {
+    if (isSuperUser) return true;
+    if (Array.isArray(user?.permissions)) return user.permissions.includes(code);
+    return false;
+  };
 
   const routeFallback = (
     <main id="main-content" className="flex min-h-screen items-center justify-center" aria-busy="true">
@@ -250,142 +283,158 @@ function App() {
           
           {/* Products */}
           <Route path={`/:lang/products`} element={
-            withLayout(<ProductListPage />)
+            withLayoutPermission(<ProductListPage />, 'products.view')
           } />
-          
+
           <Route path={`/:lang/products/new`} element={
-            withLayout(<ProductFormPage />)
+            withLayoutPermission(<ProductFormPage />, 'products.create')
           } />
-          
+
           <Route path={`/:lang/products/:id/edit`} element={
-            withLayout(<ProductFormPage />)
+            withLayoutPermission(<ProductFormPage />, 'products.edit')
           } />
-          
+
           <Route path={`/:lang/products/:id/barcode`} element={
-            withLayout(<ProductBarcodePage />)
+            withLayoutPermission(<ProductBarcodePage />, 'products.view')
           } />
           <Route path={`/:lang/products/units`} element={
-            withLayout(<ProductUnitPage />)
+            withLayoutPermission(<ProductUnitPage />, 'products.view')
           } />
-          
+
           {/* Categories */}
           <Route path={`/:lang/products/categories`} element={
-            withLayout(<CategoryListPage />)
+            withLayoutPermission(<CategoryListPage />, 'categories.view')
           } />
           <Route path={`/:lang/products/location`} element={
-            withLayout(<ProductLocationPage />)
+            withLayoutPermission(<ProductLocationPage />, 'products.view')
           } />
-          
+
           {/* Stock entry (Kirim) - List */}
           <Route path={`/:lang/stockentry`} element={
-            withLayout(<StockEntryListPage />)
+            withLayoutPermission(<StockEntryListPage />, 'stockentry.view')
           } />
           
 
           {/* Inventorizatsiya */}
           <Route path={`/:lang/inventory`} element={
-            withLayoutNoSeller(<InventorySessionsListPage />)
+            requirePermission(withLayoutNoSeller(<InventorySessionsListPage />), 'inventory.view')
           } />
           <Route path={`/:lang/inventory/new`} element={
-            withLayoutNoSeller(<InventoryPage />)
+            requirePermission(withLayoutNoSeller(<InventoryPage />), 'inventory.create')
           } />
 
 
           <Route path={`/:lang/inventory/kirimlar`} element={
-            withLayoutNoSeller(<StockEntryListPage />)
+            requirePermission(withLayoutNoSeller(<StockEntryListPage />), 'stockentry.view')
           } />
 
           <Route path={`/:lang/inventory/kamomat`} element={
-            withLayoutNoSeller(<InventoryShortagesPage />)
+            requirePermission(withLayoutNoSeller(<InventoryShortagesPage />), 'inventory.view')
           } />
 
           {/* Low Stock — Kam Zaxira */}
           <Route path={`/:lang/inventory/low-stock`} element={
-            withLayoutNoSeller(<LowStockPage />)
+            requirePermission(withLayoutNoSeller(<LowStockPage />), 'inventory.view')
           } />
 
           {/* Inventory Sessions - List */}
           <Route path={`/:lang/inventory-sessions`} element={
-            withLayoutNoSeller(<InventorySessionsListPage />)
+            requirePermission(withLayoutNoSeller(<InventorySessionsListPage />), 'inventory.view')
           } />
-          
+
           {/* Inventory Session - Detail */}
           <Route path={`/:lang/inventory-session/:id`} element={
-            withLayoutNoSeller(<InventoryDetailPage />)
+            requirePermission(withLayoutNoSeller(<InventoryDetailPage />), 'inventory.view')
           } />
-          
+
           {/* Transfers - List */}
           <Route path={`/:lang/transfers`} element={
-            withLayout(<TransferListPage />)
+            withLayoutPermission(<TransferListPage />, 'transfers.view')
           } />
-          
+
           {/* Transfers - Create */}
           <Route path={`/:lang/transfers/new`} element={
-            withLayout(<TransferCreatePage />)
+            withLayoutPermission(<TransferCreatePage />, 'transfers.create')
           } />
           {/* Transfers - Request */}
           <Route path={`/:lang/transfers/requests`} element={
-            withLayout(<TransferRequestsPage />)
+            withLayoutPermission(<TransferRequestsPage />, 'transfers.view')
           } />
-          
+
           {/* Transfer Requests */}
           <Route path={`/:lang/transfer-requests`} element={
-            withLayout(<TransferRequestsPage />)
+            withLayoutPermission(<TransferRequestsPage />, 'transfers.view')
           } />
-          
+
           {/* Sales - Create (POS) */}
           <Route path={`/:lang/sales/new`} element={
-            withLayout(<SalesPage />)
+            withLayoutPermission(<SalesPage />, 'sales.create')
           } />
           {/* Sales - List */}
           <Route path={`/:lang/sales`} element={
-            withLayout(<SalesListPage />)
+            withLayoutPermission(<SalesListPage />, 'sales.view')
           } />
-          
+
           {/* Sales - Detail */}
           <Route path={`/:lang/sales/:id`} element={
-            withLayout(<SalesDetailPage />)
+            withLayoutPermission(<SalesDetailPage />, 'sales.view')
           } />
 
 
           {/* Sale Returns - List */}
           <Route path={`/:lang/sales-returns`} element={
-            withLayout(<SaleReturnListPage />)
+            withLayoutPermission(<SaleReturnListPage />, 'sales.view')
           } />
 
           {/* Sale Returns - Create */}
           <Route path={`/:lang/sales-returns/new`} element={
-            withLayout(<SaleReturnCreatePage />)
+            withLayoutPermission(<SaleReturnCreatePage />, 'sales.create')
           } />
 
           {/* Customers */}
           <Route path={`/:lang/customers`} element={
-            withLayout(<CustomerListPage />)
+            withLayoutPermission(<CustomerListPage />, 'customers.view')
           } />
-          
+
           {/* Suppliers */}
           <Route path={`/:lang/suppliers`} element={
-            withLayout(<SupplierListPage />)
+            withLayoutPermission(<SupplierListPage />, 'suppliers.view')
           } />
-          
+
           {/* Stores */}
           <Route path={`/:lang/stores`} element={
-            withLayout(<StoreListPage />)
+            withLayoutPermission(<StoreListPage />, 'stores.view')
           } />
-          
-          {/* Users - only for superuser */}
+
+          {/* Users - superuser yoki users.view permission'li rol */}
           <Route path={`/:lang/stores/users`} element={
-            isSuperUser ? withLayout(<UserListPage />) : <Navigate to={`/${currentLang}/stores`} replace />
+            rbacAllows('users.view') ? withLayout(<UserListPage />) : <Navigate to={`/${currentLang}/stores`} replace />
           } />
-          
+
+          {/* Roles (RBAC) - superuser yoki roles.view permission'li rol */}
+          <Route path={`/:lang/stores/roles`} element={
+            rbacAllows('roles.view') ? withLayout(<RolesPage />) : <Navigate to={`/${currentLang}/stores`} replace />
+          } />
+
           {/* Reports */}
           <Route path={`/:lang/reports`} element={
-            withLayout(<ReportsPage />)
+            withLayoutPermission(<ReportsPage />, 'reports.view')
           } />
           
           {/* Settings */}
           <Route path={`/:lang/settings`} element={
             withLayout(<SettingsPage />)
+          } />
+
+          {/* Settings submenu: to'lov turlari, foydalanuvchilar, rollar */}
+          <Route path={`/:lang/settings/payments`} element={
+            withLayout(<BankCardsPage />)
+          } />
+          <Route path={`/:lang/settings/users`} element={
+            rbacAllows('users.view') ? withLayout(<UserListPage />) : <Navigate to={`/${currentLang}/settings`} replace />
+          } />
+          <Route path={`/:lang/settings/roles`} element={
+            rbacAllows('roles.view') ? withLayout(<RolesPage />) : <Navigate to={`/${currentLang}/settings`} replace />
           } />
 
           {/* Bank Cards */}
