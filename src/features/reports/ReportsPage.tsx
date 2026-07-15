@@ -68,7 +68,7 @@ const TRANSLATIONS: Record<string, { uz: string; cyrl: string }> = {
   'Naqd': { uz: 'Naqd', cyrl: 'Нақд' },
   'Karta': { uz: 'Karta', cyrl: 'Карта' },
   'Nasiya': { uz: 'Nasiya', cyrl: 'Насия' },
-  'Aralash': { uz: 'Aralash', cyrl: 'Аралаш' },
+  'Aralash': { uz: 'Naqd + karta', cyrl: 'Нақд + карта' },
   'Kartalar kesimi': { uz: 'Kartalar kesimi', cyrl: 'Карталар кесими' },
   "Noma'lum karta": { uz: "Noma'lum karta", cyrl: 'Номаълум карта' },
   'Tozalash': { uz: 'Tozalash', cyrl: 'Тозалаш' }

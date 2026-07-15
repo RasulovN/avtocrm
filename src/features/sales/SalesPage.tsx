@@ -162,22 +162,17 @@ export function SalesPage() {
   const [bankCards, setBankCards] = useState<BankCard[]>([]);
   const [selectedBankCardId, setSelectedBankCardId] = useState<string>('');
   const [cardType, setCardType] = useState('Uzcard');
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'mixed'>('cash');
   const [discount, setDiscount] = useState(0);
   const [discountType, setDiscountType] = useState<'p' | 'f'>('f');
   const [customerMode, setCustomerMode] = useState<'customer' | 'guest'>('guest');
   const [showReceipt, setShowReceipt] = useState(false);
-  type PaymentMode = 'cash' | 'card' | 'mixed' | null;
+  // Faqat naqd va karta rejimlari bor; ikkalasi birga kiritilsa to'lov
+  // backendga alohida cash+card bo'lib ketadi (aralash tur yuborilmaydi)
+  type PaymentMode = 'cash' | 'card' | null;
   const [activePayment, setActivePayment] = useState<PaymentMode>('cash');
   const [showScanner, setShowScanner] = useState(false);
   const [customers, setCustomers] = useState<{ id: number; full_name: string; phone_number: string }[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
-
-  useEffect(() => {
-    if (cashAmount > 0 && cardAmount > 0) setPaymentMethod('mixed');
-    else if (cardAmount > 0) setPaymentMethod('card');
-    else setPaymentMethod('cash');
-  }, [cashAmount, cardAmount]);
 
   useEffect(() => {
     if (selectedCustomerId) {
@@ -406,6 +401,11 @@ export function SalesPage() {
   const submitAmount = useMemo(() => (isDebtSale ? debt : totalWithDiscount), [debt, isDebtSale, totalWithDiscount]);
   // Kiritilgan to'lov jami summadan oshsa, sotuvni yakunlash bloklanadi
   const isOverpaid = totalPaid > roundedTotal;
+  // Tugma holati: rejim tanlangan yoki shu turdagi summa kiritilgan bo'lsa faol.
+  // Ikkalasi birga faol bo'lsa — bo'lingan (naqd + karta) to'lov
+  const cashSelected = activePayment === 'cash' || cashAmount > 0;
+  const cardSelected = activePayment === 'card' || cardAmount > 0;
+  const isSplitPayment = cashAmount > 0 && cardAmount > 0;
 
   useEffect(() => {
     if (isDebtSale && customerMode === 'guest') {
@@ -668,18 +668,6 @@ export function SalesPage() {
     } else {
       if (activePayment === 'cash') setCashAmount(0);
       setActivePayment('card');
-    }
-  };
-
-  const handleQuickMixed = () => {
-    if (activePayment === 'mixed') {
-      setActivePayment(null);
-      setCashAmount(0);
-      setCardAmount(0);
-    } else {
-      if (activePayment === 'cash') setCashAmount(0);
-      if (activePayment === 'card') setCardAmount(0);
-      setActivePayment('mixed');
     }
   };
 
@@ -1014,11 +1002,9 @@ export function SalesPage() {
                             <div className="font-medium dark:text-white text-sm truncate">
                               {product.name || product.sku || t('sales.unknownProduct')}
                             </div>
-                            {!isNotAvailable && (
-                              <div className="mt-1 text-[10px] text-muted-foreground">
-                                SKU: {product.sku || product.barcode || '-'}
-                              </div>
-                            )}
+                            <div className="mt-1 text-[10px] text-muted-foreground">
+                              SKU: {product.sku || '-'}
+                            </div>
                           </div>
                           <div className="flex items-center gap-2">
                             <span
@@ -1333,11 +1319,12 @@ export function SalesPage() {
                 </div>
                 <div className="rounded-xl border border-dashed border-gray-300/80 bg-gray-50/80 p-3 dark:border-gray-700 dark:bg-gray-900/60 space-y-3">
                   <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground dark:text-gray-400">{t('sales.quickPayment')}</Label>
-                  <div className="grid grid-cols-3 gap-1.5">
+                  <div className="grid grid-cols-2 gap-1.5">
                     <Button
                       type="button"
-                      variant={paymentMethod === 'cash' ? 'default' : 'outline'}
-                      className={`h-12 text-xs flex-col gap-0.5 ${paymentMethod === 'cash'
+                      variant={cashSelected ? 'default' : 'outline'}
+                      title={t('sales.quickCashHint', "Qolgan summani naqd bilan to'lash")}
+                      className={`h-12 text-xs flex-col gap-0.5 ${cashSelected
                         ? 'bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-600 dark:hover:bg-emerald-700'
                         : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'
                         }`}
@@ -1346,7 +1333,7 @@ export function SalesPage() {
                       <span className="flex items-center gap-1.5">
                         <Banknote className="h-4 w-4" /> {t('sales.cash')}
                       </span>
-                      {paymentMethod === 'cash' && (
+                      {cashAmount > 0 && (
                         <span className="text-[10px] font-normal opacity-90 tabular-nums">
                           {formatCurrency(cashAmount)}
                         </span>
@@ -1354,8 +1341,9 @@ export function SalesPage() {
                     </Button>
                     <Button
                       type="button"
-                      variant={paymentMethod === 'card' ? 'default' : 'outline'}
-                      className={`h-12 text-xs flex-col gap-0.5 ${paymentMethod === 'card'
+                      variant={cardSelected ? 'default' : 'outline'}
+                      title={t('sales.quickCardHint', "Qolgan summani karta bilan to'lash")}
+                      className={`h-12 text-xs flex-col gap-0.5 ${cardSelected
                         ? 'bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700'
                         : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'
                         }`}
@@ -1364,31 +1352,18 @@ export function SalesPage() {
                       <span className="flex items-center gap-1.5">
                         <CreditCard className="h-4 w-4" /> {t('sales.card')}
                       </span>
-                      {activePayment === 'card' && (
+                      {cardAmount > 0 && (
                         <span className="text-[10px] font-normal opacity-90 tabular-nums">
                           {formatCurrency(cardAmount)}
                         </span>
                       )}
                     </Button>
-                    <Button
-                      type="button"
-                      variant={paymentMethod === 'mixed' || activePayment === 'mixed' ? 'default' : 'outline'}
-                      className={`h-12 text-xs flex-col gap-0.5 ${paymentMethod === 'mixed' || activePayment === 'mixed'
-                        ? 'bg-violet-600 hover:bg-violet-700 text-white dark:bg-violet-600 dark:hover:bg-violet-700'
-                        : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'
-                        }`}
-                      onClick={handleQuickMixed}
-                    >
-                      <span className="flex items-center gap-1.5">
-                        <ArrowLeftRight className="h-4 w-4" /> Aralash
-                      </span>
-                      {(paymentMethod === 'mixed' || activePayment === 'mixed') && (
-                        <span className="text-[10px] font-normal opacity-90 tabular-nums">
-                          {formatCurrency(cashAmount + cardAmount)}
-                        </span>
-                      )}
-                    </Button>
                   </div>
+                  {isSplitPayment && (
+                    <p className="text-[11px] leading-snug text-muted-foreground dark:text-gray-400">
+                      {t('sales.splitPaymentInfo', "To'lov naqd va karta bo'lib qabul qilinadi")}
+                    </p>
+                  )}
                   <div className="grid gap-2 md:grid-cols-2">
                     <div>
                       <Label className="text-xs dark:text-gray-300">{t('sales.cash')}</Label>
@@ -1399,8 +1374,14 @@ export function SalesPage() {
                         value={formatAmountInput(cashAmount)}
                         disabled={isOverpaid && cashAmount === 0}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                          if (activePayment === 'cash') setActivePayment(null);
                           const val = parseAmountInput(e.target.value);
+                          if (activePayment === 'card') {
+                            // Karta avto rejimda: naqd kiritilsa, karta qoldiqqa moslashadi
+                            if (val > roundedTotal) return;
+                            setCashAmount(val);
+                            return;
+                          }
+                          if (activePayment === 'cash') setActivePayment(null);
                           if (cardAmount + val > roundedTotal) return;
                           setCashAmount(val);
                         }}
@@ -1418,8 +1399,14 @@ export function SalesPage() {
                         value={formatAmountInput(cardAmount)}
                         disabled={isOverpaid && cardAmount === 0}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                          if (activePayment === 'card') setActivePayment(null);
                           const val = parseAmountInput(e.target.value);
+                          if (activePayment === 'cash') {
+                            // Naqd avto rejimda: karta kiritilsa, naqd qoldiqqa moslashadi
+                            if (val > roundedTotal) return;
+                            setCardAmount(val);
+                            return;
+                          }
+                          if (activePayment === 'card') setActivePayment(null);
                           if (cashAmount + val > roundedTotal) return;
                           setCardAmount(val);
                         }}
@@ -1430,7 +1417,7 @@ export function SalesPage() {
                     </div>
                   </div>
                 </div>
-                {(cardAmount > 0 || paymentMethod === 'card' || paymentMethod === 'mixed' || activePayment === 'mixed') && (
+                {cardSelected && (
                   <div className="rounded-xl border border-dashed border-gray-300/80 bg-gray-50/80 p-3 dark:border-gray-700 dark:bg-gray-900/60 space-y-2">
                     <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground dark:text-gray-400">Karta turi</Label>
                     {bankCards.length === 0 ? (

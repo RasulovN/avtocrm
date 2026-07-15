@@ -566,13 +566,16 @@
     "cardRequired": "Karta to‘lovi uchun bank kartasini tanlang",
     "noBankCards": "Faol bank kartasi yo‘q — sozlamalardan qo‘shing",
     "paymentHistory": "To‘lovlar tarixi",
-    "refund": "Qaytarim"
+    "refund": "Qaytarim",
+    "quickCashHint": "Qolgan summani naqd bilan to‘lash",
+    "quickCardHint": "Qolgan summani karta bilan to‘lash",
+    "splitPaymentInfo": "To‘lov naqd va karta bo‘lib qabul qilinadi"
   },
   "payment": {
     "cash": "Naqd",
     "card": "Karta",
     "debt": "Nasiya",
-    "mixed": "Aralash"
+    "mixed": "Naqd + karta"
   },
   "saleReturns": {
     "title": "Qaytarishlar",
