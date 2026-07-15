@@ -76,6 +76,23 @@ export interface PermissionCatalogModule {
   actions: PermissionCatalogAction[];
 }
 
+// Amallar jurnali (audit log)
+export interface AuditLogEntry {
+  id: number;
+  user: number | null;
+  user_display: string;
+  module: string;
+  action: string;
+  method: string;
+  path: string;
+  object_id: string;
+  status_code: number | null;
+  details: Record<string, unknown> | null;
+  ip_address: string;
+  user_agent: string;
+  created_at: string;
+}
+
 export interface AuthState {
   user: User | null;
   token: string | null;

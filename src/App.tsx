@@ -85,6 +85,7 @@ const StoreListPage = lazy(() =>
 );
 const UserListPage = lazy(() => import('./features/users/UserListPage').then((module) => ({ default: module.UserListPage })));
 const RolesPage = lazy(() => import('./features/roles/RolesPage').then((module) => ({ default: module.RolesPage })));
+const AuditLogPage = lazy(() => import('./features/audit/AuditLogPage').then((module) => ({ default: module.AuditLogPage })));
 const SettingsPage = lazy(() =>
   import('./features/settings/SettingsPage').then((module) => ({ default: module.SettingsPage }))
 );
@@ -435,6 +436,9 @@ function App() {
           } />
           <Route path={`/:lang/settings/roles`} element={
             rbacAllows('roles.view') ? withLayout(<RolesPage />) : <Navigate to={`/${currentLang}/settings`} replace />
+          } />
+          <Route path={`/:lang/settings/audit`} element={
+            rbacAllows('audit.view') ? withLayout(<AuditLogPage />) : <Navigate to={`/${currentLang}/settings`} replace />
           } />
 
           {/* Bank Cards */}

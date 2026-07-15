@@ -127,7 +127,32 @@ export function SalesPage() {
 
   const [storeId, setStoreId] = useState(userStoreId);
   const activeStoreId = storeId || userStoreId;
+  // Do'kon tanlanganda mahsulotlar backend'dan shu do'kon kesimida keladi:
+  // faqat shu do'konda mavjud mahsulotlar, qoldiq bo'yicha kamayish tartibida.
+  const [storeProducts, setStoreProducts] = useState<Product[] | null>(null);
+  const [storeProductsLoading, setStoreProductsLoading] = useState(false);
   // const [categoryFilter, setCategoryFilter] = useState('');
+
+  const loadStoreProducts = useCallback(async () => {
+    if (!activeStoreId) {
+      setStoreProducts(null);
+      return;
+    }
+    try {
+      setStoreProductsLoading(true);
+      const res = await productService.getAll({ store_id: activeStoreId, limit: 100 });
+      setStoreProducts(res.data || []);
+    } catch (error) {
+      logger.error('Failed to load store products:', error);
+      setStoreProducts(null);
+    } finally {
+      setStoreProductsLoading(false);
+    }
+  }, [activeStoreId]);
+
+  useEffect(() => {
+    void loadStoreProducts();
+  }, [loadStoreProducts]);
 
   const [items, setItems] = useState<CartItem[]>(() => {
     try {
@@ -329,7 +354,7 @@ export function SalesPage() {
     }
 
     try {
-      const products = await productService.search(normalizedBarcode);
+      const products = await productService.search(normalizedBarcode, activeStoreId || undefined);
       const product = products.find((p) => {
         const cleanShtrix = p.shtrix_code ? extractBarcodeFromUrl(p.shtrix_code) : '';
         return String(p.id) === normalizedBarcode ||
@@ -353,7 +378,7 @@ export function SalesPage() {
     }
 
     return null;
-  }, [safeProducts, hydrateProductFromCatalog]);
+  }, [safeProducts, hydrateProductFromCatalog, activeStoreId]);
 
   const handleScan = useCallback(async (barcode: string) => {
     const product = await findProductByBarcode(barcode);
@@ -424,7 +449,9 @@ export function SalesPage() {
   }, [activePayment, roundedTotal, cashAmount, cardAmount]);
   const productImages = getProductImages(selectedProduct);
   const filteredProducts = useMemo(() => {
-    let result = allProducts;
+    // Do'kon tanlangan bo'lsa server allaqachon shu do'kon bo'yicha filtrlab,
+    // qoldiq kamayishi tartibida bergan ro'yxat ishlatiladi; aks holda umumiy katalog.
+    let result = activeStoreId && storeProducts ? storeProducts : allProducts;
     if (activeStoreId) {
       result = result.map((p) => {
         const storeInventory = p.inventory_by_store?.find(
@@ -453,7 +480,7 @@ export function SalesPage() {
     //   result = result.filter((p) => String(p.category) === categoryFilter);
     // }
     return result;
-  }, [allProducts, activeStoreId]);
+  }, [allProducts, storeProducts, activeStoreId]);
   // Miqdori ko'p mahsulotlar ro'yxat tepasida chiqadi
   const displayedProducts = useMemo(() => {
     const source = searchResults ?? filteredProducts;
@@ -540,7 +567,9 @@ export function SalesPage() {
       setSearchLoading(true);
 
       try {
-        const products = await productService.search(query);
+        // Do'kon tanlangan bo'lsa qidiruv ham shu do'kon bilan cheklanadi —
+        // boshqa do'kondagi mahsulotlar chiqmaydi va sotib bo'lmaydi.
+        const products = await productService.search(query, activeStoreId || undefined);
         setSearchResults(products.map(hydrateProductFromCatalog));
       } catch (error) {
         console.error('Product search failed:', error);
@@ -551,7 +580,7 @@ export function SalesPage() {
     }, 300);
 
     return () => window.clearTimeout(timeoutId);
-  }, [barcodeValue, hydrateProductFromCatalog]);
+  }, [barcodeValue, hydrateProductFromCatalog, activeStoreId]);
 
   useEffect(() => {
     focusBarcodeInput();
@@ -756,6 +785,7 @@ export function SalesPage() {
       await salesService.create(saleData);
       try {
         await refreshProducts();
+        await loadStoreProducts();
       } catch (err) {
         console.error('Failed to refresh products after sale:', err);
       }
@@ -974,7 +1004,7 @@ export function SalesPage() {
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto space-y-1.5">
-                {searchLoading ? (
+                {searchLoading || storeProductsLoading ? (
                   <div className="py-8 text-center text-sm text-muted-foreground dark:text-gray-400">
                     {t('common.loading')}
                   </div>

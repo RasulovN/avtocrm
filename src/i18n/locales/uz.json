@@ -72,6 +72,7 @@
     "storeInfo": "Do‘kon ma’lumotlari",
     "roles": "Rollar",
     "paymentTypes": "To‘lov turlari",
+    "auditLog": "Amallar jurnali",
     "logout": "Chiqish"
   },
   "auth": {
@@ -771,6 +772,29 @@
     "roleDeleted": "Rol o‘chirildi",
     "deleteConfirm": "Bu rolni o‘chirishni tasdiqlaysizmi? Rol biriktirilgan foydalanuvchilar bo‘lsa, avval ularni boshqa rolga o‘tkazish kerak.",
     "noAccess": "Bu sahifaga kirish uchun sizda ruxsat yo‘q"
+  },
+  "audit": {
+    "title": "Amallar jurnali",
+    "subtitle": "Tizimda kim, qachon, qayerdan qanday amal bajarganini kuzatish",
+    "when": "Vaqt",
+    "who": "Foydalanuvchi",
+    "module": "Bo‘lim",
+    "action": "Amal",
+    "target": "Obyekt / yo‘l",
+    "status": "Holat",
+    "device": "Qurilma",
+    "searchPlaceholder": "User, IP yoki yo‘l bo‘yicha qidirish...",
+    "allModules": "Barcha bo‘limlar",
+    "allActions": "Barcha amallar",
+    "moduleAuth": "Kirish/Chiqish",
+    "actionCreate": "Qo‘shish",
+    "actionEdit": "Tahrirlash",
+    "actionDelete": "O‘chirish",
+    "actionArchive": "Arxivlash",
+    "actionLogin": "Kirish",
+    "actionLogout": "Chiqish",
+    "detailsTitle": "Amal tafsilotlari",
+    "requestBody": "So‘rov ma’lumotlari"
   },
   "theme": {
     "lightMode": "Yorug‘ rejim",

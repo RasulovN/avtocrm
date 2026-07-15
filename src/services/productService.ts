@@ -516,8 +516,10 @@ export const productService = {
     }
   },
 
-  search: async (query: string): Promise<Product[]> => {
-    const response = await apiClient.get<unknown>(`/products/?search=${encodeURIComponent(query)}`);
+  search: async (query: string, storeId?: string): Promise<Product[]> => {
+    const params = new URLSearchParams({ search: query });
+    if (storeId) params.append('store_id', storeId);
+    const response = await apiClient.get<unknown>(`/products/?${params.toString()}`);
     return parsePaginatedProducts(response.data).data;
   },
 

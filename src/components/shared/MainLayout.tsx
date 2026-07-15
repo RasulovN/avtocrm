@@ -34,6 +34,7 @@ import {
   AlertTriangle,
   ShieldCheck,
   CreditCard,
+  ScrollText,
 } from 'lucide-react';
 import { NotificationProvider } from '../../context/NotificationProvider';
 import { NotificationToast } from './NotificationToast';
@@ -104,12 +105,13 @@ const subNavs: Record<string, SubNavItem[]> = {
   '/stores': [
     { titleKey: 'stores.list', href: '/stores', icon: List, permission: 'stores.view', superuserOnly: true },
   ],
-  // Sozlamalar submenu: to'lov turlari + foydalanuvchi/rol boshqaruvi
+  // Sozlamalar submenu: to'lov turlari + foydalanuvchi/rol boshqaruvi + amallar jurnali
   '/settings': [
     { titleKey: 'nav.settings', href: '/settings', icon: Settings },
     { titleKey: 'nav.paymentTypes', href: '/settings/payments', icon: CreditCard },
     { titleKey: 'stores.manageUsers', href: '/settings/users', icon: Users, permission: 'users.view', superuserOnly: true },
     { titleKey: 'nav.roles', href: '/settings/roles', icon: ShieldCheck, permission: 'roles.view', superuserOnly: true },
+    { titleKey: 'nav.auditLog', href: '/settings/audit', icon: ScrollText, permission: 'audit.view', superuserOnly: true },
   ],
 };
 
