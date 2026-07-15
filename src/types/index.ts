@@ -377,6 +377,7 @@ export interface PurchaseSession {
   cash_amount: string;
   card_amount: string;
   bank_card: number | null;
+  note?: string;
   status: PurchaseSessionStatus;
   current_step: 1 | 2 | 3;
   entry: number | null;
@@ -391,6 +392,7 @@ export interface PurchaseSessionPayload {
   cash_amount?: string;
   card_amount?: string;
   bank_card?: number | null;
+  note?: string;
   current_step?: 1 | 2 | 3;
 }
 
@@ -412,6 +414,7 @@ export interface ContractEntry {
   supplier_name?: string;
   store: number;
   store_name?: string;
+  note?: string;
   created_by: number;
   full_name: string;
   items: ContractEntryItem[];

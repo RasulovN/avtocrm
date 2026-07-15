@@ -336,7 +336,11 @@ function App() {
             requirePermission(withLayoutNoSeller(<InventoryShortagesPage />), 'inventory.view')
           } />
 
-          {/* Low Stock — Kam Zaxira */}
+          {/* Low Stock — Kam Zaxira (Xarid submenusidagi asosiy manzil) */}
+          <Route path={`/:lang/stockentry/low-stock`} element={
+            requirePermission(withLayoutNoSeller(<LowStockPage />), 'inventory.view')
+          } />
+          {/* Eski manzil ham ishlashda davom etadi */}
           <Route path={`/:lang/inventory/low-stock`} element={
             requirePermission(withLayoutNoSeller(<LowStockPage />), 'inventory.view')
           } />

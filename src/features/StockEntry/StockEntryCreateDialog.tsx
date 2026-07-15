@@ -135,6 +135,8 @@ export function StockEntryCreateDialog({
   const [cardAmount, setCardAmount] = useState<number | ''>('');
   const [bankCardId, setBankCardId] = useState('');
   const [paymentMode, setPaymentMode] = useState<PaymentMode>(null);
+  // Ixtiyoriy izoh/tavsif — kirim bilan birga saqlanadi
+  const [note, setNote] = useState('');
   const [supplierError, setSupplierError] = useState(false);
   const [itemErrors, setItemErrors] = useState<ItemErrors[]>([]);
 
@@ -231,8 +233,9 @@ export function StockEntryCreateDialog({
     cash_amount: (cashAmount === '' ? 0 : cashAmount).toFixed(2),
     card_amount: (cardAmount === '' ? 0 : cardAmount).toFixed(2),
     bank_card: bankCardId ? Number(bankCardId) : null,
+    note,
     current_step: currentStep,
-  }), [supplierId, storeId, items, cashAmount, cardAmount, bankCardId]);
+  }), [supplierId, storeId, items, cashAmount, cardAmount, bankCardId, note]);
 
   // Avto-saqlash: forma o'zgarganda 800ms dan keyin sessiyaga PATCH
   useEffect(() => {
@@ -275,6 +278,7 @@ export function StockEntryCreateDialog({
     setCashAmount('');
     setCardAmount('');
     setPaymentMode(null);
+    setNote('');
     setSupplierError(false);
     setItemErrors([]);
     setSessionId(null);
@@ -366,6 +370,7 @@ export function StockEntryCreateDialog({
     setCashAmount(cash || '');
     setCardAmount(card || '');
     if (s.bank_card) setBankCardId(String(s.bank_card));
+    setNote(s.note || '');
     setPaymentMode(cash > 0 || card > 0 ? 'manual' : null);
     setSessionId(s.id);
     setSessionStatus(s.status);
@@ -1302,6 +1307,22 @@ export function StockEntryCreateDialog({
             )}
           </div>
         )}
+
+        {/* Izoh — ixtiyoriy tavsif (kirim bilan birga saqlanadi) */}
+        <div className="space-y-2">
+          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {t('purchaseSession.note', 'Izoh')}{' '}
+            <span className="font-normal normal-case">({t('users.optional', '(ixtiyoriy)').replace(/[()]/g, '')})</span>
+          </Label>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            maxLength={1000}
+            rows={2}
+            placeholder={t('purchaseSession.notePlaceholder', "Kirim haqida qisqacha tavsif...")}
+            className="flex w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          />
+        </div>
 
         {/* Xulosa */}
         <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 p-3 dark:border-emerald-800/60 dark:bg-emerald-950/20 space-y-1.5">

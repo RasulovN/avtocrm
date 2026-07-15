@@ -22,6 +22,7 @@ import { extractErrorMessage } from '../../utils/errorHandler';
 import { logger } from '../../utils/logger';
 import { useTranslation } from 'react-i18next';
 import { extractBarcodeFromUrl } from '../../utils/xss';
+import { SaleReturnCreatePage } from './SaleReturnCreatePage';
 
 interface CartItem {
   product_id: string;
@@ -100,6 +101,8 @@ const playErrorSound = () => {
 export function SalesPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
+  // Yuqoridagi tab: sotuv (POS) yoki qaytarish rejimi
+  const [mode, setMode] = useState<'sale' | 'return'>('sale');
   const isAdmin = Boolean(user?.is_superuser || user?.role === 'superuser');
   const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores.find(s => s.type === 'b')?.id || user.stores[0].id) : '');
   const [stores, setStores] = useState<Store[]>([]);
@@ -929,12 +932,43 @@ export function SalesPage() {
           `}</style>
       {/* /* Main Sales Interface */}
       <div className="space-y-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-2xl font-bold tracking-tight dark:text-white">{t('sales.title')}</h2>
             <p className="text-sm text-muted-foreground dark:text-gray-400">{t('sales.salesPanel')}</p>
           </div>
+          {/* Sotuv | Qaytarish tab almashtirgichi */}
+          <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1">
+            <button
+              type="button"
+              onClick={() => setMode('sale')}
+              className={`inline-flex items-center gap-1.5 rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
+                mode === 'sale'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <DollarSign className="h-4 w-4" />
+              {t('sales.title', 'Sotuv')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('return')}
+              className={`inline-flex items-center gap-1.5 rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
+                mode === 'return'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <ArrowLeftRight className="h-4 w-4" />
+              {t('saleReturns.tab', 'Qaytarish')}
+            </button>
+          </div>
         </div>
+
+        {mode === 'return' ? (
+          <SaleReturnCreatePage embedded />
+        ) : (
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-12 xl:gap-3 xl:h-[calc(100vh-11rem)]">
           <div className="flex min-h-0 flex-col space-y-2 xl:col-span-5 overflow-y-auto">
             <div className="bg-card border border-gray-900 rounded-lg flex min-h-80 flex-col p-3 xl:min-h-0 xl:flex-1">
@@ -1547,6 +1581,7 @@ export function SalesPage() {
             </div>
           </div>
         </div>
+        )}
       </div>
 
       {/* Receipt Modal */}

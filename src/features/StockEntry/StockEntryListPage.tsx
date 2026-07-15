@@ -48,6 +48,7 @@ interface DisplayInventory {
   created_at: string;
   items: InventoryItem[];
   full_name: string;
+  note?: string;
 }
 
 type DisplayInventoryRow = DisplayInventory & { rowNumber: number };
@@ -191,7 +192,8 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
           status: 'completed',
           created_at: entry.created_at || new Date().toISOString(),
           items,
-          full_name: entry.full_name || ''
+          full_name: entry.full_name || '',
+          note: entry.note || ''
         };
       });
 
@@ -214,6 +216,7 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
           created_at: s.created_at || new Date().toISOString(),
           items: [],
           full_name: '',
+          note: s.note || '',
         };
       });
 
@@ -388,6 +391,7 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
 </head>
 <body>
   <div class="header">${escapeHtml(dateStr)} ${escapeHtml(String(storeName))}</div>
+  ${inv.note ? `<div class="header">${t('purchaseSession.note', 'Izoh')}: ${escapeHtml(inv.note)}</div>` : ''}
   <table>
     <thead>
       <tr>
@@ -480,7 +484,16 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
     {
       key: 'supplier_name',
       header: t('suppliers.title'),
-      render: (item) => item.supplier_name || item.supplier_id,
+      render: (item) => (
+        <div className="min-w-0">
+          <p>{item.supplier_name || item.supplier_id}</p>
+          {item.note && (
+            <p className="mt-0.5 max-w-[220px] truncate text-[11px] text-muted-foreground" title={item.note}>
+              📝 {item.note}
+            </p>
+          )}
+        </div>
+      ),
     },
     {
       key: 'store_name',
@@ -560,7 +573,7 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
           <ExportButton
             direct
             endpoint="/contract/entry/export/"
-            filename="kirimlar.xlsx"
+            filename="xaridlar.xlsx"
             className="w-full sm:w-auto"
             params={{
               search: searchTerm || undefined,
@@ -662,6 +675,11 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
                     <div className="min-w-0 flex-1">
                       <p className="text-base font-semibold">{item.supplier_name || item.supplier_id}</p>
                       <p className="mt-1 text-sm text-muted-foreground">{item.store_name || item.store_id}</p>
+                      {item.note && (
+                        <p className="mt-1 truncate text-xs text-muted-foreground" title={item.note}>
+                          📝 {item.note}
+                        </p>
+                      )}
                     </div>
                     <span className={`rounded-full px-2 py-1 text-xs ${
                       item.status === 'completed' ? 'bg-green-100 text-green-800' :
@@ -838,6 +856,14 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
                   )}
                 </div>
               </div>
+
+              {/* Izoh (kirim yaratishda kiritilgan bo'lsa) */}
+              {selectedInventory.note && (
+                <div className="rounded-lg border border-border bg-muted/30 p-3">
+                  <p className="text-xs font-medium text-muted-foreground">{t('purchaseSession.note', 'Izoh')}</p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm">{selectedInventory.note}</p>
+                </div>
+              )}
 
               {selectedInventory.items && selectedInventory.items.length > 0 && (
                 <div className="space-y-3">

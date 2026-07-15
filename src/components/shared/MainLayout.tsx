@@ -67,11 +67,11 @@ const navItems: NavItem[] = [
   { titleKey: 'nav.transfers', href: '/transfers', icon: ArrowRightLeft, access: 'all', permission: 'transfers.view' },
   { titleKey: 'nav.products', href: '/products', icon: Package, access: 'all', permission: 'products.view' },
   // { titleKey: 'nav.categories', href: '/categories', icon: Tags, access: 'all' },
-  // Kirim: do'kon paneli ham ko'radi — backend xodimni faqat o'z do'koniga kirim qilishiga cheklaydi
+  // Xarid (kirim): do'kon paneli ham ko'radi — backend xodimni faqat o'z do'koniga kirim qilishiga cheklaydi.
+  // Kam Zaxira ham shu bo'limning submenusida
   { titleKey: 'nav.stockentry', href: '/stockentry', icon: ArrowDownToLine, access: 'all', permission: 'stockentry.view' },
   { titleKey: 'nav.reports', href: '/reports', icon: BarChart3, access: 'superuser', permission: 'reports.view' },
   { titleKey: 'nav.inventory', href: '/inventory', icon: ClipboardCheck, access: 'all', permission: 'inventory.view' },
-  { titleKey: 'nav.lowStock', href: '/inventory/low-stock', icon: AlertTriangle, access: 'all', permission: 'inventory.view' },
   { titleKey: 'nav.customers', href: '/customers', icon: Users, access: 'all', permission: 'customers.view' },
   { titleKey: 'nav.suppliers', href: '/suppliers', icon: Truck, access: 'superuser', permission: 'suppliers.view' },
   // nav.stores (superuser) endi alohida menyu emas — Sozlamalar submenusi ichida
@@ -81,10 +81,11 @@ const navItems: NavItem[] = [
 
 // Sub-navigation for modules that have both list and create pages
 const subNavs: Record<string, SubNavItem[]> = {
-  // '/stockentry': [
-    // { titleKey: 'stockentry.list', href: '/stockentry', icon: List },
-    // { titleKey: 'stockentry.createIncomingStock', href: '/stockentry/new', icon: Plus },
-  // ],
+  // Xarid submenu: kirimlar ro'yxati + kam zaxira
+  '/stockentry': [
+    { titleKey: 'nav.stockentryList', href: '/stockentry', icon: List, permission: 'stockentry.view' },
+    { titleKey: 'nav.lowStock', href: '/stockentry/low-stock', icon: AlertTriangle, permission: 'inventory.view' },
+  ],
   // '/inventory': removed — standalone link, no submenu
   // '/transfers': [
   //   { titleKey: 'transfers.list', href: '/transfers', icon: List },

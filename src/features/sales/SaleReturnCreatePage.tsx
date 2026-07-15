@@ -38,7 +38,12 @@ const isFullyReturned = (sale: Sale): boolean =>
   sale.items.length > 0 &&
   sale.items.every((item) => remainingOf(item) === 0);
 
-export function SaleReturnCreatePage() {
+interface SaleReturnCreatePageProps {
+  /** Sotuv sahifasi ichida tab sifatida ishlatilganda: o'z sarlavhasi/orqaga tugmasi ko'rsatilmaydi */
+  embedded?: boolean;
+}
+
+export function SaleReturnCreatePage({ embedded = false }: SaleReturnCreatePageProps = {}) {
   const { t } = useTranslation();
   const params = useParams();
   const lang = params.lang || 'uz';
@@ -326,20 +331,22 @@ export function SaleReturnCreatePage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <PageHeader
-          title={t('saleReturns.newReturn')}
-          description={t('saleReturns.returnSale')}
-        />
-        <Link to={`/${lang}/sales-returns`}>
-          <Button variant="outline">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            {t('common.back')}
-          </Button>
-        </Link>
-      </div>
+      {!embedded && (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <PageHeader
+            title={t('saleReturns.newReturn')}
+            description={t('saleReturns.returnSale')}
+          />
+          <Link to={`/${lang}/sales-returns`}>
+            <Button variant="outline">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              {t('common.back')}
+            </Button>
+          </Link>
+        </div>
+      )}
 
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-12 xl:h-[calc(100vh-13rem)]">
+      <div className={`grid grid-cols-1 gap-3 xl:grid-cols-12 ${embedded ? 'xl:h-[calc(100vh-13rem)]' : 'xl:h-[calc(100vh-13rem)]'}`}>
         {/* ───────────── CHAP: sotuvlar ro'yxati ───────────── */}
         <div className="flex min-h-80 flex-col rounded-lg border border-border bg-card p-3 xl:col-span-3 xl:min-h-0">
           <h4 className="mb-2 flex items-center gap-2 text-base font-semibold">

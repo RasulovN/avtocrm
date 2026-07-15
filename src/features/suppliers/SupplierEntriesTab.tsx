@@ -131,7 +131,16 @@ export function SupplierEntriesTab({ supplierId, stats, refreshKey }: SupplierEn
     {
       key: 'store_name',
       header: t('sales.store', 'Do‘kon'),
-      render: (item) => <span>{item.store_name || '—'}</span>,
+      render: (item) => (
+        <div className="min-w-0">
+          <p>{item.store_name || '—'}</p>
+          {item.note && (
+            <p className="mt-0.5 max-w-[200px] truncate text-[11px] text-muted-foreground" title={item.note}>
+              📝 {item.note}
+            </p>
+          )}
+        </div>
+      ),
     },
     {
       key: 'status',
@@ -255,6 +264,14 @@ export function SupplierEntriesTab({ supplierId, stats, refreshKey }: SupplierEn
                   </p>
                 </div>
               </div>
+
+              {/* Izoh (kirim yaratishda kiritilgan bo'lsa) */}
+              {viewingEntry.note && (
+                <div className="rounded-lg border border-border bg-muted/30 p-2.5">
+                  <p className="text-xs font-medium text-muted-foreground">{t('purchaseSession.note', 'Izoh')}</p>
+                  <p className="mt-1 whitespace-pre-wrap">{viewingEntry.note}</p>
+                </div>
+              )}
 
               {/* Mahsulotlar */}
               <div className="rounded-lg border border-border">

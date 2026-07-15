@@ -8,7 +8,7 @@ const ENV_API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined
 
 const apiOriginFromEnv = (ENV_API_BASE_URL && ENV_API_BASE_URL.trim() !== '')
   ? ENV_API_BASE_URL.trim().replace(/\/$/, '')
-  : 'https://avtoyon.uz';
+  : 'https://api.avtoyon.uz';
 
 // Backend endpointlar: http://HOST:8001/api/*
 const BaSE_URL = isDev ? '/api' : `${apiOriginFromEnv}/api`;
