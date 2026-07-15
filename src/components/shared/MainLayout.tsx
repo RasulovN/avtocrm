@@ -100,7 +100,7 @@ const subNavs: Record<string, SubNavItem[]> = {
   '/products': [
     { titleKey: 'products.list', href: '/products', icon: List, permission: 'products.view' },
     { titleKey: 'categories.title', href: '/products/categories', icon: Tags, permission: 'categories.view' },
-    { titleKey: 'products.ProductLocatiion', href: '/products/location', icon: LocationEdit, permission: 'products.view' },
+    { titleKey: 'products.productLocation', href: '/products/location', icon: LocationEdit, permission: 'products.view' },
     { titleKey: 'products.units', href: '/products/units', icon: Ruler, permission: 'products.view' },
     // { titleKey: 'products.addProduct', href: '/products/new', icon: Plus },
   ],

@@ -104,7 +104,14 @@ export function SaleReturnListPage() {
       className: 'text-right',
       render: (item) => (
         <div className="flex justify-end">
-          <Button variant="ghost" size="sm" onClick={() => handleViewDetails(item)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleViewDetails(item);
+            }}
+          >
             <Eye className="h-4 w-4" />
           </Button>
         </div>
@@ -160,7 +167,14 @@ export function SaleReturnListPage() {
         <>
           <div className="space-y-3 md:hidden">
             {returns.map((item, index) => (
-              <div key={item.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+              <div
+                key={item.id}
+                className="cursor-pointer rounded-xl border border-border bg-card p-4 shadow-sm transition-colors hover:bg-accent/30"
+                onClick={() => {
+                  setSelectedReturn(item);
+                  setDetailOpen(true);
+                }}
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-xs text-muted-foreground">#{index + 1}</p>
@@ -191,7 +205,8 @@ export function SaleReturnListPage() {
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setSelectedReturn(item);
                       setDetailOpen(true);
                     }}
@@ -211,6 +226,7 @@ export function SaleReturnListPage() {
               loading={loading}
               emptyMessage={t('saleReturns.noData')}
               loadingMessage={t('common.loading')}
+              onRowClick={(item) => handleViewDetails(item)}
               minWidth="700px"
             />
           </div>
