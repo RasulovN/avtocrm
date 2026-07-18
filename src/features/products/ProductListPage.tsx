@@ -35,7 +35,7 @@ import { useCategories } from '../../context/CategoryContext';
 import type { Product, ProductFormData, ProductFilters, ProductStockStats, ProductUnit, CategoryFormData, ProductUnitFormData, Store, Category } from '../../types';
 import { formatCurrency, cn, copyToClipboard } from '../../utils';
 import { latinToCyrillic } from '../../utils/transliteration';
-import { handleError } from '../../utils/errorHandler';
+import { handleError, extractErrorMessage, extractFieldErrors } from '../../utils/errorHandler';
 
 // Qidiruv so'zlarini natija matnida (nom/SKU/barcode) sariq bilan belgilaydi.
 // Backend qidiruvi token-bazali bo'lgani uchun har bir so'z alohida belgilanadi.
@@ -1615,10 +1615,20 @@ const addProductInitialForm: ProductFormData = {
   is_active: true,
 };
 
+// Backend maydon nomlari → forma maydonlari (frontend `name`ni backend `name_uz`
+// sifatida yuboradi) — server validatsiya xatolarini to'g'ri inputga bog'lash uchun
+const PRODUCT_SERVER_FIELD_MAP: Record<string, string> = {
+  name_uz: 'name',
+  name_uz_cyrl: 'name_uz_cyrl',
+  description_uz: 'description',
+  description_uz_cyrl: 'description_uz_cyrl',
+};
+
 function AddProductModal({ open, onClose, onSuccess, categories, refreshCategories, t }: AddProductModalProps) {
   const { i18n } = useTranslation();
   const lang = i18n.language || 'uz';
   const [formData, setFormData] = useState<ProductFormData>(addProductInitialForm);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [units, setUnits] = useState<ProductUnit[]>([]);
   const [locations, setLocations] = useState<ProductLocation[]>([]);
@@ -1628,6 +1638,7 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
   // Sub-dialog states: Category
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [savingCategory, setSavingCategory] = useState(false);
+  const [categoryNameError, setCategoryNameError] = useState<string | null>(null);
   const [categoryFormData, setCategoryFormData] = useState<CategoryFormData>({
     name_uz: '',
     name_uz_cyrl: '',
@@ -1639,6 +1650,7 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
   // Sub-dialog states: Unit
   const [isUnitDialogOpen, setIsUnitDialogOpen] = useState(false);
   const [savingUnit, setSavingUnit] = useState(false);
+  const [unitNameError, setUnitNameError] = useState<string | null>(null);
   const [unitFormData, setUnitFormData] = useState<ProductUnitFormData>({
     measurement_uz: '',
     measurement_uz_cyrl: '',
@@ -1666,6 +1678,7 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
   useEffect(() => {
     if (open) {
       setFormData(addProductInitialForm);
+      setFieldErrors({});
       setImageFiles([]);
       setImagePreviews([]);
     }
@@ -1690,8 +1703,19 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
     };
   }, [imagePreviews]);
 
+  // Foydalanuvchi maydonni tahrirlashni boshlashi bilan o'sha maydon xatosi o'chadi
+  const clearFieldError = (field: string) => {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
   const handleChange = (field: keyof ProductFormData, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    clearFieldError(field);
   };
 
   const handleNameChange = (value: string) => {
@@ -1700,6 +1724,7 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
       name: value,
       name_uz_cyrl: latinToCyrillic(value),
     }));
+    clearFieldError('name');
   };
 
   const handleDescriptionChange = (value: string) => {
@@ -1708,6 +1733,7 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
       description: value,
       description_uz_cyrl: latinToCyrillic(value),
     }));
+    clearFieldError('description');
   };
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -1728,8 +1754,32 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
     setImagePreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
+  // Client-side validatsiya: majburiy maydonlar va minimal uzunliklar.
+  // Xato bo'lsa input qizaradi, ostida sabab yoziladi va birinchi xato toastda chiqadi.
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    const name = (formData.name || '').trim();
+    if (!name) {
+      errors.name = t('validation.productNameRequired', 'Mahsulot nomi kiritilishi shart');
+    } else if (name.length < 3) {
+      errors.name = t('validation.productNameMin', "Mahsulot nomi kamida 3 belgidan iborat bo'lishi kerak");
+    }
+    const desc = (formData.description || '').trim();
+    if (desc && desc.length < 3) {
+      errors.description = t('validation.descriptionMin', "Tavsif kamida 3 belgidan iborat bo'lishi kerak");
+    }
+    if (formData.min_stock !== undefined && Number(formData.min_stock) < 0) {
+      errors.min_stock = t('validation.minStockNegative', "Minimal qoldiq manfiy bo'lishi mumkin emas");
+    }
+    setFieldErrors(errors);
+    const first = Object.values(errors)[0];
+    if (first) toast.error(first);
+    return !first;
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!validateForm()) return;
     try {
       setSaving(true);
       const payload: ProductFormData = {
@@ -1740,8 +1790,21 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
       toast.success(t('products.productAdded'));
       onSuccess();
     } catch (error) {
-      handleError(error, { showToast: true });
-      toast.error(t('errors.generic'));
+      // Server validatsiya xatolarini tegishli inputlarga bog'laymiz,
+      // toastda esa aniq sababni (birinchi maydon xabarini) ko'rsatamiz
+      const serverErrors = extractFieldErrors(error);
+      const mapped: Record<string, string> = {};
+      for (const [key, msg] of Object.entries(serverErrors)) {
+        mapped[PRODUCT_SERVER_FIELD_MAP[key] ?? key] = msg;
+      }
+      setFieldErrors(mapped);
+      const firstMsg = Object.values(mapped)[0];
+      if (firstMsg) {
+        toast.error(firstMsg);
+        handleError(error, { showToast: false });
+      } else {
+        handleError(error, { showToast: true });
+      }
     } finally {
       setSaving(false);
     }
@@ -1750,12 +1813,20 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
   // Category sub-dialog handlers
   const handleOpenCategoryDialog = () => {
     setIsCategoryDialogOpen(true);
+    setCategoryNameError(null);
     setCategoryFormData({ name_uz: '', name_uz_cyrl: '', description_uz: '', description_uz_cyrl: '', image: '' });
   };
 
   const handleCategorySubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     e.stopPropagation();
+    const catName = categoryFormData.name_uz.trim();
+    if (!catName) {
+      const msg = t('validation.categoryNameRequired', 'Kategoriya nomi kiritilishi shart');
+      setCategoryNameError(msg);
+      toast.error(msg);
+      return;
+    }
     try {
       setSavingCategory(true);
       const created = await categoryService.create(categoryFormData);
@@ -1764,8 +1835,12 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
       handleChange('category', created.id);
       setIsCategoryDialogOpen(false);
     } catch (error) {
-      handleError(error, { showToast: true });
-      toast.error(t('errors.generic'));
+      // Server xatosini aniq ko'rsatamiz (masalan, "Bu kategoriya allaqachon mavjud")
+      const serverErrors = extractFieldErrors(error);
+      const msg = serverErrors.name_uz || serverErrors.name || extractErrorMessage(error);
+      setCategoryNameError(serverErrors.name_uz || serverErrors.name || null);
+      toast.error(msg);
+      handleError(error, { showToast: false });
     } finally {
       setSavingCategory(false);
     }
@@ -1774,12 +1849,20 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
   // Unit sub-dialog handlers
   const handleOpenUnitDialog = () => {
     setIsUnitDialogOpen(true);
+    setUnitNameError(null);
     setUnitFormData({ measurement_uz: '', measurement_uz_cyrl: '' });
   };
 
   const handleUnitSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     e.stopPropagation();
+    const unitName = unitFormData.measurement_uz.trim();
+    if (!unitName) {
+      const msg = t('validation.unitNameRequired', "O'lchov birligi nomi kiritilishi shart");
+      setUnitNameError(msg);
+      toast.error(msg);
+      return;
+    }
     try {
       setSavingUnit(true);
       const created = await productUnitService.create(unitFormData);
@@ -1789,8 +1872,11 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
       handleChange('unit_measurement', created.id);
       setIsUnitDialogOpen(false);
     } catch (error) {
-      handleError(error, { showToast: true });
-      toast.error(t('errors.generic'));
+      const serverErrors = extractFieldErrors(error);
+      const msg = serverErrors.measurement_uz || extractErrorMessage(error);
+      setUnitNameError(serverErrors.measurement_uz || null);
+      toast.error(msg);
+      handleError(error, { showToast: false });
     } finally {
       setSavingUnit(false);
     }
@@ -1814,17 +1900,22 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
             <div className="px-6 py-5 space-y-5">
               {/* ── Row 1: Name ── */}
               <div className="space-y-2">
-                <Label htmlFor="add-name" className="flex items-center gap-1.5">
+                <Label htmlFor="add-name" required className="flex items-center gap-1.5">
                   <Tag className="h-3.5 w-3.5 text-muted-foreground" />
-                  {t('products.productName')} <span className="text-destructive">*</span>
+                  {t('products.productName')}
                 </Label>
                 <Input
                   id="add-name"
                   placeholder="Tovar nomini kiriting..."
                   value={formData.name}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => handleNameChange(e.target.value)}
-                  required
+                  aria-invalid={Boolean(fieldErrors.name)}
+                  aria-describedby={fieldErrors.name ? 'add-name-error' : undefined}
+                  className={fieldErrors.name ? 'border-red-500 focus-visible:ring-red-500 focus-visible:border-red-500' : ''}
                 />
+                {fieldErrors.name && (
+                  <p id="add-name-error" className="text-xs text-red-500">{fieldErrors.name}</p>
+                )}
               </div>
 
               {/* ── Row 2: Category + Unit ── */}
@@ -1857,6 +1948,9 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
                       <Plus className="h-3.5 w-3.5" />
                     </Button>
                   </div>
+                  {fieldErrors.category && (
+                    <p className="text-xs text-red-500">{fieldErrors.category}</p>
+                  )}
                 </div>
 
                 {/* Unit of Measurement */}
@@ -1885,6 +1979,9 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
                       <Plus className="h-3.5 w-3.5" />
                     </Button>
                   </div>
+                  {fieldErrors.unit_measurement && (
+                    <p className="text-xs text-red-500">{fieldErrors.unit_measurement}</p>
+                  )}
                 </div>
               </div>
 
@@ -1901,8 +1998,16 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
                   placeholder="Tovar tavsifini kiriting..."
                   value={formData.description}
                   onChange={(e) => handleDescriptionChange(e.target.value)}
-                  className="flex w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm ring-offset-background placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-primary/50 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 resize-none"
+                  aria-invalid={Boolean(fieldErrors.description)}
+                  aria-describedby={fieldErrors.description ? 'add-description-error' : undefined}
+                  className={cn(
+                    'flex w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm ring-offset-background placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-primary/50 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 resize-none',
+                    fieldErrors.description && 'border-red-500 focus-visible:ring-red-500 focus-visible:border-red-500'
+                  )}
                 />
+                {fieldErrors.description && (
+                  <p id="add-description-error" className="text-xs text-red-500">{fieldErrors.description}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -1920,7 +2025,12 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
                     const val = e.target.value;
                     handleChange('min_stock', val === '' ? undefined : Number(val));
                   }}
+                  aria-invalid={Boolean(fieldErrors.min_stock)}
+                  className={fieldErrors.min_stock ? 'border-red-500 focus-visible:ring-red-500 focus-visible:border-red-500' : ''}
                 />
+                {fieldErrors.min_stock && (
+                  <p className="text-xs text-red-500">{fieldErrors.min_stock}</p>
+                )}
               </div>
 
               {/* ── Row 5: Location ── */}
@@ -2029,19 +2139,24 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
           <form onSubmit={handleCategorySubmit}>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="modal_cat_name">{t('categories.categoryName')}</Label>
+                <Label htmlFor="modal_cat_name" required>{t('categories.categoryName')}</Label>
                 <Input
                   id="modal_cat_name"
                   value={categoryFormData.name_uz}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => {
                     setCategoryFormData((prev) => ({
                       ...prev,
                       name_uz: e.target.value,
                       name_uz_cyrl: latinToCyrillic(e.target.value),
-                    }))
-                  }
-                  required
+                    }));
+                    if (categoryNameError) setCategoryNameError(null);
+                  }}
+                  aria-invalid={Boolean(categoryNameError)}
+                  className={categoryNameError ? 'border-red-500 focus-visible:ring-red-500 focus-visible:border-red-500' : ''}
                 />
+                {categoryNameError && (
+                  <p className="text-xs text-red-500">{categoryNameError}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="modal_cat_name_cyrl">{t('categories.categoryName')} (Cyrillic)</Label>
@@ -2075,19 +2190,24 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
           <form onSubmit={handleUnitSubmit}>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="modal_unit_name">{t('products.unitName')}</Label>
+                <Label htmlFor="modal_unit_name" required>{t('products.unitName')}</Label>
                 <Input
                   id="modal_unit_name"
                   value={unitFormData.measurement_uz}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => {
                     setUnitFormData((prev) => ({
                       ...prev,
                       measurement_uz: e.target.value,
                       measurement_uz_cyrl: latinToCyrillic(e.target.value),
-                    }))
-                  }
-                  required
+                    }));
+                    if (unitNameError) setUnitNameError(null);
+                  }}
+                  aria-invalid={Boolean(unitNameError)}
+                  className={unitNameError ? 'border-red-500 focus-visible:ring-red-500 focus-visible:border-red-500' : ''}
                 />
+                {unitNameError && (
+                  <p className="text-xs text-red-500">{unitNameError}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="modal_unit_name_cyrl">{t('products.unitName')} (Cyrillic)</Label>

@@ -118,15 +118,24 @@ const parsePaginatedCustomers = (
 };
 
 export const customerApiService = {
-  getAll: async (params?: { page?: number; limit?: number; search?: string }): Promise<PaginatedResponse<CustomerFromApi>> => {
+  /**
+   * Mijozlar ro'yxati. Backend limitni 100 taga cheklaydi (StandardPagination).
+   * brief=true — POS dropdowni uchun minimal javob (id, ism, telefon) — tez.
+   * signal — eskirgan qidiruv so'rovlarini bekor qilish uchun (AbortController).
+   */
+  getAll: async (
+    params?: { page?: number; limit?: number; search?: string; brief?: boolean },
+    config?: { signal?: AbortSignal }
+  ): Promise<PaginatedResponse<CustomerFromApi>> => {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.append('page', params.page.toString());
     if (params?.limit) searchParams.append('limit', params.limit.toString());
     if (params?.search) searchParams.append('search', params.search);
+    if (params?.brief) searchParams.append('brief', '1');
 
     const queryString = searchParams.toString();
     const url = queryString ? `/users/customers/list/?${queryString}` : '/users/customers/list/';
-    const response = await apiClient.get<unknown>(url);
+    const response = await apiClient.get<unknown>(url, config);
     return parsePaginatedCustomers(response.data, params);
   },
 

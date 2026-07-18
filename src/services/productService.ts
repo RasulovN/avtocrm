@@ -543,6 +543,8 @@ export const productService = {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      // Katta Excel fayl importi 15s umumiy timeoutdan oshishi mumkin
+      timeout: 60000,
     });
   },
 };

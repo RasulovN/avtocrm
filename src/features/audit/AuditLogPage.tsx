@@ -189,9 +189,9 @@ export function AuditLogPage() {
         description={t('audit.subtitle')}
       />
 
-      {/* Filtrlar */}
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
+      {/* Filtrlar: mobilda ustma-ust to'liq enda, kengroq ekranda bir qatorda */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="relative w-full sm:flex-1 sm:min-w-[200px] sm:max-w-sm">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={t('audit.searchPlaceholder')}
@@ -201,7 +201,7 @@ export function AuditLogPage() {
           />
         </div>
         <select
-          className="px-3 py-2 border rounded-md bg-background text-sm"
+          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm sm:w-auto"
           value={moduleFilter}
           onChange={(e: ChangeEvent<HTMLSelectElement>) => { setModuleFilter(e.target.value); setPage(1); }}
         >
@@ -212,7 +212,7 @@ export function AuditLogPage() {
           ))}
         </select>
         <select
-          className="px-3 py-2 border rounded-md bg-background text-sm"
+          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm sm:w-auto"
           value={actionFilter}
           onChange={(e: ChangeEvent<HTMLSelectElement>) => { setActionFilter(e.target.value); setPage(1); }}
         >
@@ -230,7 +230,7 @@ export function AuditLogPage() {
             setDateTo(to);
             setPage(1);
           }}
-          className="w-64"
+          className="w-full sm:w-64"
         />
       </div>
 

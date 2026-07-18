@@ -75,7 +75,7 @@ export function DateRangeFilter({ from, to, onChange, className }: DateRangeFilt
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-2 w-72 rounded-lg bg-popover shadow-xl">
+        <div className="absolute left-0 top-full z-50 mt-2 w-72 max-w-[calc(100vw-2rem)] overflow-x-auto rounded-lg bg-popover shadow-xl">
           <DateRangeCalendar
             from={from || undefined}
             to={to || undefined}

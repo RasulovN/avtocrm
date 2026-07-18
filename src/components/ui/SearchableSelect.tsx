@@ -20,6 +20,14 @@ interface SearchableSelectProps {
   disabled?: boolean;
   pageSize?: number;
   countLabel?: string;
+  /**
+   * Server-side qidiruv rejimi: berilsa, foydalanuvchi yozgan matn debounce
+   * (300ms) bilan shu callbackka uzatiladi — parent API'dan yangi options yuklaydi.
+   * Callback useCallback bilan barqaror bo'lishi kerak.
+   */
+  onSearchChange?: (query: string) => void;
+  /** Server qidiruvi ketayotganda input yonida spinner ko'rsatiladi */
+  isSearching?: boolean;
 }
 
 // Ro'yxat balandligi chegaralari: joy yetarli bo'lsa DESIRED, tor joyda MIN
@@ -77,6 +85,8 @@ export function SearchableSelect({
   disabled = false,
   pageSize = 50,
   countLabel = 'ta mahsulot',
+  onSearchChange,
+  isSearching = false,
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -105,6 +115,19 @@ export function SearchableSelect({
   React.useEffect(() => {
     setVisibleCount(pageSize);
   }, [searchQuery, isOpen, pageSize]);
+
+  // Server-side qidiruv: yozilgan matn 300ms debounce bilan parentga uzatiladi.
+  // Birinchi renderda yubormaymiz — parent boshlang'ich ro'yxatni o'zi yuklagan.
+  const isFirstSearchRef = React.useRef(true);
+  React.useEffect(() => {
+    if (!onSearchChange) return;
+    if (isFirstSearchRef.current) {
+      isFirstSearchRef.current = false;
+      return;
+    }
+    const timer = setTimeout(() => onSearchChange(searchQuery.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery, onSearchChange]);
 
   // Close dropdown on click outside
   React.useEffect(() => {
@@ -239,6 +262,9 @@ export function SearchableSelect({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            {isSearching && (
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground mr-1" />
+            )}
             {searchQuery && (
               <button
                 type="button"
@@ -273,7 +299,7 @@ export function SearchableSelect({
                       type="button"
                       onClick={() => handleSelect(opt.value)}
                       className={cn(
-                        'relative flex w-full cursor-default select-none flex-col items-start rounded-lg py-2 px-3 text-sm outline-none transition-colors text-left',
+                        'relative flex w-full cursor-pointer select-none flex-col items-start rounded-lg py-2 px-3 text-sm outline-none transition-colors text-left',
                         isSelected
                           ? 'bg-primary text-primary-foreground font-medium'
                           : 'hover:bg-accent hover:text-accent-foreground text-foreground'

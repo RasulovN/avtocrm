@@ -52,6 +52,30 @@ export function extractErrorMessage(error: unknown): string {
   return 'An error occurred';
 }
 
+/**
+ * DRF validatsiya javobidan ({field: ["xabar"], ...}) maydon → xabar
+ * xaritasini chiqaradi. Formalarda inputlar ostida ko'rsatish uchun:
+ * server qaysi maydonda xato ekanini aytsa, foydalanuvchi aynan qayerda
+ * nima xato ekanini ko'radi.
+ */
+export function extractFieldErrors(error: unknown): Record<string, string> {
+  const axiosError = error as { response?: { data?: unknown } };
+  const data = axiosError?.response?.data;
+  const result: Record<string, string> = {};
+
+  if (data && typeof data === 'object' && !Array.isArray(data)) {
+    for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
+      if (key === 'message' || key === 'msg' || key === 'detail' || key === 'non_field_errors') continue;
+      if (Array.isArray(value) && value.length > 0) {
+        result[key] = value.map(String).join(' ');
+      } else if (typeof value === 'string' && value) {
+        result[key] = value;
+      }
+    }
+  }
+  return result;
+}
+
 export function handleError(error: unknown, options: ErrorHandlerOptions = {}) {
   const { showToast = true, customMessage, logData, logLevel = 'error', silent = false } = options;
 

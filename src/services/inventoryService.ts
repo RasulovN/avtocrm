@@ -126,7 +126,8 @@ export const inventoryService = {
     if (data.card_amount !== undefined && data.card_amount !== '') {
       formData.append('card_amount', String(data.card_amount));
     }
-    const response = await apiClient.post<ImportEntryResult>('/contract/entry/import/', formData);
+    // Katta Excel fayl importi 15s umumiy timeoutdan oshishi mumkin
+    const response = await apiClient.post<ImportEntryResult>('/contract/entry/import/', formData, { timeout: 60000 });
     return response.data;
   },
 

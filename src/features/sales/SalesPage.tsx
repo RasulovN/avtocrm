@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, type ChangeEvent, type KeyboardEvent } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, type ChangeEvent, type KeyboardEvent, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import toast from 'react-hot-toast';
 import { ScanBarcode, Trash2, DollarSign, Search, X, UserPlus, Eye, Package, Barcode, MapPin, Image as ImageIcon, Loader2, ArrowLeftRight, Banknote, CreditCard, Star } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/Dialog';
@@ -105,6 +105,94 @@ export function SalesPage() {
   const [mode, setMode] = useState<'sale' | 'return'>('sale');
   const isAdmin = Boolean(user?.is_superuser || user?.role === 'superuser');
   const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores.find(s => s.type === 'b')?.id || user.stores[0].id) : '');
+  // ─── Panellar orasidagi splitter (Mahsulotlar | Chek | To'lov) ───
+  // Faqat xl (>=1280px) ekranlarda ishlaydi; kengliklar % da saqlanadi va
+  // localStorage orqali keyingi sessiyada ham eslab qolinadi.
+  const SPLIT_DEFAULT: [number, number, number] = [41.67, 33.33, 25];
+  const SPLIT_MIN = 16; // har bir panelning minimal kengligi (%)
+  const [panelWidths, setPanelWidths] = useState<[number, number, number]>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('sales_panel_widths') || '');
+      if (
+        Array.isArray(saved) &&
+        saved.length === 3 &&
+        saved.every((n) => typeof n === 'number' && n >= SPLIT_MIN && n <= 100)
+      ) {
+        return saved as [number, number, number];
+      }
+    } catch { /* saqlangan qiymat buzuq — default ishlatiladi */ }
+    return SPLIT_DEFAULT;
+  });
+  const [isXl, setIsXl] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1280px)').matches,
+  );
+  const splitContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1280px)');
+    const onChange = () => setIsXl(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  // Splitter surilganda: ikkala qo'shni panel kengligi umumiy yig'indisi saqlangan
+  // holda qayta taqsimlanadi, uchinchi panel o'zgarmaydi
+  const startSplitDrag = (index: 0 | 1, e: ReactPointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const container = splitContainerRef.current;
+    if (!container) return;
+    const startX = e.clientX;
+    const startWidths = [...panelWidths] as [number, number, number];
+    const totalWidth = container.getBoundingClientRect().width;
+    if (totalWidth <= 0) return;
+
+    const onMove = (ev: globalThis.PointerEvent) => {
+      const deltaPct = ((ev.clientX - startX) / totalWidth) * 100;
+      const pair = startWidths[index] + startWidths[index + 1];
+      const left = Math.max(SPLIT_MIN, Math.min(pair - SPLIT_MIN, startWidths[index] + deltaPct));
+      const next = [...startWidths] as [number, number, number];
+      next[index] = left;
+      next[index + 1] = pair - left;
+      setPanelWidths(next);
+    };
+    const onUp = () => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      setPanelWidths((w) => {
+        localStorage.setItem('sales_panel_widths', JSON.stringify(w));
+        return w;
+      });
+    };
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
+  const resetSplit = () => {
+    setPanelWidths(SPLIT_DEFAULT);
+    localStorage.setItem('sales_panel_widths', JSON.stringify(SPLIT_DEFAULT));
+  };
+
+  // xl da flex-basis % orqali kenglik; kichik ekranlarda odatiy stack (style yo'q)
+  const panelStyle = (i: 0 | 1 | 2): CSSProperties | undefined =>
+    isXl ? { flexBasis: `${panelWidths[i]}%`, flexGrow: 0, flexShrink: 1, minWidth: 0 } : undefined;
+
+  const renderSplitter = (index: 0 | 1) => (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      title={t('sales.splitterHint', 'Kengligini o‘zgartirish uchun torting, ikki marta bosib tiklang')}
+      onPointerDown={(e) => startSplitDrag(index, e)}
+      onDoubleClick={resetSplit}
+      className="group hidden shrink-0 cursor-col-resize touch-none items-center justify-center px-1 xl:flex"
+    >
+      <div className="h-16 w-1 rounded-full bg-border transition-colors group-hover:bg-primary/60 group-active:bg-primary" />
+    </div>
+  );
+
   const [stores, setStores] = useState<Store[]>([]);
   const [saving, setSaving] = useState(false);
   const [searchResults, setSearchResults] = useState<Product[] | null>(null);
@@ -200,6 +288,11 @@ export function SalesPage() {
   const [showScanner, setShowScanner] = useState(false);
   const [customers, setCustomers] = useState<{ id: number; full_name: string; phone_number: string }[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+  // Tanlangan mijoz obyekti alohida saqlanadi — server qidiruvida ro'yxat
+  // almashganda ham tanlov (label va chekdagi ma'lumot) yo'qolmasligi uchun
+  const [selectedCustomer, setSelectedCustomer] = useState<{ id: number; full_name: string; phone_number: string } | null>(null);
+  const [customersLoading, setCustomersLoading] = useState(false);
+  const customerSearchAbortRef = useRef<AbortController | null>(null);
   const [debtDueDate, setDebtDueDate] = useState('');
   // Qarzga sotuvda sana belgilanmagan bo'lsa input qizarib turadi
   const [debtDueDateError, setDebtDueDateError] = useState(false);
@@ -481,7 +574,9 @@ export function SalesPage() {
     try {
       const [storesRes, customersRes] = await Promise.all([
         storeService.getAll(),
-        customerApiService.getAll({ limit: 1000 }),
+        // brief=1 — minimal maydonlar (id, ism, telefon), backend <100ms da javob beradi.
+        // 100 tadan ortiq mijoz server-side qidiruv orqali topiladi (handleCustomerSearch).
+        customerApiService.getAll({ limit: 100, brief: true }),
       ]);
       const loadedStores = Array.isArray(storesRes.data) ? storesRes.data : [];
       setStores(isAdmin ? loadedStores : loadedStores.filter((store) => String(store.id) === String(userStoreId)));
@@ -497,6 +592,50 @@ export function SalesPage() {
       setCustomers([]);
     }
   }, [isAdmin, userStoreId]);
+
+  // Mijozni server tomonida qidirish (SearchableSelect 300ms debounce bilan chaqiradi).
+  // AbortController eskirgan so'rovlarni bekor qiladi — tez yozilganda race bo'lmaydi.
+  const handleCustomerSearch = useCallback(async (query: string) => {
+    customerSearchAbortRef.current?.abort();
+    const controller = new AbortController();
+    customerSearchAbortRef.current = controller;
+    setCustomersLoading(true);
+    try {
+      const res = await customerApiService.getAll(
+        { limit: 100, brief: true, search: query || undefined },
+        { signal: controller.signal }
+      );
+      if (!controller.signal.aborted) setCustomers(res.data || []);
+    } catch (error) {
+      if (!controller.signal.aborted) logger.error('Failed to search customers:', error);
+    } finally {
+      if (!controller.signal.aborted) setCustomersLoading(false);
+    }
+  }, []);
+
+  // Dropdown options: joriy qidiruv natijalari + (kerak bo'lsa) tanlangan mijoz.
+  // Tanlangan mijoz qidiruv natijasida bo'lmasa ham ro'yxat boshiga qo'shiladi.
+  const customerOptions = useMemo(() => {
+    const opts = customers.map((customer) => ({
+      value: String(customer.id),
+      label: customer.full_name,
+      // Telefon raqami ism ostida kichikroq ko'rinadi
+      sublabel: customer.phone_number,
+    }));
+    if (
+      selectedCustomerId &&
+      selectedCustomer &&
+      String(selectedCustomer.id) === selectedCustomerId &&
+      !customers.some((c) => String(c.id) === selectedCustomerId)
+    ) {
+      opts.unshift({
+        value: String(selectedCustomer.id),
+        label: selectedCustomer.full_name,
+        sublabel: selectedCustomer.phone_number,
+      });
+    }
+    return opts;
+  }, [customers, selectedCustomer, selectedCustomerId]);
 
   useEffect(() => {
     loadData();
@@ -702,11 +841,10 @@ export function SalesPage() {
         full_name: newCustomerName,
         phone_number: newCustomerPhone,
       });
-      setCustomers((prev) => [
-        ...prev,
-        { id: newCustomer.id, full_name: newCustomer.full_name, phone_number: newCustomer.phone_number },
-      ]);
+      const created = { id: newCustomer.id, full_name: newCustomer.full_name, phone_number: newCustomer.phone_number };
+      setCustomers((prev) => [...prev, created]);
       setSelectedCustomerId(String(newCustomer.id));
+      setSelectedCustomer(created);
       setShowNewCustomerDialog(false);
       setNewCustomerName('');
       setNewCustomerPhone('');
@@ -969,8 +1107,8 @@ export function SalesPage() {
         {mode === 'return' ? (
           <SaleReturnCreatePage embedded />
         ) : (
-        <div className="grid grid-cols-1 gap-3 xl:grid-cols-12 xl:gap-3 xl:h-[calc(100vh-11rem)]">
-          <div className="flex min-h-0 flex-col space-y-2 xl:col-span-5 overflow-y-auto">
+        <div ref={splitContainerRef} className="flex flex-col gap-3 xl:h-[calc(100vh-11rem)] xl:flex-row xl:gap-0">
+          <div className="flex min-h-0 flex-col space-y-2 overflow-y-auto" style={panelStyle(0)}>
             <div className="bg-card border border-gray-900 rounded-lg flex min-h-80 flex-col p-3 xl:min-h-0 xl:flex-1">
               <div className="mb-3">
                 <h4 className="text-base font-semibold flex items-center gap-2 dark:text-white mb-2">
@@ -1129,7 +1267,8 @@ export function SalesPage() {
               </div>
             </div>
           </div>
-          <div className="flex min-h-0 flex-col space-y-2 xl:col-span-4 overflow-y-auto">
+          {renderSplitter(0)}
+          <div className="flex min-h-0 flex-col space-y-2 overflow-y-auto" style={panelStyle(1)}>
             <div className="bg-card border border-gray-900 rounded-lg flex min-h-80 flex-col xl:flex-1">
               <div className="p-3 pb-2">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -1279,7 +1418,8 @@ export function SalesPage() {
               </div>
             </div>
           </div>
-          <div className="flex min-h-0 flex-col space-y-2 xl:col-span-3 overflow-y-auto">
+          {renderSplitter(1)}
+          <div className="flex min-h-0 flex-col space-y-2 overflow-y-auto" style={panelStyle(2)}>
             <div className="bg-card border border-gray-900 rounded-lg flex min-h-80 flex-col xl:flex-1">
               <div className="p-3 pb-2">
                 <h4 className="text-base font-semibold dark:text-white">{t('sales.payment', 'Тўлов')}</h4>
@@ -1293,13 +1433,13 @@ export function SalesPage() {
                   <div className="flex gap-2">
                     <SearchableSelect
                       value={selectedCustomerId}
-                      onValueChange={setSelectedCustomerId}
-                      options={customers.map((customer) => ({
-                        value: String(customer.id),
-                        label: customer.full_name,
-                        // Telefon raqami ism ostida kichikroq ko'rinadi
-                        sublabel: customer.phone_number,
-                      }))}
+                      onValueChange={(v) => {
+                        setSelectedCustomerId(v);
+                        setSelectedCustomer(customers.find((c) => String(c.id) === v) ?? null);
+                      }}
+                      options={customerOptions}
+                      onSearchChange={handleCustomerSearch}
+                      isSearching={customersLoading}
                       placeholder={t('placeholders.selectCustomer')}
                       searchPlaceholder={t('placeholders.searchCustomer', 'Mijozni qidirish...')}
                       emptyMessage={t('messages.customerNotFound', 'Mijoz topilmadi')}
@@ -1312,7 +1452,10 @@ export function SalesPage() {
                         variant="outline"
                         size="sm"
                         disabled={isDebtSale}
-                        onClick={() => setSelectedCustomerId('')}
+                        onClick={() => {
+                          setSelectedCustomerId('');
+                          setSelectedCustomer(null);
+                        }}
                         title="Mijozni bekor qilish"
                         className="h-10 text-sm dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900"
                       >
@@ -1605,7 +1748,7 @@ export function SalesPage() {
               <div className="border-b dark:border-gray-600 pb-2 text-sm dark:text-gray-300">
                 {selectedCustomerId &&
                   (() => {
-                    const customer = customers.find((c) => String(c.id) === selectedCustomerId);
+                    const customer = selectedCustomer ?? customers.find((c) => String(c.id) === selectedCustomerId);
                     return customer ? (
                       <>
                         <div className="flex justify-between print:text-black">

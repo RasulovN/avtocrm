@@ -100,6 +100,23 @@ body {
   color: hsl(var(--foreground));
 }
 
+/* Tailwind v4 preflight tugmalardan cursor: pointer ni olib tashlagan —
+   barcha bosiladigan elementlarga global qaytaramiz. Utility klasslar
+   (masalan, cursor-not-allowed) bu qoidadan ustun turadi. */
+@layer base {
+  button:not(:disabled),
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  input[type="file"]:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="menuitem"]:not([data-disabled]),
+  [role="option"]:not([data-disabled]),
+  [role="tab"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+}
+
 .dark input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(1);
   cursor: pointer;

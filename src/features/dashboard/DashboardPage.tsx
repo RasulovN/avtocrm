@@ -26,6 +26,7 @@ import type { DashboardReportData } from '../../services/reportService';
 import { storeService } from '../../services/storeService';
 import type { Store } from '../../types';
 import { Link } from 'react-router-dom';
+import { DateRangeFilter } from '../../components/shared/DateRangeFilter';
 
 
 // generateFallbackData was removed to only show database data
@@ -134,7 +135,12 @@ export function DashboardPage() {
   const isAdmin = Boolean(user?.is_superuser || user?.role === 'superuser');
   const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores.find(s => s.type === 'b')?.id || user.stores[0].id) : '');
 
-  const [period, setPeriod] = useState<string>('monthly');
+  // Default davr — kunlik (bugungi statistika)
+  const [period, setPeriod] = useState<string>('daily');
+  // 'dan–gacha' oraliq: ikkalasi tanlanganda period o'rniga shu oraliq ishlatiladi
+  const [rangeFrom, setRangeFrom] = useState<string>('');
+  const [rangeTo, setRangeTo] = useState<string>('');
+  const hasCustomRange = Boolean(rangeFrom && rangeTo);
   const [storeId, setStoreId] = useState<string>(userStoreId || 'all');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -183,6 +189,9 @@ export function DashboardPage() {
   }, [isAdmin, stores, userStoreId, user?.store_name, t, i18n.language]);
 
   useEffect(() => {
+    // Oraliq tanlash tugallanmagan (faqat 'dan' bosilgan) — kutamiz
+    if (rangeFrom && !rangeTo) return;
+
     let active = true;
     setIsLoading(true);
     setError(null);
@@ -192,7 +201,9 @@ export function DashboardPage() {
         const storeParam = storeId === 'all' ? 'all' : Number(storeId);
         const res = await reportService.getDashboardData({
           period,
-          store_id: storeParam
+          store_id: storeParam,
+          // 'dan–gacha' tanlangan bo'lsa backend shu oraliq bo'yicha hisoblaydi
+          ...(rangeFrom && rangeTo ? { from: rangeFrom, to: rangeTo } : {}),
         });
 
         if (active) {
@@ -216,7 +227,7 @@ export function DashboardPage() {
     void fetchDashboard();
 
     return () => { active = false; };
-  }, [storeId, period, t]);
+  }, [storeId, period, rangeFrom, rangeTo, t]);
 
   const chartData = useMemo(() => {
     return data.chart || { labels: [], data: [] };
@@ -284,6 +295,8 @@ export function DashboardPage() {
   }, [data.kpi.revenue, data.kpi.orders]);
 
   const getGrowthText = () => {
+    if (hasCustomRange) return t('dashboard.comparedToPrevPeriod', 'O\'tgan shunday davrga nisbatan');
+    if (period === 'daily') return t('dashboard.comparedToYesterday', 'Kechagiga nisbatan');
     if (period === 'weekly') return t('dashboard.comparedToLastWeek', 'O\'tgan haftaga nisbatan');
     if (period === 'yearly') return t('dashboard.comparedToLastYear', 'O\'tgan yilga nisbatan');
     return t('dashboard.comparedToLastMonth', 'O\'tgan oyga nisbatan');
@@ -312,38 +325,42 @@ export function DashboardPage() {
 
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-1 shadow-sm">
-            <button
-              onClick={() => setPeriod('weekly')}
-              className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                period === 'weekly'
-                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              <CalendarDays className="w-4 h-4 mr-2" />
-              {t('common.week', 'Hafta')}
-            </button>
-            <button
-              onClick={() => setPeriod('monthly')}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                period === 'monthly'
-                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              {t('common.month', 'Oy')}
-            </button>
-            <button
-              onClick={() => setPeriod('yearly')}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                period === 'yearly'
-                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              {t('reports.periods.year', 'Yil')}
-            </button>
+            {([
+              { key: 'daily', label: t('common.day', 'Kun') },
+              { key: 'weekly', label: t('common.week', 'Hafta') },
+              { key: 'monthly', label: t('common.month', 'Oy') },
+              { key: 'yearly', label: t('reports.periods.year', 'Yil') },
+            ] as const).map(({ key, label }, idx) => (
+              <button
+                key={key}
+                onClick={() => {
+                  setPeriod(key);
+                  // Davr tugmasi bosilganda 'dan–gacha' oraliq bekor bo'ladi
+                  setRangeFrom('');
+                  setRangeTo('');
+                }}
+                className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                  period === key && !hasCustomRange
+                    ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                {idx === 0 && <CalendarDays className="w-4 h-4 mr-2" />}
+                {label}
+              </button>
+            ))}
           </div>
+
+          {/* Dan–gacha: bitta kalendarda oraliq bo'yalgan holda tanlanadi */}
+          <DateRangeFilter
+            from={rangeFrom}
+            to={rangeTo}
+            onChange={(newFrom, newTo) => {
+              setRangeFrom(newFrom);
+              setRangeTo(newTo);
+            }}
+            className="w-full sm:w-56"
+          />
 
           <Select value={storeId} onValueChange={setStoreId} disabled={!isAdmin}>
             <SelectTrigger className="w-full sm:w-48 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm rounded-lg h-9">
@@ -364,11 +381,15 @@ export function DashboardPage() {
         <div className="rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-xs">
           <div className="flex justify-between items-center mb-3">
             <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-              {period === 'weekly' 
-                ? t('dashboard.weeklyRevenue', 'Haftalik tushum') 
-                : period === 'yearly' 
-                  ? t('dashboard.yearlyRevenue', 'Yillik tushum') 
-                  : t('dashboard.monthlyRevenue', 'Oylik tushum')}
+              {hasCustomRange
+                ? `${rangeFrom} — ${rangeTo}`
+                : period === 'daily'
+                  ? t('dashboard.todayRevenue', 'Bugungi tushum')
+                  : period === 'weekly'
+                    ? t('dashboard.weeklyRevenue', 'Haftalik tushum')
+                    : period === 'yearly'
+                      ? t('dashboard.yearlyRevenue', 'Yillik tushum')
+                      : t('dashboard.monthlyRevenue', 'Oylik tushum')}
             </p>
             <DollarSign className="w-4 h-4 text-slate-400" />
           </div>
@@ -464,9 +485,11 @@ export function DashboardPage() {
                 <CardTitle className="text-lg font-semibold text-slate-900 dark:text-white">{t('dashboard.salesDynamics', 'Savdolar Dinamikasi')}</CardTitle>
                 <CardDescription className="text-sm text-slate-500 mt-1">
                   {t('dashboard.partsSalesVolume', 'Avto qismlar sotuvi hajmi')} ({
-                    period === 'weekly' ? t('dashboard.duringWeek', 'Hafta davomida') :
-                      period === 'yearly' ? t('reports.periods.year', 'Yil') + ' davomida' :
-                        t('dashboard.duringMonth', 'Oy davomida')
+                    hasCustomRange ? `${rangeFrom} — ${rangeTo}` :
+                      period === 'daily' ? t('dashboard.duringDay', 'Kun davomida') :
+                        period === 'weekly' ? t('dashboard.duringWeek', 'Hafta davomida') :
+                          period === 'yearly' ? t('reports.periods.year', 'Yil') + ' davomida' :
+                            t('dashboard.duringMonth', 'Oy davomida')
                   })
                 </CardDescription>
               </div>
@@ -551,17 +574,23 @@ export function DashboardPage() {
                   </svg>
                 </div>
 
-                {/* X-Axis */}
+                {/* X-Axis: yorliqlar ko'p bo'lsa (soatlik/kunlik oraliq) siyraklashtiriladi */}
                 <div className="absolute left-16 right-0 bottom-0 h-8 text-xs font-semibold text-slate-400">
-                  {localizedChartLabels.map((lbl, i) => (
-                    <div
-                      key={i}
-                      className="absolute bottom-0 -translate-x-1/2 whitespace-nowrap text-center"
-                      style={{ left: `${(i / Math.max(1, localizedChartLabels.length - 1)) * 100}%` }}
-                    >
-                      {lbl}
-                    </div>
-                  ))}
+                  {(() => {
+                    const step = Math.max(1, Math.ceil(localizedChartLabels.length / 12));
+                    return localizedChartLabels.map((lbl, i) => {
+                      if (i % step !== 0) return null;
+                      return (
+                        <div
+                          key={i}
+                          className="absolute bottom-0 -translate-x-1/2 whitespace-nowrap text-center"
+                          style={{ left: `${(i / Math.max(1, localizedChartLabels.length - 1)) * 100}%` }}
+                        >
+                          {lbl}
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               </div>
             )}

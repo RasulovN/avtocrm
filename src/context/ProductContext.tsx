@@ -32,7 +32,10 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
     // logger.info('refreshProducts called, isAdmin:', isAdmin, 'userStoreId:', userStoreId);
     try {
       setLoading(true);
-      const filters: { limit?: number; store_id?: string } = { limit: 2000 };
+      // Backend StandardPagination limitni 100 taga cheklaydi — 2000 so'rash
+      // baribir 100 ta qaytarardi. Rostini yozamiz; kattaroq katalog uchun
+      // sahifalar server-side qidiruvdan foydalanadi (masalan, SalesPage).
+      const filters: { limit?: number; store_id?: string } = { limit: 100 };
       logger.info('Fetching products with filters:', filters);
       const response = await productService.getAll(filters);
       // logger.info('Products API response:', response);

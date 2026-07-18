@@ -39,6 +39,7 @@ import {
 import { NotificationProvider } from '../../context/NotificationProvider';
 import { NotificationToast } from './NotificationToast';
 import { cn, getPreferredStore } from '../../utils';
+import { getRoleLabel } from '../../utils/roleLabel';
 import { useThemeStore, useAuthStore } from '../../app/store';
 import { Button } from '../ui';
 import { useNotifications } from '../../context/NotificationProvider';
@@ -450,7 +451,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold truncate text-foreground">{currentUser.full_name || currentUser.phone_number}</p>
-                  <p className="text-[11px] text-muted-foreground capitalize">{currentUser.role}</p>
+                  <p className="text-[11px] text-muted-foreground">{getRoleLabel(currentUser, t)}</p>
                 </div>
                 <ChevronDown className={cn('h-3.5 w-3.5 text-muted-foreground transition-transform', showProfileMenu && 'rotate-180')} />
               </div>
@@ -462,7 +463,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
                       <User className="h-7 w-7 text-primary" />
                     </div>
                     <p className="font-semibold text-foreground">{currentUser.full_name}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{currentUser.role}</p>
+                    <p className="text-xs text-muted-foreground">{getRoleLabel(currentUser, t)}</p>
                   </div>
                   <div className="space-y-1 text-sm">
                     <div className="flex justify-between px-1">
@@ -507,7 +508,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
                       <User className="h-5 w-5 text-primary" />
                     </div>
                     <p className="font-semibold text-sm">{currentUser.full_name}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{currentUser.role}</p>
+                    <p className="text-xs text-muted-foreground">{getRoleLabel(currentUser, t)}</p>
                   </div>
                   <div className="pt-1 space-y-1.5">
                     <Button
@@ -653,9 +654,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
                       : 'text-muted-foreground hover:text-foreground'
                   )}
                   onClick={() => switchLanguage('cyrl')}
-                >
-                  Кир
-                </button>
+                >  Кириллча </button>
               </div>
 
               {/* Theme Toggle */}

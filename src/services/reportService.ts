@@ -8,7 +8,7 @@ export interface ReportData {
   report_date: string;
 }
 
-export type ReportsFilter = 'monthly' | 'weekly' | 'yearly';
+export type ReportsFilter = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 export interface ReportsQueryParams {
   filter?: ReportsFilter;

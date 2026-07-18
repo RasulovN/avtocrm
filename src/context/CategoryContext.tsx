@@ -28,7 +28,9 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
   const refreshCategories = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await categoryService.getAll({ limit: 1000 });
+      // Backend StandardPagination limitni 100 taga cheklaydi — 1000 so'rash
+      // baribir 100 ta qaytarardi, shuning uchun rostini yozamiz.
+      const response = await categoryService.getAll({ limit: 100 });
       const data = Array.isArray(response.data) ? response.data : [];
       setCategories(data);
       setError(null);

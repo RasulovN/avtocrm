@@ -271,8 +271,18 @@ export function CustomerListPage() {
   };
 
   const openViewDialog = (customer: CustomerFromApi) => {
+    // Jadval qatori darhol ko'rsatiladi; sotuvlar tarixi va do'kon qarzlari
+    // (ro'yxat API'sida endi yo'q — tezlik uchun) detail API'dan yuklanadi.
     setSelectedCustomer(customer);
     setDialogMode('view');
+    void customerApiService
+      .getById(customer.id)
+      .then((full) => {
+        setSelectedCustomer((prev) => (prev && prev.id === customer.id ? { ...prev, ...full } : prev));
+      })
+      .catch((error) => {
+        handleError(error, { showToast: false, logData: 'Failed to load customer detail' });
+      });
   };
 
   const closeDialog = () => {

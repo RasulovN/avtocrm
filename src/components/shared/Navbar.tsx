@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { ThemeToggle } from './ThemeToggle';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { useAuthStore } from '../../app/store';
+import { getRoleLabel } from '../../utils/roleLabel';
 import { LogOut, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 
@@ -47,7 +48,7 @@ export function Navbar() {
         <div className="hidden md:flex items-center gap-3 ml-2 border-l pl-3">
           <div className="flex flex-col items-end">
             <span className="text-sm font-medium">{user?.full_name || user?.phone_number}</span>
-            <span className="text-xs text-muted-foreground capitalize">{user?.role}</span>
+            <span className="text-xs text-muted-foreground">{getRoleLabel(user, t)}</span>
           </div>
           <button
             onClick={logout}

@@ -19,6 +19,7 @@ import { productService } from '../../services/productService';
 import { API_ORIGIN, MEDIA_URL } from '../../services/api';
 import type { ProductFormData, ProductUnit, CategoryFormData, ProductUnitFormData } from '../../types';
 import { latinToCyrillic } from '../../utils/transliteration';
+import { handleError, extractErrorMessage, extractFieldErrors } from '../../utils/errorHandler';
 import { useCategories } from '../../context/CategoryContext';
 import { productUnitService } from '../../services/productUnitService';
 import { productLocationService, type ProductLocation } from '../../services/productLocationService';
@@ -36,6 +37,15 @@ const resolveImageUrl = (image?: string) => {
   if (image.startsWith('http://') || image.startsWith('https://')) return image;
   if (image.startsWith('/')) return `${API_ORIGIN}${image}`;
   return image;
+};
+
+// Backend maydon nomlari → forma maydonlari (frontend `name`ni backend `name_uz`
+// sifatida yuboradi) — server validatsiya xatolarini to'g'ri inputga bog'lash uchun
+const SERVER_FIELD_MAP: Record<string, string> = {
+  name_uz: 'name',
+  name_uz_cyrl: 'name_uz_cyrl',
+  description_uz: 'description',
+  description_uz_cyrl: 'description_uz_cyrl',
 };
 
 const initialFormData: ProductFormData = {
@@ -60,6 +70,9 @@ export function ProductFormPage() {
   const lang = i18n.language || 'uz';
 
   const [saving, setSaving] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [categoryNameError, setCategoryNameError] = useState<string | null>(null);
+  const [unitNameError, setUnitNameError] = useState<string | null>(null);
   const { categories, refreshCategories } = useCategories();
   const [units, setUnits] = useState<ProductUnit[]>([]);
   const [locations, setLocations] = useState<ProductLocation[]>([]);
@@ -177,8 +190,41 @@ export function ProductFormPage() {
     };
   }, [imagePreviews]);
 
+  // Foydalanuvchi maydonni tahrirlashni boshlashi bilan o'sha maydon xatosi o'chadi
+  const clearFieldError = (field: string) => {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
+  // Client-side validatsiya: majburiy maydonlar va minimal uzunliklar.
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    const name = (formData.name || '').trim();
+    if (!name) {
+      errors.name = t('validation.productNameRequired', 'Mahsulot nomi kiritilishi shart');
+    } else if (name.length < 3) {
+      errors.name = t('validation.productNameMin', "Mahsulot nomi kamida 3 belgidan iborat bo'lishi kerak");
+    }
+    const desc = (formData.description || '').trim();
+    if (desc && desc.length < 3) {
+      errors.description = t('validation.descriptionMin', "Tavsif kamida 3 belgidan iborat bo'lishi kerak");
+    }
+    if (formData.min_stock !== undefined && Number(formData.min_stock) < 0) {
+      errors.min_stock = t('validation.minStockNegative', "Minimal qoldiq manfiy bo'lishi mumkin emas");
+    }
+    setFieldErrors(errors);
+    const first = Object.values(errors)[0];
+    if (first) toast.error(first);
+    return !first;
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!validateForm()) return;
 
     try {
       setSaving(true);
@@ -197,8 +243,20 @@ export function ProductFormPage() {
 
       navigate(`/${lang}/products`);
     } catch (error) {
-      console.error('Failed to save product:', error);
-      toast.error(t('errors.generic'));
+      // Server validatsiya xatolarini inputlarga bog'lab, toastda aniq sababni ko'rsatamiz
+      const serverErrors = extractFieldErrors(error);
+      const mapped: Record<string, string> = {};
+      for (const [key, msg] of Object.entries(serverErrors)) {
+        mapped[SERVER_FIELD_MAP[key] ?? key] = msg;
+      }
+      setFieldErrors(mapped);
+      const firstMsg = Object.values(mapped)[0];
+      if (firstMsg) {
+        toast.error(firstMsg);
+        handleError(error, { showToast: false });
+      } else {
+        handleError(error, { showToast: true });
+      }
     } finally {
       setSaving(false);
     }
@@ -206,6 +264,7 @@ export function ProductFormPage() {
 
   const handleChange = (field: keyof ProductFormData, value: string | boolean | number | undefined) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    clearFieldError(field);
   };
 
   const handleNameChange = (value: string) => {
@@ -214,6 +273,7 @@ export function ProductFormPage() {
       name: value,
       name_uz_cyrl: latinToCyrillic(value),
     }));
+    clearFieldError('name');
   };
 
   const handleDescriptionChange = (value: string) => {
@@ -222,6 +282,7 @@ export function ProductFormPage() {
       description: value,
       description_uz_cyrl: latinToCyrillic(value),
     }));
+    clearFieldError('description');
   };
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -256,6 +317,7 @@ export function ProductFormPage() {
 
   const handleOpenCategoryDialog = () => {
     setIsCategoryDialogOpen(true);
+    setCategoryNameError(null);
     setCategoryFormData({
       name_uz: '',
       name_uz_cyrl: '',
@@ -312,6 +374,12 @@ export function ProductFormPage() {
   const handleCategorySubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!categoryFormData.name_uz.trim()) {
+      const msg = t('validation.categoryNameRequired', 'Kategoriya nomi kiritilishi shart');
+      setCategoryNameError(msg);
+      toast.error(msg);
+      return;
+    }
     try {
       setSavingCategory(true);
       const created = await categoryService.create(categoryFormData);
@@ -320,8 +388,11 @@ export function ProductFormPage() {
       handleChange('category', created.id);
       handleCloseCategoryDialog();
     } catch (error) {
-      console.error('Failed to save category:', error);
-      toast.error(t('errors.generic'));
+      const serverErrors = extractFieldErrors(error);
+      const msg = serverErrors.name_uz || serverErrors.name || extractErrorMessage(error);
+      setCategoryNameError(serverErrors.name_uz || serverErrors.name || null);
+      toast.error(msg);
+      handleError(error, { showToast: false });
     } finally {
       setSavingCategory(false);
     }
@@ -329,6 +400,7 @@ export function ProductFormPage() {
 
   const handleOpenUnitDialog = () => {
     setIsUnitDialogOpen(true);
+    setUnitNameError(null);
     setUnitFormData({
       measurement_uz: '',
       measurement_uz_cyrl: '',
@@ -354,6 +426,12 @@ export function ProductFormPage() {
   const handleUnitSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!unitFormData.measurement_uz.trim()) {
+      const msg = t('validation.unitNameRequired', "O'lchov birligi nomi kiritilishi shart");
+      setUnitNameError(msg);
+      toast.error(msg);
+      return;
+    }
     try {
       setSavingUnit(true);
       const created = await productUnitService.create(unitFormData);
@@ -363,8 +441,11 @@ export function ProductFormPage() {
       handleChange('unit_measurement', created.id);
       handleCloseUnitDialog();
     } catch (error) {
-      console.error('Failed to save unit:', error);
-      toast.error(t('errors.generic'));
+      const serverErrors = extractFieldErrors(error);
+      const msg = serverErrors.measurement_uz || extractErrorMessage(error);
+      setUnitNameError(serverErrors.measurement_uz || null);
+      toast.error(msg);
+      handleError(error, { showToast: false });
     } finally {
       setSavingUnit(false);
     }
@@ -443,13 +524,18 @@ export function ProductFormPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="name">{t('products.productName')}</Label>
+                <Label htmlFor="name" required>{t('products.productName')}</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => handleNameChange(e.target.value)}
-                  required
+                  aria-invalid={Boolean(fieldErrors.name)}
+                  aria-describedby={fieldErrors.name ? 'name-error' : undefined}
+                  className={fieldErrors.name ? 'border-red-500 focus-visible:ring-red-500 focus-visible:border-red-500' : ''}
                 />
+                {fieldErrors.name && (
+                  <p id="name-error" className="text-xs text-red-500">{fieldErrors.name}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -467,7 +553,13 @@ export function ProductFormPage() {
                   id="description"
                   value={formData.description}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => handleDescriptionChange(e.target.value)}
+                  aria-invalid={Boolean(fieldErrors.description)}
+                  aria-describedby={fieldErrors.description ? 'description-error' : undefined}
+                  className={fieldErrors.description ? 'border-red-500 focus-visible:ring-red-500 focus-visible:border-red-500' : ''}
                 />
+                {fieldErrors.description && (
+                  <p id="description-error" className="text-xs text-red-500">{fieldErrors.description}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -603,13 +695,20 @@ export function ProductFormPage() {
             <form onSubmit={handleCategorySubmit}>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="cat_name">{t('categories.categoryName')}</Label>
+                  <Label htmlFor="cat_name" required>{t('categories.categoryName')}</Label>
                   <Input
                     id="cat_name"
                     value={categoryFormData.name_uz}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => handleCategoryNameChange(e.target.value)}
-                    required
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                      handleCategoryNameChange(e.target.value);
+                      if (categoryNameError) setCategoryNameError(null);
+                    }}
+                    aria-invalid={Boolean(categoryNameError)}
+                    className={categoryNameError ? 'border-red-500 focus-visible:ring-red-500 focus-visible:border-red-500' : ''}
                   />
+                  {categoryNameError && (
+                    <p className="text-xs text-red-500">{categoryNameError}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="cat_name_cyrl">{t('categories.categoryName')} (Cyrillic)</Label>
@@ -681,13 +780,20 @@ export function ProductFormPage() {
             <form onSubmit={handleUnitSubmit}>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="unit_name">{t('products.unitName')}</Label>
+                  <Label htmlFor="unit_name" required>{t('products.unitName')}</Label>
                   <Input
                     id="unit_name"
                     value={unitFormData.measurement_uz}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => handleUnitNameChange(e.target.value)}
-                    required
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                      handleUnitNameChange(e.target.value);
+                      if (unitNameError) setUnitNameError(null);
+                    }}
+                    aria-invalid={Boolean(unitNameError)}
+                    className={unitNameError ? 'border-red-500 focus-visible:ring-red-500 focus-visible:border-red-500' : ''}
                   />
+                  {unitNameError && (
+                    <p className="text-xs text-red-500">{unitNameError}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="unit_name_cyrl">{t('products.unitName')} (Cyrillic)</Label>

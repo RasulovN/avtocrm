@@ -207,11 +207,12 @@ export function SalesListPage() {
           title={t('sales.title')}
           description={t('sales.listDescription')}
         />
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-end">
           <ExportButton
             direct
             endpoint="/sales/export/"
             filename="sotuvlar.xlsx"
+            className="w-full sm:w-auto"
             params={{
               store: storeFilter || undefined,
               date_from: dateFrom || undefined,
@@ -220,6 +221,7 @@ export function SalesListPage() {
           />
           <Button
             variant="outline"
+            className="w-full sm:w-auto"
             onClick={() => {
               setShowStats(prev => {
                 const newVal = !prev;
@@ -249,56 +251,64 @@ export function SalesListPage() {
         </div>
       </div>
 
-      {/* Filtrlar: davr (standart — bugun) va do'kon */}
-      <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
-        <div className="flex flex-wrap gap-1.5">
-          {([
-            ['today', t('export.today', 'Bugun')],
-            ['week', t('export.last7', 'Oxirgi 7 kun')],
-            ['month', t('export.last30', 'Oxirgi 1 oy')],
-            ['all', t('export.all', 'Hammasi')],
-          ] as [DatePreset, string][]).map(([key, label]) => (
-            <Button
-              key={key}
-              type="button"
-              size="sm"
-              variant={preset === key ? 'default' : 'outline'}
-              onClick={() => applyPreset(key)}
-            >
-              {label}
-            </Button>
-          ))}
-        </div>
-        {/* Dan–gacha: bitta kalendarda oraliq bo'yalgan holda tanlanadi */}
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">{t('common.dateRange', 'Sana oralig‘i')}</label>
-          <DateRangeFilter
-            from={dateFrom}
-            to={dateTo}
-            onChange={(from, to) => {
-              setDateFrom(from);
-              setDateTo(to);
-              setPreset('custom');
-              setPage(1);
-            }}
-            className="w-64"
-          />
-        </div>
-        {isAdmin && (
-          <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">{t('products.filterByStore', 'Do‘kon bo‘yicha filtr')}</label>
-            <select
-              className="h-9 px-3 border rounded-md bg-background text-sm min-w-44"
-              value={storeFilter}
-              onChange={(e) => { setStoreFilter(e.target.value); setPage(1); }}
-            >
-              <option value="">{t('dashboard.allBranches', 'Barcha do‘konlar')}</option>
-              {stores.map((store) => (
-                <option key={store.id} value={store.id}>{store.name}</option>
-              ))}
-            </select>
+      {/* Filtrlar: davr (standart — bugun) va do'kon.
+          Mobilda hamma element ustma-ust to'liq enda, kengroq ekranda bir qatorda */}
+      <div className="rounded-2xl border border-border/60 bg-card p-3 shadow-sm sm:p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
+          <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap">
+            {([
+              ['today', t('export.today', 'Bugun')],
+              ['week', t('export.last7', 'Oxirgi 7 kun')],
+              ['month', t('export.last30', 'Oxirgi 1 oy')],
+              ['all', t('export.all', 'Hammasi')],
+            ] as [DatePreset, string][]).map(([key, label]) => (
+              <Button
+                key={key}
+                type="button"
+                size="sm"
+                variant={preset === key ? 'default' : 'outline'}
+                onClick={() => applyPreset(key)}
+                className="w-full sm:w-auto"
+              >
+                {label}
+              </Button>
+            ))}
           </div>
-        )}
+          {/* Dan–gacha: bitta kalendarda oraliq bo'yalgan holda tanlanadi */}
+          <div className="flex w-full flex-col gap-1 sm:w-64">
+            <label className="text-xs font-medium text-muted-foreground">
+              {t('common.dateRange', 'Sana oralig‘i')}
+            </label>
+            <DateRangeFilter
+              from={dateFrom}
+              to={dateTo}
+              onChange={(from, to) => {
+                setDateFrom(from);
+                setDateTo(to);
+                setPreset('custom');
+                setPage(1);
+              }}
+              className="w-full"
+            />
+          </div>
+          {isAdmin && (
+            <div className="flex w-full flex-col gap-1 sm:w-56">
+              <label className="text-xs font-medium text-muted-foreground">
+                {t('products.filterByStore', 'Do‘kon bo‘yicha filtr')}
+              </label>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm"
+                value={storeFilter}
+                onChange={(e) => { setStoreFilter(e.target.value); setPage(1); }}
+              >
+                <option value="">{t('dashboard.allBranches', 'Barcha do‘konlar')}</option>
+                {stores.map((store) => (
+                  <option key={store.id} value={store.id}>{store.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
       </div>
 
       {showStats && stats && (

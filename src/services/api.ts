@@ -72,7 +72,11 @@ const api: AxiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000,
+  // Backend SLA: har bir endpoint <1s da javob berishi kerak (sekinlari
+  // backendda 🐌 SLOW warning bilan loglanadi). 15s — sekin tarmoq/sovuq start
+  // uchun zaxira; undan uzuni baribir xato deb hisoblanadi va so'rov uziladi.
+  // Og'ir amallar (masalan, Excel eksport) o'z konfigida timeout'ni oshirishi mumkin.
+  timeout: 15000,
   withCredentials: true,
 });
 

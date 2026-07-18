@@ -49,9 +49,11 @@ const TRANSLATIONS: Record<string, { uz: string; cyrl: string }> = {
   'Tugash sanasi': { uz: 'Tugash sanasi', cyrl: 'Тугаш санаси' },
   "Do'kon": { uz: "Do'kon", cyrl: 'Дўкон' },
   "Barcha do'konlar": { uz: "Barcha do'konlar", cyrl: 'Барча дўконлар' },
+  'Kun': { uz: 'Kun', cyrl: 'Кун' },
   'Hafta': { uz: 'Hafta', cyrl: 'Ҳафта' },
   'Oy': { uz: 'Oy', cyrl: 'Ой' },
   'Yil': { uz: 'Yil', cyrl: 'Йил' },
+  'Ushbu kunda': { uz: 'Ushbu kunda', cyrl: 'Ушбу кунда' },
   'Yuklanmoqda...': { uz: 'Yuklanmoqda...', cyrl: 'Юкланмоқда...' },
   'Xatolik yuz berdi': { uz: 'Xatolik yuz berdi', cyrl: 'Хатолик юз берди' },
   'Ushbu oyda': { uz: 'Ushbu oyda', cyrl: 'Ушбу ойда' },
@@ -101,7 +103,8 @@ const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? 
 
 
   const [activeTab, setActiveTab] = useState('sotuvlar');
-  const [filter, setFilter] = useState<ReportsFilter>('monthly');
+  // Default davr — kunlik (bugungi statistika)
+  const [filter, setFilter] = useState<ReportsFilter>('daily');
   const [storeId, setStoreId] = useState<string>(userStoreId || 'all');
   const [from, setFrom] = useState<string>('');
   const [to, setTo] = useState<string>('');
@@ -313,6 +316,7 @@ const getStoreName = (id: number | string, defaultName: string) => {
   }, [data?.debts?.supplierDebts]);
 
   const getPeriodText = () => {
+    if (filter === 'daily') return getTrans('Ushbu kunda');
     if (filter === 'weekly') return getTrans('Ushbu haftada');
     if (filter === 'yearly') return getTrans('Ushbu yilda');
     return getTrans('Ushbu oyda');
@@ -359,7 +363,7 @@ const getStoreName = (id: number | string, defaultName: string) => {
               {getTrans('Davr')}
             </label>
             <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-xl p-1 h-10">
-              {(['weekly', 'monthly', 'yearly'] as const).map((p) => (
+              {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((p) => (
                 <button
                   key={p}
                   onClick={() => setFilter(p)}
@@ -368,7 +372,7 @@ const getStoreName = (id: number | string, defaultName: string) => {
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                 >
-                  {p === 'weekly' ? getTrans('Hafta') : p === 'monthly' ? getTrans('Oy') : getTrans('Yil')}
+                  {p === 'daily' ? getTrans('Kun') : p === 'weekly' ? getTrans('Hafta') : p === 'monthly' ? getTrans('Oy') : getTrans('Yil')}
                 </button>
               ))}
             </div>

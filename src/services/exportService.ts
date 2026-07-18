@@ -17,7 +17,8 @@ export const exportService = {
     const queryString = searchParams.toString();
     const url = queryString ? `${endpoint}?${queryString}` : endpoint;
 
-    const response = await apiClient.get<Blob>(url, { responseType: 'blob' });
+    // Eksport katta bo'lishi mumkin — umumiy 15s o'rniga 60s timeout
+    const response = await apiClient.get<Blob>(url, { responseType: 'blob', timeout: 60000 });
     const blob = new Blob([response.data], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
