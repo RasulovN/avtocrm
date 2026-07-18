@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef, type ChangeEvent, type KeyboardEvent, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
 import toast from 'react-hot-toast';
 import { ScanBarcode, Trash2, DollarSign, Search, X, UserPlus, Eye, Package, Barcode, MapPin, Image as ImageIcon, Loader2, ArrowLeftRight, Banknote, CreditCard, Star } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/Dialog';
@@ -16,6 +16,7 @@ import { bankCardService } from '../../services/bankCardService';
 import { useAuthStore } from '../../app/store';
 import { useProducts } from '../../context/ProductContext';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
+import { useColumnSplitter } from '../../hooks/useColumnSplitter';
 import type { Store, Product, BankCard, SalePaymentInput } from '../../types';
 import { formatCurrency, formatAmountInput, parseAmountInput } from '../../utils';
 import { extractErrorMessage } from '../../utils/errorHandler';
@@ -105,93 +106,12 @@ export function SalesPage() {
   const [mode, setMode] = useState<'sale' | 'return'>('sale');
   const isAdmin = Boolean(user?.is_superuser || user?.role === 'superuser');
   const userStoreId = user?.store_id || (user?.stores && user.stores.length > 0 ? String(user.stores.find(s => s.type === 'b')?.id || user.stores[0].id) : '');
-  // ─── Panellar orasidagi splitter (Mahsulotlar | Chek | To'lov) ───
-  // Faqat xl (>=1280px) ekranlarda ishlaydi; kengliklar % da saqlanadi va
-  // localStorage orqali keyingi sessiyada ham eslab qolinadi.
-  const SPLIT_DEFAULT: [number, number, number] = [41.67, 33.33, 25];
-  const SPLIT_MIN = 16; // har bir panelning minimal kengligi (%)
-  const [panelWidths, setPanelWidths] = useState<[number, number, number]>(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem('sales_panel_widths') || '');
-      if (
-        Array.isArray(saved) &&
-        saved.length === 3 &&
-        saved.every((n) => typeof n === 'number' && n >= SPLIT_MIN && n <= 100)
-      ) {
-        return saved as [number, number, number];
-      }
-    } catch { /* saqlangan qiymat buzuq — default ishlatiladi */ }
-    return SPLIT_DEFAULT;
-  });
-  const [isXl, setIsXl] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1280px)').matches,
-  );
-  const splitContainerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 1280px)');
-    const onChange = () => setIsXl(mq.matches);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, []);
-
-  // Splitter surilganda: ikkala qo'shni panel kengligi umumiy yig'indisi saqlangan
-  // holda qayta taqsimlanadi, uchinchi panel o'zgarmaydi
-  const startSplitDrag = (index: 0 | 1, e: ReactPointerEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const container = splitContainerRef.current;
-    if (!container) return;
-    const startX = e.clientX;
-    const startWidths = [...panelWidths] as [number, number, number];
-    const totalWidth = container.getBoundingClientRect().width;
-    if (totalWidth <= 0) return;
-
-    const onMove = (ev: globalThis.PointerEvent) => {
-      const deltaPct = ((ev.clientX - startX) / totalWidth) * 100;
-      const pair = startWidths[index] + startWidths[index + 1];
-      const left = Math.max(SPLIT_MIN, Math.min(pair - SPLIT_MIN, startWidths[index] + deltaPct));
-      const next = [...startWidths] as [number, number, number];
-      next[index] = left;
-      next[index + 1] = pair - left;
-      setPanelWidths(next);
-    };
-    const onUp = () => {
-      document.removeEventListener('pointermove', onMove);
-      document.removeEventListener('pointerup', onUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-      setPanelWidths((w) => {
-        localStorage.setItem('sales_panel_widths', JSON.stringify(w));
-        return w;
-      });
-    };
-    document.addEventListener('pointermove', onMove);
-    document.addEventListener('pointerup', onUp);
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-  };
-
-  const resetSplit = () => {
-    setPanelWidths(SPLIT_DEFAULT);
-    localStorage.setItem('sales_panel_widths', JSON.stringify(SPLIT_DEFAULT));
-  };
-
-  // xl da flex-basis % orqali kenglik; kichik ekranlarda odatiy stack (style yo'q)
-  const panelStyle = (i: 0 | 1 | 2): CSSProperties | undefined =>
-    isXl ? { flexBasis: `${panelWidths[i]}%`, flexGrow: 0, flexShrink: 1, minWidth: 0 } : undefined;
-
-  const renderSplitter = (index: 0 | 1) => (
-    <div
-      role="separator"
-      aria-orientation="vertical"
-      title={t('sales.splitterHint', 'Kengligini o‘zgartirish uchun torting, ikki marta bosib tiklang')}
-      onPointerDown={(e) => startSplitDrag(index, e)}
-      onDoubleClick={resetSplit}
-      className="group hidden shrink-0 cursor-col-resize touch-none items-center justify-center px-1 xl:flex"
-    >
-      <div className="h-16 w-1 rounded-full bg-border transition-colors group-hover:bg-primary/60 group-active:bg-primary" />
-    </div>
-  );
+  // Panellar orasidagi splitter (Mahsulotlar | Chek | To'lov) — faqat xl ekranlarda
+  const {
+    containerRef: splitContainerRef,
+    panelStyle,
+    splitter: renderSplitter,
+  } = useColumnSplitter({ storageKey: 'sales_panel_widths', defaults: [41.67, 33.33, 25] });
 
   const [stores, setStores] = useState<Store[]>([]);
   const [saving, setSaving] = useState(false);

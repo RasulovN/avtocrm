@@ -26,6 +26,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { salesService, saleReturnService } from '../../services/salesService';
 import { bankCardService } from '../../services/bankCardService';
 import { customerApiService, type CustomerFromApi } from '../../services/customerService';
+import { useColumnSplitter } from '../../hooks/useColumnSplitter';
 import { formatCurrency, formatDate, formatAmountInput, parseAmountInput } from '../../utils';
 import type { Sale, SaleItem, SaleReturnFormItem, SalePaymentInput, BankCard } from '../../types';
 
@@ -50,6 +51,12 @@ export function SaleReturnCreatePage({ embedded = false }: SaleReturnCreatePageP
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const preselectedSaleId = searchParams.get('saleId');
+
+  // Panellar orasidagi splitter (Sotuvlar | Mahsulotlar | Xulosa) — faqat xl ekranlarda
+  const split = useColumnSplitter({
+    storageKey: 'sale_return_panel_widths',
+    defaults: [25, 41.67, 33.33],
+  });
 
   // ── Chap ustun: sotuvlar ro'yxati ──────────────────────────────
   const [sales, setSales] = useState<Sale[]>([]);
@@ -346,9 +353,9 @@ export function SaleReturnCreatePage({ embedded = false }: SaleReturnCreatePageP
         </div>
       )}
 
-      <div className={`grid grid-cols-1 gap-3 xl:grid-cols-12 ${embedded ? 'xl:h-[calc(100vh-13rem)]' : 'xl:h-[calc(100vh-13rem)]'}`}>
+      <div ref={split.containerRef} className="flex flex-col gap-3 xl:h-[calc(100vh-13rem)] xl:flex-row xl:gap-0">
         {/* ───────────── CHAP: sotuvlar ro'yxati ───────────── */}
-        <div className="flex min-h-80 flex-col rounded-lg border border-border bg-card p-3 xl:col-span-3 xl:min-h-0">
+        <div className="flex min-h-80 flex-col rounded-lg border border-border bg-card p-3 xl:min-h-0" style={split.panelStyle(0)}>
           <h4 className="mb-2 flex items-center gap-2 text-base font-semibold">
             <Receipt className="h-4 w-4" />
             {t('sales.title')}
@@ -425,8 +432,10 @@ export function SaleReturnCreatePage({ embedded = false }: SaleReturnCreatePageP
           </div>
         </div>
 
+        {split.splitter(0)}
+
         {/* ───────────── MARKAZ: qaytariladigan mahsulotlar ───────────── */}
-        <div className="flex min-h-80 flex-col rounded-lg border border-border bg-card p-3 xl:col-span-5 xl:min-h-0">
+        <div className="flex min-h-80 flex-col rounded-lg border border-border bg-card p-3 xl:min-h-0" style={split.panelStyle(1)}>
           <div className="mb-2 flex items-center justify-between gap-2">
             <h4 className="flex items-center gap-2 text-base font-semibold">
               <ShoppingCart className="h-4 w-4" />
@@ -558,8 +567,10 @@ export function SaleReturnCreatePage({ embedded = false }: SaleReturnCreatePageP
           </div>
         </div>
 
+        {split.splitter(1)}
+
         {/* ───────────── O'NG: qaytarim xulosasi ───────────── */}
-        <div className="flex min-h-80 flex-col rounded-lg border border-border bg-card p-3 xl:col-span-4 xl:min-h-0">
+        <div className="flex min-h-80 flex-col rounded-lg border border-border bg-card p-3 xl:min-h-0" style={split.panelStyle(2)}>
           <h4 className="mb-2 flex items-center gap-2 text-base font-semibold">
             <Wallet className="h-4 w-4" />
             {t('saleReturns.summary', 'Qaytarim xulosasi')}
