@@ -1296,7 +1296,9 @@ export function SalesPage() {
                       onValueChange={setSelectedCustomerId}
                       options={customers.map((customer) => ({
                         value: String(customer.id),
-                        label: `${customer.full_name} - ${customer.phone_number}`,
+                        label: customer.full_name,
+                        // Telefon raqami ism ostida kichikroq ko'rinadi
+                        sublabel: customer.phone_number,
                       }))}
                       placeholder={t('placeholders.selectCustomer')}
                       searchPlaceholder={t('placeholders.searchCustomer', 'Mijozni qidirish...')}

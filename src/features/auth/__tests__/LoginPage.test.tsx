@@ -5,7 +5,7 @@ import { LoginPage } from '../LoginPage';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => {
+    t: (key: string, fallback?: string) => {
       const translations: Record<string, string> = {
         'auth.login': 'Kirish',
         'auth.password': 'Parol',
@@ -15,15 +15,19 @@ vi.mock('react-i18next', () => ({
         'common.loading': 'Yuklanmoqda...',
         'stores.phone': 'Telefon',
       };
-      return translations[key] || key;
+      return translations[key] || fallback || key;
     },
     i18n: { language: 'uz' },
   }),
 }));
 
+const { mockLogin } = vi.hoisted(() => ({
+  mockLogin: vi.fn().mockResolvedValue({}),
+}));
+
 vi.mock('../../../app/store', () => ({
   useAuthStore: vi.fn(() => ({
-    login: vi.fn().mockResolvedValue({}),
+    login: mockLogin,
     isLoading: false,
     error: null,
   })),
@@ -66,15 +70,93 @@ describe('LoginPage', () => {
     expect(screen.getByText(/parolni unutdingizmi/i)).toBeInTheDocument();
   });
 
-  it('updates phone input value', async () => {
+  it('formats phone number with spaces as user types', async () => {
     const user = userEvent.setup();
     render(<LoginPage />);
 
     const phoneInput = screen.getByLabelText(/telefon/i);
-    await user.clear(phoneInput);
-    await user.type(phoneInput, '+998901234567');
+    await user.type(phoneInput, '901234567');
 
-    expect(phoneInput).toHaveValue('+998901234567');
+    expect(phoneInput).toHaveValue('+998 90 123 45 67');
+  });
+
+  it('normalizes a pasted number that includes the country code', async () => {
+    const user = userEvent.setup();
+    render(<LoginPage />);
+
+    const phoneInput = screen.getByLabelText(/telefon/i);
+    await user.tripleClick(phoneInput);
+    await user.paste('998901234567');
+
+    expect(phoneInput).toHaveValue('+998 90 123 45 67');
+  });
+
+  it('ignores extra digits beyond a complete number', async () => {
+    const user = userEvent.setup();
+    render(<LoginPage />);
+
+    const phoneInput = screen.getByLabelText(/telefon/i);
+    await user.type(phoneInput, '90123456789');
+
+    expect(phoneInput).toHaveValue('+998 90 123 45 67');
+  });
+
+  it('shows an error immediately when 998 is typed again after +998', async () => {
+    const user = userEvent.setup();
+    render(<LoginPage />);
+
+    const phoneInput = screen.getByLabelText(/telefon/i);
+    await user.type(phoneInput, '998');
+
+    expect(phoneInput).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByText(/998 ni qayta yozmang/i)).toBeInTheDocument();
+  });
+
+  it('clears the duplicate code error once the extra 998 is removed', async () => {
+    const user = userEvent.setup();
+    render(<LoginPage />);
+
+    const phoneInput = screen.getByLabelText(/telefon/i);
+    await user.type(phoneInput, '998');
+    expect(screen.getByText(/998 ni qayta yozmang/i)).toBeInTheDocument();
+
+    await user.type(phoneInput, '{backspace}');
+    expect(screen.queryByText(/998 ni qayta yozmang/i)).not.toBeInTheDocument();
+  });
+
+  it('shows an incomplete number error on blur', async () => {
+    const user = userEvent.setup();
+    render(<LoginPage />);
+
+    const phoneInput = screen.getByLabelText(/telefon/i);
+    await user.type(phoneInput, '90123');
+    await user.tab();
+
+    expect(phoneInput).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByText(/to'liq emas/i)).toBeInTheDocument();
+  });
+
+  it('submits the phone number without spaces', async () => {
+    const user = userEvent.setup();
+    render(<LoginPage />);
+
+    await user.type(screen.getByLabelText(/telefon/i), '901234567');
+    await user.type(screen.getByLabelText(/parol/i), 'secret123');
+    await user.click(screen.getByRole('button', { name: /kirish/i }));
+
+    expect(mockLogin).toHaveBeenCalledWith('+998901234567', 'secret123');
+  });
+
+  it('does not submit when the phone number is incomplete', async () => {
+    const user = userEvent.setup();
+    render(<LoginPage />);
+
+    await user.type(screen.getByLabelText(/telefon/i), '90123');
+    await user.type(screen.getByLabelText(/parol/i), 'secret123');
+    await user.click(screen.getByRole('button', { name: /kirish/i }));
+
+    expect(mockLogin).not.toHaveBeenCalled();
+    expect(screen.getByText(/to'liq emas/i)).toBeInTheDocument();
   });
 
   it('updates password input value', async () => {

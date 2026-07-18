@@ -132,7 +132,9 @@
     "sending": "Yuborilmoqda...",
     "resetPasswordTitle": "Parolni tiklash",
     "resetPasswordDesc": "Elektron pochta manzilingizga tiklash havolasini yuboramiz",
-    "phoneNumber": "Telefon raqami"
+    "phoneNumber": "Telefon raqami",
+    "phoneInvalid": "Telefon raqam to‘liq emas (masalan: +998 90 123 45 67)",
+    "phoneDuplicateCode": "Davlat kodi +998 allaqachon kiritilgan — 998 ni qayta yozmang"
   },
   "dashboard": {
     "title": "Bosh sahifa",

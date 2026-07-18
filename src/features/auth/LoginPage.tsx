@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Car, Eye, EyeOff } from 'lucide-react';
@@ -8,6 +8,26 @@ import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
 import { Card, CardContent, CardDescription, CardHeader } from '../../components/ui/Card';
 
+const PHONE_NATIONAL_LENGTH = 9;
+
+// Kiritilgan matndan +998 dan keyingi 9 xonali raqamni ajratib oladi.
+// Boshida 998 (davlat kodi) bo'lsa, uni tashlab yuboradi — shunda
+// "+998 90 123 45 67", "998901234567" va "901234567" bir xil o'qiladi.
+const extractNational = (raw: string): string => {
+  const digits = raw.replace(/\D/g, '');
+  if (digits.startsWith('998')) return digits.slice(3, 3 + PHONE_NATIONAL_LENGTH);
+  // '+998' prefiksi qisman o'chirilgan holat ('+99', '+9') — raqam yo'q deb olamiz
+  if (raw.startsWith('+') && '998'.startsWith(digits)) return '';
+  return digits.slice(0, PHONE_NATIONAL_LENGTH);
+};
+
+// +998 XX XXX XX XX ko'rinishida formatlaydi
+const formatUzPhone = (national: string): string => {
+  const d = national.slice(0, PHONE_NATIONAL_LENGTH);
+  const parts = [d.slice(0, 2), d.slice(2, 5), d.slice(5, 7), d.slice(7, 9)].filter(Boolean);
+  return parts.length ? `+998 ${parts.join(' ')}` : '+998';
+};
+
 export function LoginPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -15,13 +35,81 @@ export function LoginPage() {
   const [phone_number, setPhoneNumber] = useState('+998');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const phoneInputRef = useRef<HTMLInputElement>(null);
+  const caretRef = useRef<number | null>(null);
+
+  // Formatlashdan keyin kursorni joyida qoldiramiz
+  useLayoutEffect(() => {
+    if (caretRef.current !== null && phoneInputRef.current) {
+      phoneInputRef.current.setSelectionRange(caretRef.current, caretRef.current);
+      caretRef.current = null;
+    }
+  }, [phone_number]);
+
+  const duplicateCodeError = () =>
+    t('auth.phoneDuplicateCode', "Davlat kodi +998 allaqachon kiritilgan — 998 ni qayta yozmang");
+
+  const validatePhone = (value: string): boolean => {
+    const national = extractNational(value);
+    if (national.startsWith('998')) {
+      setPhoneError(duplicateCodeError());
+      return false;
+    }
+    if (national.length !== PHONE_NATIONAL_LENGTH) {
+      setPhoneError(t('auth.phoneInvalid', "Telefon raqam to'liq emas (masalan: +998 90 123 45 67)"));
+      return false;
+    }
+    setPhoneError(null);
+    return true;
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target;
+    const raw = input.value;
+    const rawDigits = raw.replace(/\D/g, '');
+    const national = extractNational(raw);
+    const formatted = formatUzPhone(national);
+
+    // Kursordan oldingi raqamlar soni — formatlangan matnda ham shu raqamdan
+    // keyin turishi kerak. Agar foydalanuvchi 998 prefiksisiz yozgan bo'lsa,
+    // formatlangan matnga qo'shilgan prefiks raqamlarini ham hisobga olamiz.
+    let targetDigits = raw
+      .slice(0, input.selectionStart ?? raw.length)
+      .replace(/\D/g, '').length;
+    if (!rawDigits.startsWith('998')) targetDigits += 3;
+
+    let pos = 0;
+    let seen = 0;
+    while (pos < formatted.length && seen < targetDigits) {
+      if (formatted[pos] >= '0' && formatted[pos] <= '9') seen++;
+      pos++;
+    }
+
+    if (formatted === phone_number) {
+      // State o'zgarmadi (masalan, 9 xonadan ortiq yozildi) — React qayta
+      // render qilmaydi, shuning uchun DOM qiymatini qo'lda tiklaymiz
+      input.value = formatted;
+      input.setSelectionRange(pos, pos);
+    } else {
+      caretRef.current = pos;
+      setPhoneNumber(formatted);
+    }
+
+    if (national.startsWith('998')) {
+      setPhoneError(duplicateCodeError());
+    } else if (phoneError) {
+      setPhoneError(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!phone_number || !password) return;
-    
+    if (!validatePhone(phone_number)) return;
+
     try {
-      await login(phone_number, password);
+      await login(phone_number.replace(/\s/g, ''), password);
       navigate(`/${i18n.language || 'uz'}/dashboard`, { replace: true });
     } catch (err) {
       console.error('Login error:', err);
@@ -53,16 +141,25 @@ export function LoginPage() {
               <div className="space-y-2">
                 <Label htmlFor="phone_number" className="text-sm font-semibold">{t('stores.phone') || t('auth.phoneNumber')}</Label>
                 <Input
+                  ref={phoneInputRef}
                   id="phone_number"
                   name="phone_number"
                   type="tel"
                   autoComplete="tel"
-                  placeholder={t('stores.phone') || t('auth.phoneNumber') || '+998901234567'}
+                  placeholder="+998 90 123 45 67"
                   value={phone_number}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  onChange={handlePhoneChange}
+                  onBlur={(e) => {
+                    if (extractNational(e.target.value).length > 0) validatePhone(e.target.value);
+                  }}
                   required
-                  className="h-11"
+                  aria-invalid={Boolean(phoneError)}
+                  aria-describedby={phoneError ? 'phone_number-error' : undefined}
+                  className={`h-11 ${phoneError ? 'border-red-500 focus-visible:ring-red-500 focus-visible:border-red-500' : ''}`}
                 />
+                {phoneError && (
+                  <p id="phone_number-error" className="text-xs text-red-500">{phoneError}</p>
+                )}
               </div>
 
               <div className="space-y-2">

@@ -5,6 +5,8 @@ import { cn } from '../../utils';
 interface Option {
   value: string;
   label: string;
+  /** Ikkinchi qator: asosiy nomdan kichikroq ko'rsatiladigan qo'shimcha matn (masalan, telefon raqami) */
+  sublabel?: string;
 }
 
 interface SearchableSelectProps {
@@ -171,7 +173,12 @@ export function SearchableSelect({
   const filteredOptions = React.useMemo(() => {
     if (!searchQuery) return options;
     const query = searchQuery.toLowerCase().trim();
-    return options.filter((opt) => opt.label.toLowerCase().includes(query));
+    // Qidiruv label bilan birga sublabel bo'yicha ham ishlaydi (masalan, telefon raqami)
+    return options.filter(
+      (opt) =>
+        opt.label.toLowerCase().includes(query) ||
+        (opt.sublabel ? opt.sublabel.toLowerCase().includes(query) : false),
+    );
   }, [options, searchQuery]);
 
   const visibleOptions = React.useMemo(
@@ -199,7 +206,16 @@ export function SearchableSelect({
         )}
       >
         <span className={cn('truncate block', !selectedOption && 'text-muted-foreground/60')}>
-          {selectedOption ? selectedOption.label : placeholder}
+          {selectedOption ? (
+            <>
+              {selectedOption.label}
+              {selectedOption.sublabel && (
+                <span className="ml-2 text-xs text-muted-foreground">{selectedOption.sublabel}</span>
+              )}
+            </>
+          ) : (
+            placeholder
+          )}
         </span>
         <ChevronDown className={cn('h-4 w-4 opacity-50 shrink-0 ml-2 transition-transform duration-200', isOpen && 'rotate-180')} />
       </button>
@@ -257,13 +273,23 @@ export function SearchableSelect({
                       type="button"
                       onClick={() => handleSelect(opt.value)}
                       className={cn(
-                        'relative flex w-full cursor-default select-none items-center rounded-lg py-2 px-3 text-sm outline-none transition-colors text-left',
+                        'relative flex w-full cursor-default select-none flex-col items-start rounded-lg py-2 px-3 text-sm outline-none transition-colors text-left',
                         isSelected
                           ? 'bg-primary text-primary-foreground font-medium'
                           : 'hover:bg-accent hover:text-accent-foreground text-foreground'
                       )}
                     >
-                      <span className="truncate">{opt.label}</span>
+                      <span className="w-full truncate">{opt.label}</span>
+                      {opt.sublabel && (
+                        <span
+                          className={cn(
+                            'w-full truncate text-xs',
+                            isSelected ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                          )}
+                        >
+                          {opt.sublabel}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
