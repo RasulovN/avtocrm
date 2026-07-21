@@ -356,10 +356,10 @@ export function SaleReturnCreatePage({ embedded = false }: SaleReturnCreatePageP
       <div ref={split.containerRef} className="flex flex-col gap-3 xl:h-[calc(100vh-13rem)] xl:flex-row xl:gap-0">
         {/* ───────────── CHAP: sotuvlar ro'yxati ───────────── */}
         <div className="flex min-h-80 flex-col rounded-lg border border-border bg-card p-3 xl:min-h-0" style={split.panelStyle(0)}>
-          <h4 className="mb-2 flex items-center gap-2 text-base font-semibold">
+          <h2 className="mb-2 flex items-center gap-2 text-base font-semibold">
             <Receipt className="h-4 w-4" />
             {t('sales.title')}
-          </h4>
+          </h2>
           <div className="relative mb-3">
             <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -369,7 +369,7 @@ export function SaleReturnCreatePage({ embedded = false }: SaleReturnCreatePageP
               className="pl-9"
             />
           </div>
-          <div className="flex-1 space-y-2 overflow-y-auto pr-1">
+          <div className="max-h-[50vh] flex-1 space-y-2 overflow-y-auto pr-1 xl:max-h-none">
             {loadingSales && sales.length === 0 ? (
               <div className="py-8 text-center text-sm text-muted-foreground">{t('common.loading')}</div>
             ) : sales.length === 0 ? (
@@ -436,12 +436,12 @@ export function SaleReturnCreatePage({ embedded = false }: SaleReturnCreatePageP
 
         {/* ───────────── MARKAZ: qaytariladigan mahsulotlar ───────────── */}
         <div className="flex min-h-80 flex-col rounded-lg border border-border bg-card p-3 xl:min-h-0" style={split.panelStyle(1)}>
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <h4 className="flex items-center gap-2 text-base font-semibold">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="flex items-center gap-2 text-base font-semibold">
               <ShoppingCart className="h-4 w-4" />
               {t('saleReturns.returnItems')}
               {selectedSale && <span className="text-muted-foreground">· №{selectedSale.id}</span>}
-            </h4>
+            </h2>
             {hasSelection && (
               <div className="flex items-center gap-1.5">
                 <Button
@@ -459,6 +459,7 @@ export function SaleReturnCreatePage({ embedded = false }: SaleReturnCreatePageP
                     setOnlySelected(false);
                   }}
                   title={t('common.clear', 'Tozalash')}
+                  aria-label={t('common.clear', 'Tozalash')}
                 >
                   <Eraser className="h-4 w-4" />
                 </Button>
@@ -466,7 +467,7 @@ export function SaleReturnCreatePage({ embedded = false }: SaleReturnCreatePageP
             )}
           </div>
 
-          <div className="flex-1 space-y-2 overflow-y-auto pr-1">
+          <div className="max-h-[50vh] flex-1 space-y-2 overflow-y-auto pr-1 xl:max-h-none">
             {!selectedSale && !loadingSale ? (
               <div className="flex h-full min-h-40 flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground">
                 <Receipt className="h-10 w-10 opacity-40" />
@@ -520,6 +521,7 @@ export function SaleReturnCreatePage({ embedded = false }: SaleReturnCreatePageP
                             className="h-8 w-8"
                             disabled={qty <= 0}
                             onClick={() => setItemQty(item, qty - 1)}
+                            aria-label={t('common.decrease', 'Kamaytirish')}
                           >
                             <Minus className="h-3.5 w-3.5" />
                           </Button>
@@ -529,6 +531,7 @@ export function SaleReturnCreatePage({ embedded = false }: SaleReturnCreatePageP
                             max={remaining}
                             value={qty === 0 ? '' : qty}
                             placeholder="0"
+                            aria-label={t('sales.quantity', 'Miqdor')}
                             onChange={(e) => setItemQty(item, parseInt(e.target.value, 10) || 0)}
                             className="h-8 w-16 text-center tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                           />
@@ -538,6 +541,7 @@ export function SaleReturnCreatePage({ embedded = false }: SaleReturnCreatePageP
                             className="h-8 w-8"
                             disabled={qty >= remaining}
                             onClick={() => setItemQty(item, qty + 1)}
+                            aria-label={t('common.increase', "Ko'paytirish")}
                           >
                             <Plus className="h-3.5 w-3.5" />
                           </Button>
@@ -571,10 +575,10 @@ export function SaleReturnCreatePage({ embedded = false }: SaleReturnCreatePageP
 
         {/* ───────────── O'NG: qaytarim xulosasi ───────────── */}
         <div className="flex min-h-80 flex-col rounded-lg border border-border bg-card p-3 xl:min-h-0" style={split.panelStyle(2)}>
-          <h4 className="mb-2 flex items-center gap-2 text-base font-semibold">
+          <h2 className="mb-2 flex items-center gap-2 text-base font-semibold">
             <Wallet className="h-4 w-4" />
             {t('saleReturns.summary', 'Qaytarim xulosasi')}
-          </h4>
+          </h2>
 
           {!selectedSale ? (
             <div className="flex flex-1 items-center justify-center text-center text-sm text-muted-foreground">

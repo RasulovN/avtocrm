@@ -384,7 +384,7 @@ const getStoreName = (id: number | string, defaultName: string) => {
               {getTrans("Do'kon")}
             </label>
             <Select value={storeId} onValueChange={setStoreId} disabled={!isAdmin}>
-              <SelectTrigger className="w-full bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm rounded-xl h-10">
+              <SelectTrigger className="w-full bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm rounded-xl h-10" aria-label={getTrans("Do'kon")}>
                 <SelectValue placeholder={getTrans("Barcha do'konlar")} />
               </SelectTrigger>
               <SelectContent>
@@ -421,7 +421,7 @@ const getStoreName = (id: number | string, defaultName: string) => {
       )}
 
       {/* KPI Cards Grid */}
-      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {/* Revenue */}
         <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
           <CardContent className="p-3 sm:p-5">
@@ -432,12 +432,12 @@ const getStoreName = (id: number | string, defaultName: string) => {
             {isLoading ? (
               <Skeleton className="h-7 sm:h-8 w-28 sm:w-36 mb-1" />
             ) : (
-              <h3 className="text-base sm:text-xl md:text-2xl font-bold text-slate-900 dark:text-white mb-0.5 sm:mb-1 whitespace-nowrap">
+              <p className="text-base sm:text-xl md:text-2xl font-bold text-slate-900 dark:text-white mb-0.5 sm:mb-1 whitespace-nowrap">
                 {formatCurrency(summary.totalRevenue)}
-              </h3>
+              </p>
             )}
             {!isLoading && (
-              <p className="text-[9px] sm:text-xs text-emerald-500 flex items-center gap-0.5 sm:gap-1">
+              <p className="text-[9px] sm:text-xs text-emerald-700 dark:text-emerald-400 flex items-center gap-0.5 sm:gap-1">
                 <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                 {getTrans('Marja')}: {margin.toFixed(1)}%
               </p>
@@ -455,9 +455,9 @@ const getStoreName = (id: number | string, defaultName: string) => {
             {isLoading ? (
               <Skeleton className="h-7 sm:h-8 w-28 sm:w-36 mb-1" />
             ) : (
-              <h3 className={`text-base sm:text-xl md:text-2xl font-bold mb-0.5 sm:mb-1 whitespace-nowrap ${summary.totalProfit >= 0 ? 'text-emerald-600 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-500'}`}>
+              <p className={`text-base sm:text-xl md:text-2xl font-bold mb-0.5 sm:mb-1 whitespace-nowrap ${summary.totalProfit >= 0 ? 'text-emerald-700 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-500'}`}>
                 {formatCurrency(summary.totalProfit)}
-              </h3>
+              </p>
             )}
             {!isLoading && (
               <p className="text-[9px] sm:text-xs text-slate-500 dark:text-slate-400">
@@ -477,9 +477,9 @@ const getStoreName = (id: number | string, defaultName: string) => {
             {isLoading ? (
               <Skeleton className="h-7 sm:h-8 w-16 mb-1" />
             ) : (
-              <h3 className="text-base sm:text-xl md:text-2xl font-bold text-slate-900 dark:text-white mb-0.5 sm:mb-1">
+              <p className="text-base sm:text-xl md:text-2xl font-bold text-slate-900 dark:text-white mb-0.5 sm:mb-1">
                 {summary.totalOrders.toLocaleString()}
-              </h3>
+              </p>
             )}
             {!isLoading && (
               <p className="text-[9px] sm:text-xs text-slate-500 dark:text-slate-400">
@@ -499,9 +499,9 @@ const getStoreName = (id: number | string, defaultName: string) => {
             {isLoading ? (
               <Skeleton className="h-7 sm:h-8 w-28 sm:w-36 mb-1" />
             ) : (
-              <h3 className="text-base sm:text-xl md:text-2xl font-bold text-[#ff6b00] dark:text-amber-500 mb-0.5 sm:mb-1 whitespace-nowrap">
+              <p className="text-base sm:text-xl md:text-2xl font-bold text-orange-700 dark:text-amber-500 mb-0.5 sm:mb-1 whitespace-nowrap">
                 {formatCurrency(totalCustomerDebt)}
-              </h3>
+              </p>
             )}
           </CardContent>
         </Card>
@@ -529,17 +529,17 @@ const getStoreName = (id: number | string, defaultName: string) => {
           <>
             <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
               {/* Store Sales Chart */}
-              <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+              <Card className="min-w-0 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
                 <CardContent className="p-4 sm:p-6">
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mb-4 sm:mb-6">
+                  <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mb-4 sm:mb-6">
                     {getTrans("Do'konlar bo'yicha sotuvlar")}
-                  </h3>
+                  </h2>
                   {isLoading ? (
                     <div className="h-50 sm:h-62.5 w-full flex items-center justify-center">
                       <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
                     </div>
                   ) : storeSales.length === 0 ? (
-                    <div className="h-50 sm:h-62.5 w-full flex items-center justify-center text-xs text-slate-400">
+                    <div className="h-50 sm:h-62.5 w-full flex items-center justify-center text-xs text-slate-600 dark:text-slate-400">
                       {getTrans("Hech qanday ma'lumot topilmadi")}
                     </div>
                   ) : (
@@ -577,17 +577,17 @@ const getStoreName = (id: number | string, defaultName: string) => {
               </Card>
 
               {/* Category Sales Chart */}
-              <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+              <Card className="min-w-0 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
                 <CardContent className="p-4 sm:p-6">
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mb-4 sm:mb-6">
+                  <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mb-4 sm:mb-6">
                     {getTrans("Kategoriyalar bo'yicha sotuvlar")}
-                  </h3>
+                  </h2>
                   {isLoading ? (
                     <div className="h-50 sm:h-62.5 w-full flex items-center justify-center">
                       <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
                     </div>
                   ) : categoryStats.length === 0 ? (
-                    <div className="h-50 sm:h-62.5 w-full flex items-center justify-center text-xs text-slate-400">
+                    <div className="h-50 sm:h-62.5 w-full flex items-center justify-center text-xs text-slate-600 dark:text-slate-400">
                       {getTrans("Hech qanday ma'lumot topilmadi")}
                     </div>
                   ) : (
@@ -650,9 +650,9 @@ formatter={(value: any, props: any) => [
             {/* Top Products Table */}
             <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm mt-4 sm:mt-6 overflow-hidden">
               <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-slate-800">
-                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
                   {getTrans("Sotuvlar bo'yicha Top-10 tovarlar")}
-                </h3>
+                </h2>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs sm:text-sm text-left">
@@ -676,7 +676,7 @@ formatter={(value: any, props: any) => [
                       ))
                     ) : topProducts.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="px-3 sm:px-6 py-6 text-center text-slate-400">
+                        <td colSpan={4} className="px-3 sm:px-6 py-6 text-center text-slate-600 dark:text-slate-400">
                           {getTrans("Hech qanday ma'lumot topilmadi")}
                         </td>
                       </tr>
@@ -715,9 +715,9 @@ formatter={(value: any, props: any) => [
           <div className="space-y-4 sm:space-y-6">
           <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden animate-in fade-in-50 duration-200">
             <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-slate-800">
-              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
                 {getTrans("To'lovlar tarkibi")}
-              </h3>
+              </h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-xs sm:text-sm text-left">
@@ -741,7 +741,7 @@ formatter={(value: any, props: any) => [
                     ))
                   ) : paymentStructure.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-3 sm:px-6 py-6 text-center text-slate-400">
+                      <td colSpan={4} className="px-3 sm:px-6 py-6 text-center text-slate-600 dark:text-slate-400">
                         {getTrans("Hech qanday ma'lumot topilmadi")}
                       </td>
                     </tr>
@@ -787,9 +787,9 @@ formatter={(value: any, props: any) => [
           {/* Card Breakdown — har bir bank kartasi bo'yicha NET tushum */}
           <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden animate-in fade-in-50 duration-200">
             <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-slate-800">
-              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
                 {getTrans('Kartalar kesimi')}
-              </h3>
+              </h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-xs sm:text-sm text-left">
@@ -813,7 +813,7 @@ formatter={(value: any, props: any) => [
                     ))
                   ) : cardBreakdown.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-3 sm:px-6 py-6 text-center text-slate-400">
+                      <td colSpan={4} className="px-3 sm:px-6 py-6 text-center text-slate-600 dark:text-slate-400">
                         {getTrans("Hech qanday ma'lumot topilmadi")}
                       </td>
                     </tr>
@@ -859,9 +859,9 @@ formatter={(value: any, props: any) => [
           {/* Chiqimlar — davr ichida chiqib ketgan pul (qaytarimlar + ta'minotchi to'lovlari) */}
           <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden animate-in fade-in-50 duration-200">
             <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-slate-800">
-              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
                 {getTrans('Chiqimlar')}
-              </h3>
+              </h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-xs sm:text-sm text-left">
@@ -885,7 +885,7 @@ formatter={(value: any, props: any) => [
                     ))
                   ) : expenses.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-3 sm:px-6 py-6 text-center text-slate-400">
+                      <td colSpan={4} className="px-3 sm:px-6 py-6 text-center text-slate-600 dark:text-slate-400">
                         {getTrans("Davr ichida chiqim yo'q")}
                       </td>
                     </tr>
@@ -936,9 +936,9 @@ formatter={(value: any, props: any) => [
             {/* Customer Debts */}
             <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden animate-in fade-in-50 duration-200">
               <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-slate-800">
-                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
                   {getTrans('Qarzdorligi bor mijozlar')}
-                </h3>
+                </h2>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs sm:text-sm text-left">
@@ -960,7 +960,7 @@ formatter={(value: any, props: any) => [
                       ))
                     ) : customerDebts.length === 0 ? (
                       <tr>
-                        <td colSpan={3} className="px-3 sm:px-6 py-6 text-center text-slate-400">
+                        <td colSpan={3} className="px-3 sm:px-6 py-6 text-center text-slate-600 dark:text-slate-400">
                           {getTrans("Hech qanday ma'lumot topilmadi")}
                         </td>
                       </tr>
@@ -973,7 +973,7 @@ formatter={(value: any, props: any) => [
                           <td className="px-3 sm:px-6 py-2.5 sm:py-4 text-slate-600 dark:text-slate-400">
                             {debtor.phone || '-'}
                           </td>
-                          <td className="px-3 sm:px-6 py-2.5 sm:py-4 text-right font-bold text-[#ff6b00] dark:text-amber-500">
+                          <td className="px-3 sm:px-6 py-2.5 sm:py-4 text-right font-bold text-orange-700 dark:text-amber-500">
                             {formatCurrency(debtor.debt)}
                           </td>
                         </tr>
@@ -987,9 +987,9 @@ formatter={(value: any, props: any) => [
             {/* Supplier Debts */}
             <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden animate-in fade-in-50 duration-200">
               <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-slate-800">
-                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
                   {getTrans('Yetkazib beruvchilar oldidagi qarzdorlik')}
-                </h3>
+                </h2>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs sm:text-sm text-left">
@@ -1009,7 +1009,7 @@ formatter={(value: any, props: any) => [
                       ))
                     ) : supplierDebts.length === 0 ? (
                       <tr>
-                        <td colSpan={2} className="px-3 sm:px-6 py-6 text-center text-slate-400">
+                        <td colSpan={2} className="px-3 sm:px-6 py-6 text-center text-slate-600 dark:text-slate-400">
                           {getTrans("Hech qanday ma'lumot topilmadi")}
                         </td>
                       </tr>
@@ -1019,7 +1019,7 @@ formatter={(value: any, props: any) => [
                           <td className="px-3 sm:px-6 py-2.5 sm:py-4 font-medium text-slate-900 dark:text-white">
                             {debtor.supplierName}
                           </td>
-                          <td className="px-3 sm:px-6 py-2.5 sm:py-4 text-right font-bold text-[#ff6b00] dark:text-amber-500">
+                          <td className="px-3 sm:px-6 py-2.5 sm:py-4 text-right font-bold text-orange-700 dark:text-amber-500">
                             {formatCurrency(debtor.debt)}
                           </td>
                         </tr>

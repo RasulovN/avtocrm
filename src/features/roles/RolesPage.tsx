@@ -202,10 +202,10 @@ export function RolesPage() {
       className: 'text-right',
       render: (item: Role) => (
         <div className="flex items-center justify-end gap-2">
-          <Button variant="ghost" size="icon" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleOpenDialog(item); }}>
+          <Button variant="ghost" size="icon" aria-label={t('common.edit')} onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleOpenDialog(item); }}>
             <Edit className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); setDeleteId(item.id); }}>
+          <Button variant="ghost" size="icon" aria-label={t('common.delete')} onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); setDeleteId(item.id); }}>
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -287,7 +287,7 @@ export function RolesPage() {
               <Label>{t('roles.permissions')}</Label>
               <p className="text-xs text-muted-foreground">{t('roles.permissionsHint')}</p>
               <div className="border rounded-lg overflow-x-auto max-h-[50vh] overflow-y-auto">
-                <table className="w-full text-sm">
+                <table className="w-full min-w-[480px] text-sm">
                   <thead className="sticky top-0 bg-muted/80 backdrop-blur">
                     <tr>
                       <th className="text-left px-3 py-2 font-medium">

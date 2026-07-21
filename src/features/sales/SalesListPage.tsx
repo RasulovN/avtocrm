@@ -191,7 +191,7 @@ export function SalesListPage() {
       render: (item) => (
         <div className="flex justify-end">
           <Link to={`/${lang}/sales/${item.id}`}>
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" aria-label={t('common.view', "Ko'rish")}>
               <Eye className="h-4 w-4" />
             </Button>
           </Link>
@@ -297,6 +297,7 @@ export function SalesListPage() {
                 {t('products.filterByStore', 'Do‘kon bo‘yicha filtr')}
               </label>
               <select
+                aria-label={t('products.filterByStore', 'Do‘kon bo‘yicha filtr')}
                 className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm"
                 value={storeFilter}
                 onChange={(e) => { setStoreFilter(e.target.value); setPage(1); }}
@@ -434,6 +435,7 @@ export function SalesListPage() {
                 className="h-8 w-8 p-0"
                 onClick={() => setPage(page - 1)}
                 disabled={page === 1}
+                aria-label={t('common.previous', 'Oldingi sahifa')}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -446,6 +448,7 @@ export function SalesListPage() {
                 className="h-8 w-8 p-0"
                 onClick={() => setPage(page + 1)}
                 disabled={page === Math.ceil(total / limit) || total === 0}
+                aria-label={t('common.next', 'Keyingi sahifa')}
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>

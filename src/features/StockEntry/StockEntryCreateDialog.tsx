@@ -882,6 +882,7 @@ export function StockEntryCreateDialog({
                 size="sm"
                 variant="outline"
                 className="text-destructive hover:bg-destructive/10"
+                aria-label={t('purchaseSession.cancelTitle', 'Sessiyani bekor qilish')}
                 onClick={() => setCancelSessionId(s.id)}
               >
                 <Trash2 className="h-4 w-4" />
@@ -935,7 +936,7 @@ export function StockEntryCreateDialog({
             disabled={!isAdmin && selectableStores.length <= 1}
             required
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label={t('stores.title', "Do'kon")}>
               <SelectValue placeholder={t('inventory.selectLocation', 'Tanlang')} />
             </SelectTrigger>
             <SelectContent>
@@ -989,6 +990,7 @@ export function StockEntryCreateDialog({
                 variant="ghost"
                 size="icon"
                 className="absolute right-2 top-2 h-8 w-8"
+                aria-label={t('common.delete', "O'chirish")}
                 onClick={() => removeItem(index)}
               >
                 <Trash2 className="h-4 w-4 text-red-500" />
@@ -1521,6 +1523,7 @@ export function StockEntryCreateDialog({
                   <select
                     className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                     value={newProductData.category}
+                    aria-label={t('categories.title', 'Kategoriya')}
                     onChange={(e) => setNewProductData({ ...newProductData, category: e.target.value })}
                   >
                     <option value="">{t('categories.selectCategory', 'Kategoriyani tanlang')}</option>
@@ -1533,6 +1536,7 @@ export function StockEntryCreateDialog({
                     variant="outline"
                     size="icon"
                     className="shrink-0"
+                    aria-label={t('categories.addCategory', "Kategoriya qo'shish")}
                     onClick={() => setIsCategoryDialogOpen(true)}
                   >
                     <Plus className="h-4 w-4" />
@@ -1549,6 +1553,7 @@ export function StockEntryCreateDialog({
                   <select
                     className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                     value={newProductData.unit_measurement}
+                    aria-label={t('products.unit', "O'lchov birligi")}
                     onChange={(e) => setNewProductData({ ...newProductData, unit_measurement: e.target.value })}
                   >
                     <option value="">{t('products.selectUnit', 'O\'lchov birligini tanlang')}</option>
@@ -1561,6 +1566,7 @@ export function StockEntryCreateDialog({
                     variant="outline"
                     size="icon"
                     className="shrink-0"
+                    aria-label={t('products.addUnit', "O'lchov birligi qo'shish")}
                     onClick={() => setIsUnitDialogOpen(true)}
                   >
                     <Plus className="h-4 w-4" />
@@ -1596,6 +1602,7 @@ export function StockEntryCreateDialog({
               <select
                 className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 value={newProductData.location}
+                aria-label={t('products.location', 'Mahsulot joylashuvi')}
                 onChange={(e) => setNewProductData({ ...newProductData, location: e.target.value })}
               >
                 <option value="">{t('products.selectLocation', 'Joylashuvni tanlang')}</option>
@@ -1615,6 +1622,7 @@ export function StockEntryCreateDialog({
                 <input
                   type="file"
                   accept="image/*"
+                  aria-label={t('products.image', 'Rasm')}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   onChange={(e) => {
                     const files = Array.from(e.target.files || []);
@@ -1659,7 +1667,7 @@ export function StockEntryCreateDialog({
               </div>
             </div>
           </div>
-          <DialogFooter className="flex gap-2">
+          <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button variant="outline" onClick={() => setIsProductDialogOpen(false)}>
               {t('common.cancel', 'Bekor qilish')}
             </Button>

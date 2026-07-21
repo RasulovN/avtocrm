@@ -202,7 +202,10 @@ export function StockEntryImportDialog({
               value={supplierId}
               onValueChange={(v) => { setSupplierId(v); setSupplierError(false); }}
             >
-              <SelectTrigger className={supplierError ? 'border-red-500 focus:border-red-500 focus:ring-red-500/30' : ''}>
+              <SelectTrigger
+                aria-label={t('inventory.selectSupplier', 'Ta\'minotchini tanlang')}
+                className={supplierError ? 'border-red-500 focus:border-red-500 focus:ring-red-500/30' : ''}
+              >
                 <SelectValue placeholder={t('inventory.selectSupplier', 'Ta\'minotchini tanlang')} />
               </SelectTrigger>
               <SelectContent>
@@ -261,6 +264,7 @@ export function StockEntryImportDialog({
                 ref={fileInputRef}
                 type="file"
                 accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                aria-label={t('inventory.selectExcelFile', 'Excel faylni tanlang')}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 onChange={handleFileChange}
               />
@@ -275,6 +279,7 @@ export function StockEntryImportDialog({
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7 shrink-0 z-10"
+                    aria-label={t('common.delete', "O'chirish")}
                     onClick={(e) => {
                       e.stopPropagation();
                       setFile(null);
@@ -295,11 +300,11 @@ export function StockEntryImportDialog({
             </div>
           </div>
 
-          <div className="flex gap-2 pt-2">
-            <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
+          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row">
+            <Button type="button" variant="outline" className="sm:flex-1" onClick={() => onOpenChange(false)}>
               {t('common.cancel', 'Bekor qilish')}
             </Button>
-            <Button type="submit" className="flex-1" disabled={importing}>
+            <Button type="submit" className="sm:flex-1" disabled={importing}>
               <Upload className="h-4 w-4 mr-2" />
               {importing ? t('common.loading', 'Yuklanmoqda...') : t('inventory.import', 'Kirim qilish')}
             </Button>

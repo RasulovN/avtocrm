@@ -231,7 +231,7 @@ export function SupplierPayDialog({ supplier, open, onOpenChange, onPaid }: Supp
         <div className="space-y-4">
           {/* Qarzdor kirimlar ro'yxati */}
           <div className="rounded-lg border border-border">
-            <div className="flex items-center justify-between border-b border-border bg-muted/40 px-3 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted/40 px-3 py-2">
               <span className="text-sm font-medium">
                 {t('suppliers.unpaidEntries', 'To‘lanmagan kirimlar')} ({debtEntries.length})
               </span>
@@ -300,7 +300,7 @@ export function SupplierPayDialog({ supplier, open, onOpenChange, onPaid }: Supp
           {/* To'lov paneli */}
           {selectedEntries.length > 0 && (
             <div className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-sm">
                 <span className="flex items-center gap-2 font-medium">
                   <Wallet className="h-4 w-4" />
                   {t('suppliers.payDebt', 'Qarz to‘lash')} ({selectedEntries.length}{' '}
@@ -336,7 +336,7 @@ export function SupplierPayDialog({ supplier, open, onOpenChange, onPaid }: Supp
               {/* To'lov usuli: naqd / karta / aralash (ikkala inputga ham yozish mumkin) */}
               {amountCents > 0 && !amountTooBig && (
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <Label className="text-xs text-muted-foreground">
                       {t('sales.paymentType', "To'lov usuli")}
                     </Label>
@@ -425,7 +425,7 @@ export function SupplierPayDialog({ supplier, open, onOpenChange, onPaid }: Supp
                                 }`}
                               >
                                 <CreditCard className={`h-4 w-4 shrink-0 ${isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`} />
-                                <span className="truncate">{card.name}</span>
+                                <span className="min-w-0 truncate">{card.name}</span>
                                 {card.is_default && <Star className="h-3 w-3 shrink-0 text-amber-500" />}
                               </button>
                             );
@@ -441,7 +441,7 @@ export function SupplierPayDialog({ supplier, open, onOpenChange, onPaid }: Supp
               {amountCents > 0 && !amountTooBig && (
                 <div className="space-y-1 rounded-md bg-background/60 p-2 text-xs">
                   {allocations.map(({ entry, cents }) => (
-                    <div key={entry.id} className="flex justify-between">
+                    <div key={entry.id} className="flex justify-between gap-2">
                       <span className="text-muted-foreground">
                         №{entry.id} ({entry.created_at ? formatDate(entry.created_at) : ''})
                       </span>

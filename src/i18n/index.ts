@@ -20,9 +20,17 @@ const normalizeLanguage = (lang: string | null | undefined): 'uz' | 'cyrl' => {
 };
 
 const isBrowser = typeof window !== 'undefined';
-// Get saved language from localStorage or default to 'uz'
+// Til ustuvorligi: URL prefiksi (/uz/... yoki /cyrl/...) > localStorage > default.
+// URL'dan darhol olinmasa, birinchi renderdan keyin til almashib butun layout
+// remount bo'lardi (key={currentLang}) — bu API so'rovlarini ikki marta yuborardi.
+const pathLang = isBrowser
+  ? window.location.pathname.split('/').filter(Boolean)[0]
+  : null;
 const savedLanguage = isBrowser ? localStorage.getItem('i18nextLng') : null;
-const normalizedLanguage = normalizeLanguage(savedLanguage);
+const normalizedLanguage =
+  pathLang === 'uz' || pathLang === 'cyrl'
+    ? pathLang
+    : normalizeLanguage(savedLanguage);
 if (isBrowser && savedLanguage !== normalizedLanguage) {
   localStorage.setItem('i18nextLng', normalizedLanguage);
 }

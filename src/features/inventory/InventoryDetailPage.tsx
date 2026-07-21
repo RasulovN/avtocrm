@@ -29,7 +29,7 @@ import { PageHeader } from '../../components/shared/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
-import { ScannerModal } from '../../components/ScannerModal';
+import { LazyScannerModal } from '../../components/LazyScannerModal';
 import { useInventoryStore } from '../../store/inventory.store';
 import { cn } from '../../utils';
 
@@ -269,7 +269,7 @@ export function InventoryDetailPage() {
           </CardContent>
         </Card>
 
-        <Card className="col-span-2 xl:col-span-1">
+        <Card className="sm:col-span-2 xl:col-span-1">
           <CardContent className="p-4 sm:p-5">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -474,7 +474,7 @@ export function InventoryDetailPage() {
       </div>
 
       {/* Scanner Modal */}
-      <ScannerModal
+      <LazyScannerModal
         open={showScanner}
         onOpenChange={setShowScanner}
         onScan={handleScanSearch}
@@ -482,8 +482,8 @@ export function InventoryDetailPage() {
 
       {/* Desktop Table */}
       <Card className="hidden lg:block">
-        <div>
-          <table className="w-full table-fixed">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[1000px] table-fixed">
             <thead className="bg-muted/50">
               {activeTab === 'all' ? (
                 <tr className="border-b text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">

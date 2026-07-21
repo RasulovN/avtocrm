@@ -10,7 +10,7 @@ import { Label } from '../../../components/ui/Label';
 import { Card, CardContent, CardFooter } from '../../../components/ui/Card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/Select';
 import { SearchableSelect } from '../../../components/ui/SearchableSelect';
-import { ScannerModal } from '../../../components/ScannerModal';
+import { LazyScannerModal } from '../../../components/LazyScannerModal';
 import { transferService } from '../../../services/transferService';
 import { storeService } from '../../../services/storeService';
 import { useProducts } from '../../../context/ProductContext';
@@ -187,10 +187,10 @@ export function TransferCreatePage() {
 
       <form onSubmit={handleSubmit}>
         <Card className="border border-border/60 shadow-sm rounded-xl bg-card">
-          <CardContent className="p-6 space-y-8">
+          <CardContent className="p-4 sm:p-6 space-y-8">
 
             {/* Top section: From and To Stores */}
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label className="text-sm font-semibold text-foreground">{t('transfers.fromStore', 'Qayerdan')}</Label>
                 <Select value={fromStoreId} onValueChange={setFromStoreId} disabled={!isAdmin}>
@@ -225,7 +225,7 @@ export function TransferCreatePage() {
                 <h3 className="text-sm font-bold text-foreground">{t('transfers.itemsToTransfer', "Jo'natiladigan tovarlar")}</h3>
                 
                 <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <div className="relative w-full sm:w-64">
+                  <div className="relative min-w-0 w-full sm:w-64">
                     <Input
                       placeholder={t('products.scanBarcode', 'Shtrixkod skanerlash...')}
                       value={barcodeInput}
@@ -267,7 +267,7 @@ export function TransferCreatePage() {
 
                 {items.map((item, index) => (
                   <div key={index} className="flex flex-col sm:flex-row items-start sm:items-end gap-4 p-4 rounded-xl bg-muted/40 border border-border/60">
-                    <div className="flex-1 w-full space-y-2">
+                    <div className="min-w-0 flex-1 w-full space-y-2">
                       <Label className="text-xs font-semibold text-muted-foreground">{t('products.title', 'Tovar')}</Label>
                       <SearchableSelect
                         value={item.product}
@@ -327,7 +327,7 @@ export function TransferCreatePage() {
             </div>
 
           </CardContent>
-          <CardFooter className="p-6 pt-0 flex flex-col sm:flex-row gap-4">
+          <CardFooter className="p-4 pt-0 sm:p-6 sm:pt-0 flex flex-col sm:flex-row gap-4">
             <Button
               type="button"
               variant="outline"
@@ -348,7 +348,7 @@ export function TransferCreatePage() {
         </Card>
       </form>
 
-      <ScannerModal
+      <LazyScannerModal
         open={showScanner}
         onOpenChange={setShowScanner}
         onScan={handleScannerModalScan}

@@ -1,6 +1,30 @@
-import { defineConfig, loadEnv } from 'vite'
+import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import { readFileSync, writeFileSync } from 'fs'
+
+// Dashboard — kirishdan keyingi birinchi sahifa. Lazy chunk'ini index.html'da
+// modulepreload qilamiz: chunk yuklab olish index.js bajarilishi bilan parallel
+// ketadi va LCP zanjiri qisqaradi.
+function preloadDashboardChunk(): Plugin {
+  return {
+    name: 'preload-dashboard-chunk',
+    apply: 'build',
+    writeBundle(_options, bundle) {
+      const files = Object.keys(bundle).filter((n) =>
+        /assets\/DashboardPage-[^/]+\.js$/.test(n),
+      )
+      if (files.length === 0) return
+      const htmlPath = path.resolve(__dirname, 'dist/index.html')
+      let html = readFileSync(htmlPath, 'utf-8')
+      const links = files
+        .map((f) => `<link rel="modulepreload" crossorigin href="/${f}">`)
+        .join('\n    ')
+      html = html.replace('</head>', `  ${links}\n  </head>`)
+      writeFileSync(htmlPath, html)
+    },
+  }
+}
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, '')
@@ -10,7 +34,7 @@ export default defineConfig(({ mode }) => {
   const proxySecure = proxyTarget.startsWith('https://')
 
   return {
-  plugins: [react()],
+  plugins: [react(), preloadDashboardChunk()],
   optimizeDeps: {
     // Lazy sahifalar ortidagi kutubxonalarni ham oldindan bundle qilamiz —
     // aks holda birinchi navigatsiyada Vite qayta optimizatsiya qilib sahifani reload qiladi

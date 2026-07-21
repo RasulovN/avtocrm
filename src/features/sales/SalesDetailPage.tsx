@@ -337,7 +337,7 @@ export function SalesDetailPage() {
         }
       `}</style>
       {/* ─── Sarlavha: hujjat raqami dominant, holat va amallar bir qatorda ─── */}
-      <div className="rounded-xl border border-border bg-card p-5">
+      <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-3">
             <Link to={`/${lang}/sales`} aria-label={t('common.back')}>
@@ -417,7 +417,7 @@ export function SalesDetailPage() {
       </div>
 
       {/* ─── Asosiy ko'rsatkichlar ─── */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border border-border bg-card p-4">
           <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground">
             <ReceiptIcon className="h-3.5 w-3.5" />
@@ -486,7 +486,7 @@ export function SalesDetailPage() {
 
             {sale.items?.length ? (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full min-w-[600px] text-sm">
                   <thead>
                     <tr className="border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground">
                       <th className="w-12 px-5 py-3 font-semibold">№</th>
@@ -914,7 +914,7 @@ export function SalesDetailPage() {
                       {selectedProduct?.shtrix_code && (selectedProduct.shtrix_code.startsWith('http') || selectedProduct.shtrix_code.startsWith('/media/')) && (
                         <div className="mt-3 pt-3 border-t flex flex-col items-center gap-1.5">
                           <span className="text-xs text-muted-foreground">{t('products.barcodeImage', 'Barcode rasmi')}</span>
-                          <img src={selectedProduct.shtrix_code} alt="Barcode" className="max-h-12] w-auto bg-white p-1 rounded border" />
+                          <img src={selectedProduct.shtrix_code} alt="Barcode" className="max-h-12 w-auto max-w-full bg-white p-1 rounded border" />
                         </div>
                       )}
                     </div>

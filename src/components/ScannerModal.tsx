@@ -127,7 +127,7 @@ export function ScannerModal({ open, onOpenChange, onScan }: ScannerModalProps) 
           <DialogTitle>{t('scanner.title', 'Штрихкод сканери')}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
-          <div className="overflow-hidden rounded-xl border bg-black">
+          <div className="w-full max-w-full aspect-video overflow-hidden rounded-xl border bg-black [&_video]:h-full [&_video]:w-full [&_video]:object-cover">
             <QrScanner
               width="100%"
               height={280}
@@ -169,7 +169,7 @@ export function ScannerModal({ open, onOpenChange, onScan }: ScannerModalProps) 
             ) : (
               <Icon className="h-4 w-4 shrink-0" />
             )}
-            <span className="truncate">{message}</span>
+            <span className="min-w-0 break-words">{message}</span>
           </div>
         </div>
       </DialogContent>

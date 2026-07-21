@@ -107,6 +107,7 @@ export function SaleReturnListPage() {
           <Button
             variant="ghost"
             size="sm"
+            aria-label={t('common.view', "Ko'rish")}
             onClick={(e) => {
               e.stopPropagation();
               handleViewDetails(item);
@@ -126,7 +127,7 @@ export function SaleReturnListPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-start">
         <PageHeader
           title={t('saleReturns.title')}
           description={t('saleReturns.listDescription')}
@@ -242,7 +243,7 @@ export function SaleReturnListPage() {
           </DialogHeader>
           {selectedReturn && (
             <div className="space-y-5">
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-muted-foreground">{t('sales.saleDetails')}</p>
                   <p className="font-medium">{t('sales.sale')} #{selectedReturn.sale}</p>
@@ -271,7 +272,7 @@ export function SaleReturnListPage() {
                     {formatCurrency(parseFloat(selectedReturn.total_refund || '0'))}
                   </p>
                 </div>
-                <div className="col-span-2">
+                <div className="sm:col-span-2">
                   <p className="text-muted-foreground">{t('saleReturns.comment')}</p>
                   <p className="font-medium">
                     {selectedReturn.comment || '-'}

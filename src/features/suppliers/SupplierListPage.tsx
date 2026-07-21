@@ -287,14 +287,14 @@ export function SupplierListPage() {
         const debt = typeof item.debt === 'number' ? item.debt : Number(item.debt) || 0;
         if (debt <= 0) {
           return (
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-600 dark:border-green-900/30 dark:bg-green-900/20">
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400 dark:border-green-900/30 dark:bg-green-900/20">
               <CheckCircle2 className="h-3.5 w-3.5" />
               To'landi
             </div>
           );
         }
         return (
-          <div className="inline-flex items-center rounded bg-[#ff6b00] px-2.5 py-1 text-xs font-semibold text-white shadow-sm">
+          <div className="inline-flex items-center rounded bg-orange-700 px-2.5 py-1 text-xs font-semibold text-white shadow-sm">
             {formatCurrency(debt)}
           </div>
         );
@@ -309,7 +309,8 @@ export function SupplierListPage() {
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-8 w-8 text-muted-foreground hover:text-blue-500" 
+            className="h-8 w-8 text-muted-foreground hover:text-blue-500"
+            aria-label={t('common.edit', 'Tahrirlash')}
             onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleOpenDialog(item); }}
           >
             <Edit className="h-4 w-4" />
@@ -317,7 +318,8 @@ export function SupplierListPage() {
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-8 w-8 text-muted-foreground hover:text-red-500" 
+            className="h-8 w-8 text-muted-foreground hover:text-red-500"
+            aria-label={t('common.delete', "O'chirish")}
             onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); setDeleteId(item.id); }}
           >
             <Trash2 className="h-4 w-4" />
@@ -352,7 +354,7 @@ export function SupplierListPage() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className="rounded-lg border bg-card p-4 shadow-sm">
           <p className="text-sm text-muted-foreground">{t('dashboard.totalSuppliers', 'Таъминотчилар сони')}</p>
           <p className="text-2xl font-bold">{suppliers.length}</p>
@@ -385,7 +387,7 @@ export function SupplierListPage() {
             setPage(1);
           }}
         >
-          <SelectTrigger className="w-full sm:w-64">
+          <SelectTrigger className="w-full sm:w-64" aria-label={t('export.sortBy', 'Saralash')}>
             <SelectValue placeholder={t('export.sortBy', 'Saralash')} />
           </SelectTrigger>
           <SelectContent>
@@ -402,7 +404,7 @@ export function SupplierListPage() {
             setPage(1);
           }}
         >
-          <SelectTrigger className="w-full sm:w-48">
+          <SelectTrigger className="w-full sm:w-48" aria-label={t('suppliers.debt', 'Qarz')}>
             <SelectValue placeholder={t('suppliers.debt', 'Qarz')} />
           </SelectTrigger>
           <SelectContent>
@@ -417,10 +419,10 @@ export function SupplierListPage() {
           {suppliers.map((item, index) => (
             <div key={item.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
               <div className="flex items-start justify-between gap-3">
-                <div>
+                <div className="min-w-0">
                   <p className="text-xs text-muted-foreground">#{index + 1}</p>
-                  <p className="font-semibold text-foreground">{item.name_uz || item.name || '-'}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">{item.description_uz || item.description || '-'}</p>
+                  <p className="font-semibold text-foreground break-words">{item.name_uz || item.name || '-'}</p>
+                  <p className="mt-1 text-sm text-muted-foreground break-words">{item.description_uz || item.description || '-'}</p>
                 </div>
                 <span className="shrink-0 text-xs text-muted-foreground">ID: {item.id}</span>
               </div>
@@ -440,20 +442,20 @@ export function SupplierListPage() {
                 </div>
               </div>
 
-              <div className="mt-4 flex gap-2">
+              <div className="mt-4 grid grid-cols-2 gap-2">
                 <Button
                   variant="outline"
-                  className="flex-1"
+                  className="col-span-2 w-full"
                   onClick={() => navigate(`/${lang}/suppliers/${item.id}`)}
                 >
                   <Eye className="mr-2 h-4 w-4" />
                   {t('common.view')}
                 </Button>
-                <Button variant="outline" className="flex-1" onClick={() => handleOpenDialog(item)}>
+                <Button variant="outline" className="w-full" onClick={() => handleOpenDialog(item)}>
                   <Edit className="mr-2 h-4 w-4" />
                   {t('common.edit')}
                 </Button>
-                <Button variant="outline" className="flex-1" onClick={() => setDeleteId(item.id)}>
+                <Button variant="outline" className="w-full" onClick={() => setDeleteId(item.id)}>
                   <Trash2 className="mr-2 h-4 w-4" />
                   {t('common.delete')}
                 </Button>

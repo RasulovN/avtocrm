@@ -309,10 +309,10 @@ export function StoreListPage() {
       className: 'text-right',
       render: (item: Store) => isAdmin ? (
         <div className="flex items-center justify-end gap-2">
-          <Button variant="ghost" size="icon" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleOpenDialog(item); }}>
+          <Button variant="ghost" size="icon" aria-label={t('common.edit')} onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleOpenDialog(item); }}>
             <Edit className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); setDeleteId(item.id); }}>
+          <Button variant="ghost" size="icon" aria-label={t('common.delete')} onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); setDeleteId(item.id); }}>
             <Trash2 className="h-4 w-4 text-destructive" />
           </Button>
         </div>
@@ -345,7 +345,7 @@ export function StoreListPage() {
               {stores.map((item, index) => (
                 <div key={item.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">#{index + 1}</p>
                       <p className="font-semibold text-foreground">{getLocalizedName(item)}</p>
                       <p className="mt-1 text-sm text-muted-foreground">{getLocalizedAddress(item) || '-'}</p>
@@ -393,9 +393,9 @@ export function StoreListPage() {
           )}
 
           {!isAdmin && currentStore && (
-            <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+            <div className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-sm">
               <div className="flex items-start justify-between gap-3 mb-6">
-                <div>
+                <div className="min-w-0">
                   <h3 className="text-lg font-semibold text-foreground">{getLocalizedName(currentStore)}</h3>
                   <p className="text-sm text-muted-foreground">{getLocalizedAddress(currentStore) || '-'}</p>
                 </div>
@@ -452,60 +452,66 @@ export function StoreListPage() {
             <DialogTitle>{editingStore ? t('stores.editStore') : t('stores.addStore')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>{t('stores.storeName')} (Lotin)</Label>
-              <Input
-                value={storeFormData.name_uz ?? storeFormData.name}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => handleNameChange(e.target.value)}
-                required
-              />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>{t('stores.storeName')} (Lotin)</Label>
+                <Input
+                  value={storeFormData.name_uz ?? storeFormData.name}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleNameChange(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('stores.storeName')} (Кирилл)</Label>
+                <Input
+                  value={storeFormData.name_uz_cyrl ?? ''}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    setStoreFormData({ ...storeFormData, name_uz_cyrl: e.target.value })
+                  }
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>{t('stores.storeName')} (Кирилл)</Label>
-              <Input
-                value={storeFormData.name_uz_cyrl ?? ''}
-                onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  setStoreFormData({ ...storeFormData, name_uz_cyrl: e.target.value })
-                }
-              />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>{t('stores.phone')}</Label>
+                <Input
+                  value={storeFormData.phone_number}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    setStoreFormData({ ...storeFormData, phone_number: e.target.value, phone: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('stores.type')}</Label>
+                <select
+                  className="w-full px-3 py-2 border rounded-md bg-background"
+                  value={storeFormData.type || 's'}
+                  onChange={(e: ChangeEvent<HTMLSelectElement>) =>
+                    setStoreFormData({ ...storeFormData, type: e.target.value, is_warehouse: false })
+                  }
+                >
+                  <option value="s">{t('stores.store')}</option>
+                  <option value="b">{t('stores.base')}</option>
+                </select>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>{t('stores.phone')}</Label>
-              <Input
-                value={storeFormData.phone_number}
-                onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  setStoreFormData({ ...storeFormData, phone_number: e.target.value, phone: e.target.value })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('stores.type')}</Label>
-              <select
-                className="w-full px-3 py-2 border rounded-md bg-background"
-                value={storeFormData.type || 's'}
-                onChange={(e: ChangeEvent<HTMLSelectElement>) =>
-                  setStoreFormData({ ...storeFormData, type: e.target.value, is_warehouse: false })
-                }
-              >
-                <option value="s">{t('stores.store')}</option>
-                <option value="b">{t('stores.base')}</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label>{t('stores.address')} (Lotin)</Label>
-              <Input
-                value={storeFormData.address_uz ?? storeFormData.address ?? ''}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => handleAddressChange(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('stores.address')} (Кирилл)</Label>
-              <Input
-                value={storeFormData.address_uz_cyrl ?? ''}
-                onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  setStoreFormData({ ...storeFormData, address_uz_cyrl: e.target.value })
-                }
-              />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>{t('stores.address')} (Lotin)</Label>
+                <Input
+                  value={storeFormData.address_uz ?? storeFormData.address ?? ''}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleAddressChange(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('stores.address')} (Кирилл)</Label>
+                <Input
+                  value={storeFormData.address_uz_cyrl ?? ''}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    setStoreFormData({ ...storeFormData, address_uz_cyrl: e.target.value })
+                  }
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label>{t('stores.map')}</Label>

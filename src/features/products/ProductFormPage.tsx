@@ -476,7 +476,7 @@ export function ProductFormPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-end gap-2">
-                <div className='w-full'>
+                <div className='min-w-0 flex-1'>
                   <Label htmlFor="category">{t('products.category')}</Label>
                   <Select
                     value={formData.category || ''}
@@ -494,13 +494,13 @@ export function ProductFormPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button type="button" variant="outline" onClick={handleOpenCategoryDialog}>
+                <Button type="button" variant="outline" className="shrink-0" onClick={handleOpenCategoryDialog}>
                   {t('products.categoriesAdd')}
                 </Button>
               </div>
 
               <div className="flex items-end gap-2">
-                <div className="w-full">
+                <div className="min-w-0 flex-1">
                   <Label htmlFor="unit_measurement">{t('products.unitMeasurement')}</Label>
                   <Select
                     value={formData.unit_measurement || ''}
@@ -518,7 +518,7 @@ export function ProductFormPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button type="button" variant="outline" onClick={handleOpenUnitDialog}>
+                <Button type="button" variant="outline" className="shrink-0" onClick={handleOpenUnitDialog}>
                   {t('products.categoriesAdd')}
                 </Button>
               </div>
@@ -635,7 +635,7 @@ export function ProductFormPage() {
               </div>
 
               {allImages.length > 0 && (
-                <div className="mt-2 grid grid-cols-3 gap-2">
+                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {existingImages.map((src, idx) => (
                     <div key={`existing-${idx}`} className="relative">
                       <img

@@ -255,48 +255,60 @@ export function DataTable<T extends { id: string | number }>({
                 <span className="text-sm">{emptyMessage}</span>
               </div>
             ) : (
-              safeData.map((item) => (
-                <div
-                  key={item.id}
-                  onClick={() => onRowClick?.(item)}
-                  className={cn(
-                    'cursor-pointer p-4 transition-colors hover:bg-muted/50',
-                    onRowClick && 'cursor-pointer'
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">
-                         {itemNameKey ? String(item[itemNameKey] ?? '') : String(item['name' as keyof T] ?? '')}
-                      </p>
-                      {item['sku' as keyof T] && (
-                         <p className="text-sm text-muted-foreground font-mono">{String(item['sku' as keyof T])}</p>
+              safeData.map((item) => {
+                // Mobil karta: ustunlar ro'yxatidan avtomatik quriladi —
+                // birinchi ustun sarlavha, qolganlari label/qiymat juftliklari
+                const renderCellValue = (column: EnhancedColumn<T>): React.ReactNode =>
+                  inventoryByStore && column.key === 'quantity'
+                    ? renderStoreInventory(item)
+                    : column.render
+                      ? column.render(item)
+                      : (column.key in item ? String(item[column.key as keyof T] ?? '') : '');
+                const [titleColumn, ...detailColumns] = safeColumns;
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => onRowClick?.(item)}
+                    className={cn(
+                      'p-4 transition-colors hover:bg-muted/50',
+                      onRowClick && 'cursor-pointer'
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="flex-1 min-w-0 font-medium break-words">
+                        {titleColumn ? renderCellValue(titleColumn) : null}
+                      </div>
+                      {selectableRows && (
+                        <input
+                          type="checkbox"
+                          aria-label="Select row"
+                          checked={selectedRowIds.includes(String(item.id))}
+                          onChange={() => onToggleRowSelection?.(String(item.id))}
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-4 w-4 rounded border-border mt-1 shrink-0"
+                        />
                       )}
                     </div>
-                    {selectableRows && (
-                      <input
-                        type="checkbox"
-                        aria-label="Select row"
-                        checked={selectedRowIds.includes(String(item.id))}
-                        onChange={() => onToggleRowSelection?.(String(item.id))}
-                        onClick={(e) => e.stopPropagation()}
-                        className="h-4 w-4 rounded border-border mt-1"
-                      />
-                    )}
+                    <div className="space-y-1.5">
+                      {detailColumns.map((column) => {
+                        const value = renderCellValue(column);
+                        if (value === '' || value == null) return null;
+                        return (
+                          <div
+                            key={String(column.key)}
+                            className="flex items-start justify-between gap-3 text-sm"
+                          >
+                            {column.header && (
+                              <span className="shrink-0 text-muted-foreground">{column.header}</span>
+                            )}
+                            <div className="min-w-0 flex-1 text-right break-words">{value}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">{String(item['category_name' as keyof T] ?? item['category' as keyof T] ?? '')}</span>
-                    {inventoryByStore ? (
-                      renderStoreInventory(item)
-                    ) : (
-                      <span className="font-semibold">{Number(item[quantityKey as keyof T] ?? 0).toLocaleString()}</span>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-end gap-3 mt-2 text-sm text-muted-foreground">
-                    <span>{Number(item['purchase_price' as keyof T] ?? 0).toLocaleString()} / {Number(item['selling_price' as keyof T] ?? 0).toLocaleString()}</span>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         ) : (
@@ -490,6 +502,7 @@ export function DataTable<T extends { id: string | number }>({
                 type="number"
                 min={1}
                 max={totalPages}
+                aria-label={t('components.gotoPage', 'Sahifaga o\'tish')}
                 defaultValue={pagination.page}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -534,8 +547,8 @@ export function DataTable<T extends { id: string | number }>({
                     <span className={cn(
                       "font-semibold",
                       inv.quantity === 0 && "text-muted-foreground",
-                      inv.quantity > 0 && inv.quantity < 10 && "text-orange-500",
-                      inv.quantity >= 10 && "text-green-600 dark:text-green-400"
+                      inv.quantity > 0 && inv.quantity < 10 && "text-orange-700 dark:text-orange-400",
+                      inv.quantity >= 10 && "text-green-700 dark:text-green-400"
                     )}>
                       {inv.quantity.toLocaleString()} ta
                     </span>

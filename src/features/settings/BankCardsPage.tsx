@@ -206,6 +206,7 @@ export function BankCardsPage() {
             variant="ghost"
             size="icon"
             title={item.is_active ? "Faolsizlashtirish" : "Faollashtirish"}
+            aria-label={item.is_active ? "Faolsizlashtirish" : "Faollashtirish"}
             disabled={togglingId === item.id}
             onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
               e.stopPropagation();
@@ -221,6 +222,7 @@ export function BankCardsPage() {
           <Button
             variant="ghost"
             size="icon"
+            aria-label={t('common.edit')}
             onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
               e.stopPropagation();
               handleOpenDialog(item);
@@ -231,6 +233,7 @@ export function BankCardsPage() {
           <Button
             variant="ghost"
             size="icon"
+            aria-label={t('common.delete')}
             onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
               e.stopPropagation();
               setDeleteId(item.id);
@@ -285,12 +288,12 @@ export function BankCardsPage() {
             <Card key={card.id} className={!card.is_active ? 'opacity-60' : ''}>
               <CardContent className="space-y-3 p-4">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                       <CreditCard className="h-5 w-5 text-primary" />
                     </div>
-                    <div>
-                      <p className="font-semibold">{card.name}</p>
+                    <div className="min-w-0">
+                      <p className="font-semibold break-words">{card.name}</p>
                       {card.created_at && (
                         <p className="text-xs text-muted-foreground">{formatDate(card.created_at)}</p>
                       )}
@@ -303,7 +306,7 @@ export function BankCardsPage() {
                   </div>
                 </div>
                 {isSuperUser && (
-                  <div className="flex gap-2">
+                  <div className="flex flex-col gap-2 sm:flex-row">
                     <Button
                       variant="outline"
                       size="sm"
@@ -321,7 +324,7 @@ export function BankCardsPage() {
                       <Pencil className="mr-2 h-4 w-4" />
                       {t('common.edit')}
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => setDeleteId(card.id)}>
+                    <Button variant="outline" size="sm" aria-label={t('common.delete')} onClick={() => setDeleteId(card.id)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>

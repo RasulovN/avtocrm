@@ -7,7 +7,7 @@ export function InventoryTableSkeleton() {
 
       <div className="rounded-md border overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[640px]">
             <thead>
               <tr className="bg-muted/50 border-b">
                 <th className="px-4 py-3 text-left text-sm font-medium">

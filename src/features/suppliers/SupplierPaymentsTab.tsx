@@ -207,7 +207,7 @@ export function SupplierPaymentsTab({ supplierId, stats, refreshKey }: SupplierP
       </div>
 
       {/* O'ng ustun: jamlanma kartalar */}
-      <div className="space-y-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
         {summaryCards.map((card) => (
           <div key={card.label} className="rounded-xl border border-border bg-card p-4 shadow-sm">
             <p className="text-sm text-muted-foreground">{card.label}</p>

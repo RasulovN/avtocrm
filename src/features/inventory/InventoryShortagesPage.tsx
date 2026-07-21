@@ -55,7 +55,7 @@ export function InventoryShortagesPage() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <div className="rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-700">
                     {t('inventory.shortageCount')}: {session.mismatched_items || 0}
                   </div>

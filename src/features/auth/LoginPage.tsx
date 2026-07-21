@@ -117,7 +117,7 @@ export function LoginPage() {
   };
 
   return (
-    <main id="main-content" className="min-h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+    <main id="main-content" className="min-h-screen flex items-center justify-center relative overflow-hidden p-4 bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       {/* Ambient background effects */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-3xl" />
@@ -125,7 +125,7 @@ export function LoginPage() {
         <div className="absolute top-[30%] right-[20%] w-[300px] h-[300px] bg-violet-500/5 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative z-10 w-full max-w-md mx-4 animate-fade-in-up">
+      <div className="relative z-10 w-full max-w-md animate-fade-in-up">
         <Card className="shadow-xl border-border/40 backdrop-blur-sm bg-card/90">
           <CardHeader className="space-y-4 text-center pb-2">
             <div className="mx-auto w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20">

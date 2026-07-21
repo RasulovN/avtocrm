@@ -344,7 +344,8 @@ export function TransferListPage() {
                   handleApprove(item.id);
                 }}
                 title={t('transfers.accepted')}
-                className="text-green-600 hover:text-green-700 hover:bg-green-100/10 h-8 w-8"
+                aria-label={t('transfers.accepted')}
+                className="text-green-700 dark:text-green-400 hover:text-green-800 hover:bg-green-100/10 h-8 w-8"
               >
                 <Check className="h-4 w-4" />
               </Button>
@@ -356,7 +357,8 @@ export function TransferListPage() {
                   handleReject(item.id);
                 }}
                 title={t('transfers.rejected')}
-                className="text-red-600 hover:text-red-700 hover:bg-red-100/10 h-8 w-8"
+                aria-label={t('transfers.rejected')}
+                className="text-red-600 dark:text-red-400 hover:text-red-700 hover:bg-red-100/10 h-8 w-8"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -369,6 +371,7 @@ export function TransferListPage() {
               e.stopPropagation();
               handleShowDetails(item);
             }}
+            aria-label={t('common.view', "Ko'rish")}
             className="text-muted-foreground hover:text-foreground"
           >
             <Package className="h-5 w-5" />
@@ -414,7 +417,7 @@ export function TransferListPage() {
               setPage(1);
             }}
           >
-            <SelectTrigger className="w-full sm:w-44">
+            <SelectTrigger className="w-full sm:w-44" aria-label={t('common.status', 'Holati')}>
               <SelectValue placeholder={t('common.status', 'Holati')} />
             </SelectTrigger>
             <SelectContent>
@@ -462,9 +465,9 @@ export function TransferListPage() {
               transfers.map((item, index) => (
                 <div key={item.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">#{index + 1}</p>
-                      <p className="font-semibold text-foreground">{fromStoreLabel(item)}</p>
+                      <p className="font-semibold text-foreground break-words">{fromStoreLabel(item)}</p>
                       <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
                         <ArrowRight className="h-4 w-4 shrink-0" />
                         <span>{toStoreLabel(item)}</span>
@@ -478,7 +481,7 @@ export function TransferListPage() {
                   <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                     <div className="rounded-lg bg-muted/40 p-3">
                       <p className="text-xs text-muted-foreground">{t('products.title')}</p>
-                      <p className="mt-1 font-medium">{resolveProductName(item)}</p>
+                      <p className="mt-1 font-medium break-words">{resolveProductName(item)}</p>
                     </div>
                     <div className="rounded-lg bg-muted/40 p-3">
                       <p className="text-xs text-muted-foreground">{t('products.quantity')}</p>
@@ -538,6 +541,7 @@ export function TransferListPage() {
                   size="sm"
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1}
+                  aria-label={t('common.previous', 'Oldingi sahifa')}
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -549,6 +553,7 @@ export function TransferListPage() {
                   size="sm"
                   onClick={() => setPage(p => Math.min(Math.ceil(total / limit), p + 1))}
                   disabled={page === Math.ceil(total / limit)}
+                  aria-label={t('common.next', 'Keyingi sahifa')}
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
@@ -575,8 +580,8 @@ export function TransferListPage() {
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
         <DialogContent className="max-w-2xl sm:max-w-2xl pb-6">
           <DialogHeader>
-            <div className="flex items-center justify-between pr-6">
-              <div>
+            <div className="flex flex-wrap items-center justify-between gap-2 pr-6">
+              <div className="min-w-0">
                 <DialogTitle>{t('transfers.detailsTitle')}</DialogTitle>
                 <DialogDescription>
                   {formatDate(selectedTransfer?.created_at || '')}
@@ -629,14 +634,14 @@ export function TransferListPage() {
                   <div className="bg-muted/40 px-3 py-2 text-sm font-medium">{t('products.title')}</div>
                   <div className="divide-y divide-border">
                     {selectedTransfer.items.map((item, index) => (
-                      <div key={item.id || index} className="flex items-center justify-between px-3 py-2 text-sm">
-                        <div>
-                          <p className="font-medium">{item.product_name || '-'}</p>
+                      <div key={item.id || index} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium break-words">{item.product_name || '-'}</p>
                           <p className="text-xs text-muted-foreground">
                             {t('products.quantity')}: {item.quantity}
                           </p>
                         </div>
-                        <div className="text-right">
+                        <div className="shrink-0 text-right">
                           <p className="text-xs text-muted-foreground">{t('products.purchasePrice')}: {item.purchase_price ?? '-'}</p>
                           <p className="text-xs text-muted-foreground">{t('products.sellingPrice')}: {item.selling_price ?? '-'}</p>
                         </div>

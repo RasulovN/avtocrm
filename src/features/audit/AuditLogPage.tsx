@@ -201,6 +201,7 @@ export function AuditLogPage() {
           />
         </div>
         <select
+          aria-label={t('audit.module')}
           className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm sm:w-auto"
           value={moduleFilter}
           onChange={(e: ChangeEvent<HTMLSelectElement>) => { setModuleFilter(e.target.value); setPage(1); }}
@@ -212,6 +213,7 @@ export function AuditLogPage() {
           ))}
         </select>
         <select
+          aria-label={t('audit.action')}
           className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm sm:w-auto"
           value={actionFilter}
           onChange={(e: ChangeEvent<HTMLSelectElement>) => { setActionFilter(e.target.value); setPage(1); }}
@@ -258,7 +260,7 @@ export function AuditLogPage() {
             </DialogTitle>
           </DialogHeader>
           {viewing && (
-            <div className="space-y-2 text-sm">
+            <div className="space-y-2 text-sm break-words">
               <p><span className="text-muted-foreground">{t('audit.who')}:</span> {viewing.user_display || '-'}</p>
               <p><span className="text-muted-foreground">{t('audit.when')}:</span> {formatDate(viewing.created_at)} {new Date(viewing.created_at).toLocaleTimeString('uz-UZ')}</p>
               <p><span className="text-muted-foreground">{t('audit.module')}:</span> {moduleLabels[viewing.module] || viewing.module}</p>

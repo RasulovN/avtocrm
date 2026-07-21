@@ -143,7 +143,7 @@ export function SettingsPage() {
         description={t('nav.settings')}
       />
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Profile Settings */}
         <Card>
           <CardHeader>
@@ -228,7 +228,8 @@ export function SettingsPage() {
                   <button
                     type="button"
                     onClick={() => togglePasswordVisibility('current')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    aria-label={showPasswords.current ? t('auth.hidePassword', 'Parolni yashirish') : t('auth.showPassword', "Parolni ko'rsatish")}
+                    className="absolute right-1.5 top-1/2 flex -translate-y-1/2 items-center justify-center rounded p-1.5 text-muted-foreground hover:text-foreground"
                   >
                     {showPasswords.current ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -247,7 +248,8 @@ export function SettingsPage() {
                   <button
                     type="button"
                     onClick={() => togglePasswordVisibility('new')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    aria-label={showPasswords.new ? t('auth.hidePassword', 'Parolni yashirish') : t('auth.showPassword', "Parolni ko'rsatish")}
+                    className="absolute right-1.5 top-1/2 flex -translate-y-1/2 items-center justify-center rounded p-1.5 text-muted-foreground hover:text-foreground"
                   >
                     {showPasswords.new ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -266,7 +268,8 @@ export function SettingsPage() {
                   <button
                     type="button"
                     onClick={() => togglePasswordVisibility('confirm')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    aria-label={showPasswords.confirm ? t('auth.hidePassword', 'Parolni yashirish') : t('auth.showPassword', "Parolni ko'rsatish")}
+                    className="absolute right-1.5 top-1/2 flex -translate-y-1/2 items-center justify-center rounded p-1.5 text-muted-foreground hover:text-foreground"
                   >
                     {showPasswords.confirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -298,17 +301,17 @@ export function SettingsPage() {
               <p className="text-sm text-muted-foreground">{t('common.noData')}</p>
             ) : (
               loginHistory.slice(0, 5).map((login) => (
-              <div key={login.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/50 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <div key={login.id} className="flex flex-col gap-2 p-4 border rounded-lg bg-card hover:bg-accent/50 transition-colors sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-4 min-w-0">
+                  <div className="h-10 w-10 shrink-0 rounded-full bg-primary/10 flex items-center justify-center">
                     <Clock className="h-5 w-5 text-primary" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="font-medium">{login.date} - {login.time}</p>
-                    <p className="text-sm text-muted-foreground">{login.device}</p>
+                    <p className="text-sm text-muted-foreground break-words">{login.device}</p>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="shrink-0 sm:text-right">
                   <p className="text-sm font-mono text-muted-foreground">{login.ip}</p>
                   {/* <p className="text-sm text-muted-foreground">{login.location}</p> */}
                 </div>

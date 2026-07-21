@@ -44,7 +44,8 @@
   --secondary: 214 32% 91%;
   --secondary-foreground: 220 60% 10%;
   --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 47%;
+  /* WCAG AA: muted fonlarda ham 4.5:1 kontrast uchun 47% -> 42% */
+  --muted-foreground: 215 19% 42%;
   --accent: 210 40% 96%;
   --accent-foreground: 220 60% 10%;
   --destructive: 0 84% 60%;
@@ -210,7 +211,7 @@ body {
 /* ═══════ Badge Styles ═══════ */
 .badge-success {
   background-color: rgba(34, 197, 94, 0.1);
-  color: rgb(22, 163, 74);
+  color: rgb(21, 128, 61);
   border: 1px solid rgba(34, 197, 94, 0.2);
 }
 
@@ -222,7 +223,7 @@ body {
 
 .badge-warning {
   background-color: rgba(245, 158, 11, 0.1);
-  color: rgb(217, 119, 6);
+  color: rgb(146, 64, 14);
   border: 1px solid rgba(245, 158, 11, 0.2);
 }
 
@@ -234,7 +235,7 @@ body {
 
 .badge-danger {
   background-color: rgba(239, 68, 68, 0.1);
-  color: rgb(220, 38, 38);
+  color: rgb(185, 28, 28);
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
@@ -246,7 +247,7 @@ body {
 
 .badge-info {
   background-color: rgba(59, 130, 246, 0.1);
-  color: rgb(37, 99, 235);
+  color: rgb(29, 78, 216);
   border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
@@ -280,7 +281,8 @@ body {
 }
 
 .animate-fade-in-up {
-  animation: fadeInUp 0.35s ease-out;
+  /* 0.35s -> 0.18s: opacity-animatsiya LCP'ni kechiktiradi (Lighthouse) */
+  animation: fadeInUp 0.18s ease-out;
 }
 
 .animate-slide-in-left {

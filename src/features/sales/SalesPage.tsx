@@ -7,7 +7,7 @@ import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
 import { SearchableSelect } from '../../components/ui/SearchableSelect';
-import { ScannerModal } from '../../components/ScannerModal';
+import { LazyScannerModal } from '../../components/LazyScannerModal';
 import { storeService } from '../../services/storeService';
 import { productService } from '../../services/productService';
 import { salesService } from '../../services/salesService';
@@ -1031,9 +1031,9 @@ export function SalesPage() {
           <div className="flex min-h-0 flex-col space-y-2 overflow-y-auto" style={panelStyle(0)}>
             <div className="bg-card border border-gray-900 rounded-lg flex min-h-80 flex-col p-3 xl:min-h-0 xl:flex-1">
               <div className="mb-3">
-                <h4 className="text-base font-semibold flex items-center gap-2 dark:text-white mb-2">
+                <h3 className="text-base font-semibold flex items-center gap-2 dark:text-white mb-2">
                   {t('products.title')}
-                </h4>
+                </h3>
                 <div className="flex flex-col justify-between gap-2 sm:flex-row">
                   <div className="relative w-full">
                     <Search className="absolute left-2.5 top-3 h-4 w-4 text-muted-foreground dark:text-gray-400 z-10" />
@@ -1050,6 +1050,7 @@ export function SalesPage() {
                     className="w-full px-3 dark:bg-gray-900 dark:border-gray-600 dark:text-white hover:bg-gray-700 sm:w-auto"
                     onClick={handleOpenScanner}
                     title="Ctrl+S"
+                    aria-label={t('sales.scanBarcode', 'Shtrix kodni skanerlash')}
                   >
                     <ScanBarcode className="w-5 " />
                   </Button>
@@ -1071,7 +1072,7 @@ export function SalesPage() {
                 <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                   {isAdmin && (
                     <Select value={storeId} onValueChange={setStoreId}>
-                      <SelectTrigger className="h-8 w-full dark:bg-gray-900 dark:border-gray-600 dark:text-white sm:w-40">
+                      <SelectTrigger aria-label={t('placeholders.selectStore', "Do'konni tanlang")} className="h-8 w-full dark:bg-gray-900 dark:border-gray-600 dark:text-white sm:w-40">
                         <SelectValue placeholder={t('placeholders.selectStore')} />
                       </SelectTrigger>
                       <SelectContent>
@@ -1097,7 +1098,9 @@ export function SalesPage() {
                   </Select> */}
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto space-y-1.5">
+              {/* Mobilda ro'yxat o'z ichida scroll bo'ladi — chek va to'lov paneli pastda qoladi.
+                  min-h ro'yxat yuklanayotganda ham xuddi shu balandlikni egallashi uchun (CLS oldini oladi) */}
+              <div className="min-h-[50vh] max-h-[50vh] flex-1 overflow-y-auto space-y-1.5 xl:min-h-0 xl:max-h-none">
                 {searchLoading || storeProductsLoading ? (
                   <div className="py-8 text-center text-sm text-muted-foreground dark:text-gray-400">
                     {t('common.loading')}
@@ -1169,7 +1172,7 @@ export function SalesPage() {
                           </div>
                           <div>
                             <div className="text-muted-foreground mb-0.5">Sotuv narxi</div>
-                            <div className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
+                            <div className="font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
                               {formatCurrency(product.selling_price ?? 0)}
                             </div>
                           </div>
@@ -1192,23 +1195,23 @@ export function SalesPage() {
             <div className="bg-card border border-gray-900 rounded-lg flex min-h-80 flex-col xl:flex-1">
               <div className="p-3 pb-2">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <h4 className="text-base font-semibold flex items-center gap-2 dark:text-white print:hidden ">
+                  <h3 className="text-base font-semibold flex items-center gap-2 dark:text-white print:hidden ">
                     <DollarSign className="h-4 w-4" /> {t('sales.receipt')}
                     <span className="inline-flex items-center rounded bg-secondary dark:bg-gray-800 px-1.5 py-0.5 text-xs font-medium dark:text-gray-200 ml-1">
                       {items.length}
                     </span>
-                  </h4>
+                  </h3>
                   <Button
                     type="button"
                     variant="ghost"
-                    className="h-7 self-start px-2 text-sm text-red-500 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-900/20 sm:self-auto"
+                    className="h-7 self-start px-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-900/20 sm:self-auto"
                     onClick={() => setItems([])}
                   >
                     <Trash2 className="h-3.5 w-3.5 mr-1" /> {t('sales.clear')}
                   </Button>
                 </div>
               </div>
-              <div className="px-3 flex-1 overflow-y-auto space-y-2">
+              <div className="max-h-[45vh] px-3 flex-1 overflow-y-auto space-y-2 xl:max-h-none">
                 {items.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground dark:text-gray-400">
                     <ScanBarcode className="h-10 w-10 mx-auto mb-2 opacity-50" />
@@ -1233,21 +1236,23 @@ export function SalesPage() {
                           size="icon"
                           className="h-5 w-5"
                           onClick={() => removeItem(index)}
+                          aria-label={t('common.delete', "O'chirish")}
                         >
-                          <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                          <Trash2 className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
                         </Button>
                       </div>
                       <div className="grid grid-cols-12 gap-1.5 text-xs items-end">
-                        <div className="col-span-4">
+                        <div className="col-span-6 sm:col-span-4">
                           <div className="text-muted-foreground dark:text-gray-400 mb-1">{t('sales.quantity')}</div>
                           <div className="flex items-center gap-0.5">
                             <Button
                               type="button"
                               variant="outline"
                               size="icon"
-                              className="h-7 w-7 text-xs dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
+                              className="h-7 w-7 shrink-0 text-xs dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
                               onClick={() => updateQuantity(index, item.quantity - 1)}
                               disabled={item.quantity <= 1}
+                              aria-label={t('common.decrease', 'Kamaytirish')}
                             >
                               -
                             </Button>
@@ -1261,20 +1266,21 @@ export function SalesPage() {
                                   updateQuantity(index, val === '' ? 0 : Number(val));
                                 }
                               }}
-                              className="h-7 w-10 text-center text-xs dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                              className="h-7 w-full min-w-0 flex-1 text-center text-xs dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                             />
                             <Button
                               type="button"
                               variant="outline"
                               size="icon"
-                              className="h-7 w-7 text-xs dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
+                              className="h-7 w-7 shrink-0 text-xs dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
                               onClick={() => updateQuantity(index, item.quantity + 1)}
+                              aria-label={t('common.increase', "Ko'paytirish")}
                             >
                               +
                             </Button>
                           </div>
                         </div>
-                        <div className="col-span-5">
+                        <div className="col-span-6 sm:col-span-5">
                           <div className="flex items-center gap-1 mb-1">
                             <span className="text-muted-foreground dark:text-gray-400">{t('sales.price')}</span>
                             <button
@@ -1301,7 +1307,7 @@ export function SalesPage() {
                             className="h-7 text-center text-xs dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                           />
                         </div>
-                        <div className="col-span-3">
+                        <div className="col-span-12 sm:col-span-3">
                           <div className="text-muted-foreground dark:text-gray-400 mb-1">{t('sales.total')}</div>
                           <div className="h-7 flex items-center justify-center bg-green-100 dark:bg-green-900/30 rounded text-xs font-semibold text-green-700 dark:text-green-400">
                             {formatCurrency(item.total)}
@@ -1342,7 +1348,7 @@ export function SalesPage() {
           <div className="flex min-h-0 flex-col space-y-2 overflow-y-auto" style={panelStyle(2)}>
             <div className="bg-card border border-gray-900 rounded-lg flex min-h-80 flex-col xl:flex-1">
               <div className="p-3 pb-2">
-                <h4 className="text-base font-semibold dark:text-white">{t('sales.payment', 'Тўлов')}</h4>
+                <h3 className="text-base font-semibold dark:text-white">{t('sales.payment', 'Тўлов')}</h3>
               </div>
               <div className="px-3 flex-1 space-y-3">
                 <div className="rounded-xl border border-dashed border-gray-300/80 bg-gray-50/80 p-3 dark:border-gray-700 dark:bg-gray-900/60">
@@ -1377,6 +1383,7 @@ export function SalesPage() {
                           setSelectedCustomer(null);
                         }}
                         title="Mijozni bekor qilish"
+                        aria-label="Mijozni bekor qilish"
                         className="h-10 text-sm dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900"
                       >
                         <X className="h-4 w-4" />
@@ -1387,6 +1394,7 @@ export function SalesPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => setShowNewCustomerDialog(true)}
+                      aria-label={t('sales.addCustomer', "Mijoz qo'shish")}
                       className="h-10 text-sm dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900"
                     >
                       <UserPlus className="h-4 w-4 mr-1" />
@@ -1402,7 +1410,7 @@ export function SalesPage() {
                   <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground dark:text-gray-400">{t('sales.discount')}</Label>
                   <div className="mt-2 flex gap-1">
                     <Select value={discountType} onValueChange={(val: 'p' | 'f') => setDiscountType(val)}>
-                      <SelectTrigger className="h-9 w-20 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white">
+                      <SelectTrigger aria-label={t('sales.discount', 'Chegirma turi')} className="h-9 w-20 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1445,7 +1453,7 @@ export function SalesPage() {
                       variant={cashSelected ? 'default' : 'outline'}
                       title={t('sales.quickCashHint', "Qolgan summani naqd bilan to'lash")}
                       className={`h-12 text-xs flex-col gap-0.5 ${cashSelected
-                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-600 dark:hover:bg-emerald-700'
+                        ? 'bg-emerald-700 hover:bg-emerald-800 text-white dark:bg-emerald-700 dark:hover:bg-emerald-800'
                         : 'dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900'
                         }`}
                       onClick={handleQuickCash}
@@ -1655,7 +1663,7 @@ export function SalesPage() {
           <div className="receipt-content receipt-print bg-white dark:bg-gray-800 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-4 border-b dark:border-gray-600 flex justify-between items-center print:hidden ">
               <h3 className="text-lg font-bold dark:text-white">{t('sales.receipt')}</h3>
-              <Button variant="ghost" size="icon" onClick={() => setShowReceipt(false)}>
+              <Button variant="ghost" size="icon" onClick={() => setShowReceipt(false)} aria-label={t('common.close', 'Yopish')}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -1764,7 +1772,7 @@ export function SalesPage() {
         </div>
       )}
 
-      <ScannerModal open={showScanner} onOpenChange={setShowScanner} onScan={handleScannerScan} />
+      <LazyScannerModal open={showScanner} onOpenChange={setShowScanner} onScan={handleScannerScan} />
 
       <Dialog open={showNewCustomerDialog} onOpenChange={setShowNewCustomerDialog}>
         <DialogContent size="md">
@@ -1845,9 +1853,9 @@ export function SalesPage() {
 
               <div className="space-y-4">
                 <div>
-                  <h4 className="text-2xl font-semibold">
+                  <h3 className="text-2xl font-semibold">
                     {selectedProduct?.name || t('sales.unknownProduct')}
-                  </h4>
+                  </h3>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {selectedProduct?.description || t('sales.noDescription')}
                   </p>
@@ -1896,7 +1904,7 @@ export function SalesPage() {
                 <div className="rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4">
                   <div className="mb-3 flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-primary" />
-                    <h5 className="font-semibold">{t('sales.location')}</h5>
+                    <h4 className="font-semibold">{t('sales.location')}</h4>
                   </div>
                   {productLocation && productLocation.name ? (
                     <div>
@@ -1916,9 +1924,9 @@ export function SalesPage() {
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
                       <Package className="h-4 w-4 text-blue-500" />
-                      <h5 className="font-semibold text-sm dark:text-white">
+                      <h4 className="font-semibold text-sm dark:text-white">
                         {t('sales.storeStock', 'Бошқа дўконлардаги қолдиқлар')}
-                      </h5>
+                      </h4>
                     </div>
                     <div className="grid gap-2">
                       {selectedProduct.inventory_by_store.map((inv) => (
@@ -1945,7 +1953,7 @@ export function SalesPage() {
                           <div className="grid grid-cols-3 gap-2 pt-1 border-t border-border/40">
                             <div>
                               <p className="text-[10px] text-muted-foreground mb-0.5">Sotish narxi</p>
-                              <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                              <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums">
                                 {formatCurrency(inv.selling_price ?? 0)}
                               </p>
                             </div>

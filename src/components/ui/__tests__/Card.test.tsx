@@ -45,10 +45,10 @@ describe('CardTitle', () => {
     expect(screen.getByText('Title')).toBeInTheDocument();
   });
 
-  it('renders as h3 element', () => {
+  it('renders as h2 element', () => {
     render(<CardTitle>Heading</CardTitle>);
     const title = screen.getByText('Heading');
-    expect(title.tagName).toBe('H3');
+    expect(title.tagName).toBe('H2');
   });
 
   it('has text-xl font-bold classes', () => {

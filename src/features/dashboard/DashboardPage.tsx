@@ -323,8 +323,8 @@ export function DashboardPage() {
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center gap-3">
-          <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-1 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex w-full sm:w-auto items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-1 shadow-sm">
             {([
               { key: 'daily', label: t('common.day', 'Kun') },
               { key: 'weekly', label: t('common.week', 'Hafta') },
@@ -339,7 +339,7 @@ export function DashboardPage() {
                   setRangeFrom('');
                   setRangeTo('');
                 }}
-                className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                className={`flex flex-1 sm:flex-none items-center justify-center px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
                   period === key && !hasCustomRange
                     ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -363,7 +363,10 @@ export function DashboardPage() {
           />
 
           <Select value={storeId} onValueChange={setStoreId} disabled={!isAdmin}>
-            <SelectTrigger className="w-full sm:w-48 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm rounded-lg h-9">
+            <SelectTrigger
+              aria-label={t('placeholders.allStores', "Barcha do'konlar")}
+              className="w-full sm:w-48 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm rounded-lg h-9"
+            >
               <SelectValue placeholder={t('placeholders.allStores', 'Barcha do\'konlar')} />
             </SelectTrigger>
             <SelectContent>
@@ -396,13 +399,13 @@ export function DashboardPage() {
           {isLoading ? (
             <div className="h-8 w-32 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-md" />
           ) : (
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+            <p className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
               {formatCurrency(data.kpi.revenue)}
-            </h3>
+            </p>
           )}
           <div className="mt-2 text-xs font-medium text-slate-500">
             {getGrowthText()}{' '}
-            <span className={data.kpi.revenueGrowth >= 0 ? 'text-emerald-600 font-semibold' : 'text-rose-600 font-semibold'}>
+            <span className={data.kpi.revenueGrowth >= 0 ? 'text-emerald-700 dark:text-emerald-400 font-semibold' : 'text-rose-600 font-semibold'}>
               {data.kpi.revenueGrowth >= 0 ? '+' : ''}{data.kpi.revenueGrowth}%
             </span>
           </div>
@@ -417,13 +420,13 @@ export function DashboardPage() {
           {isLoading ? (
             <div className="h-8 w-24 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-md" />
           ) : (
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+            <p className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
               {data.kpi.orders.toLocaleString()} {t('common.qtyUnits', 'ta')}
-            </h3>
+            </p>
           )}
           <div className="mt-2 text-xs font-medium text-slate-500">
             {t('dashboard.salesActivity', 'Sotuv faolligi')}{' '}
-            <span className={data.kpi.ordersGrowth >= 0 ? 'text-emerald-600 font-semibold' : 'text-rose-600 font-semibold'}>
+            <span className={data.kpi.ordersGrowth >= 0 ? 'text-emerald-700 dark:text-emerald-400 font-semibold' : 'text-rose-600 font-semibold'}>
               {data.kpi.ordersGrowth >= 0 ? '+' : ''}{data.kpi.ordersGrowth}%
             </span>
           </div>
@@ -438,9 +441,9 @@ export function DashboardPage() {
           {isLoading ? (
             <div className="h-8 w-24 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-md" />
           ) : (
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+            <p className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
               {Math.floor(data.kpi.orders * 0.45).toLocaleString()}
-            </h3>
+            </p>
           )}
           <div className="mt-2 text-xs font-medium text-slate-500">
             {t('reports.labels.averageReceipt', 'O\'rtacha chek')}:{' '}
@@ -459,14 +462,14 @@ export function DashboardPage() {
           {isLoading ? (
             <div className="h-8 w-32 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-md" />
           ) : (
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+            <p className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
               {formatCurrency(data.kpi.debt)}
-            </h3>
+            </p>
           )}
           <div className="mt-2 text-xs font-medium text-slate-500">
             {t('dashboard.totalDebtAmount', 'Umumiy qarz miqdori')}{' '}
             {data.kpi.debtGrowth !== 0 && (
-              <span className={data.kpi.debtGrowth < 0 ? 'text-emerald-600 font-semibold' : 'text-rose-600 font-semibold'}>
+              <span className={data.kpi.debtGrowth < 0 ? 'text-emerald-700 dark:text-emerald-400 font-semibold' : 'text-rose-600 font-semibold'}>
                 ({data.kpi.debtGrowth > 0 ? '+' : ''}{data.kpi.debtGrowth}%)
               </span>
             )}
@@ -478,7 +481,7 @@ export function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-7">
 
         {/* MAIN CHART */}
-        <Card className="lg:col-span-5 rounded-3xl border-slate-200/60 dark:border-slate-800 shadow-xs overflow-hidden bg-white dark:bg-slate-900">
+        <Card className="lg:col-span-5 min-w-0 rounded-3xl border-slate-200/60 dark:border-slate-800 shadow-xs overflow-hidden bg-white dark:bg-slate-900">
           <CardHeader className="pb-0 pt-6 px-6 sm:px-8 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -506,7 +509,7 @@ export function DashboardPage() {
             ) : (
               <div className="h-[320px] w-full relative">
                 {/* Y-Axis */}
-                <div className="absolute left-0 top-0 bottom-8 w-16 flex flex-col justify-between text-xs font-semibold text-slate-400 text-right pr-4">
+                <div className="absolute left-0 top-0 bottom-8 w-16 flex flex-col justify-between text-xs font-semibold text-slate-500 dark:text-slate-400 text-right pr-4">
                   <span>{formatCurrency(maxChartVal).split(' ')[0]}</span>
                   <span>{formatCurrency(maxChartVal * 0.66).split(' ')[0]}</span>
                   <span>{formatCurrency(maxChartVal * 0.33).split(' ')[0]}</span>
@@ -575,7 +578,7 @@ export function DashboardPage() {
                 </div>
 
                 {/* X-Axis: yorliqlar ko'p bo'lsa (soatlik/kunlik oraliq) siyraklashtiriladi */}
-                <div className="absolute left-16 right-0 bottom-0 h-8 text-xs font-semibold text-slate-400">
+                <div className="absolute left-16 right-0 bottom-0 h-8 text-xs font-semibold text-slate-500 dark:text-slate-400">
                   {(() => {
                     const step = Math.max(1, Math.ceil(localizedChartLabels.length / 12));
                     return localizedChartLabels.map((lbl, i) => {
@@ -598,7 +601,7 @@ export function DashboardPage() {
         </Card>
 
         {/* LOW STOCK & ALERTS */}
-        <div className="lg:col-span-2 space-y-6 flex flex-col">
+        <div className="lg:col-span-2 min-w-0 space-y-6 flex flex-col">
           <Card className="rounded-3xl border-slate-200/60 dark:border-slate-800 shadow-xs flex-1 bg-white dark:bg-slate-900 overflow-hidden">
             <CardHeader className="bg-rose-50/50 dark:bg-rose-500/5 pb-4 border-b border-rose-100 dark:border-rose-900/30">
               <CardTitle className="text-lg font-semibold flex items-center gap-2 text-rose-700 dark:text-rose-400">
@@ -614,16 +617,16 @@ export function DashboardPage() {
               ) : (
                 <div className="divide-y divide-slate-100 dark:divide-slate-800/50">
                   {lowStockItems.map((item) => (
-                    <div key={item.id} className="p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                      <div>
-                        <p className="font-medium text-sm text-slate-800 dark:text-slate-200">
+                    <div key={item.id} className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm text-slate-800 dark:text-slate-200 truncate">
                           {(i18n.language === 'cyrl' && item.name_uz_cyrl) ? item.name_uz_cyrl : item.name}
                         </p>
                         <p className="text-xs text-slate-500 font-medium mt-0.5">
                           {t('dashboard.inStock', 'Omborda')}: <strong className="font-semibold text-rose-600 dark:text-rose-400">{item.left} {t('common.pcs', 'dona')}</strong>
                         </p>
                       </div>
-                      <button className="px-3 py-1.5 text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                      <button className="shrink-0 px-3 py-1.5 text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
                         {t('dashboard.order', 'Buyurtma')}
                       </button>
                     </div>
@@ -667,19 +670,19 @@ export function DashboardPage() {
                   const pct = Math.max((part.rev / maxRev) * 100, 2);
                   return (
                     <div key={part.id} className="group relative">
-                      <div className="flex justify-between items-end mb-2">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-xl bg-slate-100 dark:bg-slate-800 ${part.color}`}>
+                      <div className="flex justify-between items-end gap-3 mb-2">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className={`shrink-0 p-2 rounded-xl bg-slate-100 dark:bg-slate-800 ${part.color}`}>
                             <Icon className="w-5 h-5" />
                           </div>
-                          <div>
-                            <p className="font-medium text-sm text-slate-900 dark:text-white group-hover:text-indigo-500 transition-colors">
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm text-slate-900 dark:text-white group-hover:text-indigo-500 transition-colors truncate">
                               {idx + 1}. {(i18n.language === 'cyrl' && part.name_uz_cyrl) ? part.name_uz_cyrl : part.name}
                             </p>
                             <p className="text-xs font-medium text-slate-500">{part.sold} {t('dashboard.piecesSold', 'dona sotilgan')}</p>
                           </div>
                         </div>
-                        <p className="font-semibold text-sm text-slate-700 dark:text-slate-300">
+                        <p className="shrink-0 whitespace-nowrap font-semibold text-sm text-slate-700 dark:text-slate-300">
                           {formatCurrency(part.rev)}
                         </p>
                       </div>
@@ -720,8 +723,8 @@ export function DashboardPage() {
             ) : (
               <div className="divide-y divide-slate-100 dark:divide-slate-800/50">
                 {recentSalesItems.map((sale) => (
-                  <div key={sale.id} className="p-5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                    <div className="flex items-center gap-4">
+                  <div key={sale.id} className="p-5 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                    <div className="flex min-w-0 items-center gap-4">
                       <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
                         sale.type === 'cash' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400' :
                           sale.type === 'debt' ? 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400' :
@@ -731,19 +734,19 @@ export function DashboardPage() {
                           sale.type === 'debt' ? <Users className="w-6 h-6" /> :
                             <CreditCard className="w-6 h-6" />}
                       </div>
-                      <div>
-                        <p className="font-semibold text-sm sm:text-base text-slate-900 dark:text-white">{sale.client}</p>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm sm:text-base text-slate-900 dark:text-white truncate">{sale.client}</p>
                         <p className="text-xs font-medium text-slate-500 flex items-center gap-1 mt-0.5">
                           <Clock className="w-3 h-3" /> {formatRelativeTime(sale.time, sale.minutesAgo)}
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-slate-900 dark:text-white">{formatCurrency(sale.amount)}</p>
+                    <div className="text-right shrink-0">
+                      <p className="font-semibold text-slate-900 dark:text-white whitespace-nowrap">{formatCurrency(sale.amount)}</p>
                       <p className={`text-xs font-medium mt-1 ${
-                        sale.type === 'cash' ? 'text-emerald-500' :
-                          sale.type === 'debt' ? 'text-amber-500' :
-                            'text-blue-500'
+                        sale.type === 'cash' ? 'text-emerald-700 dark:text-emerald-400' :
+                          sale.type === 'debt' ? 'text-amber-700 dark:text-amber-400' :
+                            'text-blue-700 dark:text-blue-400'
                       }`}>
                         {sale.type === 'cash' ? t('sales.cash', 'Naqd') : sale.type === 'debt' ? t('customers.debt', 'Nasiya') : t('sales.card', 'Plastik')}
                       </p>
@@ -758,7 +761,7 @@ export function DashboardPage() {
               </div>
             )}
             <div className="p-4 bg-slate-50/50 dark:bg-slate-800/20 text-center border-t border-slate-100 dark:border-slate-800">
-              <Link to={`/${i18n.language || 'uz'}/sales`} className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 flex items-center justify-center w-full hover:text-emerald-700 transition-colors">
+              <Link to={`/${i18n.language || 'uz'}/sales`} className="text-sm font-semibold text-emerald-700 dark:text-emerald-400 flex items-center justify-center w-full hover:text-emerald-800 transition-colors">
                 {t('dashboard.allReceipts', 'Barcha kvitansiyalar')} <ArrowRight className="w-4 h-4 ml-1" />
               </Link>
             </div>

@@ -153,7 +153,7 @@ export function CustomerListPage() {
       render: (item) => {
         const debt = Number(item.total_debt) || 0;
         if (debt === 0) return <span className="text-muted-foreground">—</span>;
-        return <span className="font-medium text-[#ff6b00]">{formatCurrency(debt)}</span>;
+        return <span className="font-medium text-[#c2410c] dark:text-[#ff6b00]">{formatCurrency(debt)}</span>;
       },
     },
     {
@@ -446,7 +446,7 @@ export function CustomerListPage() {
           title={t('customers.title')}
           description={t('customers.description')}
         />
-          <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center md:w-auto">
             <ExportButton
               direct
               endpoint="/users/customers/export/"
@@ -468,7 +468,7 @@ export function CustomerListPage() {
               />
             </div>
             <Select value={debtFilter} onValueChange={(v: 'all' | 'with_debt' | 'no_debt') => { setDebtFilter(v); setPage(1); }}>
-              <SelectTrigger className="w-full sm:w-[160px]">
+              <SelectTrigger aria-label={t('customers.debtFilter', 'Qarz filtri')} className="w-full sm:w-[160px]">
                 <SelectValue placeholder={t('customers.debtFilter', 'Qarz filtri')} />
               </SelectTrigger>
               <SelectContent>
@@ -730,7 +730,7 @@ export function CustomerListPage() {
                     <CardContent className="flex items-center gap-3 p-3">
                       <div>
                         <p className="text-xs text-muted-foreground">{t('customers.debt')}</p>
-                        <p className={`font-semibold ${Number(selectedCustomer.total_debt) > 0 ? 'text-[#ff6b00]' : ''}`}>
+                        <p className={`font-semibold ${Number(selectedCustomer.total_debt) > 0 ? 'text-[#c2410c] dark:text-[#ff6b00]' : ''}`}>
                           {formatCurrency(Number(selectedCustomer.total_debt) || 0)}
                         </p>
                       </div>
@@ -741,7 +741,7 @@ export function CustomerListPage() {
                     <CardContent className="flex items-center gap-3 p-3">
                       <div>
                         <p className="text-xs text-muted-foreground">{t('customers.payDate')}</p>
-                        <p className={`font-semibold ${Number(selectedCustomer.total_debt) > 0 ? 'text-[#ff6b00]' : ''}`}>
+                        <p className={`font-semibold ${Number(selectedCustomer.total_debt) > 0 ? 'text-[#c2410c] dark:text-[#ff6b00]' : ''}`}>
                           30.3.2026
                         </p>
                       </div>
@@ -776,10 +776,10 @@ export function CustomerListPage() {
                 {totalDebt > 0 && (
                   <div className="rounded-lg border p-4 space-y-4 bg-muted/10">
                     <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <h4 className="text-sm font-semibold flex items-center gap-2">
+                      <h3 className="text-sm font-semibold flex items-center gap-2">
                         <Wallet className="h-4 w-4 text-muted-foreground" />
                         {t('customers.payDebtTitle', "Qarz to'lash")}
-                      </h4>
+                      </h3>
                       <button
                         type="button"
                         className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
@@ -881,7 +881,7 @@ export function CustomerListPage() {
                               {a.closed ? (
                                 <span className="text-green-600">✓ {t('customers.willClose', 'yopiladi')}</span>
                               ) : (
-                                <span className="text-[#ff6b00]">
+                                <span className="text-[#c2410c] dark:text-[#ff6b00]">
                                   {t('customers.willRemain', 'qoladi')}: {formatCurrency(a.debt - a.alloc)}
                                 </span>
                               )}
@@ -910,7 +910,7 @@ export function CustomerListPage() {
                 {/* ─── To'lovlar tarixi ─── */}
                 {(payments.length > 0 || loadingPayments) && (
                   <div className="space-y-3">
-                    <h4 className="text-sm font-semibold">{t('customers.paymentsHistory', "To'lovlar tarixi")}</h4>
+                    <h3 className="text-sm font-semibold">{t('customers.paymentsHistory', "To'lovlar tarixi")}</h3>
                     {loadingPayments ? (
                       <p className="text-xs text-muted-foreground">{t('common.loading', 'Yuklanmoqda...')}</p>
                     ) : (
@@ -950,7 +950,7 @@ export function CustomerListPage() {
 
                 {selectedCustomer.sales && selectedCustomer.sales.length > 0 && (
                   <div className="space-y-3">
-                    <h4 className="text-sm font-semibold">{t('customers.salesHistory', 'Xaridlar tarixi')}</h4>
+                    <h3 className="text-sm font-semibold">{t('customers.salesHistory', 'Xaridlar tarixi')}</h3>
                     <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
                       {selectedCustomer.sales.map((sale: any) => (
                         <div key={sale.id} className="rounded-lg border p-3 space-y-2 bg-card">
@@ -970,7 +970,7 @@ export function CustomerListPage() {
                           </div>
                           <div className="flex flex-col sm:flex-row sm:justify-between pt-2 border-t mt-2 gap-1 sm:gap-4">
                             <span className="text-sm font-medium">{t('customers.totalAmount', 'Jami')}: {formatCurrency(Number(sale.total_amount))}</span>
-                            <span className={`text-sm font-semibold ${sale.status === 'paid' ? 'text-green-600' : 'text-[#ff6b00]'}`}>
+                            <span className={`text-sm font-semibold ${sale.status === 'paid' ? 'text-green-600' : 'text-[#c2410c] dark:text-[#ff6b00]'}`}>
                               {sale.status === 'paid' ? t('customers.statusPaid', 'To\'langan') : t('customers.debt', 'Qarz') + ': ' + formatCurrency(Number(sale.total_amount) - Number(sale.paid_amount))}
                             </span>
                           </div>

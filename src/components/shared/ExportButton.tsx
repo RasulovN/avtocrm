@@ -178,7 +178,7 @@ export function ExportButton({ endpoint, filename, params, extraFilters, direct,
             <DialogDescription>{t('export.description')}</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-4 pb-6">
             {extraFilters && extraFilters.length > 0 && (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {extraFilters.map((filter) => (

@@ -317,6 +317,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
           )}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
+            aria-label={isCollapsed ? t('nav.expandSidebar', 'Menyuni kengaytirish') : t('nav.collapseSidebar', 'Menyuni yig\'ish')}
             className={cn(
               'p-1.5 rounded-lg hover:bg-muted hidden lg:flex items-center justify-center transition-colors',
               isCollapsed && 'absolute -right-3 top-5 z-50 bg-card border shadow-sm'
@@ -327,6 +328,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
           {/* Mobile close button */}
           <button
             onClick={() => setIsSidebarOpen(false)}
+            aria-label={t('common.close', 'Yopish')}
             className="lg:hidden p-1.5 rounded-lg hover:bg-muted"
           >
             <X className="h-4 w-4" />
@@ -546,29 +548,31 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
         <header className="sticky top-0 z-20 h-16 border-b border-border/60 bg-background/80 backdrop-blur-xl">
           <div className="flex h-full items-center justify-between px-4 lg:px-6">
             {/* Left: Mobile menu + Store badge */}
-            <div className="flex items-center gap-3">
+            <div className="flex flex-1 min-w-0 items-center gap-2 sm:gap-3">
               <button
                 onClick={() => setIsSidebarOpen(true)}
-                className="lg:hidden p-2 rounded-xl hover:bg-muted transition-colors"
+                aria-label={t('nav.openMenu', 'Menyuni ochish')}
+                className="lg:hidden p-2 rounded-xl hover:bg-muted transition-colors shrink-0"
               >
                 <Menu className="h-5 w-5" />
               </button>
 
-              <div className="flex items-center gap-2 bg-primary/5 px-3.5 py-2 rounded-xl border border-primary/10">
+              <div className="flex min-w-0 items-center gap-2 bg-primary/5 px-2.5 sm:px-3.5 py-2 rounded-xl border border-primary/10">
                 <Store className="h-4 w-4 text-primary shrink-0" />
-                <span className="font-semibold text-xs sm:text-sm text-primary truncate max-w-[150px] sm:max-w-[250px]">
+                <span className="font-semibold text-xs sm:text-sm text-primary truncate sm:max-w-[250px]">
                   {getPreferredStore(user)?.name || (isSuperUser ? t('stores.admin', 'Barcha filiallar') : '')}
                 </span>
               </div>
             </div>
 
             {/* Right: Actions */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
               {/* Notifications */}
               <div className="relative" ref={notificationRef}>
                 <Button
                   variant="ghost"
                   size="icon"
+                  aria-label={t('notifications.title', 'Bildirishnomalar')}
                   className="relative rounded-xl h-9 w-9"
                   onClick={() => setShowNotifications((prev) => !prev)}
                 >
@@ -581,7 +585,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
                 </Button>
 
                 {showNotifications && (
-                  <div className="absolute right-0 top-12 z-50 w-80 rounded-2xl border border-border/60 bg-card p-4 shadow-xl animate-fade-in-up">
+                  <div className="fixed inset-x-4 top-20 sm:absolute sm:inset-x-auto sm:right-0 sm:top-12 z-50 sm:w-80 rounded-2xl border border-border/60 bg-card p-4 shadow-xl animate-fade-in-up">
                     <div className="mb-3 flex items-center justify-between">
                       <div>
                         <p className="text-sm font-bold">{t("notifications.title")}</p>
@@ -654,7 +658,10 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
                       : 'text-muted-foreground hover:text-foreground'
                   )}
                   onClick={() => switchLanguage('cyrl')}
-                >  Кириллча </button>
+                >
+                  <span className="hidden sm:inline">Кириллча</span>
+                  <span className="sm:hidden">Кир</span>
+                </button>
               </div>
 
               {/* Theme Toggle */}

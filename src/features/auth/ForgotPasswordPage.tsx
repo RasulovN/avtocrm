@@ -32,8 +32,8 @@ export function ForgotPasswordPage() {
   };
 
   return (
-    <main id="main-content" className="min-h-screen flex items-center justify-center bg-linear-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      <Card className="w-full max-w-md mx-4">
+    <main id="main-content" className="min-h-screen flex items-center justify-center p-4 bg-linear-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      <Card className="w-full max-w-md">
         <CardHeader className="space-y-4 text-center">
           <div className="mx-auto w-16 h-16 bg-primary rounded-xl flex items-center justify-center">
             <Mail className="w-8 h-8 text-primary-foreground" />

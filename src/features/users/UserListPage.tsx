@@ -236,15 +236,16 @@ export function UserListPage() {
       className: 'text-right',
       render: (item: User) => (
         <div className="flex items-center justify-end gap-2">
-          <Button variant="ghost" size="icon" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleViewLogs(item); }} title={t('users.logs')}>
+          <Button variant="ghost" size="icon" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleViewLogs(item); }} title={t('users.logs')} aria-label={t('users.logs')}>
             <Eye className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleOpenDialog(item); }}>
+          <Button variant="ghost" size="icon" aria-label={t('common.edit')} onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleOpenDialog(item); }}>
             <Edit className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
+            aria-label={t('common.delete')}
             onClick={(e: MouseEvent<HTMLButtonElement>) => {
               e.stopPropagation();
               const id = item.id ?? item.user_id;
@@ -303,19 +304,19 @@ export function UserListPage() {
                     <p className="mt-1 text-sm text-muted-foreground">{item.phone_number}</p>
                   </div>
                   <div className="flex flex-col items-end gap-2 shrink-0">
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ${
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap max-w-[45vw] truncate ${
                       item.role_name ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-800'
                     }`}>
                       {item.role_name || t('users.noRole')}
                     </span>
                     <div className="flex items-center gap-1.5">
-                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleViewLogs(item)} title={t('users.logs')}>
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleViewLogs(item)} title={t('users.logs')} aria-label={t('users.logs')}>
                         <Eye className="h-4 w-4 text-muted-foreground" />
                       </Button>
-                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleOpenDialog(item)} title={t('common.edit')}>
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleOpenDialog(item)} title={t('common.edit')} aria-label={t('common.edit')}>
                         <Edit className="h-4 w-4 text-muted-foreground" />
                       </Button>
-                      <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => setDeleteId(String(userId))} title={t('common.delete')}>
+                      <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => setDeleteId(String(userId))} title={t('common.delete')} aria-label={t('common.delete')}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -502,7 +503,7 @@ export function UserListPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('common.cancel')}</Button>
             <Button onClick={handleSave} disabled={saving}>{saving ? t('common.loading') : t('common.save')}</Button>
-          </DialogFooter> 
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -516,7 +517,7 @@ export function UserListPage() {
             {safeLogs.length > 0 ? (
               safeLogs.map((log, index) => (
                 <div key={log.id ?? index} className="p-3 border rounded-md">
-                  <p className="text-sm font-medium">{log.action || '-'}</p>
+                  <p className="text-sm font-medium break-words">{log.action || '-'}</p>
                   <p className="text-xs text-muted-foreground">{formatDate(log.timestamp || log.created_at || new Date().toISOString())}</p>
                 </div>
               ))

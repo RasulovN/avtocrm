@@ -228,7 +228,7 @@ export function SearchableSelect({
           isOpen && 'ring-2 ring-ring/30 border-primary/50'
         )}
       >
-        <span className={cn('truncate block', !selectedOption && 'text-muted-foreground/60')}>
+        <span className={cn('truncate block', !selectedOption && 'text-muted-foreground')}>
           {selectedOption ? (
             <>
               {selectedOption.label}
@@ -269,7 +269,8 @@ export function SearchableSelect({
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="p-1 rounded-full hover:bg-muted text-muted-foreground"
+                aria-label="Tozalash"
+                className="flex h-6 w-6 items-center justify-center rounded-full hover:bg-muted text-muted-foreground"
               >
                 <X className="h-3 w-3" />
               </button>

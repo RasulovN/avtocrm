@@ -66,7 +66,7 @@ export function DateRangeFilter({ from, to, onChange, className }: DateRangeFilt
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') handleClear(e as unknown as React.MouseEvent);
             }}
-            className="flex h-5 w-5 shrink-0 items-center justify-center rounded hover:bg-accent"
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded hover:bg-accent"
             aria-label={t('common.cancel')}
           >
             <X className="h-3.5 w-3.5 text-muted-foreground" />

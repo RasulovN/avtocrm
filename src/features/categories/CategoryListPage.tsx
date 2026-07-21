@@ -268,6 +268,7 @@ export function CategoryListPage() {
           <Button
             variant="ghost"
             size="icon"
+            aria-label={t('common.edit')}
             onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
               e.stopPropagation();
               handleOpenDialog(item);
@@ -278,6 +279,7 @@ export function CategoryListPage() {
           <Button
             variant="ghost"
             size="icon"
+            aria-label={t('common.delete')}
             onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
               e.stopPropagation();
               setDeleteId(item.id);
@@ -342,10 +344,10 @@ export function CategoryListPage() {
                     <img
                       src={category.image}
                       alt={category.name || 'Category image'}
-                      className="h-14 w-14 rounded-lg border object-cover"
+                      className="h-14 w-14 shrink-0 rounded-lg border object-cover"
                     />
                   ) : (
-                    <div className="flex h-14 w-14 items-center justify-center rounded-lg border bg-muted text-xs text-muted-foreground">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border bg-muted text-xs text-muted-foreground">
                       IMG
                     </div>
                   )}
@@ -393,6 +395,7 @@ export function CategoryListPage() {
               <Button
                 variant="outline"
                 size="sm"
+                aria-label={t('common.previousPage', 'Oldingi sahifa')}
                 disabled={page === 1}
                 onClick={() => setPage(page - 1)}
               >
@@ -401,6 +404,7 @@ export function CategoryListPage() {
               <Button
                 variant="outline"
                 size="sm"
+                aria-label={t('common.nextPage', 'Keyingi sahifa')}
                 disabled={page * limit >= total}
                 onClick={() => setPage(page + 1)}
               >

@@ -188,6 +188,7 @@ function ProductUnit() {
           <Button
             variant="ghost"
             size="icon"
+            aria-label={t('common.edit')}
             onClick={(e: MouseEvent<HTMLButtonElement>) => {
               e.stopPropagation();
               void handleOpenDialog(item);
@@ -198,6 +199,7 @@ function ProductUnit() {
           <Button
             variant="ghost"
             size="icon"
+            aria-label={t('common.delete')}
             onClick={(e: MouseEvent<HTMLButtonElement>) => {
               e.stopPropagation();
               setDeleteId(item.id);
@@ -250,16 +252,16 @@ function ProductUnit() {
             <Card key={unit.id}>
               <CardContent className="space-y-3 p-4">
                 <div className="flex items-center justify-between gap-4">
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <p className="font-semibold">{unit.measurement_uz}</p>
                     <p className="text-sm text-muted-foreground">{unit.measurement_uz_cyrl || '-'}</p>
                   </div>
                   {isSuperUser && (
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="icon" onClick={() => void handleOpenDialog(unit)}>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Button variant="outline" size="icon" aria-label={t('common.edit')} onClick={() => void handleOpenDialog(unit)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="icon" onClick={() => setDeleteId(unit.id)}>
+                      <Button variant="outline" size="icon" aria-label={t('common.delete')} onClick={() => setDeleteId(unit.id)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>

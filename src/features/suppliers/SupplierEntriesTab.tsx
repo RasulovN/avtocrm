@@ -246,7 +246,7 @@ export function SupplierEntriesTab({ supplierId, stats, refreshKey }: SupplierEn
 
           {viewingEntry && (
             <div className="space-y-3 text-sm">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <div className="rounded-lg bg-muted/40 p-2.5">
                   <p className="text-xs text-muted-foreground">{t('common.total', 'Jami')}</p>
                   <p className="font-semibold tabular-nums">{formatCurrency(entryTotal(viewingEntry) / 100)}</p>

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { NotificationWebSocketService } from '../services/NotificationWebSocketService';
 import { authService } from '../services/authService';
+import { MEDIA_URL } from '../services/api';
 import { logger } from '../utils/logger';
 
 type ConnectionStatus = 'connecting' | 'open' | 'closed' | 'error' | 'reconnecting';
@@ -21,7 +22,11 @@ type NotificationContextType = {
 };
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
-const WS_URL = import.meta.env.VITE_WS_URL || 'wss://api.avtoyon.uz/ws/notifications/';
+// WS manzili API origin'dan olinadi (.env dagi VITE_API_BASE_URL) — lokalda lokal
+// backendga, prodda api.avtoyon.uz ga ulanadi. VITE_WS_URL bo'lsa u ustun turadi.
+const WS_URL =
+  import.meta.env.VITE_WS_URL ||
+  `${MEDIA_URL.replace(/^http/, 'ws')}/ws/notifications/`;
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [notifications, setNotifications] = useState<NotificationData[]>([]);

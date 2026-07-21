@@ -130,7 +130,7 @@ export function SupplierDetailPage() {
     <div className="space-y-6">
       {/* ───────── Sarlavha ───────── */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-5">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <Button
             variant="outline"
             size="icon"
@@ -140,8 +140,8 @@ export function SupplierDetailPage() {
           >
             <ChevronLeft className="h-5 w-5" />
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold leading-tight text-foreground">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold leading-tight text-foreground break-words">
               {supplier.name_uz || supplier.name}
             </h1>
             {createdInfo && <p className="mt-0.5 text-sm text-muted-foreground">{createdInfo}</p>}
@@ -155,13 +155,13 @@ export function SupplierDetailPage() {
 
       {/* ───────── Tablar ───────── */}
       <div>
-        <div className="grid grid-cols-2 gap-1 rounded-xl border border-border bg-muted/40 p-1 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="flex gap-1 overflow-x-auto rounded-xl border border-border bg-muted/40 p-1 lg:grid lg:grid-cols-5">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               type="button"
               onClick={() => setActiveTab(tab.key)}
-              className={`rounded-lg px-4 py-2.5 text-sm transition-colors ${
+              className={`shrink-0 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm transition-colors ${
                 activeTab === tab.key
                   ? 'border border-border bg-background font-semibold text-foreground shadow-sm'
                   : 'font-medium text-muted-foreground hover:text-foreground'

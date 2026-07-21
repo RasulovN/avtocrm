@@ -1,10 +1,8 @@
-import { useState, useEffect, useCallback, type ChangeEvent, type FocusEvent } from 'react';
+import { lazy, Suspense, useState, useEffect, useCallback, type ChangeEvent, type FocusEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, FileText, Eye, Search, X, ChevronLeft, ChevronRight, CreditCard, Printer, FileSpreadsheet, Banknote, Star } from 'lucide-react';
 import { generateBarcodePrintHtml, generateMultipleBarcodesPrintHtml, escapeHtml } from '../../utils/xss';
 
-import { StockEntryCreateDialog } from './StockEntryCreateDialog';
-import { StockEntryImportDialog } from './StockEntryImportDialog';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
 import { ExportButton } from '../../components/shared/ExportButton';
@@ -26,6 +24,15 @@ import { bankCardService } from '../../services/bankCardService';
 import { formatCurrency, formatDate } from '../../utils';
 import { handleError } from '../../utils/errorHandler';
 import type { InventoryItem, Supplier, BankCard } from '../../types';
+
+// Dialoglar og'ir (wizard + import) — sahifa yuklanishida emas, birinchi ochilganda yuklanadi
+const StockEntryCreateDialog = lazy(() =>
+  import('./StockEntryCreateDialog').then(m => ({ default: m.StockEntryCreateDialog }))
+);
+const StockEntryImportDialog = lazy(() =>
+  import('./StockEntryImportDialog').then(m => ({ default: m.StockEntryImportDialog }))
+);
+
 export interface SupplierPayment {
   id: number;
   supplier: number;
@@ -515,7 +522,7 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
       key: 'debt',
       header: t('suppliers.debt'),
       render: (item) => (
-        <span className={item.debt > 0 ? 'text-red-500' : ''}>
+        <span className={item.debt > 0 ? 'text-red-600 dark:text-red-400' : ''}>
           {formatCurrency(item.debt)}
         </span>
       ),
@@ -550,6 +557,7 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
           <Button
             variant="ghost"
             size="sm"
+            aria-label={t('common.view', 'Ko‘rish')}
             onClick={(e) => {
               e.stopPropagation();
               void handleShowDetails(item);
@@ -564,12 +572,12 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <PageHeader
           title={t('inventory.title')}
           description={t('inventory.listDescription')}
         />
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-4 sm:mt-0">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 w-full sm:w-auto">
           <ExportButton
             direct
             endpoint="/contract/entry/export/"
@@ -613,7 +621,7 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
             <div className="space-y-2">
               <Label>{t('suppliers.title')}</Label>
               <Select value={supplierFilter} onValueChange={(val) => { setSupplierFilter(val); setPage(1); }}>
-                <SelectTrigger>
+                <SelectTrigger aria-label={t('placeholders.selectSupplier')}>
                   <SelectValue placeholder={t('placeholders.selectSupplier')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -704,7 +712,7 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
                     </div>
                     <div className="rounded-lg bg-muted/30 p-3">
                       <p className="text-xs text-muted-foreground">{t('suppliers.debt')}</p>
-                      <p className={`mt-1 font-semibold ${item.debt > 0 ? 'text-red-500' : ''}`}>{formatCurrency(item.debt)}</p>
+                      <p className={`mt-1 font-semibold ${item.debt > 0 ? 'text-red-600 dark:text-red-400' : ''}`}>{formatCurrency(item.debt)}</p>
                     </div>
                     <div className="rounded-lg bg-muted/30 p-3">
                       <p className="text-xs text-muted-foreground">{t('common.date')}</p>
@@ -778,8 +786,8 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
         <DialogContent className="max-w-3xl pb-6">
           <DialogHeader>
-            <div className="flex items-center justify-between pr-6">
-              <div>
+            <div className="flex items-center justify-between gap-3 pr-6">
+              <div className="min-w-0">
                 <DialogTitle>{t('inventory.detailsTitle')}</DialogTitle>
                 <DialogDescription>
                   {formatDate(selectedInventory?.created_at || '')}
@@ -790,7 +798,7 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
                   variant="outline"
                   size="sm"
                   onClick={() => handlePrintEntry(selectedInventory)}
-                  className="flex items-center gap-1.5"
+                  className="flex shrink-0 items-center gap-1.5"
                 >
                   <Printer className="h-4 w-4" />
                   Chop etish
@@ -830,7 +838,7 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
                   <span className="text-muted-foreground">{t('inventory.paidAmount')}:</span>
                   <span className="ml-2 font-medium">{formatCurrency(selectedInventory.paid)}</span>
                 </div>
-                <div className={`col-span-1 sm:col-span-2 lg:col-span-3 flex items-center justify-between p-3 mt-2 rounded-lg border ${
+                <div className={`col-span-1 sm:col-span-2 lg:col-span-3 flex flex-wrap items-center justify-between gap-2 p-3 mt-2 rounded-lg border ${
                   selectedInventory.debt > 0
                     ? 'bg-red-50 dark:bg-red-950/20 border-red-100 dark:border-red-900/30'
                     : 'bg-green-50/50 dark:bg-green-950/10 border-green-100/50 dark:border-green-900/20'
@@ -940,7 +948,7 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
                     ))}
                   </div>
                   <div className="hidden rounded border md:block overflow-x-auto">
-                    <Table>
+                    <Table className="min-w-[640px]">
                       <TableHeader>
                         <TableRow>
                           <TableHead className="w-10">
@@ -1157,17 +1165,25 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
         </DialogContent>
       </Dialog>
 
-      <StockEntryCreateDialog
-        open={showCreateDialog}
-        onOpenChange={setShowCreateDialog}
-        onSuccess={loadData}
-      />
+      {showCreateDialog && (
+        <Suspense fallback={null}>
+          <StockEntryCreateDialog
+            open={showCreateDialog}
+            onOpenChange={setShowCreateDialog}
+            onSuccess={loadData}
+          />
+        </Suspense>
+      )}
 
-      <StockEntryImportDialog
-        open={showImportDialog}
-        onOpenChange={setShowImportDialog}
-        onSuccess={loadData}
-      />
+      {showImportDialog && (
+        <Suspense fallback={null}>
+          <StockEntryImportDialog
+            open={showImportDialog}
+            onOpenChange={setShowImportDialog}
+            onSuccess={loadData}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

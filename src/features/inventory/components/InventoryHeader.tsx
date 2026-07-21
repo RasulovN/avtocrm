@@ -60,8 +60,8 @@ export function InventoryHeader({
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <StatusIcon className="h-5 w-5" />
+        <div className="flex flex-wrap items-center gap-3">
+          <StatusIcon className="h-5 w-5 shrink-0" />
           <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusConfig.className}`}>
             {statusConfig.label}
           </span>
@@ -70,7 +70,7 @@ export function InventoryHeader({
           )}
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <button
             onClick={onLoadProducts}
             disabled={!canLoadProducts || loadingProducts}

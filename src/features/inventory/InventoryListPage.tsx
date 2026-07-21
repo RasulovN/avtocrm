@@ -151,7 +151,7 @@ export function InventorySessionsListPage({
           title={t('inventory.sessions')}
           description={t('inventory.sessionsDescription')}
         />
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <DateRangeFilter
             from={dateFrom}
             to={dateTo}
@@ -165,12 +165,13 @@ export function InventorySessionsListPage({
             direct
             endpoint="/inventory/export/"
             filename="inventarizatsiya.xlsx"
+            className="w-full sm:w-auto"
             params={{
               date_from: dateFrom || undefined,
               date_to: dateTo || undefined,
             }}
           />
-          <Button onClick={() => setShowCreateDialog(true)}>
+          <Button className="w-full sm:w-auto" onClick={() => setShowCreateDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
             {t('inventory.startInventory')}
           </Button>
@@ -254,8 +255,8 @@ export function InventorySessionsListPage({
       )}
 
       {!loading && (sessions?.length || 0) > 0 && (
-        <div className="hidden rounded-md border md:block">
-          <table className="w-full">
+        <div className="hidden overflow-x-auto rounded-md border md:block">
+          <table className="w-full min-w-[640px]">
             <thead>
               <tr className="bg-muted/50 border-b">
                 <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
@@ -303,8 +304,11 @@ export function InventorySessionsListPage({
                       {formatDate(session.started_at)}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Link to={`/${lang}/inventory-session/${session.id}`}>
-                        <Button variant="ghost" size="sm">
+                      <Link
+                        to={`/${lang}/inventory-session/${session.id}`}
+                        aria-label={t('common.view', "Ko'rish")}
+                      >
+                        <Button variant="ghost" size="sm" aria-label={t('common.view', "Ko'rish")}>
                           <Eye className="h-4 w-4" />
                         </Button>
                       </Link>
@@ -329,7 +333,7 @@ export function InventorySessionsListPage({
             <div className="space-y-2">
               <Label>{t('stores.title')}</Label>
               <Select value={selectedStore} onValueChange={setSelectedStore} disabled={!isAdmin}>
-                <SelectTrigger>
+                <SelectTrigger aria-label={t('inventory.selectStore')}>
                   <SelectValue placeholder={t('inventory.selectStore')} />
                 </SelectTrigger>
                 <SelectContent>

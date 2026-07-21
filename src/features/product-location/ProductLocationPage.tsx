@@ -201,6 +201,7 @@ export function ProductLocationPage() {
           <Button
             variant="ghost"
             size="icon"
+            aria-label={t('common.edit')}
             onClick={(e: React.MouseEvent) => {
               e.stopPropagation();
               handleOpenDialog(item);
@@ -211,6 +212,7 @@ export function ProductLocationPage() {
           <Button
             variant="ghost"
             size="icon"
+            aria-label={t('common.delete')}
             onClick={(e: React.MouseEvent) => {
               e.stopPropagation();
               setDeleteId(item.id);
@@ -304,6 +306,7 @@ export function ProductLocationPage() {
               <Button
                 variant="outline"
                 size="sm"
+                aria-label={t('common.previousPage', 'Oldingi sahifa')}
                 disabled={page === 1}
                 onClick={() => setPage(page - 1)}
               >
@@ -312,6 +315,7 @@ export function ProductLocationPage() {
               <Button
                 variant="outline"
                 size="sm"
+                aria-label={t('common.nextPage', 'Keyingi sahifa')}
                 disabled={page * limit >= total}
                 onClick={() => setPage(page + 1)}
               >

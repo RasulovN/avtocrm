@@ -51,8 +51,8 @@ export function ResetPasswordPage() {
   };
 
   return (
-    <main id="main-content" className="min-h-screen flex items-center justify-center bg-linear-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      <Card className="mx-4 w-full max-w-md">
+    <main id="main-content" className="min-h-screen flex items-center justify-center p-4 bg-linear-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      <Card className="w-full max-w-md">
         <CardHeader className="space-y-4 text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-xl bg-primary">
             <KeyRound className="h-8 w-8 text-primary-foreground" />

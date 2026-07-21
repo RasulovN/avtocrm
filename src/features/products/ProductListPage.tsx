@@ -521,7 +521,7 @@ export function ProductListPage() {
           value={filters.category || 'all'}
           onValueChange={(value) => handleFilterChange('category', value === 'all' ? '' : value)}
         >
-          <SelectTrigger className="w-full sm:w-44">
+          <SelectTrigger className="w-full sm:w-44" aria-label={t('products.filterByCategory')}>
             <SelectValue placeholder={t('products.filterByCategory')} />
           </SelectTrigger>
           <SelectContent>
@@ -541,7 +541,7 @@ export function ProductListPage() {
             value={filters.store_id || 'all'}
             onValueChange={(value) => handleFilterChange('store_id', value === 'all' ? '' : value)}
           >
-            <SelectTrigger className="w-full sm:w-52">
+            <SelectTrigger className="w-full sm:w-52" aria-label={t('products.filterByStore', "Do'kon bo'yicha filtr")}>
               <SelectValue placeholder={t('products.filterByStore', "Do'kon bo'yicha filtr")} />
             </SelectTrigger>
             <SelectContent>
@@ -599,7 +599,7 @@ export function ProductListPage() {
           );
         })}
         {effectiveStoreId && (
-          <span className="ml-auto flex items-center gap-1.5 rounded-lg bg-muted/60 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+          <span className="ml-auto flex max-w-full flex-wrap items-center gap-1.5 rounded-lg bg-muted/60 px-3 py-1.5 text-xs font-medium text-muted-foreground">
             <StoreIcon className="h-3.5 w-3.5" />
             {stores.find((s) => String(s.id) === String(effectiveStoreId))?.name || `#${effectiveStoreId}`}
             {' — '}{t('products.storeScopedHint', "qoldiqlar shu do'kon bo'yicha")}
@@ -609,11 +609,11 @@ export function ProductListPage() {
 
       {/* Selected products action bar */}
       {selectedProducts.length > 0 && (
-        <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-primary/5 px-5 py-3">
+        <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-primary/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <p className="text-sm font-medium text-primary">
             {selectedProducts.length} {t('products.selectedProducts', 'та маҳсулот танланди')}
           </p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button size="sm" onClick={handlePrintSelected}>
               <Printer className="mr-2 h-4 w-4" />
               {t('products.printBarcode')}
@@ -697,9 +697,9 @@ export function ProductListPage() {
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
-                      <h4 className="font-bold text-slate-900 dark:text-white text-sm leading-snug line-clamp-2">
+                      <p className="font-bold text-slate-900 dark:text-white text-sm leading-snug line-clamp-2">
                         {highlightMatch(item.name, searchQuery)}
-                      </h4>
+                      </p>
                       <span className="text-[10px] font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
                         #{item.id}
                       </span>
@@ -713,12 +713,12 @@ export function ProductListPage() {
                         </span>
                       )}
                       {item.sku && (
-                        <span className="text-slate-500 font-mono bg-slate-100 dark:bg-slate-800/60 px-1.5 py-0.5 rounded text-[10px]">
+                        <span className="text-slate-600 font-mono bg-slate-100 dark:bg-slate-800/60 px-1.5 py-0.5 rounded text-[10px]">
                           SKU: {highlightMatch(item.sku, searchQuery)}
                         </span>
                       )}
                       {item.barcode && (
-                        <span className="text-slate-500 font-mono bg-slate-100 dark:bg-slate-800/60 px-1.5 py-0.5 rounded text-[10px]">
+                        <span className="text-slate-600 font-mono bg-slate-100 dark:bg-slate-800/60 px-1.5 py-0.5 rounded text-[10px]">
                           Barcode: {highlightMatch(item.barcode, searchQuery)}
                         </span>
                       )}
@@ -736,7 +736,7 @@ export function ProductListPage() {
                   </div>
                   <div>
                     <span className="text-muted-foreground block text-[10px] uppercase tracking-wider">{t('products.sellingPrice', 'Sotuv narxi')}</span>
-                    <span className="font-bold text-emerald-600 dark:text-emerald-500 mt-0.5 block">
+                    <span className="font-bold text-emerald-700 dark:text-emerald-500 mt-0.5 block">
                       {formatCurrency(item.selling_price ?? 0)}
                     </span>
                   </div>
@@ -759,7 +759,7 @@ export function ProductListPage() {
                       "font-bold tabular-nums text-sm",
                       stockStatus === 'out_of_stock' && "text-red-600 dark:text-red-400",
                       stockStatus === 'low_stock' && "text-yellow-600 dark:text-yellow-400",
-                      stockStatus === 'in_stock' && "text-green-600 dark:text-green-400"
+                      stockStatus === 'in_stock' && "text-green-700 dark:text-green-400"
                     )}>
                       {totalQty}
                     </span>
@@ -780,7 +780,7 @@ export function ProductListPage() {
                               "font-bold tabular-nums",
                               storeStatus === 'out_of_stock' && "text-red-600 dark:text-red-400",
                               storeStatus === 'low_stock' && "text-yellow-600 dark:text-yellow-400",
-                              storeStatus === 'in_stock' && "text-green-600 dark:text-green-400"
+                              storeStatus === 'in_stock' && "text-green-700 dark:text-green-400"
                             )}>
                               {qty}
                             </span>
@@ -792,7 +792,7 @@ export function ProductListPage() {
                 </div>
 
                 {/* Footer part: Status & action button */}
-                <div className="flex items-center justify-between pt-1 border-t border-border/30">
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-border/30">
                   <div>
                     {stockStatus === 'out_of_stock' ? (
                       <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
@@ -1060,7 +1060,7 @@ export function ProductListPage() {
                         'text-sm font-semibold tabular-nums',
                         stockStatus === 'out_of_stock' && 'text-red-600 dark:text-red-400',
                         stockStatus === 'low_stock' && 'text-yellow-600 dark:text-yellow-400',
-                        stockStatus === 'in_stock' && 'text-green-600 dark:text-green-400'
+                        stockStatus === 'in_stock' && 'text-green-700 dark:text-green-400'
                       )}>
                         {totalQty}
                       </span>
@@ -1076,7 +1076,7 @@ export function ProductListPage() {
                             'text-sm font-semibold tabular-nums',
                             storeStatus === 'out_of_stock' && 'text-red-600 dark:text-red-400',
                             storeStatus === 'low_stock' && 'text-yellow-600 dark:text-yellow-400',
-                            storeStatus === 'in_stock' && 'text-green-600 dark:text-green-400'
+                            storeStatus === 'in_stock' && 'text-green-700 dark:text-green-400'
                           )}>
                             {qty}
                           </span>
@@ -1140,7 +1140,7 @@ export function ProductListPage() {
           </div>
           
           <div className="flex items-center gap-4 flex-wrap order-1 sm:order-2 justify-end w-full sm:w-auto">
-            <div className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center gap-1">
               <Button
                 variant="ghost"
                 size="icon"
@@ -1204,6 +1204,7 @@ export function ProductListPage() {
                 min={1}
                 max={totalPages}
                 defaultValue={page}
+                aria-label={t('common.goToPage', "Sahifaga o'tish")}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     const val = Number((e.target as HTMLInputElement).value);
@@ -1383,7 +1384,7 @@ function ProductDetailModal({ product, onClose, onEdit, stores, t }: ProductDeta
     <Dialog open={!!product} onOpenChange={(open) => !open && onClose()}>
       <DialogContent size="lg" className="max-h-[90vh] overflow-y-auto p-0">
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/60 bg-card px-6 py-4">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/60 bg-card px-4 py-4 sm:px-6">
           <DialogHeader className="p-0">
             <DialogTitle className="text-lg">{t('products.productDetails', "Mahsulot ma'lumotlari")}</DialogTitle>
           </DialogHeader>
@@ -1397,9 +1398,9 @@ function ProductDetailModal({ product, onClose, onEdit, stores, t }: ProductDeta
           )}
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-6">
           {/* Top: Image + Basic Info */}
-          <div className="flex gap-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
             {/* Product Image */}
             <div className="shrink-0">
               {imageUrl ? (
@@ -1446,7 +1447,7 @@ function ProductDetailModal({ product, onClose, onEdit, stores, t }: ProductDeta
                 <p className="text-sm text-muted-foreground mb-3">{product.name_uz_cyrl}</p>
               )}
 
-              <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
                 <div className="flex items-center gap-2">
                   <Hash className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="text-muted-foreground">ID:</span>
@@ -1477,7 +1478,7 @@ function ProductDetailModal({ product, onClose, onEdit, stores, t }: ProductDeta
           </div>
 
           {/* Pricing */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
               <p className="text-xs text-muted-foreground mb-1">{t('products.purchasePrice', 'Kelish narxi')}</p>
               <p className="text-lg font-bold tabular-nums">{formatCurrency(product.purchase_price ?? 0)}</p>
@@ -1559,11 +1560,11 @@ function ProductDetailModal({ product, onClose, onEdit, stores, t }: ProductDeta
                   {t('common.print', 'Chop etish')}
                 </Button>
               </div>
-              <div className="flex justify-center bg-white rounded-xl p-4">
+              <div className="flex justify-center bg-white rounded-xl p-4 max-w-full overflow-x-auto">
                 {isShtrixUrl ? (
                   <img src={product.shtrix_code!} alt="Barcode" className="max-w-[280px] h-auto" />
                 ) : (
-                  <svg ref={barcodeRef} />
+                  <svg ref={barcodeRef} className="max-w-full" />
                 )}
               </div>
               <p className="text-center text-xs text-muted-foreground mt-2 font-mono">{isShtrixUrl ? (product.barcode || barcodeValue) : barcodeValue}</p>
@@ -1571,7 +1572,7 @@ function ProductDetailModal({ product, onClose, onEdit, stores, t }: ProductDeta
           )}
 
           {/* Meta info */}
-          <div className="flex items-center gap-4 text-[11px] text-muted-foreground pt-2 border-t border-border/40">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground pt-2 border-t border-border/40">
             <span className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
               {t('common.createdAt', 'Yaratilgan')}: {product.created_at ? new Date(product.created_at).toLocaleDateString() : '—'}
@@ -1887,7 +1888,7 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
       <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
         <DialogContent size="lg" className="max-h-[90vh] overflow-y-auto p-0">
           {/* Header */}
-          <div className="sticky top-0 z-10 border-b border-border/60 bg-card px-6 py-5">
+          <div className="sticky top-0 z-10 border-b border-border/60 bg-card px-4 py-5 sm:px-6">
             <DialogHeader className="p-0">
               <DialogTitle className="text-lg flex items-center gap-2">
                 <Package className="h-5 w-5 text-primary" />
@@ -1897,7 +1898,7 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
           </div>
 
           <form onSubmit={handleSubmit}>
-            <div className="px-6 py-5 space-y-5">
+            <div className="px-4 sm:px-6 py-5 space-y-5">
               {/* ── Row 1: Name ── */}
               <div className="space-y-2">
                 <Label htmlFor="add-name" required className="flex items-center gap-1.5">
@@ -2108,7 +2109,7 @@ function AddProductModal({ open, onClose, onSuccess, categories, refreshCategori
             </div>
 
             {/* Footer */}
-            <div className="sticky bottom-0 z-10 border-t border-border/60 bg-card px-6 py-4 flex justify-end gap-2">
+            <div className="sticky bottom-0 z-10 border-t border-border/60 bg-card px-4 sm:px-6 py-4 flex flex-wrap justify-end gap-2">
               <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
                 {t('common.cancel')}
               </Button>

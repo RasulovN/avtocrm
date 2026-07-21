@@ -247,9 +247,9 @@ export function TransferRequestsPage(): ReactElement {
               filteredRequests.map((request) => (
                 <div key={request.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">#{request.id}</p>
-                      <p className="font-semibold text-foreground">
+                      <p className="font-semibold text-foreground break-words">
                         {fromStoreLabel(request)}
                       </p>
                       <p className="text-sm text-muted-foreground">

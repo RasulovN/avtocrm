@@ -222,7 +222,7 @@ export function ProductBarcodePage() {
           { label: t('products.barcode') },
         ]}
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {displayBatches.length > 1 && (
               <Button variant="outline" onClick={handlePrintAll}>
                 <Printer className="h-4 w-4 mr-2" />
@@ -320,7 +320,7 @@ export function ProductBarcodePage() {
                 const barcodeValue = batch.barcode || batch.shtrix_code || '';
                 return (
                   <div key={key} className="space-y-3 rounded-lg border p-4">
-                    <div id={key} className="barcode-card text-center">
+                    <div id={key} className="barcode-card max-w-full overflow-x-auto text-center">
                       {barcodeValue ? (
                         <>
                           <BarcodePrint 
@@ -332,7 +332,7 @@ export function ProductBarcodePage() {
                           <div className="mt-2 text-sm text-muted-foreground space-y-1">
                             <div><strong>{t('products.store')}:</strong> {batch.store_name}</div>
                             <div><strong>{t('products.quantity') || 'Quantity'}:</strong> {batch.quantity}</div>
-                            <div className="flex gap-2 text-xs pt-1">
+                            <div className="flex flex-wrap gap-2 text-xs pt-1">
                               <span className="text-muted-foreground"><strong>Purchase:</strong> {formatCurrency(Number(batch.purchase_price))}</span>
                               <span><strong>Sell:</strong> {formatCurrency(Number(batch.selling_price))}</span>
                             </div>

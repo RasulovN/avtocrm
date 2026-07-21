@@ -247,7 +247,7 @@ export function LowStockPage() {
             value={selectedStore || '__all__'}
             onValueChange={(v) => setSelectedStore(v === '__all__' ? '' : v)}
           >
-            <SelectTrigger className="w-full sm:w-56">
+            <SelectTrigger className="w-full sm:w-56" aria-label={t('inventory.allStores')}>
               <Store className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
               <SelectValue placeholder={t('inventory.allStores')} />
             </SelectTrigger>
@@ -267,7 +267,7 @@ export function LowStockPage() {
         {/* Ordering filter — only for history tab */}
         {activeTab === 'history' && (
           <Select value={ordering} onValueChange={setOrdering}>
-            <SelectTrigger className="w-full sm:w-52">
+            <SelectTrigger className="w-full sm:w-52" aria-label={t('inventory.orderingLabel')}>
               <SelectValue placeholder={t('inventory.orderingLabel')} />
             </SelectTrigger>
             <SelectContent>
@@ -282,7 +282,7 @@ export function LowStockPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 rounded-xl bg-muted/50 p-1 w-fit">
+      <div className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl bg-muted/50 p-1">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.key;
@@ -290,7 +290,7 @@ export function LowStockPage() {
             <button
               key={tab.key}
               onClick={() => handleTabChange(tab.key)}
-              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+              className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-all ${
                 isActive
                   ? 'bg-background text-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
@@ -382,7 +382,7 @@ export function LowStockPage() {
           {/* Desktop Table */}
           <div className="hidden rounded-lg border md:block">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[760px] text-sm">
                 <thead>
                   <tr className="border-b bg-muted/40">
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">ID</th>
@@ -450,7 +450,7 @@ export function LowStockPage() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t pt-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
               <p className="text-sm text-muted-foreground">
                 {t('common.showing')} {(currentPage - 1) * LIMIT + 1}–
                 {Math.min(currentPage * LIMIT, total)} {t('common.of')} {total}
@@ -459,6 +459,7 @@ export function LowStockPage() {
                 <Button
                   variant="outline"
                   size="sm"
+                  aria-label={t('common.previous', 'Oldingi')}
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
                 >
@@ -470,6 +471,7 @@ export function LowStockPage() {
                 <Button
                   variant="outline"
                   size="sm"
+                  aria-label={t('common.next', 'Keyingi')}
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
                 >
