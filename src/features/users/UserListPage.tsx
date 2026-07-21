@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useCallback, type ChangeEvent, type Mouse
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { Plus, Edit, Trash2, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, EyeOff } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
@@ -49,6 +49,8 @@ export function UserListPage() {
   const [saving, setSaving] = useState(false);
   // Saqlashga urinishdan keyin bo'sh majburiy maydonlar qizil ko'rsatiladi
   const [showErrors, setShowErrors] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const fullNameMissing = !formData.full_name?.trim();
   const emailMissing = !formData.email?.trim();
@@ -155,6 +157,8 @@ export function UserListPage() {
       });
     }
     setShowErrors(false);
+    setShowPassword(false);
+    setShowConfirmPassword(false);
     setDialogOpen(true);
   };
 
@@ -192,6 +196,7 @@ export function UserListPage() {
           email: formData.email,
           phone_number: formData.phone_number,
           role_id: formData.role_id ?? null,
+          store_id: formData.store_id ? Number(formData.store_id) : null,
         };
         await userService.update(String(id), updateData);
       } else {
@@ -436,40 +441,50 @@ export function UserListPage() {
                 ))}
               </select>
             </div>
+            <div className="space-y-2">
+              <Label>
+                {t('users.store')}{' '}
+                <span className="text-xs font-normal text-muted-foreground">
+                  ({t('common.optional', 'ixtiyoriy')})
+                </span>
+              </Label>
+              <select
+                className="w-full px-3 py-2 border rounded-md bg-background"
+                value={formData.store_id || ''}
+                onChange={(e: ChangeEvent<HTMLSelectElement>) => setFormData({ ...formData, store_id: e.target.value })}
+              >
+                <option value="">{t('common.select')}</option>
+                {safeStores.map((store) => (
+                  <option key={store.id} value={store.id}>{store.name}</option>
+                ))}
+              </select>
+            </div>
             {!editingUser && (
               <>
                 <div className="space-y-2">
                   <Label>
-                    {t('users.store')}{' '}
-                    <span className="text-xs font-normal text-muted-foreground">
-                      ({t('common.optional', 'ixtiyoriy')})
-                    </span>
-                  </Label>
-                  <select
-                    className="w-full px-3 py-2 border rounded-md bg-background"
-                    value={formData.store_id || ''}
-                    onChange={(e: ChangeEvent<HTMLSelectElement>) => setFormData({ ...formData, store_id: e.target.value })}
-                  >
-                    <option value="">{t('common.select')}</option>
-                    {safeStores.map((store) => (
-                      <option key={store.id} value={store.id}>{store.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <Label>
                     {t('users.password')} <span className="text-red-500">*</span>
                   </Label>
-                  <Input
-                    type="password"
-                    value={formData.password}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, password: e.target.value })}
-                    className={
-                      showErrors && (passwordMissing || passwordMismatch)
-                        ? 'border-red-500 focus-visible:ring-red-500'
-                        : ''
-                    }
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      value={formData.password}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, password: e.target.value })}
+                      className={`pr-10 ${
+                        showErrors && (passwordMissing || passwordMismatch)
+                          ? 'border-red-500 focus-visible:ring-red-500'
+                          : ''
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? t('users.hidePassword') : t('users.showPassword')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                   {showErrors && passwordMissing && (
                     <p className="text-xs text-red-600">{t('users.passwordRequired', 'Parol kiritilishi shart!')}</p>
                   )}
@@ -478,16 +493,26 @@ export function UserListPage() {
                   <Label>
                     {t('users.confirmPassword')} <span className="text-red-500">*</span>
                   </Label>
-                  <Input
-                    type="password"
-                    value={formData.confirm_password}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, confirm_password: e.target.value })}
-                    className={
-                      showErrors && (confirmMissing || passwordMismatch)
-                        ? 'border-red-500 focus-visible:ring-red-500'
-                        : ''
-                    }
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      value={formData.confirm_password}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, confirm_password: e.target.value })}
+                      className={`pr-10 ${
+                        showErrors && (confirmMissing || passwordMismatch)
+                          ? 'border-red-500 focus-visible:ring-red-500'
+                          : ''
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      aria-label={showConfirmPassword ? t('users.hidePassword') : t('users.showPassword')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                   {showErrors && confirmMissing && (
                     <p className="text-xs text-red-600">
                       {t('users.confirmPasswordRequired', 'Parol tasdig‘i kiritilishi shart!')}

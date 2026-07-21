@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 import { Plus, ArrowRight, Eye, Search, Check, X, Package, CheckCircle2, Printer, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PageHeader } from '../../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../../components/shared/DataTable';
+import { ConfirmDialog } from '../../../components/shared/ConfirmDialog';
 import { ExportButton } from '../../../components/shared/ExportButton';
 import { DateRangeFilter } from '../../../components/shared/DateRangeFilter';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/Select';
@@ -34,6 +35,8 @@ export function TransferListPage() {
   const [loading, setLoading] = useState(true);
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  // Qabul qilish / rad etish oldidan modal orqali tasdiq so'raladi
+  const [confirmAction, setConfirmAction] = useState<{ type: 'approve' | 'reject'; transfer: Transfer } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   // Default — oxirgi 1 hafta; tozalansa yoki o'zgartirilsa boshqa o'tkazmalar ham chiqadi
@@ -341,7 +344,7 @@ export function TransferListPage() {
                 size="icon"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleApprove(item.id);
+                  setConfirmAction({ type: 'approve', transfer: item });
                 }}
                 title={t('transfers.accepted')}
                 aria-label={t('transfers.accepted')}
@@ -354,7 +357,7 @@ export function TransferListPage() {
                 size="icon"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleReject(item.id);
+                  setConfirmAction({ type: 'reject', transfer: item });
                 }}
                 title={t('transfers.rejected')}
                 aria-label={t('transfers.rejected')}
@@ -501,7 +504,7 @@ export function TransferListPage() {
                           className="flex-1 text-green-600 border-green-600 dark:hover:bg-green-950/20 hover:bg-green-50"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleApprove(item.id);
+                            setConfirmAction({ type: 'approve', transfer: item });
                           }}
                         >
                           <Check className="mr-2 h-4 w-4" />
@@ -512,7 +515,7 @@ export function TransferListPage() {
                           className="flex-1 text-red-600 border-red-600 dark:hover:bg-red-950/20 hover:bg-red-50"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleReject(item.id);
+                            setConfirmAction({ type: 'reject', transfer: item });
                           }}
                         >
                           <X className="mr-2 h-4 w-4" />
@@ -673,6 +676,44 @@ export function TransferListPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Qabul qilish / rad etish uchun tasdiqlash modali */}
+      <ConfirmDialog
+        open={!!confirmAction}
+        onOpenChange={(open: boolean) => !open && setConfirmAction(null)}
+        onConfirm={() => {
+          if (!confirmAction) return;
+          if (confirmAction.type === 'approve') {
+            void handleApprove(confirmAction.transfer.id);
+          } else {
+            void handleReject(confirmAction.transfer.id);
+          }
+        }}
+        title={
+          confirmAction?.type === 'approve'
+            ? t('transfers.confirmApproveTitle', "O'tkazmani qabul qilish")
+            : t('transfers.confirmRejectTitle', "O'tkazmani rad etish")
+        }
+        description={
+          confirmAction
+            ? t(
+                confirmAction.type === 'approve' ? 'transfers.confirmApproveDesc' : 'transfers.confirmRejectDesc',
+                {
+                  id: confirmAction.transfer.id,
+                  from: fromStoreLabel(confirmAction.transfer),
+                  to: toStoreLabel(confirmAction.transfer),
+                }
+              )
+            : ''
+        }
+        confirmText={
+          confirmAction?.type === 'approve'
+            ? t('transfers.accepted')
+            : t('transfers.rejected')
+        }
+        cancelText={t('common.cancel')}
+        variant={confirmAction?.type === 'reject' ? 'destructive' : 'default'}
+      />
     </div>
   );
 }

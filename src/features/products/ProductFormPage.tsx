@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from '../../components/ui/Select';
 import { productService } from '../../services/productService';
-import { API_ORIGIN, MEDIA_URL } from '../../services/api';
+import { API_ORIGIN } from '../../services/api';
 import type { ProductFormData, ProductUnit, CategoryFormData, ProductUnitFormData } from '../../types';
 import { latinToCyrillic } from '../../utils/transliteration';
 import { handleError, extractErrorMessage, extractFieldErrors } from '../../utils/errorHandler';
@@ -78,7 +78,9 @@ export function ProductFormPage() {
   const [locations, setLocations] = useState<ProductLocation[]>([]);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  const [existingImages, setExistingImages] = useState<string[]>([]);
+  // Mavjud rasmlar backenddan id bilan keladi — o'chirishda id delete_image_ids ga tushadi
+  const [existingImages, setExistingImages] = useState<{ id?: number; url: string }[]>([]);
+  const [deletedImageIds, setDeletedImageIds] = useState<number[]>([]);
   const [formData, setFormData] = useState<ProductFormData>(initialFormData);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [savingCategory, setSavingCategory] = useState(false);
@@ -136,28 +138,31 @@ export function ProductFormPage() {
         is_active: product.is_active ?? true,
       });
 
-      const previews: string[] = [];
+      const previews: { id?: number; url: string }[] = [];
       if (Array.isArray(product.images)) {
         product.images.forEach((img) => {
           let imageUrl: string | undefined;
+          let imageId: number | undefined;
           if (typeof img === 'string') {
             imageUrl = img;
           } else if (typeof img === 'object' && img !== null && 'image' in img) {
-            const imgObj = img as { image?: string };
+            const imgObj = img as { id?: number; image?: string };
             imageUrl = imgObj.image;
+            imageId = imgObj.id;
           }
           const resolved = resolveImageUrl(imageUrl);
-          if (resolved) previews.push(resolved);
+          if (resolved) previews.push({ id: imageId, url: resolved });
         });
       } else if (product.images && typeof product.images === 'string') {
         const resolved = resolveImageUrl(product.images);
-        if (resolved) previews.push(resolved);
+        if (resolved) previews.push({ url: resolved });
       } else if (product.image && typeof product.image === 'string') {
         const resolved = resolveImageUrl(product.image);
-        if (resolved) previews.push(resolved);
+        if (resolved) previews.push({ url: resolved });
       }
 
       setExistingImages(previews);
+      setDeletedImageIds([]);
       setImagePreviews([]);
       setImageFiles([]);
     } catch (error) {
@@ -230,7 +235,10 @@ export function ProductFormPage() {
       setSaving(true);
       const payload: ProductFormData = {
         ...formData,
-        images: isEditing ? [...existingImages, ...imageFiles] : imageFiles,
+        // Tahrirlashda faqat yangi fayllar yuboriladi (backend: new_images),
+        // o'chirilgan mavjud rasmlar esa delete_image_ids orqali
+        images: imageFiles,
+        delete_image_ids: isEditing ? deletedImageIds : undefined,
       };
 
       if (isEditing && id) {
@@ -301,6 +309,11 @@ export function ProductFormPage() {
   };
 
   const handleRemoveExistingImage = (index: number) => {
+    const removed = existingImages[index];
+    if (removed?.id !== undefined) {
+      const removedId = removed.id;
+      setDeletedImageIds((ids) => (ids.includes(removedId) ? ids : [...ids, removedId]));
+    }
     setExistingImages((prev) => prev.filter((_, i) => i !== index));
   };
 
@@ -636,10 +649,10 @@ export function ProductFormPage() {
 
               {allImages.length > 0 && (
                 <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {existingImages.map((src, idx) => (
-                    <div key={`existing-${idx}`} className="relative">
+                  {existingImages.map((img, idx) => (
+                    <div key={`existing-${img.id ?? idx}`} className="relative">
                       <img
-                        src={`${MEDIA_URL}${src}`}
+                        src={img.url}
                         alt={formData.name || `Product image ${idx + 1}`}
                         className="h-24 w-24 rounded-md border object-cover"
                       />

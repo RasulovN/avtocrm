@@ -12,11 +12,21 @@ export interface SaleListFilters {
   store?: string;
 }
 
+export interface PaidBreakdownRow {
+  type: 'cash' | 'card';
+  // Bank kartasi nomi (Uzcard, Humo...); naqd yoki eski (kartasiz) to'lovlarda null
+  name: string | null;
+  amount: string;
+}
+
 export interface SaleStatistics {
   total_sales: number;
   total_amount: string;
   total_paid: string;
   total_debt: string;
+  // Davr ichida rasmiylashtirilgan qaytarimlar (SaleReturn) summasi
+  total_returned?: string;
+  paid_breakdown?: PaidBreakdownRow[];
 }
 
 export const salesService = {

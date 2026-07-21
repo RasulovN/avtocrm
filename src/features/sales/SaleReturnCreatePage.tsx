@@ -12,7 +12,6 @@ import {
   Plus,
   Receipt,
   CheckCircle2,
-  CreditCard,
   Eraser,
   Phone,
   User,
@@ -730,27 +729,19 @@ export function SaleReturnCreatePage({ embedded = false }: SaleReturnCreatePageP
                           {t('sales.noBankCards', 'Faol bank kartasi yo‘q — sozlamalardan qo‘shing')}
                         </p>
                       ) : (
-                        <div className="grid grid-cols-2 gap-2">
-                          {bankCards.map((card) => {
-                            const isSelected = String(card.id) === selectedBankCardId;
-                            return (
-                              <button
-                                key={card.id}
-                                type="button"
-                                onClick={() => setSelectedBankCardId(String(card.id))}
-                                className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors ${
-                                  isSelected
-                                    ? 'border-primary bg-primary/10 font-semibold text-primary'
-                                    : 'border-border hover:bg-accent/50'
-                                }`}
-                              >
-                                <CreditCard className="h-4 w-4 shrink-0" />
-                                <span className="min-w-0 flex-1 truncate text-left">{card.name}</span>
-                                {isSelected && <CheckCircle2 className="h-4 w-4 shrink-0" />}
-                              </button>
-                            );
-                          })}
-                        </div>
+                        <Select value={selectedBankCardId} onValueChange={setSelectedBankCardId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder={t('sales.selectCardType', 'Karta turini tanlang')} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {bankCards.map((card) => (
+                              <SelectItem key={card.id} value={String(card.id)}>
+                                {card.name}
+                                {card.is_default ? ' ★' : ''}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       )}
                     </div>
                   )}

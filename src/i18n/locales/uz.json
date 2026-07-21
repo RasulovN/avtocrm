@@ -21,6 +21,7 @@
     "next": "Keyingi",
     "submit": "Yuborish",
     "select": "Tanlash",
+    "optional": "ixtiyoriy",
     "all": "Hammasi",
     "status": "Holati",
     "name": "Nomi",
@@ -537,7 +538,11 @@
     "detailsSellingPrice": "Sotish narhi",
     "detailsApprovedAt": "Tasdiqlangan vaqt",
     "approvedBy": "Tasdiqladi",
-    "approvedAt": "Tasdiqlangan vaqt"
+    "approvedAt": "Tasdiqlangan vaqt",
+    "confirmApproveTitle": "O‘tkazmani qabul qilish",
+    "confirmApproveDesc": "№{{id}} o‘tkazmani ({{from}} → {{to}}) qabul qilishni tasdiqlaysizmi?",
+    "confirmRejectTitle": "O‘tkazmani rad etish",
+    "confirmRejectDesc": "№{{id}} o‘tkazmani ({{from}} → {{to}}) rad etishni tasdiqlaysizmi?"
   },
   "sales": {
     "title": "Sotuvlar",
@@ -619,7 +624,14 @@
     "quickCashHint": "Qolgan summani naqd bilan to‘lash",
     "quickCardHint": "Qolgan summani karta bilan to‘lash",
     "splitPaymentInfo": "To‘lov naqd va karta bo‘lib qabul qilinadi",
-    "splitterHint": "Kengligini o‘zgartirish uchun torting, ikki marta bosib tiklang"
+    "splitterHint": "Kengligini o‘zgartirish uchun torting, ikki marta bosib tiklang",
+    "cardType": "Karta turi",
+    "selectCardType": "Karta turini tanlang",
+    "addCardType": "Karta qo‘shish",
+    "cardRequired": "Karta to‘lovi uchun karta turini tanlang",
+    "cardSplitMismatch": "Karta turlari yig‘indisi karta summasiga teng bo‘lishi kerak",
+    "singleCardAuto": "Bitta karta — summa avtomatik",
+    "unknownCard": "Noma’lum karta"
   },
   "payment": {
     "cash": "Naqd",
@@ -928,7 +940,14 @@
     "userDeleted": "Foydalanuvchi muvaffaqiyatli o‘chirildi",
     "optional": "(ixtiyoriy)",
     "systemRole": "Tizim roli",
-    "noRole": "Rolsiz (cheklanmagan)"
+    "noRole": "Rolsiz (cheklanmagan)",
+    "fullNameRequired": "F.I.Sh kiritilishi shart!",
+    "emailRequired": "Email kiritilishi shart!",
+    "phoneRequired": "Telefon raqami kiritilishi shart!",
+    "passwordRequired": "Parol kiritilishi shart!",
+    "confirmPasswordRequired": "Parol tasdig‘i kiritilishi shart!",
+    "showPassword": "Parolni ko‘rsatish",
+    "hidePassword": "Parolni yashirish"
   },
   "roles": {
     "title": "Rollar",
@@ -992,7 +1011,9 @@
     "notFound": "Topilmadi",
     "unauthorized": "Ruxsat yo‘q",
     "validationError": "Ma’lumotlar tekshirish xatoligi",
-    "requestFailed": "So‘rov yuborilmadi"
+    "requestFailed": "So‘rov yuborilmadi",
+    "requiredFields": "Majburiy (*) maydonlarni to‘ldiring",
+    "passwordMismatch": "Parollar mos kelmadi"
   },
   "components": {
     "filterByStore": "Do‘konlar bo‘yicha",

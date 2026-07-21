@@ -833,35 +833,26 @@ export function CustomerListPage() {
                       </div>
                     </div>
 
-                    {/* Karta tanlash — tugmalar bilan */}
+                    {/* Karta turi — select bilan tanlanadi */}
                     {payType === 'card' && (
                       bankCards.length === 0 ? (
                         <p className="text-xs text-red-500">
                           {t('sales.noBankCards', "Faol bank kartasi yo'q — sozlamalardan qo'shing")}
                         </p>
                       ) : (
-                        <div className="flex flex-wrap gap-2">
-                          {bankCards.map((card) => {
-                            const selected = payBankCardId === String(card.id);
-                            return (
-                              <button
-                                key={card.id}
-                                type="button"
-                                onClick={() => setPayBankCardId(String(card.id))}
-                                className={cn(
-                                  'flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors',
-                                  selected
-                                    ? 'border-blue-600 bg-blue-600 text-white shadow-sm'
-                                    : 'border-border bg-background hover:bg-accent hover:text-accent-foreground'
-                                )}
-                              >
-                                <CreditCard className="h-3 w-3" />
+                        <Select value={payBankCardId} onValueChange={setPayBankCardId}>
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder={t('sales.selectCardType', 'Karta turini tanlang')} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {bankCards.map((card) => (
+                              <SelectItem key={card.id} value={String(card.id)}>
                                 {card.name}
-                                {selected && <Check className="h-3 w-3" />}
-                              </button>
-                            );
-                          })}
-                        </div>
+                                {card.is_default ? ' ★' : ''}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       )
                     )}
 

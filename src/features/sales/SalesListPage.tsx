@@ -313,7 +313,7 @@ export function SalesListPage() {
       </div>
 
       {showStats && stats && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 transition-all duration-300 ease-in-out">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 transition-all duration-300 ease-in-out">
           <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm card-hover-lift">
             <p className="text-sm text-muted-foreground">{t('dashboard.totalSales')}</p>
             <p className="text-2xl font-bold">{stats.total_sales}</p>
@@ -325,6 +325,31 @@ export function SalesListPage() {
           <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm card-hover-lift">
             <p className="text-sm text-muted-foreground">{t('sales.paid', 'To‘langan')}</p>
             <p className="text-2xl font-bold text-emerald-600">{formatCurrency(parseFloat(stats.total_paid || '0'))}</p>
+            {(stats.paid_breakdown?.length ?? 0) > 0 && (
+              <div className="mt-3 space-y-1.5 border-t border-border/60 pt-2.5">
+                {stats.paid_breakdown!.map((row, index) => (
+                  <div key={`${row.type}-${row.name ?? index}`} className="flex items-center justify-between gap-2 text-xs">
+                    <span className="flex items-center gap-1.5 min-w-0 text-muted-foreground">
+                      <span
+                        className={`h-1.5 w-1.5 shrink-0 rounded-full ${row.type === 'cash' ? 'bg-emerald-500' : 'bg-sky-500'}`}
+                      />
+                      <span className="truncate">
+                        {row.type === 'cash'
+                          ? t('sales.cash', 'Naqd')
+                          : row.name || t('sales.unknownCard', 'Noma’lum karta')}
+                      </span>
+                    </span>
+                    <span className="shrink-0 font-medium tabular-nums">
+                      {formatCurrency(parseFloat(row.amount || '0'))}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm card-hover-lift">
+            <p className="text-sm text-muted-foreground">{t('saleReturns.totalRefund', 'Qaytarilgan summa')}</p>
+            <p className="text-2xl font-bold text-amber-600">{formatCurrency(parseFloat(stats.total_returned || '0'))}</p>
           </div>
           <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm card-hover-lift">
             <p className="text-sm text-muted-foreground">{t('dashboard.totalDebt')}</p>

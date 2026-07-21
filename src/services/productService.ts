@@ -4,21 +4,13 @@ import { apiClient, API_ORIGIN } from './api';
 import { latinToCyrillic } from '../utils/transliteration';
 import type { Product, ProductFormData, ProductFilters, ProductStockStats, PaginatedResponse, ApiResponse, ProductStoreInventory } from '../types';
 
-const BACKEND_FALLBACK_URL = 'http://192.168.1.41:8001/api';
-
-
-
 const resolveImageUrl = (image?: string | unknown) => {
   if (typeof image !== 'string' || !image) return '';
   if (image.startsWith('http://') || image.startsWith('https://')) return image;
-  
-  // If we are running locally and API_ORIGIN is empty, fallback to actual server host
-  const origin = API_ORIGIN && API_ORIGIN.trim() !== "" ? API_ORIGIN : BACKEND_FALLBACK_URL;
-  
-  if (image.startsWith('/')) {
-    return `${origin}${image}`;
-  }
-  return `${origin}/${image}`;
+
+  // Dev'da API_ORIGIN bo'sh — nisbiy /media yo'l Vite proxy orqali backendga boradi
+  const path = image.startsWith('/') ? image : `/${image}`;
+  return API_ORIGIN && API_ORIGIN.trim() !== '' ? `${API_ORIGIN}${path}` : path;
 };
 
 const normalizeNumber = (value: unknown): number | undefined => {
@@ -99,11 +91,11 @@ const normalizeImages = (images?: unknown[] | string | unknown, image?: unknown)
         return { image: resolveImageUrl(item), product: 0 };
       }
       if (typeof item === 'object' && item !== null && 'image' in item) {
-        const imgObj = item as { image?: string; product?: number };
-        return { image: resolveImageUrl(imgObj.image), product: imgObj.product ?? 0 };
+        const imgObj = item as { id?: number; image?: string; product?: number };
+        return { id: imgObj.id, image: resolveImageUrl(imgObj.image), product: imgObj.product ?? 0 };
       }
       return null;
-    }).filter((item): item is { image: string; product: number } => item !== null && item.image !== '');
+    }).filter((item): item is { id?: number; image: string; product: number } => item !== null && item.image !== '');
     return resolved.length > 0 ? resolved : undefined;
   }
   if (typeof images === 'string' && images.trim() !== '') {
@@ -299,7 +291,11 @@ const mapProductPayload = (
 ): Record<string, unknown> | FormData => {
   const mode = options?.mode ?? 'create';
   const imageFiles = toFileList(data.images);
-  const useFormData = mode === 'create' && imageFiles.length > 0;
+  const deleteImageIds = Array.isArray(data.delete_image_ids)
+    ? data.delete_image_ids.filter((id) => Number.isFinite(Number(id)))
+    : [];
+  // Fayl bo'lsa har ikki rejimda multipart kerak — JSON'da fayl serverga yetib bormaydi
+  const useFormData = imageFiles.length > 0;
 
   const categoryId = typeof data.category === 'string' && data.category.trim() !== '' 
     ? data.category.trim() 
@@ -319,16 +315,24 @@ const mapProductPayload = (
       payload.append('location', data.location.trim());
     }
     if (typeof data.name === 'string') {
-      payload.append('name_uz', data.name);
-      const cyr = typeof data.name_uz_cyrl === 'string' ? data.name_uz_cyrl : latinToCyrillic(data.name);
-      payload.append('name_uz_cyrl', cyr);
+      if (mode === 'update') {
+        payload.append('name', data.name);
+      } else {
+        payload.append('name_uz', data.name);
+        const cyr = typeof data.name_uz_cyrl === 'string' ? data.name_uz_cyrl : latinToCyrillic(data.name);
+        payload.append('name_uz_cyrl', cyr);
+      }
     }
     if (typeof data.description === 'string') {
-      payload.append('description_uz', data.description);
-      const cyr = typeof data.description_uz_cyrl === 'string'
-        ? data.description_uz_cyrl
-        : latinToCyrillic(data.description);
-      payload.append('description_uz_cyrl', cyr);
+      if (mode === 'update') {
+        payload.append('description', data.description);
+      } else {
+        payload.append('description_uz', data.description);
+        const cyr = typeof data.description_uz_cyrl === 'string'
+          ? data.description_uz_cyrl
+          : latinToCyrillic(data.description);
+        payload.append('description_uz_cyrl', cyr);
+      }
     }
     if (data.purchase_price !== undefined && data.purchase_price !== '') {
       payload.append('purchase_price', String(data.purchase_price));
@@ -339,11 +343,22 @@ const mapProductPayload = (
     if (data.min_stock !== undefined && data.min_stock !== '') {
       payload.append('min_stock', String(data.min_stock));
     }
+    if (mode === 'update' && data.is_active !== undefined) {
+      // Backend arxivlashni status maydoni orqali qiladi (a=faol, i=arxiv)
+      payload.append('status', data.is_active ? 'a' : 'i');
+    }
+    // Backend update'da yangi fayllarni `new_images` nomi bilan kutadi
+    const fileField = mode === 'update' ? 'new_images' : 'images';
     imageFiles.forEach((file) => {
-      payload.append('images', file);
+      payload.append(fileField, file);
     });
-    stringImages.forEach((image) => {
-      payload.append('images', image);
+    if (mode === 'create') {
+      stringImages.forEach((image) => {
+        payload.append('images', image);
+      });
+    }
+    deleteImageIds.forEach((imgId) => {
+      payload.append('delete_image_ids', String(imgId));
     });
     return payload;
   }
@@ -388,6 +403,9 @@ const mapProductPayload = (
     payload.is_active = data.is_active;
     // Backend arxivlashni status maydoni orqali qiladi (a=faol, i=arxiv)
     payload.status = data.is_active ? 'a' : 'i';
+  }
+  if (mode === 'update' && deleteImageIds.length > 0) {
+    payload.delete_image_ids = deleteImageIds;
   }
   return payload;
 };

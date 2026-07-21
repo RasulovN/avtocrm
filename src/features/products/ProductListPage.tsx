@@ -671,6 +671,8 @@ export function ProductListPage() {
                       <img
                         src={imageUrl}
                         alt={item.name}
+                        loading="lazy"
+                        decoding="async"
                         className="h-16 w-16 rounded-xl object-cover border border-border/40"
                         onError={(e) => {
                           const img = e.target as HTMLImageElement;
@@ -955,6 +957,8 @@ export function ProductListPage() {
                         <img
                           src={imageUrl}
                           alt={item.name}
+                          loading="lazy"
+                          decoding="async"
                           className="h-11 w-11 rounded-lg object-cover border border-border/40"
                           onError={(e) => {
                             const img = e.target as HTMLImageElement;

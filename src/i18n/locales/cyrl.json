@@ -21,6 +21,7 @@
     "next": "Кейинги",
     "submit": "Юбориш",
     "select": "Танлаш",
+    "optional": "ихтиёрий",
     "all": "Ҳаммаси",
     "status": "Ҳолат",
     "name": "Номи",
@@ -537,7 +538,11 @@
     "detailsSellingPrice": "Сотиш нархи",
     "detailsApprovedAt": "Тасдиқланган вақт",
     "approvedBy": "Тасдиқлади",
-    "approvedAt": "Тасдиқланган вақт"
+    "approvedAt": "Тасдиқланган вақт",
+    "confirmApproveTitle": "Ўтказмани қабул қилиш",
+    "confirmApproveDesc": "№{{id}} ўтказмани ({{from}} → {{to}}) қабул қилишни тасдиқлайсизми?",
+    "confirmRejectTitle": "Ўтказмани рад этиш",
+    "confirmRejectDesc": "№{{id}} ўтказмани ({{from}} → {{to}}) рад этишни тасдиқлайсизми?"
   },
   "sales": {
     "title": "Сотувлар",
@@ -619,7 +624,14 @@
     "quickCashHint": "Қолган суммани нақд билан тўлаш",
     "quickCardHint": "Қолган суммани карта билан тўлаш",
     "splitPaymentInfo": "Тўлов нақд ва карта бўлиб қабул қилинади",
-    "splitterHint": "Кенглигини ўзгартириш учун тортинг, икки марта босиб тикланг"
+    "splitterHint": "Кенглигини ўзгартириш учун тортинг, икки марта босиб тикланг",
+    "cardType": "Карта тури",
+    "selectCardType": "Карта турини танланг",
+    "addCardType": "Карта қўшиш",
+    "cardRequired": "Карта тўлови учун карта турини танланг",
+    "cardSplitMismatch": "Карта турлари йиғиндиси карта суммасига тенг бўлиши керак",
+    "singleCardAuto": "Битта карта — сумма автоматик",
+    "unknownCard": "Номаълум карта"
   },
   "payment": {
     "cash": "Нақд",
@@ -928,7 +940,14 @@
     "userDeleted": "Фойдаланувчи муваффақиятли ўчирилди",
     "optional": "(ихтиёрий)",
     "systemRole": "Тизим роли",
-    "noRole": "Ролсиз (чекланмаган)"
+    "noRole": "Ролсиз (чекланмаган)",
+    "fullNameRequired": "Ф.И.Ш киритилиши шарт!",
+    "emailRequired": "Email киритилиши шарт!",
+    "phoneRequired": "Телефон рақами киритилиши шарт!",
+    "passwordRequired": "Парол киритилиши шарт!",
+    "confirmPasswordRequired": "Парол тасдиғи киритилиши шарт!",
+    "showPassword": "Паролни кўрсатиш",
+    "hidePassword": "Паролни яшириш"
   },
   "roles": {
     "title": "Роллар",
@@ -992,7 +1011,9 @@
     "notFound": "Топилмади",
     "unauthorized": "Рухсат йўқ",
     "validationError": "Ма'лумотларни текшириш хатолиги",
-    "requestFailed": "Сўров юборилмади"
+    "requestFailed": "Сўров юборилмади",
+    "requiredFields": "Мажбурий (*) майдонларни тўлдиринг",
+    "passwordMismatch": "Пароллар мос келмади"
   },
   "components": {
     "filterByStore": "Дўконлар бўйича",

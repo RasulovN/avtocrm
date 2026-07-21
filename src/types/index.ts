@@ -119,6 +119,8 @@ export interface ProductLocation {
 }
 
 export interface ProductImage {
+  // Backend ProductImage yozuvi IDsi — tahrirlashda o'chirish uchun kerak
+  id?: number;
   image: string;
   product: number;
 }
@@ -193,6 +195,8 @@ export interface ProductFormData {
   description?: string;
   description_uz_cyrl?: string;
   images?: string[] | string | File[] | (string | File)[];
+  // Tahrirlashda o'chiriladigan mavjud rasm IDlari (backend: delete_image_ids)
+  delete_image_ids?: number[];
   min_stock?: number;
   is_active?: boolean;
   sku?: string;

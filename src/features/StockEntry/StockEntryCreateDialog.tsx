@@ -1284,28 +1284,19 @@ export function StockEntryCreateDialog({
                 </p>
               </div>
             ) : (
-              <div className="flex flex-wrap gap-2">
-                {bankCards.map((card) => {
-                  const selected = bankCardId === String(card.id);
-                  return (
-                    <button
-                      key={card.id}
-                      type="button"
-                      onClick={() => setBankCardId(String(card.id))}
-                      className={cn(
-                        'flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors',
-                        selected
-                          ? 'border-blue-600 bg-blue-600 text-white shadow-sm'
-                          : 'border-border bg-background hover:bg-accent hover:text-accent-foreground'
-                      )}
-                    >
-                      <CreditCard className="h-3.5 w-3.5" />
+              <Select value={bankCardId} onValueChange={setBankCardId}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t('sales.selectCardType', 'Karta turini tanlang')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {bankCards.map((card) => (
+                    <SelectItem key={card.id} value={String(card.id)}>
                       {card.name}
-                      {selected && <Check className="h-3.5 w-3.5" />}
-                    </button>
-                  );
-                })}
-              </div>
+                      {card.is_default ? ' ★' : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
           </div>
         )}

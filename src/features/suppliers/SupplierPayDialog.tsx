@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { Wallet, CheckCircle2, Loader2, Banknote, CreditCard, Star } from 'lucide-react';
+import { Wallet, CheckCircle2, Loader2, Banknote, CreditCard } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
 import {
   Dialog,
   DialogContent,
@@ -409,28 +410,19 @@ export function SupplierPayDialog({ supplier, open, onOpenChange, onPaid }: Supp
                           {t('sales.noBankCards', "Faol to'lov turi yo'q — Sozlamalar → To'lov turlaridan qo'shing")}
                         </p>
                       ) : (
-                        <div className="grid grid-cols-2 gap-2">
-                          {bankCards.map((card) => {
-                            const isSelected = String(card.id) === selectedBankCardId;
-                            return (
-                              <button
-                                key={card.id}
-                                type="button"
-                                onClick={() => setSelectedBankCardId(String(card.id))}
-                                aria-pressed={isSelected}
-                                className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-sm font-medium transition-colors ${
-                                  isSelected
-                                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-500/40 dark:border-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300'
-                                    : 'border-border bg-background text-foreground hover:bg-accent'
-                                }`}
-                              >
-                                <CreditCard className={`h-4 w-4 shrink-0 ${isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`} />
-                                <span className="min-w-0 truncate">{card.name}</span>
-                                {card.is_default && <Star className="h-3 w-3 shrink-0 text-amber-500" />}
-                              </button>
-                            );
-                          })}
-                        </div>
+                        <Select value={selectedBankCardId} onValueChange={setSelectedBankCardId}>
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder={t('sales.selectCardType', 'Karta turini tanlang')} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {bankCards.map((card) => (
+                              <SelectItem key={card.id} value={String(card.id)}>
+                                {card.name}
+                                {card.is_default ? ' ★' : ''}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       )}
                     </div>
                   )}

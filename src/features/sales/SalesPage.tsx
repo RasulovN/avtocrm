@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
 import toast from 'react-hot-toast';
-import { ScanBarcode, Trash2, DollarSign, Search, X, UserPlus, Eye, Package, Barcode, MapPin, Image as ImageIcon, Loader2, ArrowLeftRight, Banknote, CreditCard, Star } from 'lucide-react';
+import { ScanBarcode, Trash2, DollarSign, Search, X, UserPlus, Eye, Package, Barcode, MapPin, Image as ImageIcon, Loader2, ArrowLeftRight, Banknote, CreditCard, Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/Dialog';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -37,6 +37,17 @@ interface CartItem {
   available_stock: number;
   use_wholesale: boolean;
 }
+
+// Karta to'lovi taqsimoti: bir sotuvda bir nechta karta turi (UzCard, Humo, ...)
+// tanlanishi mumkin — har qator alohida to'lov bo'lib backendga yuboriladi.
+// amountText — inputda ko'rinadigan matn ("0" ham yozish mumkin bo'lishi uchun alohida saqlanadi)
+interface CardSplit {
+  bankCardId: string;
+  amount: number;
+  amountText: string;
+}
+
+const splitText = (amount: number): string => (amount > 0 ? formatAmountInput(amount) : '');
 
 const getProductImages = (product?: Product | null): string[] => {
   if (!product) return [];
@@ -196,8 +207,13 @@ export function SalesPage() {
 
   const [cashAmount, setCashAmount] = useState(0);
   const [cardAmount, setCardAmount] = useState(0);
+  // Input matnlari alohida saqlanadi — "0" yozish mumkin bo'lishi uchun
+  // (raqamdan format qilinsa 0 bo'sh satrga aylanib, yozilgan 0 "yo'qolib" qolardi)
+  const [cashText, setCashText] = useState('');
+  const [cardText, setCardText] = useState('');
   const [bankCards, setBankCards] = useState<BankCard[]>([]);
-  const [selectedBankCardId, setSelectedBankCardId] = useState<string>('');
+  // Karta summasi qatorlar bo'yicha taqsimlanadi; yig'indi doim cardAmount ga teng ushlanadi
+  const [cardSplits, setCardSplits] = useState<CardSplit[]>([]);
   const [discount, setDiscount] = useState(0);
   const [discountType, setDiscountType] = useState<'p' | 'f'>('f');
   const [showReceipt, setShowReceipt] = useState(false);
@@ -445,11 +461,36 @@ export function SalesPage() {
   // (masalan, karta rejimida naqd kiritilsa, karta summasi qoldiqqa moslashadi — aralash to'lov)
   useEffect(() => {
     if (activePayment === 'cash') {
-      setCashAmount(Math.max(0, roundedTotal - cardAmount));
+      const val = Math.max(0, roundedTotal - cardAmount);
+      setCashAmount(val);
+      setCashText(splitText(val));
     } else if (activePayment === 'card') {
-      setCardAmount(Math.max(0, roundedTotal - cashAmount));
+      const val = Math.max(0, roundedTotal - cashAmount);
+      setCardAmount(val);
+      setCardText(splitText(val));
     }
   }, [activePayment, roundedTotal, cashAmount, cardAmount]);
+
+  // Karta jami summasi (Karta inputi/tezkor tugma) o'zgarganda qatorlar sinxronlanadi:
+  // oxirgi qator qoldiqni oladi, oldingi qatorlar jami summadan oshsa qisqartiriladi
+  useEffect(() => {
+    setCardSplits((prev) => {
+      if (prev.length === 0) {
+        const def = bankCards.find((c) => c.is_default) ?? bankCards[0];
+        return def ? [{ bankCardId: String(def.id), amount: cardAmount, amountText: splitText(cardAmount) }] : prev;
+      }
+      const prevSum = prev.reduce((sum, row) => sum + row.amount, 0);
+      if (prevSum === cardAmount) return prev; // qatorlarning o'zi allaqachon mos
+      let remaining = cardAmount;
+      const next = prev.map((row, i) => {
+        const isLast = i === prev.length - 1;
+        const amount = isLast ? remaining : Math.min(row.amount, remaining);
+        remaining -= amount;
+        return amount === row.amount ? row : { ...row, amount, amountText: splitText(amount) };
+      });
+      return next;
+    });
+  }, [cardAmount, bankCards]);
   const productImages = getProductImages(selectedProduct);
   const filteredProducts = useMemo(() => {
     // Do'kon tanlangan bo'lsa server allaqachon shu do'kon bo'yicha filtrlab,
@@ -571,7 +612,7 @@ export function SalesPage() {
         if (cancelled) return;
         setBankCards(cards);
         const defaultCard = cards.find((card) => card.is_default) ?? cards[0];
-        setSelectedBankCardId(defaultCard ? String(defaultCard.id) : '');
+        setCardSplits(defaultCard ? [{ bankCardId: String(defaultCard.id), amount: 0, amountText: '' }] : []);
       } catch (error) {
         logger.error('Failed to load bank cards:', error);
       }
@@ -738,9 +779,13 @@ export function SalesPage() {
       // Qayta bosilsa avto rejim o'chadi
       setActivePayment(null);
       setCashAmount(0);
+      setCashText('');
     } else {
       // Karta rejimidan o'tilsa, avvalgi avto to'ldirilgan karta summasi tozalanadi
-      if (activePayment === 'card') setCardAmount(0);
+      if (activePayment === 'card') {
+        setCardAmount(0);
+        setCardText('');
+      }
       setActivePayment('cash');
     }
   };
@@ -748,9 +793,75 @@ export function SalesPage() {
     if (activePayment === 'card') {
       setActivePayment(null);
       setCardAmount(0);
+      setCardText('');
     } else {
-      if (activePayment === 'cash') setCashAmount(0);
+      if (activePayment === 'cash') {
+        setCashAmount(0);
+        setCashText('');
+      }
       setActivePayment('card');
+    }
+  };
+
+  // ─── Karta taqsimoti qatorlari ───
+  const updateSplitCard = (idx: number, bankCardId: string) => {
+    setCardSplits((prev) => prev.map((row, i) => (i === idx ? { ...row, bankCardId } : row)));
+  };
+
+  // Qator summasini tahrirlash — ERKIN rejim:
+  //   kamaytirish hech narsani "tortib olmaydi" — karta jami kamayadi,
+  //   yetmagan qism qarzga qoladi (qarzga sotish mumkin);
+  //   oshirishda limit (sotuv jami - naqd) dan oshgan qism boshqa
+  //   qatorlardan (oxiridan boshlab) avtomatik qirqiladi.
+  const updateSplitAmount = (idx: number, digits: string) => {
+    const raw = digits === '' ? 0 : Number(digits);
+    // Karta avto rejimdan chiqamiz — endi karta jami qatorlar yig'indisiga ergashadi
+    if (activePayment === 'card') setActivePayment(null);
+
+    // Naqd avto rejimda naqd o'zi moslashadi, shuning uchun limitga kirmaydi
+    const cashPart = activePayment === 'cash' ? 0 : cashAmount;
+    const hardMax = Math.max(0, roundedTotal - cashPart);
+
+    const val = Math.min(raw, hardMax);
+    const next = cardSplits.map((row, i) =>
+      i === idx
+        ? { ...row, amount: val, amountText: digits === '' ? '' : formatAmountInput(val) || '0' }
+        : { ...row },
+    );
+
+    // Yig'indi limitdan oshsa, ortiqcha qism boshqa qatorlardan qirqiladi
+    let overflow = next.reduce((sum, row) => sum + row.amount, 0) - hardMax;
+    for (let i = next.length - 1; i >= 0 && overflow > 0; i--) {
+      if (i === idx) continue;
+      const cut = Math.min(next[i].amount, overflow);
+      if (cut > 0) {
+        const rest = next[i].amount - cut;
+        next[i] = { ...next[i], amount: rest, amountText: splitText(rest) };
+        overflow -= cut;
+      }
+    }
+
+    setCardSplits(next);
+    const newSum = next.reduce((sum, row) => sum + row.amount, 0);
+    setCardAmount(newSum);
+    setCardText(splitText(newSum));
+  };
+
+  const addCardSplit = () => {
+    const used = new Set(cardSplits.map((row) => row.bankCardId));
+    const nextCard = bankCards.find((card) => !used.has(String(card.id)));
+    if (!nextCard) return;
+    setCardSplits((prev) => [...prev, { bankCardId: String(nextCard.id), amount: 0, amountText: '' }]);
+  };
+
+  const removeCardSplit = (idx: number) => {
+    const next = cardSplits.filter((_, i) => i !== idx);
+    setCardSplits(next);
+    // Karta avto rejimda effect qayta taqsimlaydi; aks holda jami qatorlarga ergashadi
+    if (activePayment !== 'card') {
+      const newSum = next.reduce((sum, row) => sum + row.amount, 0);
+      setCardAmount(newSum);
+      setCardText(splitText(newSum));
     }
   };
 
@@ -800,9 +911,18 @@ export function SalesPage() {
       return;
     }
 
-    if (cardAmount > 0 && !selectedBankCardId) {
-      toast.error(t('sales.cardRequired', 'Karta to‘lovi uchun bank kartasini tanlang'));
-      return;
+    // Karta to'lovi: faol qatorlarning har birida karta turi tanlangan va
+    // yig'indi karta summasiga teng bo'lishi shart
+    const activeSplits = cardSplits.filter((split) => split.amount > 0);
+    if (cardAmount > 0) {
+      if (activeSplits.length === 0 || activeSplits.some((split) => !split.bankCardId)) {
+        toast.error(t('sales.cardRequired', 'Karta to‘lovi uchun karta turini tanlang'));
+        return;
+      }
+      if (activeSplits.reduce((sum, split) => sum + split.amount, 0) !== cardAmount) {
+        toast.error(t('sales.cardSplitMismatch', 'Karta turlari yig‘indisi karta summasiga teng bo‘lishi kerak'));
+        return;
+      }
     }
 
     try {
@@ -813,7 +933,9 @@ export function SalesPage() {
         payments.push({ type: 'cash', amount: String(cashAmount) });
       }
       if (cardAmount > 0) {
-        payments.push({ type: 'card', amount: String(cardAmount), bank_card: Number(selectedBankCardId) });
+        for (const split of activeSplits) {
+          payments.push({ type: 'card', amount: String(split.amount), bank_card: Number(split.bankCardId) });
+        }
       }
 
       const selectedStoreId = items.length > 0 ? items[0].store_id : activeStoreId || '1';
@@ -866,8 +988,10 @@ export function SalesPage() {
     setItems([]);
     setCashAmount(0);
     setCardAmount(0);
+    setCashText('');
+    setCardText('');
     const defaultCard = bankCards.find((card) => card.is_default) ?? bankCards[0];
-    setSelectedBankCardId(defaultCard ? String(defaultCard.id) : '');
+    setCardSplits(defaultCard ? [{ bankCardId: String(defaultCard.id), amount: 0, amountText: '' }] : []);
     setDiscount(0);
     setDiscountType('f');
     setActivePayment('cash');
@@ -1499,19 +1623,24 @@ export function SalesPage() {
                         type="text"
                         inputMode="numeric"
                         placeholder="0"
-                        value={formatAmountInput(cashAmount)}
+                        value={cashText}
                         disabled={isOverpaid && cashAmount === 0}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                          const val = parseAmountInput(e.target.value);
+                          // "0" yozish mumkin; "05" → "5" (oldingi nol tashlanadi)
+                          const digits = e.target.value.replace(/\D/g, '');
+                          const val = digits === '' ? 0 : Number(digits);
+                          const text = digits === '' ? '' : formatAmountInput(val) || '0';
                           if (activePayment === 'card') {
                             // Karta avto rejimda: naqd kiritilsa, karta qoldiqqa moslashadi
                             if (val > roundedTotal) return;
                             setCashAmount(val);
+                            setCashText(text);
                             return;
                           }
                           if (activePayment === 'cash') setActivePayment(null);
                           if (cardAmount + val > roundedTotal) return;
                           setCashAmount(val);
+                          setCashText(text);
                         }}
                         className={`h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white ${
                           isOverpaid ? 'border-red-500 dark:border-red-500 focus-visible:ring-red-500/30' : ''
@@ -1524,19 +1653,24 @@ export function SalesPage() {
                         type="text"
                         inputMode="numeric"
                         placeholder="0"
-                        value={formatAmountInput(cardAmount)}
+                        value={cardText}
                         disabled={isOverpaid && cardAmount === 0}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                          const val = parseAmountInput(e.target.value);
+                          // "0" yozish mumkin; "05" → "5" (oldingi nol tashlanadi)
+                          const digits = e.target.value.replace(/\D/g, '');
+                          const val = digits === '' ? 0 : Number(digits);
+                          const text = digits === '' ? '' : formatAmountInput(val) || '0';
                           if (activePayment === 'cash') {
                             // Naqd avto rejimda: karta kiritilsa, naqd qoldiqqa moslashadi
                             if (val > roundedTotal) return;
                             setCardAmount(val);
+                            setCardText(text);
                             return;
                           }
                           if (activePayment === 'card') setActivePayment(null);
                           if (cashAmount + val > roundedTotal) return;
                           setCardAmount(val);
+                          setCardText(text);
                         }}
                         className={`h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white ${
                           isOverpaid ? 'border-red-500 dark:border-red-500 focus-visible:ring-red-500/30' : ''
@@ -1547,7 +1681,23 @@ export function SalesPage() {
                 </div>
                 {cardSelected && (
                   <div className="rounded-xl border border-dashed border-gray-300/80 bg-gray-50/80 p-3 dark:border-gray-700 dark:bg-gray-900/60 space-y-2">
-                    <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground dark:text-gray-400">Karta turi</Label>
+                    <div className="flex items-center justify-between gap-2">
+                      <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground dark:text-gray-400">
+                        {t('sales.cardType', 'Karta turi')}
+                      </Label>
+                      {bankCards.length > cardSplits.length && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-xs dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900"
+                          onClick={addCardSplit}
+                        >
+                          <Plus className="mr-1 h-3 w-3" />
+                          {t('sales.addCardType', 'Karta qo‘shish')}
+                        </Button>
+                      )}
+                    </div>
                     {bankCards.length === 0 ? (
                       <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-800/50 dark:bg-red-900/20 px-3 py-2">
                         <p className="text-xs text-red-600 dark:text-red-400">
@@ -1555,26 +1705,52 @@ export function SalesPage() {
                         </p>
                       </div>
                     ) : (
-                      // Kartalar tugma ko'rinishida — bir bosishda tanlanadi
-                      <div className="grid grid-cols-2 gap-2">
-                        {bankCards.map((card) => {
-                          const isSelected = String(card.id) === selectedBankCardId;
+                      // Har qator: karta turi (select) + shu kartaga tushadigan summa.
+                      // Bir nechta qator = to'lov bir nechta karta turiga bo'linadi.
+                      <div className="space-y-2">
+                        {cardSplits.map((split, idx) => {
+                          const usedElsewhere = new Set(
+                            cardSplits.filter((_, i) => i !== idx).map((row) => row.bankCardId),
+                          );
                           return (
-                            <button
-                              key={card.id}
-                              type="button"
-                              onClick={() => setSelectedBankCardId(String(card.id))}
-                              aria-pressed={isSelected}
-                              className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-sm font-medium transition-colors ${
-                                isSelected
-                                  ? 'border-emerald-500 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-500/40 dark:border-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300'
-                                  : 'border-gray-300 bg-background text-foreground hover:bg-accent dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800'
-                              }`}
-                            >
-                              <CreditCard className={`h-4 w-4 shrink-0 ${isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`} />
-                              <span className="truncate">{card.name}</span>
-                              {card.is_default && <Star className="h-3 w-3 shrink-0 text-amber-500" />}
-                            </button>
+                            <div key={idx} className="flex items-center gap-2">
+                              <Select value={split.bankCardId} onValueChange={(v) => updateSplitCard(idx, v)}>
+                                <SelectTrigger className="h-9 flex-1 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white">
+                                  <SelectValue placeholder={t('sales.selectCardType', 'Karta turini tanlang')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {bankCards
+                                    .filter((card) => !usedElsewhere.has(String(card.id)))
+                                    .map((card) => (
+                                      <SelectItem key={card.id} value={String(card.id)}>
+                                        {card.name}
+                                        {card.is_default ? ' ★' : ''}
+                                      </SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
+                              <Input
+                                type="text"
+                                inputMode="numeric"
+                                placeholder="0"
+                                value={split.amountText}
+                                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                  updateSplitAmount(idx, e.target.value.replace(/\D/g, ''))
+                                }
+                                className="h-9 w-28 shrink-0 text-right text-sm tabular-nums dark:bg-gray-900 dark:border-gray-600 dark:text-white"
+                              />
+                              {cardSplits.length > 1 && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-9 w-9 shrink-0 text-muted-foreground hover:text-red-500"
+                                  onClick={() => removeCardSplit(idx)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
                           );
                         })}
                       </div>
@@ -1727,16 +1903,25 @@ export function SalesPage() {
                   <span>{t('sales.cash')}:</span>
                   <span>{formatCurrency(cashAmount)}</span>
                 </div>
-                <div className="flex justify-between dark:text-gray-300 print:text-black">
-                  <span>
-                    {t('sales.card')}
-                    {cardAmount > 0 && selectedBankCardId
-                      ? ` (${bankCards.find((card) => String(card.id) === selectedBankCardId)?.name ?? ''})`
-                      : ''}
-                    :
-                  </span>
-                  <span>{formatCurrency(cardAmount)}</span>
-                </div>
+                {cardAmount > 0 ? (
+                  // Har bir karta turi chekda alohida qatorda ko'rsatiladi
+                  cardSplits
+                    .filter((split) => split.amount > 0)
+                    .map((split) => (
+                      <div key={split.bankCardId} className="flex justify-between dark:text-gray-300 print:text-black">
+                        <span>
+                          {t('sales.card')}
+                          {` (${bankCards.find((card) => String(card.id) === split.bankCardId)?.name ?? ''})`}:
+                        </span>
+                        <span>{formatCurrency(split.amount)}</span>
+                      </div>
+                    ))
+                ) : (
+                  <div className="flex justify-between dark:text-gray-300 print:text-black">
+                    <span>{t('sales.card')}:</span>
+                    <span>{formatCurrency(0)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between dark:text-gray-300 print:text-black">
                   <span>{t('inventory.paid')}:</span>
                   <span>{formatCurrency(totalPaid)}</span>
