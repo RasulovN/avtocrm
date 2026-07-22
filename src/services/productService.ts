@@ -472,13 +472,15 @@ const parsePaginatedProducts = (
 
 export const productService = {
   getAll: async (
-    filters?: ProductFilters & { page?: number; limit?: number },
+    filters?: ProductFilters & { page?: number; limit?: number; store_only?: boolean },
     options?: { signal?: AbortSignal }
   ): Promise<PaginatedResponse<Product> & { stats?: ProductStockStats }> => {
     const params = new URLSearchParams();
     if (filters?.search) params.append('search', filters.search);
     if (filters?.category) params.append('category', filters.category);
     if (filters?.store_id) params.append('store_id', filters.store_id);
+    // store_only=false — do'konda yo'q mahsulotlar ham keladi (qoldiq 0 bilan pastda)
+    if (filters?.store_id && filters?.store_only === false) params.append('store_only', '0');
     if (filters?.stock_status) params.append('stock_status', filters.stock_status);
     if (filters?.page) params.append('page', filters.page.toString());
     if (filters?.limit) params.append('limit', filters.limit.toString());

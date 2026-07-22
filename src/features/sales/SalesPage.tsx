@@ -280,6 +280,9 @@ export function SalesPage() {
           page,
           limit: CATALOG_PAGE_SIZE,
           store_id: activeStoreId || undefined,
+          // Butun katalog ko'rinadi: do'kondagilar qoldiq bo'yicha tepada,
+          // do'konda yo'qlari 0 bilan pastda — pagination shu tufayli ishlaydi
+          store_only: false,
           search: debouncedQuery || undefined,
         },
         { signal: controller.signal }

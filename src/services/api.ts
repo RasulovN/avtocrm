@@ -129,6 +129,12 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Ataylab bekor qilingan so'rov (AbortController) xato emas —
+    // log/toast'siz jim rad etiladi (masalan, katalog/qidiruv so'rovlari almashganda)
+    if (axios.isCancel(error)) {
+      return Promise.reject(error);
+    }
+
     const status = error.response?.status;
     const config = (error.config || {}) as ApiRequestConfig;
     const isExpectedStatus = typeof status === 'number' && config.expectedErrorStatuses?.includes(status);
