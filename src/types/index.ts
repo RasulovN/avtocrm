@@ -694,6 +694,8 @@ export interface SaleReturn {
   total_refund: string;
   comment?: string;
   items: SaleReturnItem[];
+  /** Shu qaytarimda mijozga qaytarilgan pul qatorlari (naqd / har karta alohida) */
+  refund_payments?: SalePayment[];
   created_at?: string;
 }
 

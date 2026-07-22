@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { Plus, Eye, Undo2 } from 'lucide-react';
+import { Plus, Eye, Undo2, Banknote, CreditCard } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
 import { DateRangeFilter } from '../../components/shared/DateRangeFilter';
@@ -415,6 +415,37 @@ export function SaleReturnListPage() {
                   </table>
                 </div>
               </div>
+
+              {/* Pul qaytarish usuli — naqd / har bir karta (Humo, Uzcard, ...) alohida */}
+              {(selectedReturn.refund_payments?.length ?? 0) > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold mb-2">
+                    {t('saleReturns.refundMethod', 'Pul qaytarish usuli')}
+                  </h3>
+                  <div className="space-y-1.5">
+                    {selectedReturn.refund_payments!.map((p) => (
+                      <div
+                        key={p.id}
+                        className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm bg-card"
+                      >
+                        <span className="flex min-w-0 items-center gap-2 truncate text-muted-foreground">
+                          {p.type === 'cash' ? (
+                            <Banknote className="h-4 w-4 shrink-0 text-emerald-500" />
+                          ) : (
+                            <CreditCard className="h-4 w-4 shrink-0 text-blue-500" />
+                          )}
+                          {p.type === 'cash'
+                            ? t('sales.cash', 'Naqd')
+                            : p.bank_card_name || t('sales.card', 'Karta')}
+                        </span>
+                        <span className="shrink-0 font-semibold tabular-nums text-red-600">
+                          −{formatCurrency(parseFloat(p.amount || '0'))}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
           <DialogFooter>

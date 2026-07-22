@@ -16,7 +16,6 @@ import { storeService } from '../../services/storeService';
 import { useAuthStore } from '../../app/store';
 import type { Store } from '../../types';
 import { formatDate } from '../../utils';
-import { lastWeekRange } from '../../utils/dateRange';
 import { handleError } from '../../utils/errorHandler';
 
 interface InventorySessionsListPageProps {
@@ -38,9 +37,10 @@ export function InventorySessionsListPage({
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedStore, setSelectedStore] = useState(isAdmin ? '' : userStoreId);
   const [stores, setStores] = useState<Store[]>([]);
-  // Default — oxirgi 1 hafta; tozalansa yoki o'zgartirilsa boshqa sessiyalar ham chiqadi
-  const [dateFrom, setDateFrom] = useState(() => lastWeekRange().from);
-  const [dateTo, setDateTo] = useState(() => lastWeekRange().to);
+  // Default — sana filtri BO'SH: barcha inventarizatsiya sessiyalari ko'rinadi
+  // (avval oxirgi 1 hafta avto-tanlanib, eski sessiyalar ro'yxatda chiqmay qolardi)
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   const { sessions, loading, fetchSessions, startSession } = useInventoryStore();
 

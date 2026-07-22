@@ -136,7 +136,27 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
   const params = useParams();
   const lang = params.lang || i18n.language || 'uz';
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  // Yig'ilgan holat reload'da ham saqlanadi
+  const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebar_collapsed') === '1');
+  // Yig'ilgan rejim faqat desktop (lg+) uchun: mobil drawer doim to'liq ochiladi.
+  // Aks holda desktopda yig'ib qo'yilgan menyu mobilda ikonka bo'lib qolib,
+  // kengaytirish tugmasi (hidden lg:flex) chiqmagani uchun qulflanib qolardi.
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const onChange = () => setIsDesktop(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  const collapsed = isCollapsed && isDesktop;
+  const toggleCollapsed = () => {
+    setIsCollapsed((prev) => {
+      localStorage.setItem('sidebar_collapsed', prev ? '0' : '1');
+      return !prev;
+    });
+  };
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -291,16 +311,16 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
       <aside
         className={cn(
           'fixed inset-y-0 left-0 z-40 bg-sidebar border-r border-border/60 transition-all duration-300 flex flex-col',
-          isCollapsed ? 'w-[68px]' : 'w-[260px]',
+          collapsed ? 'w-[68px]' : 'w-[260px]',
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
       >
         {/* Logo Section */}
         <div className={cn(
           'h-16 flex items-center border-b border-border/60 shrink-0',
-          isCollapsed ? 'justify-center px-2' : 'px-5 justify-between'
+          collapsed ? 'justify-center px-2' : 'px-5 justify-between'
         )}>
-          {!isCollapsed ? (
+          {!collapsed ? (
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold text-sm">
                 A
@@ -316,14 +336,14 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
             </div>
           )}
           <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            aria-label={isCollapsed ? t('nav.expandSidebar', 'Menyuni kengaytirish') : t('nav.collapseSidebar', 'Menyuni yig\'ish')}
+            onClick={toggleCollapsed}
+            aria-label={collapsed ? t('nav.expandSidebar', 'Menyuni kengaytirish') : t('nav.collapseSidebar', 'Menyuni yig\'ish')}
             className={cn(
               'p-1.5 rounded-lg hover:bg-muted hidden lg:flex items-center justify-center transition-colors',
-              isCollapsed && 'absolute -right-3 top-5 z-50 bg-card border shadow-sm'
+              collapsed && 'absolute -right-3 top-5 z-50 rounded-full bg-card border shadow-sm'
             )}
           >
-            <ChevronLeft className={cn('h-3.5 w-3.5 transition-transform text-muted-foreground', isCollapsed && 'rotate-180')} />
+            <ChevronLeft className={cn('h-3.5 w-3.5 transition-transform text-muted-foreground', collapsed && 'rotate-180')} />
           </button>
           {/* Mobile close button */}
           <button
@@ -343,17 +363,17 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
                 onClick={goBackToMainNav}
                 className={cn(
                   'sidebar-nav-item w-full',
-                  isCollapsed && 'justify-center px-2'
+                  collapsed && 'justify-center px-2'
                 )}
-                title={isCollapsed ? t('common.back') : undefined}
+                title={collapsed ? t('common.back') : undefined}
               >
                 <ArrowLeft className="h-[18px] w-[18px] shrink-0" />
-                {!isCollapsed && <span>{t('common.back')}</span>}
+                {!collapsed && <span>{t('common.back')}</span>}
               </button>
 
               <div className="my-2 mx-2 border-t border-border/60" />
 
-              {parentNavItem && !isCollapsed && (
+              {parentNavItem && !collapsed && (
                 <div className="px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                   {t(parentNavItem.titleKey)}
                 </div>
@@ -370,12 +390,12 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
                     className={cn(
                       'sidebar-nav-item',
                       isActive && 'active',
-                      isCollapsed && 'justify-center px-2'
+                      collapsed && 'justify-center px-2'
                     )}
-                    title={isCollapsed ? t(subItem.titleKey) : undefined}
+                    title={collapsed ? t(subItem.titleKey) : undefined}
                   >
                     <subItem.icon className="h-[18px] w-[18px] shrink-0" />
-                    {!isCollapsed && <span>{t(subItem.titleKey)}</span>}
+                    {!collapsed && <span>{t(subItem.titleKey)}</span>}
                   </Link>
                 );
               })}
@@ -420,15 +440,15 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
                     className={cn(
                       'sidebar-nav-item',
                       isActive && !shouldShowSubNav && 'active',
-                      isCollapsed && 'justify-center px-2'
+                      collapsed && 'justify-center px-2'
                     )}
-                    title={isCollapsed ? t(item.titleKey) : undefined}
+                    title={collapsed ? t(item.titleKey) : undefined}
                   >
                     <item.icon className="h-[18px] w-[18px] shrink-0" />
-                    {!isCollapsed && (
+                    {!collapsed && (
                       <span className="flex-1">{t(item.titleKey)}</span>
                     )}
-                    {!isCollapsed && hasSubNav && (
+                    {!collapsed && hasSubNav && (
                       <ChevronRight className="h-3.5 w-3.5 opacity-40" />
                     )}
                   </Link>
@@ -440,9 +460,9 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
         {/* User Profile Section */}
         <div className={cn(
           'border-t border-border/60 p-3',
-          isCollapsed ? 'flex justify-center' : ''
+          collapsed ? 'flex justify-center' : ''
         )}>
-          {!isCollapsed ? (
+          {!collapsed ? (
             <div className="relative" ref={profileRef}>
               <div
                 className="flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-colors hover:bg-muted"
@@ -542,7 +562,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
       {/* ═══════ Main Content Area ═══════ */}
       <div className={cn(
         'flex-1 flex flex-col min-w-0 transition-all duration-300',
-        isCollapsed ? 'lg:ml-[68px]' : 'lg:ml-[260px]'
+        collapsed ? 'lg:ml-[68px]' : 'lg:ml-[260px]'
       )}>
         {/* ═══════ Top Header Bar ═══════ */}
         <header className="sticky top-0 z-20 h-16 border-b border-border/60 bg-background/80 backdrop-blur-xl">

@@ -11,11 +11,37 @@ export interface ErrorHandlerOptions {
   silent?: boolean;
 }
 
+/**
+ * DRF xato javobidan odam o'qiydigan xabarlarni REKURSIV yig'adi.
+ * DRF xatolari har xil shaklda keladi:
+ *   - ["Mahsulot mavjud emas"]                      (servisdagi raise ValidationError("..."))
+ *   - {"detail": "..."} / {"message": "..."}
+ *   - {"amount": ["..."], "items": [{}, {"quantity": ["..."]}]}  (nested list xatolari)
+ * Shu funksiya hammasidan matnlarni chiqaradi — "[object Object]" yoki
+ * "Request failed with status code 400" o'rniga haqiqiy xabar ko'rinadi.
+ */
+function collectMessages(value: unknown): string[] {
+  if (value === null || value === undefined) return [];
+  if (typeof value === 'string') return value.trim() ? [value] : [];
+  if (typeof value === 'number' || typeof value === 'boolean') return [String(value)];
+  if (Array.isArray(value)) return value.flatMap(collectMessages);
+  if (typeof value === 'object') {
+    return Object.values(value as Record<string, unknown>).flatMap(collectMessages);
+  }
+  return [];
+}
+
 export function extractErrorMessage(error: unknown): string {
   if (!error) return 'An error occurred';
 
   const axiosError = error as { response?: { data?: unknown }; message?: string };
   const data = axiosError.response?.data;
+
+  // DRF servis xatosi: butun javob oddiy massiv — ["Mahsulot mavjud emas"]
+  if (Array.isArray(data)) {
+    const messages = [...new Set(collectMessages(data))];
+    if (messages.length > 0) return messages.join('; ');
+  }
 
   if (data && typeof data === 'object') {
     const obj = data as Record<string, unknown>;
@@ -31,17 +57,10 @@ export function extractErrorMessage(error: unknown): string {
     const fieldErrors: string[] = [];
     for (const [key, value] of Object.entries(obj)) {
       if (key === 'non_field_errors' || key === 'message' || key === 'msg' || key === 'detail') continue;
-      if (Array.isArray(value)) {
-        const label = key.replace(/_/g, ' ');
-        fieldErrors.push(`${label}: ${value.map(String).join(', ')}`);
-      } else if (typeof value === 'object' && value !== null) {
-        const nested = value as Record<string, unknown>;
-        for (const [nk, nv] of Object.entries(nested)) {
-          if (Array.isArray(nv)) {
-            fieldErrors.push(`${key}.${nk}: ${nv.map(String).join(', ')}`);
-          }
-        }
-      }
+      const messages = [...new Set(collectMessages(value))];
+      if (messages.length === 0) continue;
+      const label = key.replace(/_/g, ' ');
+      fieldErrors.push(`${label}: ${messages.join(', ')}`);
     }
     if (fieldErrors.length > 0) return fieldErrors.join('; ');
   }

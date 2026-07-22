@@ -20,13 +20,15 @@ import { PageHeader } from '../../components/shared/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/Dialog';
+import { CardSplitEditor } from '../../components/shared/CardSplitEditor';
+import { useCardSplits } from '../../hooks/useCardSplits';
 import { salesService, saleReturnService } from '../../services/salesService';
 import { bankCardService } from '../../services/bankCardService';
 import { customerApiService, type CustomerFromApi } from '../../services/customerService';
 import { useColumnSplitter } from '../../hooks/useColumnSplitter';
 import { formatCurrency, formatDate, formatAmountInput, parseAmountInput } from '../../utils';
+import { extractErrorMessage } from '../../utils/errorHandler';
 import type { Sale, SaleItem, SaleReturnFormItem, SalePaymentInput, BankCard } from '../../types';
 
 /** Itemdan qaytarish mumkin bo'lgan qoldiq (sotilgan - avval qaytarilgan) */
@@ -76,11 +78,20 @@ export function SaleReturnCreatePage({ embedded = false }: SaleReturnCreatePageP
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [bankCards, setBankCards] = useState<BankCard[]>([]);
-  const [selectedBankCardId, setSelectedBankCardId] = useState<string>('');
   // Summalar float xatosiz bo'lishi uchun tiyinda saqlanadi.
   // Naqd/Karta tugmalari tez tanlash uchun; ikkala inputga yozish = aralash taqsimot.
   const [refundCashCents, setRefundCashCents] = useState(0);
   const [refundCardCents, setRefundCardCents] = useState(0);
+  // Karta qaytarimini bir nechta kartaga (Uzcard/Humo/...) taqsimlash — sotuvdagi kabi
+  const {
+    cardSplits,
+    activeSplits,
+    splitsInvalid,
+    updateSplitCard,
+    updateSplitAmount,
+    addCardSplit,
+    removeCardSplit,
+  } = useCardSplits(bankCards, Math.round(refundCardCents / 100));
 
   // Mijoz tafsilotlari modali (xulosadagi "Mijoz" kartasi bosilganda)
   const [customerModalOpen, setCustomerModalOpen] = useState(false);
@@ -161,8 +172,6 @@ export function SaleReturnCreatePage({ embedded = false }: SaleReturnCreatePageP
       .then((cards) => {
         if (cancelled) return;
         setBankCards(cards);
-        const defaultCard = cards.find((card) => card.is_default) ?? cards[0];
-        setSelectedBankCardId(defaultCard ? String(defaultCard.id) : '');
       })
       .catch(() => setBankCards([]));
     return () => {
@@ -283,9 +292,10 @@ export function SaleReturnCreatePage({ embedded = false }: SaleReturnCreatePageP
     }
     // Ortiqcha yoki kam summa — tugma noaktiv
     if (refundMismatch) return false;
-    if (refundCardCents > 0 && !selectedBankCardId) return false;
+    // Karta qaytarimida har faol qatorda karta tanlangan va yig'indi mos bo'lishi shart
+    if (refundCardCents > 0 && (bankCards.length === 0 || splitsInvalid)) return false;
     return true;
-  }, [selectedSale, returnQuantities, hasSelection, refundMismatch, refundCardCents, selectedBankCardId]);
+  }, [selectedSale, returnQuantities, hasSelection, refundMismatch, refundCardCents, bankCards.length, splitsInvalid]);
 
   const handleSubmit = async () => {
     if (!selectedSale || returnItems.length === 0) return;
@@ -293,18 +303,22 @@ export function SaleReturnCreatePage({ embedded = false }: SaleReturnCreatePageP
     setError('');
     try {
       // payments[] faqat karta ishlatilganda yuboriladi;
-      // yuborilmasa backend eski xatti-harakatni saqlaydi (to'liq naqd)
+      // yuborilmasa backend eski xatti-harakatni saqlaydi (to'liq naqd).
+      // Karta qismi bir nechta kartaga (Uzcard/Humo/...) taqsimlanishi mumkin —
+      // har karta alohida qator bo'lib ketadi.
       let payments: SalePaymentInput[] | undefined;
       if (refundCardCents > 0) {
         payments = [];
         if (refundCashCents > 0) {
           payments.push({ type: 'cash', amount: (refundCashCents / 100).toFixed(2) });
         }
-        payments.push({
-          type: 'card',
-          amount: (refundCardCents / 100).toFixed(2),
-          bank_card: Number(selectedBankCardId),
-        });
+        for (const split of activeSplits) {
+          payments.push({
+            type: 'card',
+            amount: split.amount.toFixed(2),
+            bank_card: Number(split.bankCardId),
+          });
+        }
       }
       await saleReturnService.create({
         sale: Number(selectedSale.id),
@@ -314,12 +328,14 @@ export function SaleReturnCreatePage({ embedded = false }: SaleReturnCreatePageP
       });
       navigate(`/${lang}/sales-returns`);
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { message?: string; detail?: string } } };
-      const msg =
-        axiosErr?.response?.data?.message ||
-        axiosErr?.response?.data?.detail ||
-        t('saleReturns.createError');
-      setError(msg);
+      // Backend xabarini har qanday DRF shaklidan chiqaradi (massiv, detail,
+      // maydon xatolari) — umumiy "400 error" o'rniga aniq sabab ko'rinadi
+      const msg = extractErrorMessage(err);
+      setError(
+        !msg || msg === 'An error occurred' || msg.startsWith('Request failed')
+          ? t('saleReturns.createError')
+          : msg,
+      );
     } finally {
       setSubmitting(false);
     }
@@ -721,29 +737,17 @@ export function SaleReturnCreatePage({ embedded = false }: SaleReturnCreatePageP
                     </div>
                   </div>
 
+                  {/* Karta ishlatilsa — summani kartalarga (Uzcard/Humo/...) taqsimlash */}
                   {refundCardCents > 0 && (
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">{t('sales.bankCard', 'Bank kartasi')}</Label>
-                      {bankCards.length === 0 ? (
-                        <p className="text-sm text-red-600">
-                          {t('sales.noBankCards', 'Faol bank kartasi yo‘q — sozlamalardan qo‘shing')}
-                        </p>
-                      ) : (
-                        <Select value={selectedBankCardId} onValueChange={setSelectedBankCardId}>
-                          <SelectTrigger>
-                            <SelectValue placeholder={t('sales.selectCardType', 'Karta turini tanlang')} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {bankCards.map((card) => (
-                              <SelectItem key={card.id} value={String(card.id)}>
-                                {card.name}
-                                {card.is_default ? ' ★' : ''}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </div>
+                    <CardSplitEditor
+                      bankCards={bankCards}
+                      cardSplits={cardSplits}
+                      onUpdateCard={updateSplitCard}
+                      onUpdateAmount={updateSplitAmount}
+                      onAdd={addCardSplit}
+                      onRemove={removeCardSplit}
+                      disabled={submitting}
+                    />
                   )}
 
                   {refundExcess && (

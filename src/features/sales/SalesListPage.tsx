@@ -432,7 +432,17 @@ export function SalesListPage() {
           </div>
           <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm card-hover-lift">
             <p className="text-sm text-muted-foreground">{t('dashboard.totalRevenue')}</p>
-            <p className="text-2xl font-bold text-green-600">{formatCurrency(parseFloat(stats.total_amount || '0'))}</p>
+            {/* Sof savdo — qaytarib berilgan summa ayirilgan */}
+            <p className="text-2xl font-bold text-green-600">
+              {formatCurrency(parseFloat(stats.total_net ?? stats.total_amount ?? '0'))}
+            </p>
+            {stats.total_net !== undefined &&
+              parseFloat(stats.total_returned || '0') > 0 && (
+                <p className="mt-2 border-t border-border/60 pt-2 text-xs text-muted-foreground">
+                  {t('sales.grossBeforeReturns', 'Qaytarimlardan oldin')}:{' '}
+                  <span className="font-semibold">{formatCurrency(parseFloat(stats.total_amount || '0'))}</span>
+                </p>
+              )}
           </div>
           <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm card-hover-lift">
             <p className="text-sm text-muted-foreground">{t('sales.paid', 'To‘langan')}</p>

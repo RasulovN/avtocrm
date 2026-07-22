@@ -113,8 +113,14 @@ export function TransferCreatePage() {
     }
   }, [loadData, isAdmin, userStoreId]);
 
-  // Sahifa ochilganda faol qoralama bo'lsa tiklanadi (davom ettirish)
+  // Sahifa ochilganda faol qoralama bo'lsa tiklanadi (davom ettirish).
+  // DIQQAT: effekt auth store to'liq tiklangandan KEYIN ishlashi shart —
+  // aks holda isAdmin hali false bo'lib, admin uchun "qayerdan" do'koni
+  // tiklanmay qolardi (har safar qayta tanlashga to'g'ri kelardi).
+  const restoredRef = useRef(false);
   useEffect(() => {
+    if (!user || restoredRef.current) return;
+    restoredRef.current = true;
     let cancelled = false;
     transferService
       .getActiveSession()
@@ -145,11 +151,15 @@ export function TransferCreatePage() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user, isAdmin]);
 
   // Qoralamani serverga yozish; yangi sessiya ochilsa ID qaytaradi
   const persistDraft = useCallback(async (): Promise<number | null> => {
-    const hasContent = Boolean(toStoreId) || items.length > 0;
+    // Admin "qayerdan" do'konni tanlagan bo'lsa ham qoralama saqlanadi —
+    // (xodimda from avtomatik o'z do'koni, shuning uchun u hisobga olinmaydi,
+    // aks holda har kirishda bo'sh qoralama yaratilib ketardi)
+    const hasContent =
+      Boolean(toStoreId) || items.length > 0 || (isAdmin && Boolean(fromStoreId));
     if (!sessionId && !hasContent) return null; // bo'sh forma — saqlashga hojat yo'q
     const payload = {
       from_store: fromStoreId || null,
@@ -177,7 +187,7 @@ export function TransferCreatePage() {
     } finally {
       creatingSession.current = false;
     }
-  }, [sessionId, fromStoreId, toStoreId, items]);
+  }, [sessionId, fromStoreId, toStoreId, items, isAdmin]);
 
   // Avto-saqlash: o'zgarishdan 1.2s keyin qoralama serverga yoziladi
   useEffect(() => {
@@ -297,7 +307,8 @@ export function TransferCreatePage() {
   };
 
   // ─── Chiqish oqimi: o'zgarishlar bo'lsa "saqlansinmi?" deb so'raymiz ───
-  const hasDraftContent = Boolean(toStoreId) || items.length > 0;
+  const hasDraftContent =
+    Boolean(toStoreId) || items.length > 0 || (isAdmin && Boolean(fromStoreId));
 
   const handleCancelClick = () => {
     if (hasDraftContent || sessionId) {

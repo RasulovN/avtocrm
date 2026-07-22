@@ -21,7 +21,11 @@ export interface PaidBreakdownRow {
 
 export interface SaleStatistics {
   total_sales: number;
+  /** Yalpi savdo (qaytarimlardan oldin) */
   total_amount: string;
+  /** Sof savdo: davr sotuvlari - davr ichidagi qaytarimlar */
+  total_net?: string;
+  /** NET to'langan (qaytarib berilgan pul ayirilgan) — paid_breakdown bilan mos */
   total_paid: string;
   total_debt: string;
   // Davr ichida rasmiylashtirilgan qaytarimlar (SaleReturn) summasi

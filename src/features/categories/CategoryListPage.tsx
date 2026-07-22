@@ -438,7 +438,9 @@ export function CategoryListPage() {
           <ConfirmDialog
             open={!!deleteId}
             onOpenChange={(open: boolean) => !open && setDeleteId(null)}
-            onConfirm={() => deleteId && handleDelete(deleteId)}
+            onConfirm={() => {
+              if (deleteId) return handleDelete(deleteId);
+            }}
             title={t('common.delete')}
             description={t('categories.categoryDeleted')}
             confirmText={t('common.delete')}
@@ -467,7 +469,7 @@ export function CategoryListPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="name_cyrl">{t('categories.categoryName')} (Кириллча)</Label>
+                    <Label htmlFor="name_cyrl">{t('categories.categoryName')} (Кирил)</Label>
                     <Input
                       id="name_cyrl"
                       value={formData.name_uz_cyrl}
