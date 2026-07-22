@@ -392,7 +392,7 @@ export function SalesDetailPage() {
                     </span>
                   );
                 })()}
-                <PaymentTypeBadge type={sale.payment_type} />
+                <PaymentTypeBadge type={sale.payment_type} payments={sale.payments} />
               </div>
               <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
                 <span className="inline-flex items-center gap-1.5">
@@ -602,7 +602,7 @@ export function SalesDetailPage() {
                 <CreditCard className="h-4 w-4" />
                 {t('sales.payment')}
               </h3>
-              <PaymentTypeBadge type={sale.payment_type} />
+              <PaymentTypeBadge type={sale.payment_type} payments={sale.payments} />
             </div>
             <div className="p-5">
               <div className="grid grid-cols-2 gap-3">

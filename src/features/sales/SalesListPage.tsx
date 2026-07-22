@@ -273,7 +273,7 @@ export function SalesListPage() {
     {
       key: 'payment_type',
       header: t('sales.paymentType', 'To‘lov turi'),
-      render: (item) => <PaymentTypeBadge type={item.payment_type} />,
+      render: (item) => <PaymentTypeBadge type={item.payment_type} payments={item.payments} />,
     },
     {
       key: 'status',
@@ -499,6 +499,37 @@ export function SalesListPage() {
           <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm card-hover-lift">
             <p className="text-sm text-muted-foreground">{t('dashboard.totalDebt')}</p>
             <p className="text-2xl font-bold text-red-500">{formatCurrency(parseFloat(stats.total_debt || '0'))}</p>
+            {/* Oxirgi qarz to'lovlari: jami summa + qismlari (naqd / Humo / Uzcard ...) */}
+            {(stats.recent_debt_payments?.length ?? 0) > 0 && (
+              <div className="mt-3 space-y-2 border-t border-border/60 pt-2.5">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t('sales.recentDebtPayments', "Oxirgi qarz to'lovlari")}
+                </p>
+                {stats.recent_debt_payments!.map((g, i) => (
+                  <div key={i} className="text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="min-w-0 truncate text-muted-foreground">
+                        #{g.sale} · {formatDate(g.created_at)}
+                      </span>
+                      <span className="shrink-0 font-semibold tabular-nums text-emerald-600">
+                        +{formatCurrency(parseFloat(g.amount || '0'))}
+                      </span>
+                    </div>
+                    <div className="mt-0.5 flex flex-wrap gap-x-2.5 gap-y-0.5 text-[11px] text-muted-foreground">
+                      {g.parts.map((p, j) => (
+                        <span key={j} className="inline-flex items-center gap-1 whitespace-nowrap">
+                          <span
+                            className={`h-1.5 w-1.5 shrink-0 rounded-full ${p.type === 'cash' ? 'bg-emerald-500' : 'bg-sky-500'}`}
+                          />
+                          {p.type === 'cash' ? t('sales.cash', 'Naqd') : p.name || t('sales.card', 'Karta')}:{' '}
+                          {formatCurrency(parseFloat(p.amount || '0'))}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -623,7 +654,7 @@ export function SalesListPage() {
                       }`}>
                       {item.status === 'partial' ? t('common.pending') : (item.status === 'paid' ? t('sales.paid') : t('common.completed'))}
                     </span>
-                    <PaymentTypeBadge type={item.payment_type} />
+                    <PaymentTypeBadge type={item.payment_type} payments={item.payments} />
                   </div>
                 </div>
 

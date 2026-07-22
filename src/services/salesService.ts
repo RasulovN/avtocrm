@@ -34,6 +34,13 @@ export interface SaleStatistics {
   // davrda qaytarim bo'lmasa ham kartada umumiy summa ko'rinib turadi
   total_returned_all?: string;
   paid_breakdown?: PaidBreakdownRow[];
+  /** Oxirgi qarz to'lovlari (guruhlangan: bitta harakat = bitta yozuv, qismlari ichida) */
+  recent_debt_payments?: {
+    sale: number;
+    created_at: string;
+    amount: string;
+    parts: { type: 'cash' | 'card'; name?: string | null; amount: string }[];
+  }[];
 }
 
 export const salesService = {

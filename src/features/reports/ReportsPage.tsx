@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DollarSign, TrendingUp, ShoppingCart, Users, Loader2, AlertCircle } from 'lucide-react';
+import { DollarSign, TrendingUp, ShoppingCart, Users, Truck, Loader2, AlertCircle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Card, CardContent } from '../../components/ui/Card';
 import { DateRangeFilter } from '../../components/shared/DateRangeFilter';
@@ -67,6 +67,7 @@ const TRANSLATIONS: Record<string, { uz: string; cyrl: string }> = {
   "Hech qanday ma'lumot topilmadi": { uz: "Hech qanday ma'lumot topilmadi", cyrl: 'Ҳеч қандай маълумот топилмади' },
   'ta': { uz: 'ta', cyrl: 'та' },
   'Yetkazib beruvchilar oldidagi qarzdorlik': { uz: 'Yetkazib beruvchilar oldidagi qarzdorlik', cyrl: 'Етказиб берувчилар олдидаги қарздорлик' },
+  'Yetkazib beruvchilardan qarz': { uz: 'Yetkazib beruvchilardan qarz', cyrl: 'Етказиб берувчилардан қарз' },
   'Yetkazib beruvchi': { uz: 'Yetkazib beruvchi', cyrl: 'Етказиб берувчи' },
   'Sof foyda trendi': { uz: 'Sof foyda trendi', cyrl: 'Соф фойда тренди' },
   'Yetkazib beruvchilarga': { uz: 'Yetkazib beruvchilarga', cyrl: 'Етказиб берувчиларга' },
@@ -231,6 +232,11 @@ const getStoreName = (id: number | string, defaultName: string) => {
     if (!data?.debts?.customerDebts) return 0;
     return data.debts.customerDebts.reduce((sum, d) => sum + d.debt, 0);
   }, [data?.debts?.customerDebts]);
+
+  const totalSupplierDebt = useMemo(() => {
+    if (!data?.debts?.supplierDebts) return 0;
+    return data.debts.supplierDebts.reduce((sum, d) => sum + d.debt, 0);
+  }, [data?.debts?.supplierDebts]);
 
   const storeSales = useMemo(() => {
     if (!data?.branchStatistics) return [];
@@ -421,7 +427,7 @@ const getStoreName = (id: number | string, defaultName: string) => {
       )}
 
       {/* KPI Cards Grid */}
-      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {/* Revenue */}
         <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
           <CardContent className="p-3 sm:p-5">
@@ -472,7 +478,7 @@ const getStoreName = (id: number | string, defaultName: string) => {
           <CardContent className="p-3 sm:p-5">
             <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3 text-slate-900 dark:text-slate-100">
               <ShoppingCart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <p className="text-[10px] sm:text-sm font-semibold">{getTrans('Jami buyurtmalar')}</p>
+              <p className="text-[10px] sm:text-sm font-semibold">{getTrans('Sotuvlar soni')}</p>
             </div>
             {isLoading ? (
               <Skeleton className="h-7 sm:h-8 w-16 mb-1" />
@@ -501,6 +507,33 @@ const getStoreName = (id: number | string, defaultName: string) => {
             ) : (
               <p className="text-base sm:text-xl md:text-2xl font-bold text-orange-700 dark:text-amber-500 mb-0.5 sm:mb-1 whitespace-nowrap">
                 {formatCurrency(totalCustomerDebt)}
+              </p>
+            )}
+            {!isLoading && (
+              <p className="text-[9px] sm:text-xs text-slate-500 dark:text-slate-400">
+                {customerDebts.length} {getTrans('mijoz')}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Supplier Debts */}
+        <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+          <CardContent className="p-3 sm:p-5">
+            <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3 text-slate-900 dark:text-slate-100">
+              <Truck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <p className="text-[10px] sm:text-sm font-semibold">{getTrans('Yetkazib beruvchilardan qarz')}</p>
+            </div>
+            {isLoading ? (
+              <Skeleton className="h-7 sm:h-8 w-28 sm:w-36 mb-1" />
+            ) : (
+              <p className="text-base sm:text-xl md:text-2xl font-bold text-rose-700 dark:text-rose-500 mb-0.5 sm:mb-1 whitespace-nowrap">
+                {formatCurrency(totalSupplierDebt)}
+              </p>
+            )}
+            {!isLoading && (
+              <p className="text-[9px] sm:text-xs text-slate-500 dark:text-slate-400">
+                {supplierDebts.length} {getTrans('Yetkazib beruvchi').toLowerCase()}
               </p>
             )}
           </CardContent>
