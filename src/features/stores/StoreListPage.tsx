@@ -21,6 +21,13 @@ import { useAuthStore } from '../../app/store';
 import type { Store, StoreFormData } from '../../types';
 import { latinToCyrillic } from '../../utils/transliteration';
 import { handleError } from '../../utils/errorHandler';
+import toast from 'react-hot-toast';
+import {
+  maskUzPhoneInput,
+  normalizeUzPhone,
+  isCompleteUzPhone,
+  PHONE_INPUT_MAX_LENGTH,
+} from '../../utils/phone';
 
 // Eslatma: bank kartalari (To'lov turlari) boshqaruvi Sozlamalar → To'lov
 // turlari sahifasiga ko'chirilgan (features/settings/BankCardsPage).
@@ -145,8 +152,9 @@ export function StoreListPage() {
         address: store.address || '',
         address_uz: store.address_uz || store.address || '',
         address_uz_cyrl: store.address_uz_cyrl || '',
-        phone: store.phone_number || store.phone || '',
-        phone_number: store.phone_number || store.phone || '',
+        // Ko'rinish +998 XX XXX XX XX formatida (saqlashda tekis +998... yuboriladi)
+        phone: maskUzPhoneInput(store.phone_number || store.phone || ''),
+        phone_number: maskUzPhoneInput(store.phone_number || store.phone || ''),
         type: store.type || (store.is_warehouse ? 'w' : 's'),
         latitude: store.latitude || '',
         longitude: store.longitude || '',
@@ -166,12 +174,28 @@ export function StoreListPage() {
   };
 
   const handleSave = async () => {
+    // Backendga mos frontend validatsiya: nom (min 2) va to'liq UZ telefon raqami
+    const nameValue = (storeFormData.name_uz ?? storeFormData.name ?? '').trim();
+    if (nameValue.length < 2) {
+      toast.error(t('stores.nameTooShort', "Do'kon nomi kamida 2 ta belgi bo'lishi kerak"));
+      return;
+    }
+    if (!isCompleteUzPhone(storeFormData.phone_number || '')) {
+      toast.error(t('auth.phoneInvalid', "Telefon raqam to'liq emas (masalan: +998 90 123 45 67)"));
+      return;
+    }
     try {
       setSaving(true);
+      // Serverga tekis format yuboriladi: +998XXXXXXXXX
+      const payload = {
+        ...storeFormData,
+        phone: normalizeUzPhone(storeFormData.phone_number || ''),
+        phone_number: normalizeUzPhone(storeFormData.phone_number || ''),
+      };
       if (editingStore) {
-        await storeService.update(editingStore.id, storeFormData);
+        await storeService.update(editingStore.id, payload);
       } else {
-        await storeService.create(storeFormData);
+        await storeService.create(payload);
       }
       setDialogOpen(false);
       loadStores();
@@ -459,6 +483,8 @@ export function StoreListPage() {
                   value={storeFormData.name_uz ?? storeFormData.name}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => handleNameChange(e.target.value)}
                   required
+                  minLength={2}
+                  maxLength={255}
                 />
               </div>
               <div className="space-y-2">
@@ -468,17 +494,24 @@ export function StoreListPage() {
                   onChange={(e: ChangeEvent<HTMLInputElement>) =>
                     setStoreFormData({ ...storeFormData, name_uz_cyrl: e.target.value })
                   }
+                  maxLength={255}
                 />
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>{t('stores.phone')}</Label>
+                {/* Faqat raqam, +998 XX XXX XX XX formatida — harflar yozib bo'lmaydi */}
                 <Input
+                  type="tel"
+                  inputMode="tel"
                   value={storeFormData.phone_number}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                    setStoreFormData({ ...storeFormData, phone_number: e.target.value, phone: e.target.value })
-                  }
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                    const masked = maskUzPhoneInput(e.target.value);
+                    setStoreFormData({ ...storeFormData, phone_number: masked, phone: masked });
+                  }}
+                  maxLength={PHONE_INPUT_MAX_LENGTH}
+                  placeholder="+998 90 123 45 67"
                 />
               </div>
               <div className="space-y-2">
@@ -501,6 +534,7 @@ export function StoreListPage() {
                 <Input
                   value={storeFormData.address_uz ?? storeFormData.address ?? ''}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => handleAddressChange(e.target.value)}
+                  maxLength={500}
                 />
               </div>
               <div className="space-y-2">
@@ -510,6 +544,7 @@ export function StoreListPage() {
                   onChange={(e: ChangeEvent<HTMLInputElement>) =>
                     setStoreFormData({ ...storeFormData, address_uz_cyrl: e.target.value })
                   }
+                  maxLength={500}
                 />
               </div>
             </div>

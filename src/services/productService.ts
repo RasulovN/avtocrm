@@ -472,7 +472,8 @@ const parsePaginatedProducts = (
 
 export const productService = {
   getAll: async (
-    filters?: ProductFilters & { page?: number; limit?: number }
+    filters?: ProductFilters & { page?: number; limit?: number },
+    options?: { signal?: AbortSignal }
   ): Promise<PaginatedResponse<Product> & { stats?: ProductStockStats }> => {
     const params = new URLSearchParams();
     if (filters?.search) params.append('search', filters.search);
@@ -484,7 +485,7 @@ export const productService = {
 
     const queryString = params.toString();
     const url = queryString ? `/products/?${queryString}` : '/products/';
-    const response = await apiClient.get(url);
+    const response = await apiClient.get(url, { signal: options?.signal });
     const parsed = parsePaginatedProducts(response.data, filters);
     // Backend joriy filtrlar bo'yicha status statistikasini ham qaytaradi
     const stats = (response.data as { stats?: ProductStockStats })?.stats;

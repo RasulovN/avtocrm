@@ -17,6 +17,18 @@ import type { User, UserFormData, Store, Role } from '../../types';
 import { formatDate } from '../../utils';
 import { handleError } from '../../utils/errorHandler';
 import { useAuthStore } from '../../app/store';
+import {
+  maskUzPhoneInput,
+  normalizeUzPhone,
+  isCompleteUzPhone,
+  PHONE_INPUT_MAX_LENGTH,
+} from '../../utils/phone';
+
+// Backendga mos forma cheklovlari (User.full_name max 128)
+const NAME_MIN_LENGTH = 3;
+const NAME_MAX_LENGTH = 128;
+const PASSWORD_MIN_LENGTH = 8;
+const PASSWORD_MAX_LENGTH = 64;
 
 export function UserListPage() {
   const { t, i18n } = useTranslation();
@@ -140,7 +152,8 @@ export function UserListPage() {
         password: '',
         confirm_password: '',
         email: user.email || '',
-        phone_number: user.phone_number,
+        // Ko'rinish +998 XX XXX XX XX formatida (saqlashda tekis +998... yuboriladi)
+        phone_number: maskUzPhoneInput(user.phone_number || ''),
         store_id: user.store_id || '',
         role_id: user.role_id ?? null,
       });
@@ -184,6 +197,22 @@ export function UserListPage() {
         toast.error(t('errors.passwordMismatch', 'Parollar mos kelmadi'));
         return;
       }
+      // Backendga mos min limitlar: ism (3), to'liq UZ telefon, parol (8)
+      if (formData.full_name.trim().length < NAME_MIN_LENGTH) {
+        setShowErrors(true);
+        toast.error(t('auth.nameTooShort', `Ism-familiya kamida ${NAME_MIN_LENGTH} ta belgi bo'lishi kerak`));
+        return;
+      }
+      if (!isCompleteUzPhone(formData.phone_number)) {
+        setShowErrors(true);
+        toast.error(t('auth.phoneInvalid', "Telefon raqam to'liq emas (masalan: +998 90 123 45 67)"));
+        return;
+      }
+      if (!editingUser && formData.password.length < PASSWORD_MIN_LENGTH) {
+        setShowErrors(true);
+        toast.error(t('auth.passwordTooShort', `Parol kamida ${PASSWORD_MIN_LENGTH} ta belgi bo'lishi kerak`));
+        return;
+      }
       setSaving(true);
       if (editingUser) {
         const id = editingUser.id ?? editingUser.user_id;
@@ -194,14 +223,14 @@ export function UserListPage() {
         const updateData = {
           full_name: formData.full_name,
           email: formData.email,
-          phone_number: formData.phone_number,
+          phone_number: normalizeUzPhone(formData.phone_number),
           role_id: formData.role_id ?? null,
           store_id: formData.store_id ? Number(formData.store_id) : null,
         };
         await userService.update(String(id), updateData);
       } else {
         // store ixtiyoriy: do'konga bog'lanmagan (admin turidagi) user ham yaratish mumkin
-        const payload = { ...formData };
+        const payload = { ...formData, phone_number: normalizeUzPhone(formData.phone_number) };
         if (!payload.store_id) delete payload.store_id;
         await userService.create(payload);
       }
@@ -390,7 +419,11 @@ export function UserListPage() {
               </Label>
               <Input
                 value={formData.full_name}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, full_name: e.target.value })}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setFormData({ ...formData, full_name: e.target.value.slice(0, NAME_MAX_LENGTH) })
+                }
+                minLength={NAME_MIN_LENGTH}
+                maxLength={NAME_MAX_LENGTH}
                 className={showErrors && fullNameMissing ? 'border-red-500 focus-visible:ring-red-500' : ''}
               />
               {showErrors && fullNameMissing && (
@@ -415,11 +448,16 @@ export function UserListPage() {
               <Label>
                 {t('users.phone')} <span className="text-red-500">*</span>
               </Label>
+              {/* Faqat raqam, +998 XX XXX XX XX formatida — harflar yozib bo'lmaydi */}
               <Input
                 type="tel"
-                placeholder="+998901234567"
+                inputMode="tel"
+                placeholder="+998 90 123 45 67"
                 value={formData.phone_number}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, phone_number: e.target.value })}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setFormData({ ...formData, phone_number: maskUzPhoneInput(e.target.value) })
+                }
+                maxLength={PHONE_INPUT_MAX_LENGTH}
                 className={showErrors && phoneMissing ? 'border-red-500 focus-visible:ring-red-500' : ''}
               />
               {showErrors && phoneMissing && (
@@ -469,7 +507,11 @@ export function UserListPage() {
                     <Input
                       type={showPassword ? 'text' : 'password'}
                       value={formData.password}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, password: e.target.value })}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                        setFormData({ ...formData, password: e.target.value.slice(0, PASSWORD_MAX_LENGTH) })
+                      }
+                      minLength={PASSWORD_MIN_LENGTH}
+                      maxLength={PASSWORD_MAX_LENGTH}
                       className={`pr-10 ${
                         showErrors && (passwordMissing || passwordMismatch)
                           ? 'border-red-500 focus-visible:ring-red-500'
@@ -497,7 +539,11 @@ export function UserListPage() {
                     <Input
                       type={showConfirmPassword ? 'text' : 'password'}
                       value={formData.confirm_password}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, confirm_password: e.target.value })}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                        setFormData({ ...formData, confirm_password: e.target.value.slice(0, PASSWORD_MAX_LENGTH) })
+                      }
+                      minLength={PASSWORD_MIN_LENGTH}
+                      maxLength={PASSWORD_MAX_LENGTH}
                       className={`pr-10 ${
                         showErrors && (confirmMissing || passwordMismatch)
                           ? 'border-red-500 focus-visible:ring-red-500'

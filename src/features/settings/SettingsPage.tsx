@@ -11,6 +11,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { useAuthStore } from '../../app/store';
 import { authService } from '../../services/authService';
 import { formatDateShort, formatTime } from '../../utils';
+import { maskUzPhoneInput, isCompleteUzPhone, PHONE_INPUT_MAX_LENGTH } from '../../utils/phone';
+
+// Forma cheklovlari: ism-familiya va parol uchun min/max
+const NAME_MIN_LENGTH = 3;
+const NAME_MAX_LENGTH = 100;
+const PASSWORD_MIN_LENGTH = 8;
+const PASSWORD_MAX_LENGTH = 64;
 
 interface LoginHistory {
   id: string;
@@ -45,7 +52,8 @@ export function SettingsPage() {
 
   const [profileData, setProfileData] = useState<ProfileFormData>({
     full_name: user?.full_name || 'Admin',
-    phone_number: user?.phone_number || '',
+    // Ko'rinish har doim +998 XX XXX XX XX formatida
+    phone_number: user?.phone_number ? maskUzPhoneInput(user.phone_number) : '+998',
   });
 
   const [passwordData, setPasswordData] = useState<PasswordFormData>({
@@ -77,11 +85,18 @@ export function SettingsPage() {
   });
 
   const handleProfileChange = (field: keyof ProfileFormData, value: string) => {
+    if (field === 'phone_number') {
+      // Faqat raqam: harflar/belgilar tashlab yuboriladi, +998 va 9 xonaga cheklanadi
+      value = maskUzPhoneInput(value);
+    }
+    if (field === 'full_name') {
+      value = value.slice(0, NAME_MAX_LENGTH);
+    }
     setProfileData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handlePasswordChange = (field: keyof PasswordFormData, value: string) => {
-    setPasswordData((prev) => ({ ...prev, [field]: value }));
+    setPasswordData((prev) => ({ ...prev, [field]: value.slice(0, PASSWORD_MAX_LENGTH) }));
   };
 
   const handleForgotPassword = async () => {
@@ -106,6 +121,16 @@ export function SettingsPage() {
   const handleProfileSubmit = async (e: ChangeEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!isAdmin) return;
+    if (profileData.full_name.trim().length < NAME_MIN_LENGTH) {
+      toast.error(
+        t('auth.nameTooShort', `Ism-familiya kamida ${NAME_MIN_LENGTH} ta belgi bo'lishi kerak`),
+      );
+      return;
+    }
+    if (!isCompleteUzPhone(profileData.phone_number)) {
+      toast.error(t('auth.phoneInvalid', "Telefon raqam to'liq emas (masalan: +998 90 123 45 67)"));
+      return;
+    }
     setProfileSaving(true);
     setTimeout(() => {
       setProfileSaving(false);
@@ -115,8 +140,14 @@ export function SettingsPage() {
 
   const handlePasswordSubmit = async (e: ChangeEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (passwordData.newPassword.length < PASSWORD_MIN_LENGTH) {
+      toast.error(
+        t('auth.passwordTooShort', `Parol kamida ${PASSWORD_MIN_LENGTH} ta belgi bo'lishi kerak`),
+      );
+      return;
+    }
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error(t('errors.validationError'));
+      toast.error(t('auth.passwordsMismatch', 'Yangi parol va tasdiq paroli mos kelmadi'));
       return;
     }
     try {
@@ -167,6 +198,8 @@ export function SettingsPage() {
                     onChange={(e: ChangeEvent<HTMLInputElement>) => handleProfileChange('full_name', e.target.value)}
                     className="pl-10"
                     disabled={!isAdmin}
+                    minLength={NAME_MIN_LENGTH}
+                    maxLength={NAME_MAX_LENGTH}
                   />
                 </div>
               </div>
@@ -176,10 +209,14 @@ export function SettingsPage() {
                   <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     id="phone_number"
+                    type="tel"
+                    inputMode="tel"
                     value={profileData.phone_number}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => handleProfileChange('phone_number', e.target.value)}
                     className="pl-10"
                     disabled={!isAdmin}
+                    maxLength={PHONE_INPUT_MAX_LENGTH}
+                    placeholder="+998 90 123 45 67"
                   />
                 </div>
               </div>
@@ -224,6 +261,7 @@ export function SettingsPage() {
                     value={passwordData.currentPassword}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => handlePasswordChange('currentPassword', e.target.value)}
                     className="pr-10"
+                    maxLength={PASSWORD_MAX_LENGTH}
                   />
                   <button
                     type="button"
@@ -244,6 +282,8 @@ export function SettingsPage() {
                     value={passwordData.newPassword}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => handlePasswordChange('newPassword', e.target.value)}
                     className="pr-10"
+                    minLength={PASSWORD_MIN_LENGTH}
+                    maxLength={PASSWORD_MAX_LENGTH}
                   />
                   <button
                     type="button"
@@ -264,6 +304,8 @@ export function SettingsPage() {
                     value={passwordData.confirmPassword}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => handlePasswordChange('confirmPassword', e.target.value)}
                     className="pr-10"
+                    minLength={PASSWORD_MIN_LENGTH}
+                    maxLength={PASSWORD_MAX_LENGTH}
                   />
                   <button
                     type="button"

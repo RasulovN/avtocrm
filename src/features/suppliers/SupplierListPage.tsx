@@ -17,6 +17,12 @@ import type { Supplier, SupplierFormData } from '../../types';
 import { latinToCyrillic, cyrillicToLatin } from '../../utils/transliteration';
 import { formatCurrency } from '../../utils';
 import { handleError } from '../../utils/errorHandler';
+import {
+  maskUzPhoneInput,
+  normalizeUzPhone,
+  isCompleteUzPhone,
+  PHONE_INPUT_MAX_LENGTH,
+} from '../../utils/phone';
 
 // interface SupplierPayment {
 //   id: number;
@@ -179,7 +185,7 @@ export function SupplierListPage() {
           description_uz_cyrl: fresh.description_uz_cyrl || '',
           address_uz: fresh.address_uz || fresh.address || '',
           address_uz_cyrl: fresh.address_uz_cyrl || '',
-          phone_number: fresh.phone_number || fresh.phone || '',
+          phone_number: maskUzPhoneInput(fresh.phone_number || fresh.phone || ''),
           inn: fresh.inn || '',
         });
       } catch (error) {
@@ -193,7 +199,7 @@ export function SupplierListPage() {
           description_uz_cyrl: supplier.description_uz_cyrl || '',
           address_uz: supplier.address_uz || supplier.address || '',
           address_uz_cyrl: supplier.address_uz_cyrl || '',
-          phone_number: supplier.phone_number || supplier.phone || '',
+          phone_number: maskUzPhoneInput(supplier.phone_number || supplier.phone || ''),
           inn: supplier.inn || '',
         });
       }
@@ -219,14 +225,21 @@ export function SupplierListPage() {
       toast.error(t('suppliers.fillRequired', 'Majburiy (*) maydonlarni to‘ldiring'));
       return;
     }
+    if (!isCompleteUzPhone(formData.phone_number)) {
+      setShowErrors(true);
+      toast.error(t('auth.phoneInvalid', "Telefon raqam to'liq emas (masalan: +998 90 123 45 67)"));
+      return;
+    }
 
     try {
       setSaving(true);
+      // Serverga tekis format yuboriladi: +998XXXXXXXXX
+      const payload = { ...formData, phone_number: normalizeUzPhone(formData.phone_number) };
       if (editingSupplier) {
-        await supplierService.update(editingSupplier.id, formData);
+        await supplierService.update(editingSupplier.id, payload);
         toast.success(t('suppliers.supplierUpdated', "Ta'minotchi muvaffaqiyatli yangilandi"));
       } else {
-        await supplierService.create(formData);
+        await supplierService.create(payload);
         toast.success(t('suppliers.supplierAdded', "Ta'minotchi muvaffaqiyatli qo'shildi"));
       }
       setDialogOpen(false);
@@ -500,6 +513,8 @@ export function SupplierListPage() {
                 <Input
                   value={formData.name_uz}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => handleNameChange(e.target.value)}
+                  minLength={2}
+                  maxLength={255}
                   className={showErrors && nameMissing ? 'border-red-500 focus-visible:ring-red-500' : ''}
                 />
               </div>
@@ -510,6 +525,7 @@ export function SupplierListPage() {
                 <Input
                   value={formData.name_uz_cyrl}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => handleNameCyrlChange(e.target.value)}
+                  maxLength={255}
                   className={showErrors && nameMissing ? 'border-red-500 focus-visible:ring-red-500' : ''}
                 />
               </div>
@@ -542,12 +558,16 @@ export function SupplierListPage() {
                 <Label>
                   {t('suppliers.phone')} <span className="text-red-500">*</span>
                 </Label>
+                {/* Faqat raqam, +998 XX XXX XX XX formatida — harflar yozib bo'lmaydi */}
                 <Input
-                  placeholder="+998901234567"
+                  type="tel"
+                  inputMode="tel"
+                  placeholder="+998 90 123 45 67"
                   value={formData.phone_number}
                   onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                    setFormData({ ...formData, phone_number: e.target.value })
+                    setFormData({ ...formData, phone_number: maskUzPhoneInput(e.target.value) })
                   }
+                  maxLength={PHONE_INPUT_MAX_LENGTH}
                   className={showErrors && phoneMissing ? 'border-red-500 focus-visible:ring-red-500' : ''}
                 />
                 {showErrors && phoneMissing && (
@@ -566,7 +586,10 @@ export function SupplierListPage() {
                 <Input
                   inputMode="numeric"
                   value={formData.inn}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, inn: e.target.value })}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    setFormData({ ...formData, inn: e.target.value.replace(/\D/g, '').slice(0, 50) })
+                  }
+                  maxLength={50}
                 />
               </div>
             </div>

@@ -49,6 +49,9 @@ interface CardSplit {
 
 const splitText = (amount: number): string => (amount > 0 ? formatAmountInput(amount) : '');
 
+// Katalog bir sahifada nechta mahsulot yuklaydi (backend StandardPagination max 100)
+const CATALOG_PAGE_SIZE = 100;
+
 const getProductImages = (product?: Product | null): string[] => {
   if (!product) return [];
 
@@ -227,8 +230,6 @@ export function SalesPage() {
 
   const [stores, setStores] = useState<Store[]>([]);
   const [saving, setSaving] = useState(false);
-  const [searchResults, setSearchResults] = useState<Product[] | null>(null);
-  const [searchLoading, setSearchLoading] = useState(false);
   // const { categories } = useCategories();
   const { products: allProducts, loading: productsLoading, refreshProducts } = useProducts();
 
@@ -251,32 +252,72 @@ export function SalesPage() {
 
   const [storeId, setStoreId] = useState(userStoreId);
   const activeStoreId = storeId || userStoreId;
-  // Do'kon tanlanganda mahsulotlar backend'dan shu do'kon kesimida keladi:
-  // faqat shu do'konda mavjud mahsulotlar, qoldiq bo'yicha kamayish tartibida.
-  const [storeProducts, setStoreProducts] = useState<Product[] | null>(null);
-  const [storeProductsLoading, setStoreProductsLoading] = useState(false);
   // const [categoryFilter, setCategoryFilter] = useState('');
 
-  const loadStoreProducts = useCallback(async () => {
-    if (!activeStoreId) {
-      setStoreProducts(null);
-      return;
-    }
-    try {
-      setStoreProductsLoading(true);
-      const res = await productService.getAll({ store_id: activeStoreId, limit: 100 });
-      setStoreProducts(res.data || []);
-    } catch (error) {
-      logger.error('Failed to load store products:', error);
-      setStoreProducts(null);
-    } finally {
-      setStoreProductsLoading(false);
-    }
-  }, [activeStoreId]);
+  // ─── Katalog: backend pagination (100 tadan) + server-side qidiruv ───
+  // Ro'yxat pastiga yetganda keyingi sahifa qo'shib yuklanadi, shuning uchun
+  // 1000+ mahsulotda ham ro'yxat to'liq ko'rinadi. Qidiruv ham shu oqim
+  // orqali (search param) ishlaydi va xuddi shunday sahifalanadi.
+  const [catalog, setCatalog] = useState<Product[]>([]);
+  const [catalogTotal, setCatalogTotal] = useState(0);
+  const [catalogPage, setCatalogPage] = useState(1);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogLoadingMore, setCatalogLoadingMore] = useState(false);
+  // Qidiruv inputi 300ms debounce bilan shu holatga tushadi
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const catalogAbortRef = useRef<AbortController | null>(null);
 
+  const loadCatalog = useCallback(async (page: number, append: boolean) => {
+    // Eskirgan so'rov bekor qilinadi — tez yozilganda/scrollda race bo'lmaydi
+    catalogAbortRef.current?.abort();
+    const controller = new AbortController();
+    catalogAbortRef.current = controller;
+    if (append) setCatalogLoadingMore(true);
+    else setCatalogLoading(true);
+    try {
+      const res = await productService.getAll(
+        {
+          page,
+          limit: CATALOG_PAGE_SIZE,
+          store_id: activeStoreId || undefined,
+          search: debouncedQuery || undefined,
+        },
+        { signal: controller.signal }
+      );
+      if (controller.signal.aborted) return;
+      const items = res.data || [];
+      setCatalog((prev) => {
+        if (!append) return items;
+        // Sahifalar orasida qoldiq o'zgargan bo'lsa mahsulot ikki sahifada
+        // takror kelishi mumkin — takrorlarini tashlab yuboramiz
+        const seen = new Set(prev.map((p) => String(p.id)));
+        return [...prev, ...items.filter((p) => !seen.has(String(p.id)))];
+      });
+      setCatalogTotal(res.total ?? items.length);
+      setCatalogPage(page);
+    } catch (error) {
+      if (!controller.signal.aborted) logger.error('Failed to load products:', error);
+    } finally {
+      if (!controller.signal.aborted) {
+        setCatalogLoading(false);
+        setCatalogLoadingMore(false);
+      }
+    }
+  }, [activeStoreId, debouncedQuery]);
+
+  // Do'kon yoki qidiruv o'zgarganda katalog 1-sahifadan qayta yuklanadi
   useEffect(() => {
-    void loadStoreProducts();
-  }, [loadStoreProducts]);
+    void loadCatalog(1, false);
+  }, [loadCatalog]);
+
+  useEffect(() => () => catalogAbortRef.current?.abort(), []);
+
+  const catalogHasMore = catalog.length < catalogTotal;
+
+  const loadMoreCatalog = useCallback(() => {
+    if (catalogLoading || catalogLoadingMore || !catalogHasMore) return;
+    void loadCatalog(catalogPage + 1, true);
+  }, [catalogLoading, catalogLoadingMore, catalogHasMore, catalogPage, loadCatalog]);
 
   const [items, setItems] = useState<CartItem[]>(() => {
     try {
@@ -460,7 +501,7 @@ export function SalesPage() {
     return true;
   }, [activeStoreId, items, t]);
 
-  const findProductByBarcode = useCallback(async (barcode: string, isFromScan: boolean = true): Promise<Product | null> => {
+  const findProductByBarcode = useCallback(async (barcode: string): Promise<Product | null> => {
     const normalizedBarcode = barcode.trim();
     logger.info('Searching for barcode:', barcode);
 
@@ -474,9 +515,7 @@ export function SalesPage() {
     });
 
     if (localProduct) {
-      const hydratedProduct = hydrateProductFromCatalog(localProduct);
-      if (!isFromScan) setSearchResults(null);
-      return hydratedProduct;
+      return hydrateProductFromCatalog(localProduct);
     }
 
     try {
@@ -490,17 +529,10 @@ export function SalesPage() {
       }) || products[0];
 
       if (product) {
-        const hydratedProduct = hydrateProductFromCatalog(product);
-        // Only show search results if this is manual search, not from barcode scan
-        if (!isFromScan) {
-          setSearchResults([hydratedProduct]);
-        }
-        return hydratedProduct;
-      } else {
-        if (!isFromScan) setSearchResults([]);
+        return hydrateProductFromCatalog(product);
       }
     } catch {
-      if (!isFromScan) setSearchResults([]);
+      // Topilmadi — chaqiruvchi o'zi xabar beradi
     }
 
     return null;
@@ -594,9 +626,9 @@ export function SalesPage() {
   }, [cardAmount, bankCards]);
   const productImages = getProductImages(selectedProduct);
   const filteredProducts = useMemo(() => {
-    // Do'kon tanlangan bo'lsa server allaqachon shu do'kon bo'yicha filtrlab,
-    // qoldiq kamayishi tartibida bergan ro'yxat ishlatiladi; aks holda umumiy katalog.
-    let result = activeStoreId && storeProducts ? storeProducts : allProducts;
+    // Katalog backenddan sahifalab (100 tadan) keladi — qidiruv ham shu ro'yxatda.
+    // Do'kon tanlangan bo'lsa har mahsulotga shu do'kon qoldiq/narxlari qo'llanadi.
+    let result = catalog;
     if (activeStoreId) {
       result = result.map((p) => {
         const storeInventory = p.inventory_by_store?.find(
@@ -625,12 +657,12 @@ export function SalesPage() {
     //   result = result.filter((p) => String(p.category) === categoryFilter);
     // }
     return result;
-  }, [allProducts, storeProducts, activeStoreId]);
-  // Miqdori ko'p mahsulotlar ro'yxat tepasida chiqadi
+  }, [catalog, activeStoreId]);
+  // Miqdori ko'p mahsulotlar ro'yxat tepasida chiqadi (backend ham -stock_qty
+  // tartibida beradi; sort barqaror bo'lgani uchun sahifa tartibi buzilmaydi)
   const displayedProducts = useMemo(() => {
-    const source = searchResults ?? filteredProducts;
-    return [...source].sort((a, b) => (b.quantity ?? 0) - (a.quantity ?? 0));
-  }, [searchResults, filteredProducts]);
+    return [...filteredProducts].sort((a, b) => (b.quantity ?? 0) - (a.quantity ?? 0));
+  }, [filteredProducts]);
 
   // ─── Mobil scroll yordamchilari ───
   // Ro'yxat ichki scroll ekani bilinmaydi: pastda fade + "pastga" tugmasi ko'rsatiladi,
@@ -650,6 +682,16 @@ export function SalesPage() {
     updateListHasMore();
   }, [displayedProducts, updateListHasMore]);
 
+  // Scroll pastga 300px qolganda keyingi sahifa (100 ta) avtomatik yuklanadi
+  const handleListScroll = useCallback(() => {
+    updateListHasMore();
+    const el = productListRef.current;
+    if (!el) return;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 300) {
+      loadMoreCatalog();
+    }
+  }, [updateListHasMore, loadMoreCatalog]);
+
   const scrollListDown = () => {
     const el = productListRef.current;
     if (!el) return;
@@ -665,8 +707,9 @@ export function SalesPage() {
       const [storesRes, customersRes] = await Promise.all([
         storeService.getAll(),
         // brief=1 — minimal maydonlar (id, ism, telefon), backend <100ms da javob beradi.
-        // 100 tadan ortiq mijoz server-side qidiruv orqali topiladi (handleCustomerSearch).
-        customerApiService.getAll({ limit: 100, brief: true }),
+        // Sahifa 50 tadan (pagination) — katta ro'yxatda GET qotmasligi uchun;
+        // 50 tadan ortiq mijoz server-side qidiruv orqali topiladi (handleCustomerSearch).
+        customerApiService.getAll({ page: 1, limit: 50, brief: true }),
       ]);
       const loadedStores = Array.isArray(storesRes.data) ? storesRes.data : [];
       setStores(isAdmin ? loadedStores : loadedStores.filter((store) => String(store.id) === String(userStoreId)));
@@ -692,7 +735,7 @@ export function SalesPage() {
     setCustomersLoading(true);
     try {
       const res = await customerApiService.getAll(
-        { limit: 100, brief: true, search: query || undefined },
+        { page: 1, limit: 50, brief: true, search: query || undefined },
         { signal: controller.signal }
       );
       if (!controller.signal.aborted) setCustomers(res.data || []);
@@ -762,45 +805,19 @@ export function SalesPage() {
   }, [scanStatus, focusBarcodeInput]);
 
   useEffect(() => {
-    // When scanner modal closes, ensure search results are cleared
-    if (!showScanner) {
-      setSearchResults(null);
-    }
-  }, [showScanner]);
-
-  useEffect(() => {
     if (!isAdmin && userStoreId) {
       setStoreId(userStoreId);
     }
   }, [isAdmin, userStoreId]);
 
+  // Qidiruv matni 300ms debounce bilan katalog so'roviga (search param) tushadi.
+  // Do'kon tanlangan bo'lsa qidiruv ham shu do'kon bilan cheklanadi va natijalar
+  // xuddi katalogdek sahifalanadi (100 tadan, scroll bilan davomi yuklanadi).
   useEffect(() => {
     const query = barcodeValue.trim();
-
-    if (!query) {
-      setSearchResults(null);
-      setSearchLoading(false);
-      return;
-    }
-
-    const timeoutId = window.setTimeout(async () => {
-      setSearchLoading(true);
-
-      try {
-        // Do'kon tanlangan bo'lsa qidiruv ham shu do'kon bilan cheklanadi —
-        // boshqa do'kondagi mahsulotlar chiqmaydi va sotib bo'lmaydi.
-        const products = await productService.search(query, activeStoreId || undefined);
-        setSearchResults(products.map(hydrateProductFromCatalog));
-      } catch (error) {
-        console.error('Product search failed:', error);
-        setSearchResults([]);
-      } finally {
-        setSearchLoading(false);
-      }
-    }, 300);
-
+    const timeoutId = window.setTimeout(() => setDebouncedQuery(query), 300);
     return () => window.clearTimeout(timeoutId);
-  }, [barcodeValue, hydrateProductFromCatalog, activeStoreId]);
+  }, [barcodeValue]);
 
   useEffect(() => {
     focusBarcodeInput();
@@ -828,32 +845,31 @@ export function SalesPage() {
 
     if (e.key === 'Enter' && barcodeValue.trim()) {
       const isNumeric = /^\d+$/.test(barcodeValue.trim());
-      if (isNumeric && searchResults && searchResults.length > 0) {
-        addProduct(searchResults[0]);
+      // Qidiruv natijasi ko'rinib turgan bo'lsa, Enter birinchisini savatga qo'shadi.
+      // Guard: natija hozirgi so'rovga tegishli bo'lishi shart (eskirgan ro'yxatga tushmaslik uchun)
+      if (isNumeric && !catalogLoading && debouncedQuery === barcodeValue.trim() && displayedProducts.length > 0) {
+        addProduct(displayedProducts[0]);
         barcodeOnChange({ target: { value: '' } } as ChangeEvent<HTMLInputElement>);
-        setSearchResults(null);
       }
     }
   };
 
   const handleOpenScanner = () => {
-    // Clear search results when opening scanner
-    setSearchResults(null);
+    // Clear search input when opening scanner
     barcodeOnChange({ target: { value: '' } } as ChangeEvent<HTMLInputElement>);
     setShowScanner(true);
   };
 
   const handleScannerScan = async (barcode: string) => {
     // Camera scanner adds directly to cart (same as device scanner)
-    const product = await findProductByBarcode(barcode, true);
+    const product = await findProductByBarcode(barcode);
 
     if (product) {
       addProduct(product);
       playSuccessSound();
       toast.success(`${t('messages.productFound')}: ${product.name || barcode}`);
-      // Clear any search results and input
+      // Clear search input
       barcodeOnChange({ target: { value: '' } } as ChangeEvent<HTMLInputElement>);
-      setSearchResults(null);
       setShowScanner(false);
     } else {
       playErrorSound();
@@ -1096,17 +1112,9 @@ export function SalesPage() {
       await salesService.create(saleData);
       try {
         await refreshProducts();
-        await loadStoreProducts();
-        // Qidiruv natijalari ochiq turgan bo'lsa ular ham qayta yuklanadi —
-        // aks holda ro'yxat (searchResults ?? filteredProducts) sotilgan
-        // mahsulotni eski qoldiq bilan (masalan, 5 dona) ko'rsatib turaverardi
-        const activeQuery = barcodeValue.trim();
-        if (activeQuery) {
-          const freshResults = await productService.search(activeQuery, activeStoreId || undefined);
-          setSearchResults(freshResults.map(hydrateProductFromCatalog));
-        } else {
-          setSearchResults(null);
-        }
+        // Katalog joriy qidiruv/do'kon bo'yicha 1-sahifadan qayta yuklanadi —
+        // aks holda ro'yxat sotilgan mahsulotni eski qoldiq bilan ko'rsatib turaverardi
+        await loadCatalog(1, false);
       } catch (err) {
         console.error('Failed to refresh products after sale:', err);
       }
@@ -1163,7 +1171,6 @@ export function SalesPage() {
       }
       addProduct(hydratedProduct);
       barcodeOnChange({ target: { value: '' } } as ChangeEvent<HTMLInputElement>);
-      setSearchResults(null);
     } catch {
       toast.error(t('messages.productAddError'));
     }
@@ -1387,10 +1394,11 @@ export function SalesPage() {
               <div className="relative flex min-h-0 flex-1 flex-col">
                 <div
                   ref={productListRef}
-                  onScroll={updateListHasMore}
+                  onScroll={handleListScroll}
                   className="min-h-[50vh] max-h-[50vh] flex-1 overflow-y-auto space-y-1.5 xl:min-h-0 xl:max-h-none"
                 >
-                {searchLoading || storeProductsLoading ? (
+                {/* Qayta yuklashda eski ro'yxat turadi (miltillamaydi) — katta loader faqat ro'yxat bo'sh bo'lganda */}
+                {catalogLoading && displayedProducts.length === 0 ? (
                   <div className="py-8 text-center text-sm text-muted-foreground dark:text-gray-400">
                     {t('common.loading')}
                   </div>
@@ -1399,12 +1407,32 @@ export function SalesPage() {
                     {t('messages.productNotFound')}
                   </div>
                 ) : (
-                  <ProductCatalogList
-                    products={displayedProducts}
-                    activeStoreId={activeStoreId}
-                    onProductClick={handleProductClick}
-                    onOpenDetails={handleOpenProductDialog}
-                  />
+                  <>
+                    <ProductCatalogList
+                      products={displayedProducts}
+                      activeStoreId={activeStoreId}
+                      onProductClick={handleProductClick}
+                      onOpenDetails={handleOpenProductDialog}
+                    />
+                    {/* Keyingi sahifa scrollda avtomatik yuklanadi; tugma — zaxira yo'li */}
+                    {catalogHasMore && (
+                      <div className="py-2 text-center">
+                        {catalogLoadingMore ? (
+                          <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground dark:text-gray-400">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('common.loading')}
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={loadMoreCatalog}
+                            className="text-xs font-medium text-primary hover:underline dark:text-blue-400"
+                          >
+                            {t('sales.loadMoreProducts', 'Yana yuklash')} ({displayedProducts.length}/{catalogTotal})
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </>
                 )}
                 </div>
 

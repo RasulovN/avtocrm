@@ -153,7 +153,10 @@
     "resetPasswordDesc": "Elektron pochta manzilingizga tiklash havolasini yuboramiz",
     "phoneNumber": "Telefon raqami",
     "phoneInvalid": "Telefon raqam to‘liq emas (masalan: +998 90 123 45 67)",
-    "phoneDuplicateCode": "Davlat kodi +998 allaqachon kiritilgan — 998 ni qayta yozmang"
+    "phoneDuplicateCode": "Davlat kodi +998 allaqachon kiritilgan — 998 ni qayta yozmang",
+    "passwordsMismatch": "Yangi parol va tasdiq paroli mos kelmadi",
+    "nameTooShort": "Ism-familiya kamida 3 ta belgi bo‘lishi kerak",
+    "passwordTooShort": "Parol kamida 8 ta belgi bo‘lishi kerak"
   },
   "dashboard": {
     "title": "Bosh sahifa",
@@ -668,6 +671,7 @@
     "morePaymentTypes": "+{{count}} ta to‘lov turi",
     "paidBreakdownTitle": "To‘langan — to‘lov turlari",
     "scrollDownList": "Ro‘yxatni pastga aylantirish",
+    "loadMoreProducts": "Yana yuklash",
     "goToReceipt": "Chekka o‘tish",
     "selectSale": "Sotuvni tanlash",
     "selectAllSales": "Hammasini tanlash",

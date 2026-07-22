@@ -24,6 +24,12 @@ import { bankCardService } from '../../services/bankCardService';
 import { CardSplitEditor } from '../../components/shared/CardSplitEditor';
 import { useCardSplits } from '../../hooks/useCardSplits';
 import { groupByPaymentGroup } from '../../utils/paymentGroups';
+import {
+  maskUzPhoneInput,
+  normalizeUzPhone,
+  isCompleteUzPhone,
+  PHONE_INPUT_MAX_LENGTH,
+} from '../../utils/phone';
 import { formatDate, formatCurrency, cn } from '../../utils';
 import { handleError } from '../../utils/errorHandler';
 import type { BankCard } from '../../types';
@@ -237,25 +243,21 @@ export function CustomerListPage() {
     },
   ];
 
-  // Telefon inputiga faqat raqam va boshida '+' kiritishga ruxsat beramiz
-  const sanitizePhone = (raw: string): string => {
-    let value = raw.replace(/[^\d+]/g, '');
-    value = value.startsWith('+')
-      ? '+' + value.slice(1).replace(/\+/g, '')
-      : value.replace(/\+/g, '');
-    return value.slice(0, 16);
-  };
+  // Telefon UZ formatida (+998 XX XXX XX XX): harflar tashlanadi, 9 xonaga cheklanadi
+  const sanitizePhone = (raw: string): string => maskUzPhoneInput(raw);
 
   const validateForm = (): boolean => {
     const errors: { full_name?: string; phone_number?: string } = {};
     if (!formData.full_name.trim()) {
       errors.full_name = t('customers.nameRequired', "Ism-familiya kiritilishi shart");
+    } else if (formData.full_name.trim().length < 3) {
+      errors.full_name = t('auth.nameTooShort', "Ism-familiya kamida 3 ta belgi bo'lishi kerak");
     }
     const phone = formData.phone_number.trim();
-    if (!phone) {
+    if (!phone || phone === '+998') {
       errors.phone_number = t('customers.phoneRequired', "Telefon raqam kiritilishi shart");
-    } else if (!/^\+?\d{7,15}$/.test(phone)) {
-      errors.phone_number = t('customers.phoneInvalid', "Telefon raqam noto'g'ri (masalan: +998901234567)");
+    } else if (!isCompleteUzPhone(phone)) {
+      errors.phone_number = t('auth.phoneInvalid', "Telefon raqam to'liq emas (masalan: +998 90 123 45 67)");
     }
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
@@ -270,7 +272,8 @@ export function CustomerListPage() {
 
   const openEditDialog = (customer: CustomerFromApi) => {
     setSelectedCustomer(customer);
-    setFormData({ full_name: customer.full_name, phone_number: customer.phone_number });
+    // Telefon ko'rinishi +998 XX XXX XX XX formatida
+    setFormData({ full_name: customer.full_name, phone_number: maskUzPhoneInput(customer.phone_number) });
     setFieldErrors({});
     setDialogMode('edit');
   };
@@ -422,15 +425,16 @@ export function CustomerListPage() {
 
     try {
       setSubmitting(true);
+      // Serverga tekis format yuboriladi: +998XXXXXXXXX
       if (dialogMode === 'create') {
         await customerApiService.create({
           full_name: formData.full_name.trim(),
-          phone_number: formData.phone_number.trim(),
+          phone_number: normalizeUzPhone(formData.phone_number),
         });
       } else if (dialogMode === 'edit' && selectedCustomer) {
         await customerApiService.update(selectedCustomer.id, {
           full_name: formData.full_name.trim(),
-          phone_number: formData.phone_number.trim(),
+          phone_number: normalizeUzPhone(formData.phone_number),
         });
       }
       await loadData();
@@ -616,9 +620,11 @@ export function CustomerListPage() {
                   <Input
                     value={formData.full_name}
                     onChange={(e) => {
-                      setFormData({ ...formData, full_name: e.target.value });
+                      setFormData({ ...formData, full_name: e.target.value.slice(0, 100) });
                       if (fieldErrors.full_name) setFieldErrors((prev) => ({ ...prev, full_name: undefined }));
                     }}
+                    minLength={3}
+                    maxLength={100}
                     placeholder={t('customers.fullNamePlaceholder')}
                     className={fieldErrors.full_name ? 'border-red-500 focus-visible:ring-red-500' : ''}
                     aria-invalid={Boolean(fieldErrors.full_name)}
@@ -639,7 +645,8 @@ export function CustomerListPage() {
                       setFormData({ ...formData, phone_number: sanitizePhone(e.target.value) });
                       if (fieldErrors.phone_number) setFieldErrors((prev) => ({ ...prev, phone_number: undefined }));
                     }}
-                    placeholder={t('customers.phonePlaceholder')}
+                    maxLength={PHONE_INPUT_MAX_LENGTH}
+                    placeholder="+998 90 123 45 67"
                     className={fieldErrors.phone_number ? 'border-red-500 focus-visible:ring-red-500' : ''}
                     aria-invalid={Boolean(fieldErrors.phone_number)}
                   />
@@ -673,9 +680,11 @@ export function CustomerListPage() {
                   <Input
                     value={formData.full_name}
                     onChange={(e) => {
-                      setFormData({ ...formData, full_name: e.target.value });
+                      setFormData({ ...formData, full_name: e.target.value.slice(0, 100) });
                       if (fieldErrors.full_name) setFieldErrors((prev) => ({ ...prev, full_name: undefined }));
                     }}
+                    minLength={3}
+                    maxLength={100}
                     placeholder={t('customers.fullNamePlaceholder')}
                     className={fieldErrors.full_name ? 'border-red-500 focus-visible:ring-red-500' : ''}
                     aria-invalid={Boolean(fieldErrors.full_name)}
@@ -696,7 +705,8 @@ export function CustomerListPage() {
                       setFormData({ ...formData, phone_number: sanitizePhone(e.target.value) });
                       if (fieldErrors.phone_number) setFieldErrors((prev) => ({ ...prev, phone_number: undefined }));
                     }}
-                    placeholder={t('customers.phonePlaceholder')}
+                    maxLength={PHONE_INPUT_MAX_LENGTH}
+                    placeholder="+998 90 123 45 67"
                     className={fieldErrors.phone_number ? 'border-red-500 focus-visible:ring-red-500' : ''}
                     aria-invalid={Boolean(fieldErrors.phone_number)}
                   />
