@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DollarSign, TrendingUp, ShoppingCart, Users, Truck, Loader2, AlertCircle } from 'lucide-react';
+import { DollarSign, TrendingUp, ShoppingCart, Users, Truck, Loader2, AlertCircle, Package, Wallet } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Card, CardContent } from '../../components/ui/Card';
 import { DateRangeFilter } from '../../components/shared/DateRangeFilter';
-import { ExportButton } from '../../components/shared/ExportButton';
+import { ReportExportMenu } from './ReportExportMenu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
 import { useThemeStore } from '../../app/themeStore';
 import { useAuthStore } from '../../app/store';
@@ -83,6 +83,11 @@ const TRANSLATIONS: Record<string, { uz: string; cyrl: string }> = {
   'Mijozga qaytarim (naqd)': { uz: 'Mijozga qaytarim (naqd)', cyrl: 'Мижозга қайтарим (нақд)' },
   'Mijozga qaytarim (karta)': { uz: 'Mijozga qaytarim (karta)', cyrl: 'Мижозга қайтарим (карта)' },
   "Ta'minotchilarga to'lov": { uz: "Ta'minotchilarga to'lov", cyrl: 'Таъминотчиларга тўлов' },
+  "Ta'minotchilar statistikasi": { uz: "Ta'minotchilar statistikasi", cyrl: 'Таъминотчилар статистикаси' },
+  "Ta'minotchilar soni": { uz: "Ta'minotchilar soni", cyrl: 'Таъминотчилар сони' },
+  'Mahsulot turlari': { uz: 'Mahsulot turlari', cyrl: 'Маҳсулот турлари' },
+  'Davrdagi xarid summasi': { uz: 'Davrdagi xarid summasi', cyrl: 'Даврдаги харид суммаси' },
+  'Jami qarz': { uz: 'Jami qarz', cyrl: 'Жами қарз' },
   "Davr ichida chiqim yo'q": { uz: "Davr ichida chiqim yo'q", cyrl: 'Давр ичида чиқим йўқ' },
   'Tozalash': { uz: 'Tozalash', cyrl: 'Тозалаш' }
 };
@@ -92,7 +97,7 @@ const Skeleton = ({ className }: { className?: string }) => (
   <div className={`animate-pulse bg-slate-200 dark:bg-slate-800 rounded-xl ${className}`} />
 );
 
-export function ReportsPage() {
+export function ReportsPage({ embedded = false }: { embedded?: boolean } = {}) {
   const { i18n } = useTranslation();
   const lang = i18n.language || 'uz';
   const { theme } = useThemeStore();
@@ -336,28 +341,20 @@ const getStoreName = (id: number | string, defaultName: string) => {
 
   return (
     <div className="space-y-4 sm:space-y-6 pb-4 sm:pb-10 max-w-400 mx-auto animate-in fade-in duration-500">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            {getTrans('Hisobotlar va tahlillar')}
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            {getTrans('Batafsil biznes tahlili')}
-          </p>
-        </div>
-        {/* Sahifadagi joriy filtrlar (davr/do'kon/sana) bilan darhol yuklab olinadi */}
-        <ExportButton
-          endpoint="/reports/export/"
-          filename="hisobot.xlsx"
-          direct
-          params={{
-            filter,
-            store_id: storeId,
-            from: from || undefined,
-            to: to || undefined,
-          }}
-        />
+      {/* Header — embedded (bosh sahifa ichida) rejimda sarlavha yashiriladi */}
+      <div className={`flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-center ${embedded ? 'sm:justify-end' : 'sm:justify-between'}`}>
+        {!embedded && (
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+              {getTrans('Hisobotlar va tahlillar')}
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+              {getTrans('Batafsil biznes tahlili')}
+            </p>
+          </div>
+        )}
+        {/* Bo'limlab yuklab olish — joriy filtrlar (davr/do'kon/sana) bilan */}
+        <ReportExportMenu filter={filter} storeId={storeId} from={from} to={to} />
       </div>
 
       {/* Filters Panel */}
@@ -965,6 +962,57 @@ formatter={(value: any, props: any) => [
 
         {/* Debts Tab */}
         {activeTab === 'qarzlar' && (
+          <div className="space-y-4 sm:space-y-6">
+          {/* Ta'minotchilar statistikasi — backend supplierStatistics blokini
+              qaytarsagina ko'rinadi (eski backend bilan ham buzilmaydi) */}
+          {!isLoading && data?.supplierStatistics && (
+            <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm animate-in fade-in-50 duration-200">
+              <CardContent className="p-4 sm:p-6">
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mb-4">
+                  {getTrans("Ta'minotchilar statistikasi")}
+                </h2>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                  <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 p-3 sm:p-4">
+                    <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 text-slate-500 dark:text-slate-400">
+                      <Truck className="h-3.5 w-3.5" />
+                      <p className="text-[10px] sm:text-xs font-semibold">{getTrans("Ta'minotchilar soni")}</p>
+                    </div>
+                    <p className="text-base sm:text-xl font-bold text-slate-900 dark:text-white">
+                      {data.supplierStatistics.supplierCount.toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 p-3 sm:p-4">
+                    <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 text-slate-500 dark:text-slate-400">
+                      <Package className="h-3.5 w-3.5" />
+                      <p className="text-[10px] sm:text-xs font-semibold">{getTrans('Mahsulot turlari')}</p>
+                    </div>
+                    <p className="text-base sm:text-xl font-bold text-slate-900 dark:text-white">
+                      {data.supplierStatistics.distinctProductCount.toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 p-3 sm:p-4">
+                    <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 text-slate-500 dark:text-slate-400">
+                      <ShoppingCart className="h-3.5 w-3.5" />
+                      <p className="text-[10px] sm:text-xs font-semibold">{getTrans('Davrdagi xarid summasi')}</p>
+                    </div>
+                    <p className="text-base sm:text-xl font-bold text-slate-900 dark:text-white whitespace-nowrap">
+                      {formatCurrency(data.supplierStatistics.totalPurchaseAmount)}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 p-3 sm:p-4">
+                    <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 text-slate-500 dark:text-slate-400">
+                      <Wallet className="h-3.5 w-3.5" />
+                      <p className="text-[10px] sm:text-xs font-semibold">{getTrans('Jami qarz')}</p>
+                    </div>
+                    <p className="text-base sm:text-xl font-bold text-rose-700 dark:text-rose-500 whitespace-nowrap">
+                      {formatCurrency(data.supplierStatistics.totalDebt)}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
             {/* Customer Debts */}
             <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden animate-in fade-in-50 duration-200">
@@ -1062,6 +1110,7 @@ formatter={(value: any, props: any) => [
                 </table>
               </div>
             </Card>
+          </div>
           </div>
         )}
       </div>

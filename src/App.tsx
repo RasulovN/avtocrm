@@ -95,8 +95,11 @@ const SettingsPage = lazy(() =>
 const BankCardsPage = lazy(() =>
   import('./features/settings/BankCardsPage').then((module) => ({ default: module.BankCardsPage }))
 );
-const ReportsPage = lazy(() =>
-  import('./features/reports/ReportsPage').then((module) => ({ default: module.ReportsPage }))
+// Reports moduli: filtr → generate → jadval → eksport (ERP uslubi).
+// Eski aralash statistika sahifasi (ReportsPage) o'rniga ishlatiladi —
+// vizual statistika endi faqat bosh sahifada (DashboardPage).
+const ReportsModulePage = lazy(() =>
+  import('./features/reports/ReportsModulePage').then((module) => ({ default: module.ReportsModulePage }))
 );
 
 const InventoryPage = lazy(() => import('./features/inventory/InventoryPage'));
@@ -429,9 +432,9 @@ function App() {
             rbacAllows('roles.view') ? withLayout(<RolesPage />) : <Navigate to={`/${currentLang}/stores`} replace />
           } />
 
-          {/* Reports */}
+          {/* Reports — filtr asosida hisobot yaratish va yuklab olish */}
           <Route path={`/:lang/reports`} element={
-            withLayoutPermission(<ReportsPage />, 'reports.view')
+            withLayoutPermission(<ReportsModulePage />, 'reports.view')
           } />
           
           {/* Settings */}

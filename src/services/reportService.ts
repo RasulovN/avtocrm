@@ -63,6 +63,15 @@ export interface SupplierDebt {
   debt: number;
 }
 
+// Backend /reports/ javobidagi yangi blok — ta'minotchilar bo'yicha umumiy
+// statistika. Eski backend'da bo'lmasligi mumkin, shuning uchun optional.
+export interface SupplierStatistics {
+  supplierCount: number;
+  distinctProductCount: number;
+  totalPurchaseAmount: number;
+  totalDebt: number;
+}
+
 export interface CategoryStatistic {
   categoryName: string;
   categoryName_uz_cyrl?: string;
@@ -102,6 +111,8 @@ export interface DetailedReportsResponse {
   paymentStructure: PaymentStructureItem[];
   cardBreakdown: CardBreakdownItem[];
   expenses: ExpenseItem[];
+  // Yangi backend'da keladi; eski javobda bo'lmasa undefined qoladi
+  supplierStatistics?: SupplierStatistics;
   charts: {
     profitTrend: ChartSeries;
   };
@@ -199,10 +210,18 @@ const normalizeDetailedReportsResponse = (payload: unknown): DetailedReportsResp
     paymentStructure?: unknown;
     cardBreakdown?: unknown;
     expenses?: unknown;
+    supplierStatistics?: unknown;
     charts?: unknown;
     topSellingProducts?: unknown;
     debts?: unknown;
   };
+
+  // supplierStatistics — yangi blok: summalar backend'dan string bo'lib
+  // keladi ("11000000.00"), raqamga o'tkazamiz; blok yo'q bo'lsa undefined
+  const supplierStatsRaw =
+    source.supplierStatistics && typeof source.supplierStatistics === 'object'
+      ? (source.supplierStatistics as Record<string, unknown>)
+      : null;
 
   const summaryRaw = (source.summary ?? {}) as Record<string, unknown>;
   const branchStatisticsRaw = Array.isArray(source.branchStatistics) ? source.branchStatistics : [];
@@ -275,6 +294,14 @@ const normalizeDetailedReportsResponse = (payload: unknown): DetailedReportsResp
         percent: String(expense.percent ?? ''),
       };
     }),
+    supplierStatistics: supplierStatsRaw
+      ? {
+          supplierCount: toNumber(supplierStatsRaw.supplierCount),
+          distinctProductCount: toNumber(supplierStatsRaw.distinctProductCount),
+          totalPurchaseAmount: toNumber(supplierStatsRaw.totalPurchaseAmount),
+          totalDebt: toNumber(supplierStatsRaw.totalDebt),
+        }
+      : undefined,
     charts: {
       profitTrend: normalizeChartSeries(chartsRaw.profitTrend),
     },

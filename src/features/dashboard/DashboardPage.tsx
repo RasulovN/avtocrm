@@ -22,7 +22,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { useAuthStore } from '../../app/store';
 import { formatCurrency } from '../../utils';
 import { reportService } from '../../services/reportService';
-import type { DashboardReportData } from '../../services/reportService';
+import type { DashboardReportData, DetailedReportsResponse } from '../../services/reportService';
+import { ExportButton } from '../../components/shared/ExportButton';
 import { storeService } from '../../services/storeService';
 import type { Store } from '../../types';
 import { Link } from 'react-router-dom';
@@ -147,6 +148,13 @@ export function DashboardPage() {
   const [data, setData] = useState<DashboardReportData>(initialDashboardData);
   const [stores, setStores] = useState<Store[]>([]);
 
+  // Batafsil statistika (avvalgi hisobotlar sahifasidan ko'chirilgan bloklar):
+  // To'lovlar tarkibi, kartalar kesimi, chiqimlar va qarzlar — dashboard
+  // filtrlariga (davr/do'kon/sana) to'liq bo'ysunadi
+  const [detailedStats, setDetailedStats] = useState<DetailedReportsResponse | null>(null);
+  const [detailedLoading, setDetailedLoading] = useState(true);
+  const [statsTab, setStatsTab] = useState<'tolovlar' | 'qarzlar'>('tolovlar');
+
   useEffect(() => {
     if (!isAdmin && userStoreId) {
       setStoreId(userStoreId);
@@ -228,6 +236,26 @@ export function DashboardPage() {
 
     return () => { active = false; };
   }, [storeId, period, rangeFrom, rangeTo, t]);
+
+  // Batafsil statistika — dashboard filtrlari bilan bir xil parametrlarda yuklanadi
+  useEffect(() => {
+    if (rangeFrom && !rangeTo) return;
+    let active = true;
+    setDetailedLoading(true);
+    reportService
+      .getDetailedReport({
+        filter: period as 'daily' | 'weekly' | 'monthly' | 'yearly',
+        store_id: storeId === 'all' ? 'all' : Number(storeId),
+        ...(rangeFrom && rangeTo ? { from: rangeFrom, to: rangeTo } : {}),
+      })
+      .then((res) => {
+        if (active) setDetailedStats(res);
+      })
+      .finally(() => {
+        if (active) setDetailedLoading(false);
+      });
+    return () => { active = false; };
+  }, [storeId, period, rangeFrom, rangeTo]);
 
   const chartData = useMemo(() => {
     return data.chart || { labels: [], data: [] };
@@ -767,6 +795,179 @@ export function DashboardPage() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* ═══ BATAFSIL STATISTIKA — To'lovlar / Qarzlar (dashboard filtrlari bilan) ═══ */}
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-xl p-1 h-10">
+            {([
+              { key: 'tolovlar', label: t('reports.paymentsTab', "To'lovlar") },
+              { key: 'qarzlar', label: t('reports.debtsTab', 'Qarzlar') },
+            ] as const).map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setStatsTab(tab.key)}
+                className={`flex-1 sm:flex-none sm:px-6 h-8 rounded-lg text-sm font-medium transition-all ${
+                  statsTab === tab.key
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          {/* Bosh sahifa statistikasini eksport — joriy filtrlar (davr/do'kon/sana) bilan:
+              tanlangan do'kon bo'yicha yoki "Barchasi" (umumiy) */}
+          <ExportButton
+            endpoint="/reports/export/"
+            filename="statistika.xlsx"
+            direct
+            params={{
+              filter: period,
+              store_id: storeId,
+              from: rangeFrom || undefined,
+              to: rangeTo || undefined,
+            }}
+          />
+        </div>
+
+        {detailedLoading ? (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {[...Array(2)].map((_, i) => (
+              <div key={i} className="h-64 animate-pulse rounded-2xl bg-slate-100 dark:bg-slate-800/60" />
+            ))}
+          </div>
+        ) : statsTab === 'tolovlar' ? (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            {/* To'lovlar tarkibi */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">{t('reports.paymentStructure', "To'lovlar tarkibi")}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1.5">
+                {(detailedStats?.paymentStructure || []).length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">{t('common.noData')}</p>
+                ) : (
+                  (detailedStats?.paymentStructure || []).map((p, i) => (
+                    <div key={i} className="flex items-center justify-between gap-2 rounded-lg bg-muted/40 px-3 py-2 text-sm">
+                      <span className="min-w-0 truncate text-muted-foreground">{p.method}</span>
+                      <span className="shrink-0 font-semibold tabular-nums">
+                        {formatCurrency(p.amount)}
+                        <span className="ml-1.5 text-xs font-normal text-muted-foreground">{p.percent}</span>
+                      </span>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Kartalar kesimi (Humo/Uzcard/...) */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">{t('reports.cardBreakdown', 'Kartalar kesimi')}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1.5">
+                {(detailedStats?.cardBreakdown || []).length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">{t('common.noData')}</p>
+                ) : (
+                  (detailedStats?.cardBreakdown || []).map((c, i) => (
+                    <div key={i} className="flex items-center justify-between gap-2 rounded-lg bg-muted/40 px-3 py-2 text-sm">
+                      <span className="flex min-w-0 items-center gap-2 truncate text-muted-foreground">
+                        <CreditCard className="h-3.5 w-3.5 shrink-0 text-sky-500" />
+                        {c.name}
+                      </span>
+                      <span className="shrink-0 font-semibold tabular-nums">
+                        {formatCurrency(c.amount)}
+                        <span className="ml-1.5 text-xs font-normal text-muted-foreground">{c.percent}</span>
+                      </span>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Chiqimlar (usul/karta kesimida) */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">{t('reports.expenses', 'Chiqimlar')}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1.5">
+                {(detailedStats?.expenses || []).length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">{t('common.noData')}</p>
+                ) : (
+                  (detailedStats?.expenses || []).map((e, i) => (
+                    <div key={i} className="flex items-center justify-between gap-2 rounded-lg bg-muted/40 px-3 py-2 text-sm">
+                      <span className="min-w-0 truncate text-muted-foreground">{e.method}</span>
+                      <span className="shrink-0 font-semibold tabular-nums text-red-500">
+                        {formatCurrency(e.amount)}
+                        <span className="ml-1.5 text-xs font-normal text-muted-foreground">{e.percent}</span>
+                      </span>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {/* Mijoz qarzlari */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">
+                  {t('reports.customerDebts', 'Qarzdorlar (mijozlar)')}
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">
+                    {(detailedStats?.debts?.customerDebts || []).length} ta
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="max-h-80 space-y-1.5 overflow-y-auto">
+                {(detailedStats?.debts?.customerDebts || []).length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">{t('common.noData')}</p>
+                ) : (
+                  (detailedStats?.debts?.customerDebts || []).map((d, i) => (
+                    <div key={i} className="flex items-center justify-between gap-2 rounded-lg bg-muted/40 px-3 py-2 text-sm">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{d.customerName}</p>
+                        <p className="text-xs text-muted-foreground">{d.phone}</p>
+                      </div>
+                      <span className="shrink-0 font-semibold tabular-nums text-red-500">
+                        {formatCurrency(d.debt)}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Ta'minotchi qarzlari */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">
+                  {t('reports.supplierDebts', "Ta'minotchi qarzlari")}
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">
+                    {(detailedStats?.debts?.supplierDebts || []).length} ta
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="max-h-80 space-y-1.5 overflow-y-auto">
+                {(detailedStats?.debts?.supplierDebts || []).length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">{t('common.noData')}</p>
+                ) : (
+                  (detailedStats?.debts?.supplierDebts || []).map((d, i) => (
+                    <div key={i} className="flex items-center justify-between gap-2 rounded-lg bg-muted/40 px-3 py-2 text-sm">
+                      <span className="min-w-0 truncate font-medium">{d.supplierName}</span>
+                      <span className="shrink-0 font-semibold tabular-nums text-red-500">
+                        {formatCurrency(d.debt)}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
 
     </div>
