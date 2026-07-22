@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
 import { Link, useParams } from 'react-router-dom';
 import { Plus, ArrowRight, Eye, Search, Check, X, Package, CheckCircle2, Printer, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PageHeader } from '../../../components/shared/PageHeader';
@@ -13,7 +14,7 @@ import { Button } from '../../../components/ui/Button';
 import { Card, CardContent } from '../../../components/ui/Card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../../components/ui/Dialog';
 import { Input } from '../../../components/ui/Input';
-import { transferService } from '../../../services/transferService';
+import { transferService, type TransferSessionRecord } from '../../../services/transferService';
 import { storeService } from '../../../services/storeService';
 import { formatDate } from '../../../utils';
 import { escapeHtml } from '../../../utils/xss';
@@ -37,6 +38,8 @@ export function TransferListPage() {
   const [showDetails, setShowDetails] = useState(false);
   // Qabul qilish / rad etish oldidan modal orqali tasdiq so'raladi
   const [confirmAction, setConfirmAction] = useState<{ type: 'approve' | 'reject'; transfer: Transfer } | null>(null);
+  // Tasdiqlangach so'rov tugaguncha modal loading holatida ochiq turadi
+  const [confirmLoading, setConfirmLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   // Default — oxirgi 1 hafta; tozalansa yoki o'zgartirilsa boshqa o'tkazmalar ham chiqadi
@@ -46,6 +49,8 @@ export function TransferListPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const limit = 20;
+  // Yakunlanmagan o'tkazma qoralamalari — ro'yxat tepasida "davom ettirish" kartasi
+  const [drafts, setDrafts] = useState<TransferSessionRecord[]>([]);
   
   const productNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -70,7 +75,21 @@ export function TransferListPage() {
 
   useEffect(() => {
     loadStores();
+    transferService
+      .getSessions()
+      .then(setDrafts)
+      .catch(() => setDrafts([]));
   }, []);
+
+  const discardDraft = async (id: number) => {
+    try {
+      await transferService.cancelSession(id);
+      setDrafts((prev) => prev.filter((draft) => draft.id !== id));
+      toast.success(t('transfers.draftDeleted', 'Qoralama o‘chirildi'));
+    } catch (error) {
+      handleError(error, { showToast: true });
+    }
+  };
 
   const loadStores = async () => {
     try {
@@ -117,6 +136,7 @@ export function TransferListPage() {
       setTransfers((prev) =>
         prev.map((t) => (t.id === id ? { ...t, status: 'a' } : t))
       );
+      toast.success(t('transfers.approveSuccess', "O'tkazma qabul qilindi"));
     } catch (error) {
       handleError(error, { showToast: true });
     }
@@ -128,6 +148,7 @@ export function TransferListPage() {
       setTransfers((prev) =>
         prev.map((t) => (t.id === id ? { ...t, status: 'r' } : t))
       );
+      toast.success(t('transfers.rejectSuccess', "O'tkazma rad etildi"));
     } catch (error) {
       handleError(error, { showToast: true });
     }
@@ -390,6 +411,51 @@ export function TransferListPage() {
         title={t('transfers.title')}
         description={t('transfers.listDescription')}
       />
+
+      {/* Yakunlanmagan qoralamalar — davom ettirish yoki o'chirish */}
+      {drafts.length > 0 && (
+        <div className="space-y-2">
+          {drafts.map((draft) => (
+            <div
+              key={draft.id}
+              className="flex flex-col gap-3 rounded-xl border border-amber-300/60 bg-amber-50/60 p-4 dark:border-amber-700/40 dark:bg-amber-900/10 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                    {t('transfers.draftBadge', 'Qoralama')}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {draft.updated_at ? formatDate(draft.updated_at) : ''}
+                  </span>
+                </div>
+                <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-sm font-medium text-foreground">
+                  {draft.from_store_name || '—'}
+                  <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                  {draft.to_store_name || '—'}
+                  <span className="text-muted-foreground">
+                    · {t('transfers.draftItems', '{{count}} ta tovar', { count: draft.items?.length ?? 0 })}
+                  </span>
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <Link to={`/${lang}/transfers/new`}>
+                  <Button size="sm">{t('transfers.draftContinue', 'Davom ettirish')}</Button>
+                </Link>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 text-muted-foreground hover:text-red-500"
+                  onClick={() => void discardDraft(draft.id)}
+                  aria-label={t('transfers.leaveDiscard', 'Qoralamani o‘chirish')}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Filtrlar sahifa tepasida — ro'yxatga ham, eksportga ham birdek qo'llanadi */}
       <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
@@ -681,14 +747,20 @@ export function TransferListPage() {
       <ConfirmDialog
         open={!!confirmAction}
         onOpenChange={(open: boolean) => !open && setConfirmAction(null)}
-        onConfirm={() => {
+        onConfirm={async () => {
           if (!confirmAction) return;
-          if (confirmAction.type === 'approve') {
-            void handleApprove(confirmAction.transfer.id);
-          } else {
-            void handleReject(confirmAction.transfer.id);
+          setConfirmLoading(true);
+          try {
+            if (confirmAction.type === 'approve') {
+              await handleApprove(confirmAction.transfer.id);
+            } else {
+              await handleReject(confirmAction.transfer.id);
+            }
+          } finally {
+            setConfirmLoading(false);
           }
         }}
+        loading={confirmLoading}
         title={
           confirmAction?.type === 'approve'
             ? t('transfers.confirmApproveTitle', "O'tkazmani qabul qilish")

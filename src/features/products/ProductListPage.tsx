@@ -32,6 +32,7 @@ import { productLocationService, type ProductLocation } from '../../services/pro
 import { categoryService } from '../../services/categoryService';
 import { useAuthStore } from '../../app/store';
 import { useCategories } from '../../context/CategoryContext';
+import { useProducts } from '../../context/ProductContext';
 import type { Product, ProductFormData, ProductFilters, ProductStockStats, ProductUnit, CategoryFormData, ProductUnitFormData, Store, Category } from '../../types';
 import { formatCurrency, cn, copyToClipboard } from '../../utils';
 import { latinToCyrillic } from '../../utils/transliteration';
@@ -75,6 +76,8 @@ export function ProductListPage() {
   const canArchiveProduct = hasRbacRole ? hasPermission('products.archive') : isAdmin;
   const userStoreId = user?.store_id;
   const { categories, refreshCategories } = useCategories();
+  // App-darajali mahsulot keshi (POS, kirim wizard'i) — yangi mahsulotdan keyin yangilanadi
+  const { refreshProducts } = useProducts();
   const [products, setProducts] = useState<Product[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
@@ -702,9 +705,10 @@ export function ProductListPage() {
                       <p className="font-bold text-slate-900 dark:text-white text-sm leading-snug line-clamp-2">
                         {highlightMatch(item.name, searchQuery)}
                       </p>
+                      {/* ID — vaqtincha yashirilgan (faqat frontendda)
                       <span className="text-[10px] font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
                         #{item.id}
-                      </span>
+                      </span> */}
                     </div>
 
                     <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
@@ -719,11 +723,12 @@ export function ProductListPage() {
                           SKU: {highlightMatch(item.sku, searchQuery)}
                         </span>
                       )}
+                      {/* Barcode — vaqtincha yashirilgan (faqat frontendda)
                       {item.barcode && (
                         <span className="text-slate-600 font-mono bg-slate-100 dark:bg-slate-800/60 px-1.5 py-0.5 rounded text-[10px]">
                           Barcode: {highlightMatch(item.barcode, searchQuery)}
                         </span>
-                      )}
+                      )} */}
                     </div>
                   </div>
                 </div>
@@ -850,13 +855,14 @@ export function ProductListPage() {
 
       {/* ═══════ Product Table ═══════ */}
       <div className="hidden md:block w-full overflow-x-auto rounded-2xl border border-border/60 bg-card">
-        <table className="w-full text-sm" style={{ minWidth: `${Math.max(1100, 800 + shopStores.length * 90)}px` }}>
+        {/* ID va Barcode ustunlari yashirilgani uchun minimal kenglik mos kamaytirilgan */}
+        <table className="w-full text-sm" style={{ minWidth: `${Math.max(950, 650 + shopStores.length * 90)}px` }}>
           <thead>
             <tr className="border-b border-border/50 bg-muted/30">
-              {/* ID */}
+              {/* ID — vaqtincha yashirilgan (faqat frontendda)
               <th className="w-14 px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 ID
-              </th>
+              </th> */}
               {/* Image */}
               <th className="w-16 px-2 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {t('products.image', 'Tovar rasmi')}
@@ -869,10 +875,10 @@ export function ProductListPage() {
               <th className="w-[120px] px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {t('products.sku', 'SKU')}
               </th>
-              {/* Barcode */}
+              {/* Barcode — vaqtincha yashirilgan (faqat frontendda)
               <th className="w-[140px] px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {t('products.barcode')}
-              </th>
+              </th> */}
               {/* Category */}
               <th className="w-[140px] px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {t('products.category', 'Kategoriya')}
@@ -910,7 +916,7 @@ export function ProductListPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={10 + shopStores.length} className="h-40 text-center">
+                <td colSpan={8 + shopStores.length} className="h-40 text-center">
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
                     <Loader2 className="h-6 w-6 animate-spin" />
                     <span className="text-sm">{t('common.loading')}</span>
@@ -919,7 +925,7 @@ export function ProductListPage() {
               </tr>
             ) : filteredProducts.length === 0 ? (
               <tr>
-                <td colSpan={10 + shopStores.length} className="h-40 text-center">
+                <td colSpan={8 + shopStores.length} className="h-40 text-center">
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
                     <Package className="h-8 w-8 opacity-40" />
                     <span className="text-sm">{t('common.noData', "Ma'lumot yo'q")}</span>
@@ -946,10 +952,10 @@ export function ProductListPage() {
                       stockStatus === 'low_stock' && 'border-l-2 border-l-yellow-500'
                     )}
                   >
-                    {/* ID */}
+                    {/* ID — vaqtincha yashirilgan (faqat frontendda)
                     <td className="px-3 py-3">
                       <span className="text-xs font-mono text-muted-foreground">#{item.id}</span>
-                    </td>
+                    </td> */}
 
                     {/* Product Image */}
                     <td className="px-2 py-2">
@@ -1004,9 +1010,10 @@ export function ProductListPage() {
                             <Copy className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 group-hover/name:opacity-100 transition-opacity" />
                           )}
                         </button>
+                        {/* ID — vaqtincha yashirilgan (faqat frontendda)
                         <p className="text-[11px] text-muted-foreground font-mono mt-0.5">
                           ID: {item.id}
-                        </p>
+                        </p> */}
                       </div>
                     </td>
 
@@ -1017,7 +1024,7 @@ export function ProductListPage() {
                       </code>
                     </td>
 
-                    {/* Barcode */}
+                    {/* Barcode — vaqtincha yashirilgan (faqat frontendda)
                     <td className="px-3 py-2">
                       {item.barcode ? (
                         <div className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
@@ -1036,7 +1043,7 @@ export function ProductListPage() {
                           )}
                         </div>
                       ) : '—'}
-                    </td>
+                    </td> */}
 
                     {/* Category */}
                     <td className="px-3 py-2 text-sm text-muted-foreground">
@@ -1253,6 +1260,8 @@ export function ProductListPage() {
         onSuccess={() => {
           setIsAddModalOpen(false);
           void loadProducts();
+          // POS va kirim wizard'idagi mahsulot ro'yxati ham yangi mahsulotni ko'rsin
+          void refreshProducts();
         }}
         categories={categories}
         refreshCategories={refreshCategories}

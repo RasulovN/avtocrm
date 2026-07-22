@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { Plus, Eye, Undo2 } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
+import { DateRangeFilter } from '../../components/shared/DateRangeFilter';
 import { Button } from '../../components/ui/Button';
 import {
   Dialog,
@@ -13,11 +14,35 @@ import {
   DialogFooter,
 } from '../../components/ui/Dialog';
 import { saleReturnService } from '../../services/salesService';
-import { formatCurrency } from '../../utils';
+import { formatCurrency, formatDate } from '../../utils';
 import { handleError } from '../../utils/errorHandler';
 import type { SaleReturn } from '../../types';
 
 type ReturnRow = Omit<SaleReturn, 'id'> & { id: string; rowNumber: number };
+
+// Sotuvlar sahifasidagi bilan bir xil davr presetlari — ikkala sahifa
+// statistikasi bir davr uchun solishtirma bo'ladi
+type DatePreset = 'today' | 'week' | 'month' | 'all' | 'custom';
+
+const toLocalDate = (d: Date): string =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+const presetRange = (preset: DatePreset): { from: string; to: string } => {
+  const today = new Date();
+  const to = toLocalDate(today);
+  if (preset === 'today') return { from: to, to };
+  if (preset === 'week') {
+    const d = new Date(today);
+    d.setDate(d.getDate() - 6);
+    return { from: toLocalDate(d), to };
+  }
+  if (preset === 'month') {
+    const d = new Date(today);
+    d.setDate(d.getDate() - 29);
+    return { from: toLocalDate(d), to };
+  }
+  return { from: '', to: '' }; // all
+};
 
 export function SaleReturnListPage() {
   const { t } = useTranslation();
@@ -27,15 +52,25 @@ export function SaleReturnListPage() {
   const [loading, setLoading] = useState(true);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedReturn, setSelectedReturn] = useState<SaleReturn | null>(null);
+  // Default — Hammasi (avvalgi xatti-harakat saqlanadi: barcha qaytarimlar ko'rinadi)
+  const [preset, setPreset] = useState<DatePreset>('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const applyPreset = (next: DatePreset) => {
+    setPreset(next);
+    const range = presetRange(next);
+    setDateFrom(range.from);
+    setDateTo(range.to);
+  };
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await saleReturnService.getAll();
+      const data = await saleReturnService.getAll({
+        date_from: dateFrom || undefined,
+        date_to: dateTo || undefined,
+      });
       setReturns(data);
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
@@ -45,7 +80,11 @@ export function SaleReturnListPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateFrom, dateTo]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const handleViewDetails = (item: ReturnRow) => {
     const original = returns.find((r) => r.id === Number(item.id));
@@ -99,6 +138,11 @@ export function SaleReturnListPage() {
       render: (item) => `${item.items?.length || 0} ta`,
     },
     {
+      key: 'created_at',
+      header: t('common.date'),
+      render: (item) => item.created_at ? formatDate(item.created_at) : '—',
+    },
+    {
       key: 'actions',
       header: t('common.actions'),
       className: 'text-right',
@@ -138,6 +182,47 @@ export function SaleReturnListPage() {
             {t('saleReturns.newReturn')}
           </Button>
         </Link>
+      </div>
+
+      {/* Davr filtri — sotuvlar sahifasidagi bilan bir xil; statistika va
+          ro'yxat tanlangan davr bo'yicha chiqadi */}
+      <div className="rounded-2xl border border-border/60 bg-card p-3 shadow-sm sm:p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
+          <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap">
+            {([
+              ['today', t('export.today', 'Bugun')],
+              ['week', t('export.last7', 'Oxirgi 7 kun')],
+              ['month', t('export.last30', 'Oxirgi 1 oy')],
+              ['all', t('export.all', 'Hammasi')],
+            ] as [DatePreset, string][]).map(([key, label]) => (
+              <Button
+                key={key}
+                type="button"
+                size="sm"
+                variant={preset === key ? 'default' : 'outline'}
+                onClick={() => applyPreset(key)}
+                className="w-full sm:w-auto"
+              >
+                {label}
+              </Button>
+            ))}
+          </div>
+          <div className="flex w-full flex-col gap-1 sm:w-64">
+            <label className="text-xs font-medium text-muted-foreground">
+              {t('common.dateRange', 'Sana oralig‘i')}
+            </label>
+            <DateRangeFilter
+              from={dateFrom}
+              to={dateTo}
+              onChange={(from, to) => {
+                setDateFrom(from);
+                setDateTo(to);
+                setPreset('custom');
+              }}
+              className="w-full"
+            />
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -182,6 +267,9 @@ export function SaleReturnListPage() {
                     <p className="font-semibold text-foreground">{t('stores.title')}: {item.store_name || String(item.store)}</p>
                     <p className="text-sm text-muted-foreground">{t('sales.sale')} #{item.sale}</p>
                     <p className="text-sm text-muted-foreground">{item.seller_name || String(item.seller)}</p>
+                    {item.created_at && (
+                      <p className="text-xs text-muted-foreground">{formatDate(item.created_at)}</p>
+                    )}
                   </div>
                 </div>
 
@@ -270,6 +358,12 @@ export function SaleReturnListPage() {
                   <p className="text-muted-foreground">{t('saleReturns.totalRefund')}</p>
                   <p className="font-medium text-red-600">
                     {formatCurrency(parseFloat(selectedReturn.total_refund || '0'))}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">{t('common.date')}</p>
+                  <p className="font-medium">
+                    {selectedReturn.created_at ? formatDate(selectedReturn.created_at) : '—'}
                   </p>
                 </div>
                 <div className="sm:col-span-2">

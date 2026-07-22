@@ -1,14 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { Plus, FileText, Eye, EyeOff, ChevronLeft, ChevronRight } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { Plus, FileText, Eye, EyeOff, ChevronLeft, ChevronRight, Trash2, Archive, RotateCcw } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
 import { DateRangeFilter } from '../../components/shared/DateRangeFilter';
 import { ExportButton } from '../../components/shared/ExportButton';
 import { PaymentTypeBadge } from '../../components/shared/PaymentTypeBadge';
+import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 import { Button } from '../../components/ui/Button';
-import { salesService, type SaleStatistics } from '../../services/salesService';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/Dialog';
+import { salesService, type SaleStatistics, type ArchivedSale } from '../../services/salesService';
 import { storeService } from '../../services/storeService';
 import { useAuthStore } from '../../app/store';
 import { formatCurrency, formatDate } from '../../utils';
@@ -65,6 +68,17 @@ export function SalesListPage() {
 
   // Statistika — serverdan, butun filtrlangan davr bo'yicha
   const [stats, setStats] = useState<SaleStatistics | null>(null);
+  // To'lov turlari ko'p bo'lsa kartada faqat bir qismi ko'rinadi, qolgani modalda
+  const [breakdownOpen, setBreakdownOpen] = useState(false);
+
+  // O'chirish (faqat superadmin): checkbox bilan tanlash + tasdiqlash + arxiv
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [archiveLoading, setArchiveLoading] = useState(false);
+  const [archive, setArchive] = useState<ArchivedSale[]>([]);
+  const [restoringId, setRestoringId] = useState<number | null>(null);
 
   const applyPreset = (next: DatePreset) => {
     setPreset(next);
@@ -97,6 +111,8 @@ export function SalesListPage() {
       setSales(res.data || []);
       setTotal(res.total ?? 0);
       setStats(statsRes);
+      // Sahifa/filtr o'zgarganda eski tanlov qolib ketmasin
+      setSelectedIds(new Set());
     } catch (error) {
       const axiosErr = error as { response?: { status?: number } };
       if (axiosErr.response?.status === 401) return;
@@ -119,7 +135,97 @@ export function SalesListPage() {
     rowNumber: index + 1,
   }));
 
+  // ─── Tanlash (faqat superadmin) ───
+  const pageIds = salesRows.map((r) => r.id);
+  const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedIds(allSelected ? new Set() : new Set(pageIds));
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      setDeleting(true);
+      const res = await salesService.bulkDelete([...selectedIds]);
+      toast.success(
+        t('sales.deletedToArchive', "{{count}} ta sotuv arxivga o'tkazildi", { count: res.archived })
+      );
+      setSelectedIds(new Set());
+      await loadData();
+    } catch (error) {
+      handleError(error, { showToast: true });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const openArchive = async () => {
+    setArchiveOpen(true);
+    try {
+      setArchiveLoading(true);
+      const res = await salesService.getArchive();
+      setArchive(res.results || []);
+    } catch (error) {
+      handleError(error, { showToast: true });
+    } finally {
+      setArchiveLoading(false);
+    }
+  };
+
+  const handleRestore = async (id: number) => {
+    try {
+      setRestoringId(id);
+      await salesService.restore([id]);
+      toast.success(t('sales.restoredMsg', 'Sotuv ro‘yxatga qaytarildi'));
+      setArchive((prev) => prev.filter((a) => a.id !== id));
+      await loadData();
+    } catch (error) {
+      handleError(error, { showToast: true });
+    } finally {
+      setRestoringId(null);
+    }
+  };
+
+  // Checkbox ustuni — faqat superadmin uchun; sarlavhadagi checkbox sahifadagi
+  // hammasini tanlaydi/bekor qiladi. stopPropagation — qator bosilganda
+  // detail sahifaga o'tib ketmasligi uchun.
+  const selectColumn: Column<SaleRow> = {
+    key: 'select',
+    header: (
+      <input
+        type="checkbox"
+        checked={allSelected}
+        onChange={toggleSelectAll}
+        onClick={(e) => e.stopPropagation()}
+        aria-label={t('sales.selectAllSales', 'Hammasini tanlash')}
+        className="h-4 w-4 cursor-pointer accent-primary align-middle"
+      />
+    ),
+    className: 'w-10',
+    render: (item) => (
+      <input
+        type="checkbox"
+        checked={selectedIds.has(item.id)}
+        onChange={() => toggleSelect(item.id)}
+        onClick={(e) => e.stopPropagation()}
+        aria-label={t('sales.selectSale', 'Sotuvni tanlash')}
+        className="h-4 w-4 cursor-pointer accent-primary align-middle"
+      />
+    ),
+  };
+
   const columns: Column<SaleRow>[] = [
+    ...(isAdmin ? [selectColumn] : []),
     {
       key: 'rowNumber',
       header: '#',
@@ -208,6 +314,12 @@ export function SalesListPage() {
           description={t('sales.listDescription')}
         />
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-end">
+          {isAdmin && (
+            <Button variant="outline" className="w-full sm:w-auto" onClick={openArchive}>
+              <Archive className="h-4 w-4 mr-2" />
+              {t('sales.archive', 'Arxiv')}
+            </Button>
+          )}
           <ExportButton
             direct
             endpoint="/sales/export/"
@@ -327,7 +439,8 @@ export function SalesListPage() {
             <p className="text-2xl font-bold text-emerald-600">{formatCurrency(parseFloat(stats.total_paid || '0'))}</p>
             {(stats.paid_breakdown?.length ?? 0) > 0 && (
               <div className="mt-3 space-y-1.5 border-t border-border/60 pt-2.5">
-                {stats.paid_breakdown!.map((row, index) => (
+                {/* Kartada faqat dastlabki 3 tasi — dizayn buzilmasligi uchun */}
+                {stats.paid_breakdown!.slice(0, 3).map((row, index) => (
                   <div key={`${row.type}-${row.name ?? index}`} className="flex items-center justify-between gap-2 text-xs">
                     <span className="flex items-center gap-1.5 min-w-0 text-muted-foreground">
                       <span
@@ -344,12 +457,34 @@ export function SalesListPage() {
                     </span>
                   </div>
                 ))}
+                {stats.paid_breakdown!.length > 3 && (
+                  <button
+                    type="button"
+                    onClick={() => setBreakdownOpen(true)}
+                    className="w-full pt-0.5 text-left text-xs font-medium text-primary hover:underline"
+                  >
+                    {t('sales.morePaymentTypes', '+{{count}} ta to‘lov turi', {
+                      count: stats.paid_breakdown!.length - 3,
+                    })}
+                  </button>
+                )}
               </div>
             )}
           </div>
           <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm card-hover-lift">
             <p className="text-sm text-muted-foreground">{t('saleReturns.totalRefund', 'Qaytarilgan summa')}</p>
             <p className="text-2xl font-bold text-amber-600">{formatCurrency(parseFloat(stats.total_returned || '0'))}</p>
+            {/* Tanlangan davrda qaytarim bo'lmasa ham umumiy summa ko'rinib turadi —
+                sales-returns sahifasidagi jami bilan mos */}
+            {stats.total_returned_all !== undefined &&
+              parseFloat(stats.total_returned_all || '0') !== parseFloat(stats.total_returned || '0') && (
+                <p className="mt-2 border-t border-border/60 pt-2 text-xs text-muted-foreground">
+                  {t('export.all', 'Hammasi')}:{' '}
+                  <span className="font-semibold text-amber-600">
+                    {formatCurrency(parseFloat(stats.total_returned_all))}
+                  </span>
+                </p>
+              )}
           </div>
           <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm card-hover-lift">
             <p className="text-sm text-muted-foreground">{t('dashboard.totalDebt')}</p>
@@ -358,9 +493,83 @@ export function SalesListPage() {
         </div>
       )}
 
-      <div>
+      {/* To'lov turlari bo'yicha to'liq taqsimot modali */}
+      <Dialog open={breakdownOpen} onOpenChange={setBreakdownOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t('sales.paidBreakdownTitle', 'To‘langan — to‘lov turlari')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1">
+            <div className="mb-2 flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
+              <span className="text-sm text-muted-foreground">{t('common.total', 'Jami')}</span>
+              <span className="font-bold tabular-nums text-emerald-600">
+                {formatCurrency(parseFloat(stats?.total_paid || '0'))}
+              </span>
+            </div>
+            <div className="max-h-72 divide-y divide-border/50 overflow-y-auto">
+              {(stats?.paid_breakdown ?? []).map((row, index) => (
+                <div
+                  key={`${row.type}-${row.name ?? index}`}
+                  className="flex items-center justify-between gap-3 px-1 py-2 text-sm"
+                >
+                  <span className="flex min-w-0 items-center gap-2 text-muted-foreground">
+                    <span
+                      className={`h-2 w-2 shrink-0 rounded-full ${row.type === 'cash' ? 'bg-emerald-500' : 'bg-sky-500'}`}
+                    />
+                    <span className="truncate">
+                      {row.type === 'cash'
+                        ? t('sales.cash', 'Naqd')
+                        : row.name || t('sales.unknownCard', 'Noma’lum karta')}
+                    </span>
+                  </span>
+                  <span className="shrink-0 font-semibold tabular-nums">
+                    {formatCurrency(parseFloat(row.amount || '0'))}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <div className="flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold">{t('sales.history')}</h2>
+        {/* Mobil uchun "hammasini tanlash" — desktopda jadval sarlavhasidagi checkbox bor */}
+        {isAdmin && salesRows.length > 0 && (
+          <label className="flex items-center gap-2 text-sm text-muted-foreground md:hidden cursor-pointer">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={toggleSelectAll}
+              className="h-4 w-4 cursor-pointer accent-primary"
+            />
+            {t('sales.selectAllSales', 'Hammasini tanlash')}
+          </label>
+        )}
       </div>
+
+      {/* Tanlangan sotuvlar paneli — o'chirish tasdiqlash bilan */}
+      {isAdmin && selectedIds.size > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 dark:border-red-800/50 dark:bg-red-950/20">
+          <span className="text-sm font-medium">
+            {t('sales.selectedCount', '{{count}} ta sotuv tanlandi', { count: selectedIds.size })}
+          </span>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>
+              {t('common.cancel', 'Bekor qilish')}
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={deleting}
+              onClick={() => setDeleteConfirmOpen(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-1.5" />
+              {t('common.delete', "O'chirish")}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="text-center py-8 text-muted-foreground">
@@ -381,11 +590,23 @@ export function SalesListPage() {
                 onClick={() => navigate(`/${lang}/sales/${item.id}`)}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs text-muted-foreground">#{index + 1}</p>
-                    <p className="font-semibold text-foreground">{t('stores.title')}: {item.store_name || String(item.store)}</p>
-                    <p className="text-sm text-muted-foreground">{t('customers.title')}: {item.customer_name || String(item.customer)}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">{formatDate(item.created_at)}</p>
+                  <div className="flex items-start gap-3 min-w-0">
+                    {isAdmin && (
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(String(item.id))}
+                        onChange={() => toggleSelect(String(item.id))}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label={t('sales.selectSale', 'Sotuvni tanlash')}
+                        className="mt-1 h-4 w-4 shrink-0 cursor-pointer accent-primary"
+                      />
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground">#{index + 1}</p>
+                      <p className="font-semibold text-foreground">{t('stores.title')}: {item.store_name || String(item.store)}</p>
+                      <p className="text-sm text-muted-foreground">{t('customers.title')}: {item.customer_name || String(item.customer)}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">{formatDate(item.created_at)}</p>
+                    </div>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     <span className={`rounded-full px-2 py-1 text-xs ${item.status === 'partial' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
@@ -481,6 +702,81 @@ export function SalesListPage() {
           </div>
         </>
       )}
+
+      {/* O'chirishni tasdiqlash — sotuvlar avval arxivga tushadi */}
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        onConfirm={handleBulkDelete}
+        title={t('sales.deleteConfirmTitle', "Sotuvlarni o'chirish")}
+        description={t(
+          'sales.deleteConfirmDesc',
+          "{{count}} ta sotuv arxivga o'tkaziladi va ro'yxatdan yashiriladi. Arxivda 30 kun saqlanadi, keyin avtomatik butunlay o'chib ketadi. Davom etasizmi?",
+          { count: selectedIds.size }
+        )}
+        confirmText={t('common.delete', "O'chirish")}
+        cancelText={t('common.cancel', 'Bekor qilish')}
+        variant="destructive"
+        loading={deleting}
+      />
+
+      {/* Arxiv — o'chirilgan sotuvlar, tiklash imkoniyati bilan */}
+      <Dialog open={archiveOpen} onOpenChange={setArchiveOpen}>
+        <DialogContent className="max-w-2xl sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{t('sales.archiveTitle', "O'chirilgan sotuvlar arxivi")}</DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            {t(
+              'sales.archiveHint',
+              "O'chirilgan sotuvlar arxivda 30 kun saqlanadi, so'ng avtomatik butunlay o'chiriladi. Tiklangan sotuv ro'yxatga qaytadi."
+            )}
+          </p>
+          <div className="max-h-96 space-y-2 overflow-y-auto">
+            {archiveLoading ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">{t('common.loading')}</p>
+            ) : archive.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                {t('sales.archiveEmpty', 'Arxiv bo‘sh')}
+              </p>
+            ) : (
+              archive.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex flex-col gap-2 rounded-lg border border-border/60 bg-muted/20 p-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0 space-y-0.5">
+                    <p className="text-sm font-semibold">
+                      №{item.id} — {item.store_name || '-'}
+                      <span className="ml-2 font-normal text-muted-foreground">
+                        {item.customer_name || '-'}
+                      </span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t('common.total', 'Jami')}: <span className="font-medium text-foreground">{formatCurrency(parseFloat(item.total_amount || '0'))}</span>
+                      {' • '}
+                      {t('sales.deletedAt', "O'chirilgan sana")}: {formatDate(item.deleted_at)}
+                    </p>
+                    <p className="text-xs font-medium text-amber-600">
+                      {t('sales.daysLeft', "Butunlay o'chirilishiga {{count}} kun qoldi", { count: item.days_left })}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    disabled={restoringId === item.id}
+                    onClick={() => handleRestore(item.id)}
+                  >
+                    <RotateCcw className="h-4 w-4 mr-1.5" />
+                    {restoringId === item.id ? t('common.loading') : t('sales.restore', 'Tiklash')}
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

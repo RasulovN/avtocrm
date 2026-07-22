@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState, useEffect, useCallback, type ChangeEvent, type FocusEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, FileText, Eye, Search, X, ChevronLeft, ChevronRight, CreditCard, Printer, FileSpreadsheet, Banknote, Star } from 'lucide-react';
+import { Plus, FileText, Eye, Search, X, ChevronLeft, ChevronRight, CreditCard, Printer, FileSpreadsheet, Banknote } from 'lucide-react';
 import { generateBarcodePrintHtml, generateMultipleBarcodesPrintHtml, escapeHtml } from '../../utils/xss';
 
 import { PageHeader } from '../../components/shared/PageHeader';
@@ -21,7 +21,10 @@ import type { PurchaseSession } from '../../types';
 import { productService } from '../../services/productService';
 import { supplierService } from '../../services/supplierService';
 import { bankCardService } from '../../services/bankCardService';
+import { CardSplitEditor } from '../../components/shared/CardSplitEditor';
+import { useCardSplits } from '../../hooks/useCardSplits';
 import { formatCurrency, formatDate } from '../../utils';
+import { groupByPaymentGroup } from '../../utils/paymentGroups';
 import { handleError } from '../../utils/errorHandler';
 import type { InventoryItem, Supplier, BankCard } from '../../types';
 
@@ -39,7 +42,13 @@ export interface SupplierPayment {
   entry: number;
   amount: string;
   type: string;
+  payment_method?: 'cash' | 'card' | '';
+  bank_card?: number | null;
+  bank_card_name?: string | null;
+  /** Bitta to'lov harakatining split qatorlarini bog'lovchi guruh ID (null — eski yozuvlar) */
+  payment_group?: string | null;
   note: string;
+  created_at?: string;
 }
 
 interface DisplayInventory {
@@ -88,12 +97,13 @@ export function StockEntryListPage() {
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
-  const [paymentAmount, setPaymentAmount] = useState('');
   const [paying, setPaying] = useState(false);
-  // To'lov usuli: naqd yoki karta; karta bo'lsa to'lov turi (Uzcard/Humo/...) tanlanadi
-  const [paymentType, setPaymentType] = useState<'cash' | 'card'>('cash');
+  // To'lov taqsimoti: naqd va karta summalari (ikkalasi birga = aralash to'lov).
+  // Jami to'lov shu ikkisining yig'indisidan hisoblanadi — qarzdan kam bo'lsa
+  // qisman to'lov bo'lib saqlanadi.
+  const [payCash, setPayCash] = useState('');
+  const [payCard, setPayCard] = useState('');
   const [paymentCards, setPaymentCards] = useState<BankCard[]>([]);
-  const [selectedPaymentCardId, setSelectedPaymentCardId] = useState('');
   const [paymentHistory, setPaymentHistory] = useState<SupplierPayment[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
@@ -430,45 +440,62 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
 
   const handlePayDebt = () => {
     if (!selectedInventory || !selectedInventory.debt) return;
-    setPaymentAmount(String(selectedInventory.debt));
-    setPaymentType('cash');
+    // Default: to'liq qarz naqd sifatida — foydalanuvchi kamaytirsa qisman to'lov bo'ladi
+    setPayCash(String(selectedInventory.debt));
+    setPayCard('');
     setShowPaymentDialog(true);
     // Kirim bo'limida ko'rinadigan to'lov turlari (scope: purchase + both)
     if (paymentCards.length === 0) {
       bankCardService
         .getAll({ is_active: true, scope: 'purchase' })
-        .then((cards) => {
-          setPaymentCards(cards);
-          const defaultCard = cards.find((card) => card.is_default) ?? cards[0];
-          setSelectedPaymentCardId(defaultCard ? String(defaultCard.id) : '');
-        })
+        .then(setPaymentCards)
         .catch(() => setPaymentCards([]));
     }
   };
 
-  // To'lov validatsiyasi: 0 dan katta va qoldiq qarzdan oshmasligi kerak;
-  // karta usulida to'lov turi (karta) tanlangan bo'lishi shart
   const paymentDebt = selectedInventory?.debt || 0;
-  const paymentAmountNum = Number(paymentAmount) || 0;
-  const paymentExceedsDebt = paymentAmountNum > paymentDebt;
-  const paymentCardMissing = paymentType === 'card' && !selectedPaymentCardId;
-  const paymentInvalid = !paymentAmount || paymentAmountNum <= 0 || paymentExceedsDebt || paymentCardMissing;
-  const paymentRemaining = Math.max(0, paymentDebt - paymentAmountNum);
+  const payCashNum = Number(payCash) || 0;
+  const payCardNum = Number(payCard) || 0;
+  // Jami to'lov naqd + karta yig'indisidan hisoblanadi (tiyin darajasida — float xatosisiz)
+  const paymentTotalNum = (Math.round(payCashNum * 100) + Math.round(payCardNum * 100)) / 100;
+  const paymentExceedsDebt = Math.round(paymentTotalNum * 100) > Math.round(paymentDebt * 100);
+  const paymentRemaining = Math.max(0, paymentDebt - paymentTotalNum);
+
+  // Karta summasini bir nechta kartaga (Humo/Uzcard/...) taqsimlash
+  const {
+    cardSplits,
+    activeSplits,
+    splitsInvalid,
+    updateSplitCard,
+    updateSplitAmount,
+    addCardSplit,
+    removeCardSplit,
+  } = useCardSplits(paymentCards, Math.round(payCardNum));
+
+  const paymentInvalid = paymentTotalNum <= 0 || paymentExceedsDebt || splitsInvalid;
 
   const handleSubmitPayment = async () => {
     if (!selectedInventory || paymentInvalid) return;
     try {
       setPaying(true);
+      // Split to'lovlar: naqd bitta qator + har bir karta alohida qator
+      const paymentsPayload = [];
+      if (payCashNum > 0) paymentsPayload.push({ type: 'cash' as const, amount: payCashNum.toFixed(2) });
+      for (const split of activeSplits) {
+        paymentsPayload.push({
+          type: 'card' as const,
+          amount: split.amount.toFixed(2),
+          bank_card: Number(split.bankCardId),
+        });
+      }
       await supplierService.createPayment({
         supplier: parseInt(selectedInventory.supplier_id),
         entry: parseInt(selectedInventory.id),
-        amount: paymentAmount,
-        payment_type: paymentType,
-        ...(paymentType === 'card' ? { bank_card: Number(selectedPaymentCardId) } : {}),
+        payments: paymentsPayload,
       });
       setShowPaymentDialog(false);
-      setPaymentAmount('');
-      setPaymentType('cash');
+      setPayCash('');
+      setPayCard('');
       loadData();
     } catch (error) {
       handleError(error, { showToast: true });
@@ -1013,25 +1040,76 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
                 ) : paymentHistory.length === 0 ? (
                   <div className="text-muted-foreground text-sm">{t('common.noData')}</div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>ID</TableHead>
-                          <TableHead>{t('sales.amount')}</TableHead>
-                          <TableHead>{t('saleReturns.comment')}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {paymentHistory.map((p) => (
-                          <TableRow key={p.id}>
-                            <TableCell>{p.id}</TableCell>
-                            <TableCell>{formatCurrency(Number(p.amount))}</TableCell>
-                            <TableCell>{p.note}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                  <div className="space-y-1.5">
+                    {/* Bitta to'lov harakati (split: naqd + kartalar) — bitta blok,
+                        qismlari ichida alohida ko'rinadi */}
+                    {groupByPaymentGroup(paymentHistory).map((group) => {
+                      const first = group[0];
+                      const single = group.length === 1;
+                      const isIntake = first.type === 'in';
+                      const groupTotal = group.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+                      return (
+                        <div
+                          key={first.id}
+                          className={`rounded-lg border px-3 py-2 text-sm ${
+                            isIntake ? 'border-amber-200 bg-amber-50/50 dark:border-amber-800/40 dark:bg-amber-950/10' : 'bg-card'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex min-w-0 items-center gap-2">
+                              {isIntake ? (
+                                <FileText className="h-4 w-4 shrink-0 text-amber-600" />
+                              ) : single ? (
+                                first.payment_method === 'card' ? (
+                                  <CreditCard className="h-4 w-4 shrink-0 text-blue-500" />
+                                ) : (
+                                  <Banknote className="h-4 w-4 shrink-0 text-emerald-500" />
+                                )
+                              ) : (
+                                <CreditCard className="h-4 w-4 shrink-0 text-violet-500" />
+                              )}
+                              <div className="min-w-0">
+                                <p className="truncate font-medium">
+                                  {isIntake
+                                    ? t('suppliers.debtRecorded', 'Qarzga yozildi')
+                                    : single
+                                      ? first.payment_method === 'card'
+                                        ? first.bank_card_name || t('sales.card', 'Karta')
+                                        : t('sales.cash', 'Naqd')
+                                      : t('sales.mixedPayment', "Aralash to'lov")}
+                                </p>
+                                <p className="text-[11px] text-muted-foreground">
+                                  {first.created_at ? formatDate(first.created_at) : ''}
+                                </p>
+                              </div>
+                            </div>
+                            <span className={`shrink-0 font-semibold tabular-nums ${isIntake ? 'text-amber-600' : 'text-green-600'}`}>
+                              {formatCurrency(groupTotal)}
+                            </span>
+                          </div>
+                          {/* Qismlar: qaysi usuldan/kartadan qancha */}
+                          {!single && (
+                            <div className="ml-6 mt-1.5 space-y-1 border-l border-border/60 pl-3">
+                              {group.map((p) => (
+                                <div key={p.id} className="flex items-center justify-between gap-2 text-xs">
+                                  <span className="flex min-w-0 items-center gap-1.5 truncate text-muted-foreground">
+                                    {p.payment_method === 'card' ? (
+                                      <CreditCard className="h-3 w-3 shrink-0" />
+                                    ) : (
+                                      <Banknote className="h-3 w-3 shrink-0" />
+                                    )}
+                                    {p.payment_method === 'card'
+                                      ? p.bank_card_name || t('sales.card', 'Karta')
+                                      : t('sales.cash', 'Naqd')}
+                                  </span>
+                                  <span className="shrink-0 tabular-nums">{formatCurrency(Number(p.amount) || 0)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -1054,33 +1132,103 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
               <p className="text-sm text-muted-foreground">{t('dashboard.totalDebt')}</p>
               <p className="text-xl font-bold text-red-500">{formatCurrency(paymentDebt)}</p>
             </div>
+            {/* Tez tanlov: jami summani bitta usulga o'tkazish */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">{t('customers.paymentAmount')}</label>
+                <label className="text-sm font-medium">{t('sales.paymentType', "To'lov usuli")}</label>
                 <button
                   type="button"
                   className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
-                  onClick={() => setPaymentAmount(String(paymentDebt))}
+                  onClick={() => {
+                    setPayCash(String(paymentDebt));
+                    setPayCard('');
+                  }}
                 >
                   {t('inventory.payFullDebt', "To'liq to'lash")} ({formatCurrency(paymentDebt)})
                 </button>
               </div>
-              <Input
-                type="number"
-                min="0"
-                max={paymentDebt}
-                value={paymentAmount}
-                onFocus={(e: FocusEvent<HTMLInputElement>) => e.target.select()}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setPaymentAmount(e.target.value)}
-                placeholder={t('placeholders.enterAmount')}
-                className={paymentExceedsDebt ? 'border-red-500 focus:border-red-500 focus:ring-red-500/30' : ''}
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant={payCardNum === 0 && payCashNum > 0 ? 'default' : 'outline'}
+                  onClick={() => {
+                    setPayCash(String(paymentTotalNum > 0 ? paymentTotalNum : paymentDebt));
+                    setPayCard('');
+                  }}
+                >
+                  <Banknote className="h-4 w-4 mr-2" />
+                  {t('sales.cash', 'Naqd')}
+                </Button>
+                <Button
+                  type="button"
+                  variant={payCashNum === 0 && payCardNum > 0 ? 'default' : 'outline'}
+                  onClick={() => {
+                    setPayCard(String(paymentTotalNum > 0 ? paymentTotalNum : paymentDebt));
+                    setPayCash('');
+                  }}
+                >
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  {t('sales.card', 'Karta')}
+                </Button>
+              </div>
+            </div>
+
+            {/* Naqd va karta summalari — jami to'lov shu yig'indidan hisoblanadi,
+                qarzdan kam bo'lsa qisman to'lov bo'lib saqlanadi */}
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">{t('sales.cash', 'Naqd')}</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={payCash}
+                    onFocus={(e: FocusEvent<HTMLInputElement>) => e.target.select()}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setPayCash(e.target.value)}
+                    className={paymentExceedsDebt ? 'border-red-400 focus-visible:ring-red-400' : ''}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">{t('sales.card', 'Karta')}</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={payCard}
+                    onFocus={(e: FocusEvent<HTMLInputElement>) => e.target.select()}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setPayCard(e.target.value)}
+                    className={paymentExceedsDebt ? 'border-red-400 focus-visible:ring-red-400' : ''}
+                  />
+                </div>
+              </div>
+
+              {/* Karta ishlatilsa — summani kartalarga (Uzcard/Humo/...) taqsimlash */}
+              {payCardNum > 0 && (
+                <CardSplitEditor
+                  bankCards={paymentCards}
+                  cardSplits={cardSplits}
+                  onUpdateCard={updateSplitCard}
+                  onUpdateAmount={updateSplitAmount}
+                  onAdd={addCardSplit}
+                  onRemove={removeCardSplit}
+                  disabled={paying}
+                />
+              )}
+            </div>
+
+            {/* Jami to'lov (naqd + karta) va qisman to'lovda qoladigan qarz */}
+            <div className="rounded-lg border p-3 space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t('customers.paymentAmount', "To'lov summasi")}:</span>
+                <span className="font-bold">{formatCurrency(paymentTotalNum)}</span>
+              </div>
               {paymentExceedsDebt ? (
                 <p className="text-xs font-medium text-red-500">
                   {t('inventory.paymentExceedsDebt', "To'lov summasi qoldiq qarzdan oshib ketdi")} —{' '}
                   {t('suppliers.debt', 'Qarz')}: {formatCurrency(paymentDebt)}
                 </p>
-              ) : paymentAmountNum > 0 ? (
+              ) : paymentTotalNum > 0 ? (
                 <p className="text-xs text-muted-foreground">
                   {t('inventory.remainingDebt', 'Qoladigan qarz')}:{' '}
                   <span className={paymentRemaining > 0 ? 'font-semibold text-red-500' : 'font-semibold text-green-600'}>
@@ -1090,68 +1238,6 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
                 </p>
               ) : null}
             </div>
-
-            {/* To'lov usuli: naqd yoki karta */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t('sales.paymentType', "To'lov usuli")}</label>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant={paymentType === 'cash' ? 'default' : 'outline'}
-                  onClick={() => setPaymentType('cash')}
-                >
-                  <Banknote className="h-4 w-4 mr-2" />
-                  {t('sales.cash', 'Naqd')}
-                </Button>
-                <Button
-                  type="button"
-                  variant={paymentType === 'card' ? 'default' : 'outline'}
-                  onClick={() => setPaymentType('card')}
-                >
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  {t('sales.card', 'Karta')}
-                </Button>
-              </div>
-            </div>
-
-            {/* Karta tanlanganda — to'lov turlari (Uzcard/Humo/...) */}
-            {paymentType === 'card' && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  {t('nav.paymentTypes', "To'lov turlari")} <span className="text-red-500">*</span>
-                </label>
-                {paymentCards.length === 0 ? (
-                  <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-800/50 dark:bg-red-900/20 px-3 py-2">
-                    <p className="text-xs text-red-600 dark:text-red-400">
-                      {t('sales.noBankCards', "Faol to'lov turi yo'q — Sozlamalar → To'lov turlaridan qo'shing")}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    {paymentCards.map((card) => {
-                      const isSelected = String(card.id) === selectedPaymentCardId;
-                      return (
-                        <button
-                          key={card.id}
-                          type="button"
-                          onClick={() => setSelectedPaymentCardId(String(card.id))}
-                          aria-pressed={isSelected}
-                          className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-sm font-medium transition-colors ${
-                            isSelected
-                              ? 'border-emerald-500 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-500/40 dark:border-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300'
-                              : 'border-border bg-background text-foreground hover:bg-accent'
-                          }`}
-                        >
-                          <CreditCard className={`h-4 w-4 shrink-0 ${isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`} />
-                          <span className="truncate">{card.name}</span>
-                          {card.is_default && <Star className="h-3 w-3 shrink-0 text-amber-500" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
 
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setShowPaymentDialog(false)}>
@@ -1169,8 +1255,12 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
         <Suspense fallback={null}>
           <StockEntryCreateDialog
             open={showCreateDialog}
-            onOpenChange={setShowCreateDialog}
-            onSuccess={loadData}
+            onOpenChange={(o: boolean) => {
+              setShowCreateDialog(o);
+              // Wizard qay holatda yopilmasin (tasdiqlangan, jarayonda qoldirilgan
+              // yoki bekor qilingan) — ro'yxat avtomatik yangilanadi
+              if (!o) void loadData();
+            }}
           />
         </Suspense>
       )}
@@ -1179,8 +1269,10 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
         <Suspense fallback={null}>
           <StockEntryImportDialog
             open={showImportDialog}
-            onOpenChange={setShowImportDialog}
-            onSuccess={loadData}
+            onOpenChange={(o: boolean) => {
+              setShowImportDialog(o);
+              if (!o) void loadData();
+            }}
           />
         </Suspense>
       )}

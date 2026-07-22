@@ -20,8 +20,10 @@ import { useAuthStore } from '../../app/store';
 import { useProducts } from '../../context/ProductContext';
 import type {
   Store, Supplier, ProductUnit, ProductFormData, CategoryFormData, ProductUnitFormData,
-  BankCard, PurchaseSession, PurchaseSessionPayload, PurchaseSessionStatus,
+  BankCard, PurchasePaymentInput, PurchaseSession, PurchaseSessionPayload, PurchaseSessionStatus,
 } from '../../types';
+import { CardSplitEditor } from '../../components/shared/CardSplitEditor';
+import { useCardSplits } from '../../hooks/useCardSplits';
 import { useCategories } from '../../context/CategoryContext';
 import { productUnitService } from '../../services/productUnitService';
 import { productService } from '../../services/productService';
@@ -36,7 +38,7 @@ import {
   DialogFooter,
 } from '../../components/ui/Dialog';
 import toast from 'react-hot-toast';
-import { formatCurrency, formatDate, cn } from '../../utils';
+import { formatCurrency, formatDate, formatAmountInput, cn } from '../../utils';
 import { handleError } from '../../utils/errorHandler';
 
 interface InventoryFormItem {
@@ -114,7 +116,12 @@ export function StockEntryCreateDialog({
     [safeSuppliers]
   );
   const productOptions = useMemo(
-    () => safeProducts.map((p) => ({ value: String(p.id), label: p.name })),
+    () => safeProducts.map((p) => {
+      // SKU/shtrix-kod sublabel sifatida — SearchableSelect qidiruvi label bilan
+      // birga sublabel bo'yicha ham ishlaydi, ya'ni nom, SKU va barcode bo'yicha topiladi
+      const codes = [p.sku, p.barcode].filter(Boolean).join(' • ');
+      return { value: String(p.id), label: p.name, sublabel: codes || undefined };
+    }),
     [safeProducts]
   );
 
@@ -133,8 +140,17 @@ export function StockEntryCreateDialog({
   const [items, setItems] = useState<InventoryFormItem[]>([emptyItem()]);
   const [cashAmount, setCashAmount] = useState<number | ''>('');
   const [cardAmount, setCardAmount] = useState<number | ''>('');
-  const [bankCardId, setBankCardId] = useState('');
   const [paymentMode, setPaymentMode] = useState<PaymentMode>(null);
+  // Karta summasini bir nechta kartaga (Humo/Uzcard/...) taqsimlash — sotuvdagi kabi
+  const {
+    cardSplits,
+    setCardSplits,
+    splitsInvalid,
+    updateSplitCard,
+    updateSplitAmount,
+    addCardSplit,
+    removeCardSplit,
+  } = useCardSplits(bankCards, cardAmount === '' ? 0 : cardAmount);
   // Ixtiyoriy izoh/tavsif — kirim bilan birga saqlanadi
   const [note, setNote] = useState('');
   const [supplierError, setSupplierError] = useState(false);
@@ -219,23 +235,40 @@ export function StockEntryCreateDialog({
   }, [imagePreviews]);
 
   // ─── Sessiya payload ───
-  const buildSessionPayload = useCallback((currentStep: WizardStep): PurchaseSessionPayload => ({
-    supplier: supplierId ? Number(supplierId) : undefined,
-    store: storeId ? Number(storeId) : undefined,
-    items: items.map((it) => ({
-      product: it.product_id ? Number(it.product_id) : null,
-      product_name: it.product_name || '',
-      quantity: String(it.quantity === '' ? 0 : it.quantity),
-      purchase_price: String(it.purchase_price === '' ? 0 : it.purchase_price),
-      selling_price: String(it.selling_price === '' ? 0 : it.selling_price),
-      wholesale_price: String(it.wholesale_price === '' ? 0 : it.wholesale_price),
-    })),
-    cash_amount: (cashAmount === '' ? 0 : cashAmount).toFixed(2),
-    card_amount: (cardAmount === '' ? 0 : cardAmount).toFixed(2),
-    bank_card: bankCardId ? Number(bankCardId) : null,
-    note,
-    current_step: currentStep,
-  }), [supplierId, storeId, items, cashAmount, cardAmount, bankCardId, note]);
+  const buildSessionPayload = useCallback((currentStep: WizardStep): PurchaseSessionPayload => {
+    const cashVal = cashAmount === '' ? 0 : cashAmount;
+    const cardVal = cardAmount === '' ? 0 : cardAmount;
+    // Split to'lovlar: naqd bitta qator + har bir karta alohida qator.
+    // Draftda karta hali tanlanmagan qatorlar payloadga kirmaydi —
+    // tasdiqlash splitsInvalid bilan bloklanadi.
+    const payments: PurchasePaymentInput[] = [];
+    if (cashVal > 0) payments.push({ type: 'cash', amount: cashVal.toFixed(2) });
+    for (const split of cardSplits) {
+      if (split.amount > 0 && split.bankCardId) {
+        payments.push({ type: 'card', amount: split.amount.toFixed(2), bank_card: Number(split.bankCardId) });
+      }
+    }
+    const activeCardSplits = cardSplits.filter((s) => s.amount > 0 && s.bankCardId);
+    return {
+      supplier: supplierId ? Number(supplierId) : undefined,
+      store: storeId ? Number(storeId) : undefined,
+      items: items.map((it) => ({
+        product: it.product_id ? Number(it.product_id) : null,
+        product_name: it.product_name || '',
+        quantity: String(it.quantity === '' ? 0 : it.quantity),
+        purchase_price: String(it.purchase_price === '' ? 0 : it.purchase_price),
+        selling_price: String(it.selling_price === '' ? 0 : it.selling_price),
+        wholesale_price: String(it.wholesale_price === '' ? 0 : it.wholesale_price),
+      })),
+      cash_amount: cashVal.toFixed(2),
+      card_amount: cardVal.toFixed(2),
+      // Eski maydon — faqat bitta karta ishlatilganda ma'noli (moslik uchun)
+      bank_card: activeCardSplits.length === 1 ? Number(activeCardSplits[0].bankCardId) : null,
+      payments,
+      note,
+      current_step: currentStep,
+    };
+  }, [supplierId, storeId, items, cashAmount, cardAmount, cardSplits, note]);
 
   // Avto-saqlash: forma o'zgarganda 800ms dan keyin sessiyaga PATCH
   useEffect(() => {
@@ -277,6 +310,7 @@ export function StockEntryCreateDialog({
     setItems([emptyItem()]);
     setCashAmount('');
     setCardAmount('');
+    setCardSplits([]);
     setPaymentMode(null);
     setNote('');
     setSupplierError(false);
@@ -286,9 +320,7 @@ export function StockEntryCreateDialog({
     setStep(1);
     setSaveState('idle');
     lastSavedRef.current = '';
-    const defaultCard = bankCards.find((card) => card.is_default) ?? bankCards[0];
-    setBankCardId(defaultCard ? String(defaultCard.id) : '');
-  }, [isAdmin, userStoreId, bankCards]);
+  }, [isAdmin, userStoreId, setCardSplits]);
 
   const loadData = useCallback(async () => {
     try {
@@ -301,8 +333,6 @@ export function StockEntryCreateDialog({
       setStores(Array.isArray(storesRes.data) ? storesRes.data : []);
       setSuppliers(Array.isArray(suppliersRes.data) ? suppliersRes.data : []);
       setBankCards(cardsRes);
-      const defaultCard = cardsRes.find((card) => card.is_default) ?? cardsRes[0];
-      setBankCardId((prev) => prev || (defaultCard ? String(defaultCard.id) : ''));
     } catch (error) {
       console.error('Failed to load data:', error);
     }
@@ -369,7 +399,20 @@ export function StockEntryCreateDialog({
     const card = Number(s.card_amount) || 0;
     setCashAmount(cash || '');
     setCardAmount(card || '');
-    if (s.bank_card) setBankCardId(String(s.bank_card));
+    // Split to'lovlarni tiklash: yangi draftlarda payments JSON, eski
+    // draftlarda bitta bank_card + card_amount
+    const savedCardRows = (s.payments || []).filter((p) => p.type === 'card' && Number(p.amount) > 0);
+    if (savedCardRows.length > 0) {
+      setCardSplits(savedCardRows.map((p) => ({
+        bankCardId: p.bank_card ? String(p.bank_card) : '',
+        amount: Number(p.amount) || 0,
+        amountText: Number(p.amount) > 0 ? formatAmountInput(Number(p.amount)) : '',
+      })));
+    } else if (s.bank_card && card > 0) {
+      setCardSplits([{ bankCardId: String(s.bank_card), amount: card, amountText: formatAmountInput(card) }]);
+    } else {
+      setCardSplits([]);
+    }
     setNote(s.note || '');
     setPaymentMode(cash > 0 || card > 0 ? 'manual' : null);
     setSessionId(s.id);
@@ -445,14 +488,15 @@ export function StockEntryCreateDialog({
   const handleReceive = async () => {
     let hasError = false;
     const newItemErrors: ItemErrors[] = items.map(item => {
+      // Ulgurji narx MAJBURIY EMAS — kiritilsa narx qoidasi (getPriceRuleErrors)
+      // orqali solishtiriladi, bo'sh qolsa xato hisoblanmaydi (backend ham default 0 qabul qiladi)
       const errors: ItemErrors = {
         product_id: !item.product_id,
         quantity: item.quantity === '' || Number(item.quantity) <= 0,
         purchase_price: item.purchase_price === '' || Number(item.purchase_price) <= 0,
         selling_price: item.selling_price === '' || Number(item.selling_price) <= 0,
-        wholesale_price: item.wholesale_price === '' || Number(item.wholesale_price) <= 0,
       };
-      if (errors.product_id || errors.quantity || errors.purchase_price || errors.selling_price || errors.wholesale_price) {
+      if (errors.product_id || errors.quantity || errors.purchase_price || errors.selling_price) {
         hasError = true;
       }
       return errors;
@@ -626,7 +670,7 @@ export function StockEntryCreateDialog({
     stepLoading ||
     !paymentTouched ||
     isOverpaid ||
-    (cardNeedsBankCard && (!bankCardId || bankCards.length === 0));
+    (cardNeedsBankCard && (bankCards.length === 0 || splitsInvalid));
 
   // ─── To'lov tez tanlovlari (sotuv qismidagi kabi) ───
   const handleQuickCash = () => {
@@ -1075,7 +1119,8 @@ export function StockEntryCreateDialog({
                     (itemErrors[index]?.wholesale_price || priceErrors.wholesaleBelowPurchase || priceErrors.wholesaleAboveSelling) && 'text-red-500'
                   )}
                 >
-                  {t('products.wholesalePrice', 'Ulgurji narx')}
+                  {t('products.wholesalePrice', 'Ulgurji narx')}{' '}
+                  <span className="font-normal text-muted-foreground">({t('common.optional', 'ixtiyoriy')})</span>
                 </Label>
                 <Input
                   type="number"
@@ -1271,7 +1316,7 @@ export function StockEntryCreateDialog({
           </div>
         )}
 
-        {/* To'lov usuli — karta summasi kiritilganda tugmalar orqali tanlanadi */}
+        {/* To'lov usuli — karta summasi kiritilganda kartalarga taqsimlanadi (sotuvdagi kabi) */}
         {paymentMode !== 'debt' && cardValue > 0 && (
           <div className="rounded-xl border border-dashed p-3 bg-muted/10 space-y-2">
             <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -1284,19 +1329,15 @@ export function StockEntryCreateDialog({
                 </p>
               </div>
             ) : (
-              <Select value={bankCardId} onValueChange={setBankCardId}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t('sales.selectCardType', 'Karta turini tanlang')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {bankCards.map((card) => (
-                    <SelectItem key={card.id} value={String(card.id)}>
-                      {card.name}
-                      {card.is_default ? ' ★' : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <CardSplitEditor
+                bankCards={bankCards}
+                cardSplits={cardSplits}
+                onUpdateCard={updateSplitCard}
+                onUpdateAmount={updateSplitAmount}
+                onAdd={addCardSplit}
+                onRemove={removeCardSplit}
+                disabled={stepLoading}
+              />
             )}
           </div>
         )}

@@ -48,13 +48,18 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   }
 }
 
+// Intl.NumberFormat yaratish qimmat — bitta instansiya keshlanadi.
+// (Avval har chaqiruvda yangi formatter yaratilardi: katta ro'yxatlarda
+// har renderda minglab instansiya — sezilarli qotishga sabab bo'lgan.)
+const currencyFormatter = new Intl.NumberFormat('uz-UZ', {
+  style: 'currency',
+  currency: 'UZS',
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('uz-UZ', {
-    style: 'currency',
-    currency: 'UZS',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
+  return currencyFormatter.format(amount);
 }
 
 export function formatAmountInput(value: number): string {
@@ -109,15 +114,18 @@ export function pxToMm(px: number, dpi: number = 203): number {
   return (px * 25.4) / dpi;
 }
 
+// Bitta instansiya keshlanadi (har chaqiruvda yaratish qimmat)
+const timeFormatter = new Intl.DateTimeFormat('uz-UZ', {
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+});
+
 export function formatTime(date: string | Date | undefined | null): string {
   if (!date) return '-';
   const d = new Date(date);
   if (isNaN(d.getTime())) return '-';
-  return new Intl.DateTimeFormat('uz-UZ', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  }).format(d);
+  return timeFormatter.format(d);
 }
 
 export function calculateProfit(purchasePrice: number, sellingPrice: number, quantity: number): number {

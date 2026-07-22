@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileText, CheckCircle2, Banknote, CreditCard } from 'lucide-react';
+import { FileText, CheckCircle2, Banknote, CreditCard, Wallet } from 'lucide-react';
 import { DataTable, type Column } from '../../components/shared/DataTable';
 import {
   Dialog,
@@ -12,6 +12,7 @@ import {
 import { inventoryService } from '../../services/inventoryService';
 import { supplierService, type SupplierTransactionRecord, type SupplierStats } from '../../services/supplierService';
 import { formatCurrency, formatDate } from '../../utils';
+import { groupByPaymentGroup } from '../../utils/paymentGroups';
 import { handleError } from '../../utils/errorHandler';
 import type { ContractEntry } from '../../types';
 
@@ -296,6 +297,37 @@ export function SupplierEntriesTab({ supplierId, stats, refreshKey }: SupplierEn
                 </div>
               </div>
 
+              {/* Kirim paytidagi to'lovlar (split: naqd / har bir karta alohida) */}
+              {(viewingEntry.payments || []).length > 0 && (
+                <div className="rounded-lg border border-border">
+                  <div className="border-b border-border bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground">
+                    {t('suppliers.entryPayments', "Kirim paytidagi to'lovlar")}
+                  </div>
+                  <div className="divide-y divide-border/60">
+                    {(viewingEntry.payments || []).map((p) => (
+                      <div key={p.id} className="flex items-center justify-between gap-2 px-3 py-1.5">
+                        <span className="inline-flex min-w-0 flex-1 items-center gap-1 truncate text-xs">
+                          {p.type === 'card' ? (
+                            <>
+                              <CreditCard className="h-3 w-3 shrink-0 text-muted-foreground" />
+                              {p.bank_card_name || t('sales.card', 'Karta')}
+                            </>
+                          ) : (
+                            <>
+                              <Banknote className="h-3 w-3 shrink-0 text-muted-foreground" />
+                              {t('sales.cash', 'Naqd')}
+                            </>
+                          )}
+                        </span>
+                        <span className="shrink-0 font-semibold tabular-nums text-green-600">
+                          {formatCurrency(Number(p.amount) || 0)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* To'lovlar tarixi */}
               <div className="rounded-lg border border-border">
                 <div className="border-b border-border bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground">
@@ -315,29 +347,65 @@ export function SupplierEntriesTab({ supplierId, stats, refreshKey }: SupplierEn
                     }
                     return (
                       <div className="max-h-44 divide-y divide-border/60 overflow-y-auto">
-                        {payments.map((tx) => (
-                          <div key={tx.id} className="flex items-center justify-between gap-2 px-3 py-1.5">
-                            <span className="shrink-0 text-xs text-muted-foreground">
-                              {tx.created_at ? formatDate(tx.created_at) : '—'}
-                            </span>
-                            <span className="inline-flex min-w-0 flex-1 items-center justify-center gap-1 truncate text-xs">
-                              {tx.payment_method === 'card' ? (
-                                <>
-                                  <CreditCard className="h-3 w-3 shrink-0 text-muted-foreground" />
-                                  {tx.bank_card_name || t('sales.card', 'Karta')}
-                                </>
-                              ) : (
-                                <>
-                                  <Banknote className="h-3 w-3 shrink-0 text-muted-foreground" />
-                                  {t('sales.cash', 'Naqd')}
-                                </>
+                        {/* Bitta to'lov harakati (split: naqd + kartalar) — bitta blok,
+                            qismlari ichida alohida ko'rinadi */}
+                        {groupByPaymentGroup(payments).map((group) => {
+                          const first = group[0];
+                          const single = group.length === 1;
+                          const groupTotal = group.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+                          return (
+                            <div key={first.id} className="px-3 py-1.5">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="shrink-0 text-xs text-muted-foreground">
+                                  {first.created_at ? formatDate(first.created_at) : '—'}
+                                </span>
+                                <span className="inline-flex min-w-0 flex-1 items-center justify-center gap-1 truncate text-xs">
+                                  {single ? (
+                                    first.payment_method === 'card' ? (
+                                      <>
+                                        <CreditCard className="h-3 w-3 shrink-0 text-muted-foreground" />
+                                        {first.bank_card_name || t('sales.card', 'Karta')}
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Banknote className="h-3 w-3 shrink-0 text-muted-foreground" />
+                                        {t('sales.cash', 'Naqd')}
+                                      </>
+                                    )
+                                  ) : (
+                                    <>
+                                      <Wallet className="h-3 w-3 shrink-0 text-muted-foreground" />
+                                      {t('sales.mixedPayment', "Aralash to'lov")}
+                                    </>
+                                  )}
+                                </span>
+                                <span className="shrink-0 font-semibold tabular-nums text-green-600">
+                                  {formatCurrency(groupTotal)}
+                                </span>
+                              </div>
+                              {/* Qismlar: qaysi usuldan/kartadan qancha */}
+                              {!single && (
+                                <div className="ml-4 mt-1 space-y-0.5 border-l border-border/60 pl-2">
+                                  {group.map((p) => (
+                                    <div key={p.id} className="flex items-center justify-between gap-2 text-[11px]">
+                                      <span className="flex min-w-0 items-center gap-1 truncate text-muted-foreground">
+                                        {p.payment_method === 'card' ? (
+                                          <CreditCard className="h-3 w-3 shrink-0" />
+                                        ) : (
+                                          <Banknote className="h-3 w-3 shrink-0" />
+                                        )}
+                                        {p.payment_method === 'card'
+                                          ? p.bank_card_name || t('sales.card', 'Karta')
+                                          : t('sales.cash', 'Naqd')}
+                                      </span>
+                                      <span className="shrink-0 tabular-nums">{formatCurrency(Number(p.amount) || 0)}</span>
+                                    </div>
+                                  ))}
+                                </div>
                               )}
-                            </span>
-                            <span className="shrink-0 font-semibold tabular-nums text-green-600">
-                              {formatCurrency(Number(tx.amount) || 0)}
-                            </span>
-                          </div>
-                        ))}
+                            </div>
+                          );
+                        })}
                       </div>
                     );
                   })()

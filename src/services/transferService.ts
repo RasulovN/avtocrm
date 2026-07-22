@@ -83,12 +83,10 @@ export const transferService = {
     const payload = response.data as unknown;
     const data = extractTransferList(payload);
 
+    const rawTotal = (payload as { total?: unknown })?.total;
+    const rawCount = (payload as { count?: unknown })?.count;
     const totalFromPayload =
-      typeof (payload as { total?: number })?.total === 'number'
-        ? (payload as { total?: number }).total
-        : typeof (payload as { count?: number })?.count === 'number'
-          ? (payload as { count?: number }).count
-          : data.length;
+      typeof rawTotal === 'number' ? rawTotal : typeof rawCount === 'number' ? rawCount : data.length;
 
     return {
       data,
@@ -119,4 +117,57 @@ create: async (data: TransferFormData): Promise<Transfer> => {
     const payload = response.data?.data ?? response.data;
     return normalizeTransfer(payload);
   },
+
+  // ─── O'tkazma qoralamasi (sessiya): avto-saqlash + davom ettirish ───
+
+  // Foydalanuvchining barcha faol qoralamalari (ro'yxat sahifasi uchun)
+  getSessions: async (): Promise<TransferSessionRecord[]> => {
+    const response = await apiClient.get('/transfer/session/');
+    const data = response.data as unknown;
+    if (Array.isArray(data)) return data as TransferSessionRecord[];
+    const results = (data as { results?: unknown[] })?.results;
+    return Array.isArray(results) ? (results as TransferSessionRecord[]) : [];
+  },
+
+  // Foydalanuvchining oxirgi faol qoralamasi (bo'lmasa null)
+  getActiveSession: async (): Promise<TransferSessionRecord | null> => {
+    const list = await transferService.getSessions();
+    return list[0] ?? null;
+  },
+
+  createSession: async (payload: TransferSessionPayload): Promise<TransferSessionRecord> => {
+    const response = await apiClient.post<TransferSessionRecord>('/transfer/session/', payload);
+    return response.data;
+  },
+
+  updateSession: async (id: number, payload: TransferSessionPayload): Promise<TransferSessionRecord> => {
+    const response = await apiClient.patch<TransferSessionRecord>(`/transfer/session/${id}/`, payload);
+    return response.data;
+  },
+
+  cancelSession: async (id: number): Promise<void> => {
+    await apiClient.delete(`/transfer/session/${id}/`);
+  },
+
+  completeSession: async (id: number, transferId?: string | number): Promise<void> => {
+    await apiClient.post(`/transfer/session/${id}/complete/`, transferId ? { transfer: transferId } : {});
+  },
 };
+
+export interface TransferSessionRecord {
+  id: number;
+  from_store: number | null;
+  from_store_name?: string | null;
+  to_store: number | null;
+  to_store_name?: string | null;
+  items: { product: number | string | null; quantity: number }[];
+  status: 'in_progress' | 'completed' | 'cancelled';
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface TransferSessionPayload {
+  from_store?: number | string | null;
+  to_store?: number | string | null;
+  items?: { product: number | string; quantity: number }[];
+}

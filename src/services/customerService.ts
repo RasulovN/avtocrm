@@ -18,9 +18,17 @@ interface CustomerFormData {
   phone_number: string;
 }
 
+/** Qarz to'lovining bitta split qatori — {type, amount, bank_card?} */
+export interface DebtPaymentInput {
+  type: 'cash' | 'card';
+  amount: string;
+  bank_card?: number | null;
+}
+
 export interface CustomerPayDebtAllocation {
   sale: number;
   payment_id: number;
+  payment_ids?: number[];
   amount: string;
   closed: boolean;
   sale_debt_left: string;
@@ -41,6 +49,8 @@ export interface CustomerPaymentRow {
   bank_card: number | null;
   bank_card_name?: string;
   is_refund: boolean;
+  /** Bitta to'lov harakatining split qatorlarini bog'lovchi guruh ID (null — eski yozuvlar) */
+  payment_group?: string | null;
   created_at: string;
 }
 
@@ -164,8 +174,11 @@ export const customerApiService = {
    */
   payCustomerDebt: async (data: {
     customer: number;
-    amount: string;
-    type: 'cash' | 'card';
+    amount?: string;
+    // Yangi rejim: split to'lovlar (naqd + kartalar) — har usul alohida qator
+    payments?: DebtPaymentInput[];
+    // Eski rejim: bitta usul
+    type?: 'cash' | 'card';
     bank_card?: number | null;
   }): Promise<CustomerPayDebtResult> => {
     const response = await apiClient.post<CustomerPayDebtResult>('/debts/customer/pay/', data);
@@ -189,7 +202,14 @@ export const customerApiService = {
     return response.data;
   },
 
-  createDebtPaymentForSale: async (data: { sale: number; amount: string; type: 'cash' | 'card'; bank_card?: number }) => {
+  createDebtPaymentForSale: async (data: {
+    sale: number;
+    amount?: string;
+    // Yangi rejim: split to'lovlar; eski rejim: type + bank_card
+    payments?: DebtPaymentInput[];
+    type?: 'cash' | 'card';
+    bank_card?: number;
+  }) => {
     const response = await apiClient.post('/debts/create/', data);
     return response.data;
   },

@@ -16,13 +16,9 @@ import { escapeHtml } from '../../utils/xss';
 import { extractBarcodeFromUrl } from '../../utils/xss';
 import type { Product, Sale, SaleItem, BankCard } from '../../types';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/Dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../components/ui/Select';
+import { CardSplitEditor } from '../../components/shared/CardSplitEditor';
+import { useCardSplits } from '../../hooks/useCardSplits';
+import { groupByPaymentGroup } from '../../utils/paymentGroups';
 
 const getProductImages = (product?: Product | null): string[] => {
   if (!product) return [];
@@ -52,10 +48,12 @@ export function SalesDetailPage() {
   const [sale, setSale] = useState<Sale | null>(null);
   const [loading, setLoading] = useState(true);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
-  const [paymentAmount, setPaymentAmount] = useState('');
-  const [paymentType, setPaymentType] = useState<'cash' | 'card'>('cash');
+  // To'lov taqsimoti: naqd va karta summalari (ikkalasi birga = aralash to'lov).
+  // Jami to'lov shu ikkisining yig'indisidan hisoblanadi — qarzdan kam bo'lsa
+  // qisman to'lov bo'lib saqlanadi.
+  const [payCash, setPayCash] = useState('');
+  const [payCard, setPayCard] = useState('');
   const [bankCards, setBankCards] = useState<BankCard[]>([]);
-  const [selectedBankCardId, setSelectedBankCardId] = useState<string>('');
   const [paying, setPaying] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
   const [showProductDialog, setShowProductDialog] = useState(false);
@@ -87,43 +85,64 @@ export function SalesDetailPage() {
 
   const openPaymentDialog = () => {
     if (!sale || !sale.debt) return;
-    setPaymentAmount(String(sale.debt));
-    setPaymentType('cash');
+    // Default: to'liq qarz naqd sifatida — foydalanuvchi kamaytirsa qisman to'lov bo'ladi
+    setPayCash(String(sale.debt));
+    setPayCard('');
     setShowPaymentDialog(true);
     if (bankCards.length === 0) {
       bankCardService
-        .getAll({ is_active: true })
-        .then((cards) => {
-          setBankCards(cards);
-          const defaultCard = cards.find((card) => card.is_default) ?? cards[0];
-          setSelectedBankCardId(defaultCard ? String(defaultCard.id) : '');
-        })
+        .getAll({ is_active: true, scope: 'sale' })
+        .then(setBankCards)
         .catch(() => setBankCards([]));
     }
   };
 
-  // Ortiqcha to'lov himoyasi: kiritilgan summa qarzdan oshsa to'lash bloklanadi
   const saleDebt = Number(sale?.debt) || 0;
-  const paymentAmountNum = Number(paymentAmount) || 0;
-  const paymentExceedsDebt = paymentAmountNum > saleDebt;
+  const payCashNum = Number(payCash) || 0;
+  const payCardNum = Number(payCard) || 0;
+  // Jami to'lov naqd + karta yig'indisidan hisoblanadi (tiyin darajasida — float xatosisiz)
+  const paymentTotalNum = (Math.round(payCashNum * 100) + Math.round(payCardNum * 100)) / 100;
+  // Ortiqcha to'lov himoyasi: yig'indi qarzdan oshsa to'lash bloklanadi
+  const paymentExceedsDebt = Math.round(paymentTotalNum * 100) > Math.round(saleDebt * 100);
+
+  // Karta summasini bir nechta kartaga (Humo/Uzcard/...) taqsimlash
+  const {
+    cardSplits,
+    activeSplits,
+    splitsInvalid,
+    updateSplitCard,
+    updateSplitAmount,
+    addCardSplit,
+    removeCardSplit,
+  } = useCardSplits(bankCards, Math.round(payCardNum));
+
   const paymentInvalid =
-    !paymentAmount ||
-    paymentAmountNum <= 0 ||
+    paymentTotalNum <= 0 ||
     paymentExceedsDebt ||
-    (paymentType === 'card' && !selectedBankCardId);
+    splitsInvalid;
 
   const handleDebtPayment = async () => {
     if (!sale || !saleId || paymentInvalid) return;
     try {
       setPaying(true);
+      // Split to'lovlar: naqd bitta qator + har bir karta alohida qator
+      const paymentsPayload = [];
+      if (payCashNum > 0) paymentsPayload.push({ type: 'cash' as const, amount: payCashNum.toFixed(2) });
+      for (const split of activeSplits) {
+        paymentsPayload.push({
+          type: 'card' as const,
+          amount: split.amount.toFixed(2),
+          bank_card: Number(split.bankCardId),
+        });
+      }
       await customerApiService.createDebtPaymentForSale({
         sale: Number(saleId),
-        amount: String(paymentAmountNum),
-        type: paymentType,
-        ...(paymentType === 'card' ? { bank_card: Number(selectedBankCardId) } : {}),
+        amount: paymentTotalNum.toFixed(2),
+        payments: paymentsPayload,
       });
       setShowPaymentDialog(false);
-      setPaymentAmount('');
+      setPayCash('');
+      setPayCard('');
 
       const res = await salesService.getById(saleId);
       setSale(res);
@@ -608,35 +627,79 @@ export function SalesDetailPage() {
                   <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                     {t('sales.paymentHistory', 'To‘lovlar tarixi')}
                   </p>
-                  {sale.payments.map((payment) => (
-                    <div
-                      key={payment.id}
-                      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${
-                        payment.is_refund ? 'bg-red-600/10' : 'bg-muted/40'
-                      }`}
-                    >
-                      {payment.is_refund ? (
-                        <Undo2 className="h-4 w-4 shrink-0 text-red-600" />
-                      ) : payment.type === 'cash' ? (
-                        <Banknote className="h-4 w-4 shrink-0 text-emerald-600" />
-                      ) : (
-                        <CreditCard className="h-4 w-4 shrink-0 text-blue-600" />
-                      )}
-                      <span className="min-w-0 flex-1 truncate text-muted-foreground">
-                        {payment.type === 'cash' ? t('payment.cash', 'Naqd') : t('payment.card', 'Karta')}
-                        {payment.bank_card_name ? ` — ${payment.bank_card_name}` : ''}
-                        {payment.is_refund ? ` (${t('sales.refund', 'Qaytarim')})` : ''}
-                      </span>
-                      <span
-                        className={`shrink-0 font-semibold tabular-nums ${
-                          payment.is_refund ? 'text-red-600' : ''
-                        }`}
+                  {/* Bitta to'lov harakati (masalan, qisman to'lov naqd + Humo + Uzcard) —
+                      bitta blok: jami summa + sana, qismlari ichida alohida */}
+                  {groupByPaymentGroup(sale.payments).map((group) => {
+                    const first = group[0];
+                    const isRefund = Boolean(first.is_refund);
+                    const groupTotal = group.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+                    const single = group.length === 1;
+                    return (
+                      <div
+                        key={first.id}
+                        className={`rounded-lg px-3 py-2 text-sm ${isRefund ? 'bg-red-600/10' : 'bg-muted/40'}`}
                       >
-                        {payment.is_refund ? '−' : ''}
-                        {formatCurrency(parseFloat(payment.amount))}
-                      </span>
-                    </div>
-                  ))}
+                        <div className="flex items-center gap-2">
+                          {isRefund ? (
+                            <Undo2 className="h-4 w-4 shrink-0 text-red-600" />
+                          ) : single ? (
+                            first.type === 'cash' ? (
+                              <Banknote className="h-4 w-4 shrink-0 text-emerald-600" />
+                            ) : (
+                              <CreditCard className="h-4 w-4 shrink-0 text-blue-600" />
+                            )
+                          ) : (
+                            <Wallet className="h-4 w-4 shrink-0 text-violet-600" />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-muted-foreground">
+                              {single
+                                ? `${first.type === 'cash' ? t('payment.cash', 'Naqd') : t('payment.card', 'Karta')}${
+                                    first.bank_card_name ? ` — ${first.bank_card_name}` : ''
+                                  }`
+                                : t('sales.mixedPayment', "Aralash to'lov")}
+                              {isRefund ? ` (${t('sales.refund', 'Qaytarim')})` : ''}
+                            </p>
+                            {/* Qachon to'langani — qisman qarz qaytarishlar ham sana/soat bilan ko'rinadi */}
+                            {first.created_at && (
+                              <p className="text-[11px] tabular-nums text-muted-foreground/70">
+                                {formatDate(first.created_at)}
+                              </p>
+                            )}
+                          </div>
+                          <span
+                            className={`shrink-0 font-semibold tabular-nums ${isRefund ? 'text-red-600' : ''}`}
+                          >
+                            {isRefund ? '−' : ''}
+                            {formatCurrency(groupTotal)}
+                          </span>
+                        </div>
+                        {/* Qismlar: qaysi usuldan/kartadan qancha */}
+                        {!single && (
+                          <div className="ml-6 mt-1.5 space-y-1 border-l border-border/60 pl-3">
+                            {group.map((p) => (
+                              <div key={p.id} className="flex items-center justify-between gap-2 text-xs">
+                                <span className="flex min-w-0 items-center gap-1.5 truncate text-muted-foreground">
+                                  {p.type === 'cash' ? (
+                                    <Banknote className="h-3 w-3 shrink-0 text-emerald-600" />
+                                  ) : (
+                                    <CreditCard className="h-3 w-3 shrink-0 text-blue-600" />
+                                  )}
+                                  {p.type === 'cash'
+                                    ? t('payment.cash', 'Naqd')
+                                    : p.bank_card_name || t('payment.card', 'Karta')}
+                                </span>
+                                <span className={`shrink-0 tabular-nums ${isRefund ? 'text-red-600' : ''}`}>
+                                  {isRefund ? '−' : ''}
+                                  {formatCurrency(parseFloat(p.amount))}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
@@ -738,58 +801,67 @@ export function SalesDetailPage() {
               <p className="text-sm text-muted-foreground">{t('dashboard.totalDebt')}</p>
               <p className="text-xl font-bold text-amber-500">{formatCurrency(Number(sale?.debt) || 0)}</p>
             </div>
+            {/* Naqd va karta summalari — jami to'lov shu yig'indidan hisoblanadi,
+                qarzdan kam bo'lsa qisman to'lov bo'lib saqlanadi */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">{t('customers.paymentAmount')}</label>
-              <Input
-                type="number"
-                min={0}
-                max={saleDebt}
-                value={paymentAmount}
-                onChange={(e) => setPaymentAmount(e.target.value)}
-                placeholder={t('placeholders.enterAmount')}
-                className={paymentExceedsDebt ? 'border-red-500 focus-visible:ring-red-500' : ''}
-              />
+              <label className="text-sm font-medium">{t('sales.paymentMethod')}</label>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">{t('sales.cash', 'Naqd')}</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    placeholder="0"
+                    value={payCash}
+                    onChange={(e) => setPayCash(e.target.value)}
+                    className={paymentExceedsDebt ? 'border-red-400 focus-visible:ring-red-400' : ''}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">{t('sales.card', 'Karta')}</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    placeholder="0"
+                    value={payCard}
+                    onChange={(e) => setPayCard(e.target.value)}
+                    className={paymentExceedsDebt ? 'border-red-400 focus-visible:ring-red-400' : ''}
+                  />
+                </div>
+              </div>
+
+              {/* Karta ishlatilsa — summani kartalarga (Uzcard/Humo/...) taqsimlash */}
+              {payCardNum > 0 && (
+                <CardSplitEditor
+                  bankCards={bankCards}
+                  cardSplits={cardSplits}
+                  onUpdateCard={updateSplitCard}
+                  onUpdateAmount={updateSplitAmount}
+                  onAdd={addCardSplit}
+                  onRemove={removeCardSplit}
+                  disabled={paying}
+                />
+              )}
+            </div>
+
+            {/* Jami to'lov (naqd + karta) va qisman to'lovda qoladigan qarz */}
+            <div className="rounded-lg border p-3 space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t('customers.paymentAmount', "To'lov summasi")}:</span>
+                <span className="font-bold">{formatCurrency(paymentTotalNum)}</span>
+              </div>
+              {!paymentExceedsDebt && paymentTotalNum > 0 && paymentTotalNum < saleDebt && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('customers.willRemain', 'qoladi')}:</span>
+                  <span className="font-semibold text-amber-600">{formatCurrency(saleDebt - paymentTotalNum)}</span>
+                </div>
+              )}
               {paymentExceedsDebt && (
                 <p className="text-xs font-medium text-red-600">
                   {t('customers.amountExceedsDebt', 'Summa qarzdan oshib ketdi')} (max {formatCurrency(saleDebt)})
                 </p>
               )}
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t('sales.paymentMethod')}</label>
-              <Select value={paymentType} onValueChange={(value) => setPaymentType(value as 'cash' | 'card')}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cash">{t('sales.cash')}</SelectItem>
-                  <SelectItem value="card">{t('sales.card')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {paymentType === 'card' && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">{t('sales.bankCard', 'Bank kartasi')}</label>
-                {bankCards.length === 0 ? (
-                  <p className="text-sm text-red-600 dark:text-red-400">
-                    {t('sales.noBankCards', 'Faol bank kartasi yo‘q — sozlamalardan qo‘shing')}
-                  </p>
-                ) : (
-                  <Select value={selectedBankCardId} onValueChange={setSelectedBankCardId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={t('sales.selectCard', 'Kartani tanlang')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {bankCards.map((card) => (
-                        <SelectItem key={card.id} value={String(card.id)}>
-                          {card.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-            )}
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setShowPaymentDialog(false)}>
                 {t('common.cancel')}

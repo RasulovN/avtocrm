@@ -31,9 +31,14 @@ export function ConfirmDialog({
   variant = 'default',
   loading,
 }: ConfirmDialogProps) {
-  const handleConfirm = () => {
-    onConfirm();
-    onOpenChange(false);
+  // Async onConfirm tugaguncha modal ochiq turadi (loading bilan);
+  // xato bo'lsa ham modal yopiladi — xabarni chaqiruvchi toast orqali beradi
+  const handleConfirm = async () => {
+    try {
+      await onConfirm();
+    } finally {
+      onOpenChange(false);
+    }
   };
 
   return (

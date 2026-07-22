@@ -26,6 +26,9 @@ export interface SaleStatistics {
   total_debt: string;
   // Davr ichida rasmiylashtirilgan qaytarimlar (SaleReturn) summasi
   total_returned?: string;
+  // Davrga bog'liq bo'lmagan JAMI qaytarim (do'kon filtri saqlanadi) —
+  // davrda qaytarim bo'lmasa ham kartada umumiy summa ko'rinib turadi
+  total_returned_all?: string;
   paid_breakdown?: PaidBreakdownRow[];
 }
 
@@ -84,11 +87,50 @@ export const salesService = {
   delete: async (id: string): Promise<void> => {
     await apiClient.delete(`/sales/${id}`);
   },
+
+  // Faqat superadmin: tanlangan sotuvlarni arxivga o'tkazadi (soft delete).
+  // Arxivda 30 kun saqlanadi, keyin backend avtomatik butunlay o'chiradi.
+  bulkDelete: async (ids: Array<string | number>): Promise<{ archived: number }> => {
+    const response = await apiClient.post<{ archived: number }>('/sales/bulk-delete/', { ids });
+    return response.data;
+  },
+
+  // Faqat superadmin: arxivdagi (o'chirilgan) sotuvlar ro'yxati
+  getArchive: async (): Promise<{ results: ArchivedSale[]; retention_days: number }> => {
+    const response = await apiClient.get<{ results: ArchivedSale[]; retention_days: number }>('/sales/archive/');
+    return response.data;
+  },
+
+  // Faqat superadmin: arxivdagi sotuvlarni ro'yxatga qaytaradi
+  restore: async (ids: Array<string | number>): Promise<{ restored: number }> => {
+    const response = await apiClient.post<{ restored: number }>('/sales/archive/restore/', { ids });
+    return response.data;
+  },
 };
 
+export interface ArchivedSale {
+  id: number;
+  store_name: string | null;
+  customer_name: string | null;
+  total_amount: string;
+  paid_amount: string;
+  created_at: string;
+  deleted_at: string;
+  // Butunlay o'chirilishigacha qolgan kunlar
+  days_left: number;
+}
+
 export const saleReturnService = {
-  getAll: async (): Promise<SaleReturn[]> => {
-    const response = await apiClient.get<SaleReturn[] | { results: SaleReturn[] }>('/sales/sale-return/list/');
+  // Davr/do'kon filtri sotuv statistikasi bilan bir xil — ikkala sahifa mos chiqadi
+  getAll: async (params?: Pick<SaleListFilters, 'date_from' | 'date_to' | 'store'>): Promise<SaleReturn[]> => {
+    const searchParams = new URLSearchParams();
+    if (params?.date_from) searchParams.append('date_from', params.date_from);
+    if (params?.date_to) searchParams.append('date_to', params.date_to);
+    if (params?.store) searchParams.append('store', params.store);
+    const query = searchParams.toString();
+    const response = await apiClient.get<SaleReturn[] | { results: SaleReturn[] }>(
+      `/sales/sale-return/list/${query ? `?${query}` : ''}`
+    );
     const payload = response.data;
     if (Array.isArray(payload)) {
       return payload;

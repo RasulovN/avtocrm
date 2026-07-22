@@ -21,6 +21,7 @@ import type { ProductFormData, ProductUnit, CategoryFormData, ProductUnitFormDat
 import { latinToCyrillic } from '../../utils/transliteration';
 import { handleError, extractErrorMessage, extractFieldErrors } from '../../utils/errorHandler';
 import { useCategories } from '../../context/CategoryContext';
+import { useProducts } from '../../context/ProductContext';
 import { productUnitService } from '../../services/productUnitService';
 import { productLocationService, type ProductLocation } from '../../services/productLocationService';
 import { categoryService } from '../../services/categoryService';
@@ -74,6 +75,8 @@ export function ProductFormPage() {
   const [categoryNameError, setCategoryNameError] = useState<string | null>(null);
   const [unitNameError, setUnitNameError] = useState<string | null>(null);
   const { categories, refreshCategories } = useCategories();
+  // App-darajali mahsulot keshi (POS, kirim wizard'i) — saqlashdan keyin yangilanadi
+  const { refreshProducts } = useProducts();
   const [units, setUnits] = useState<ProductUnit[]>([]);
   const [locations, setLocations] = useState<ProductLocation[]>([]);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -247,6 +250,14 @@ export function ProductFormPage() {
       } else {
         await productService.create(payload);
         toast.success(t('products.productAdded'));
+      }
+
+      // POS va kirim wizard'i ishlatadigan umumiy mahsulot keshini yangilaymiz —
+      // aks holda o'zgargan nom/narx u yerlarda F5 gacha eskiligicha qoladi
+      try {
+        await refreshProducts();
+      } catch {
+        // Kesh yangilanmasa ham saqlash muvaffaqiyatli — navigatsiyani to'xtatmaymiz
       }
 
       navigate(`/${lang}/products`);

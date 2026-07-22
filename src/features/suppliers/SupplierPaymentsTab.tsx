@@ -11,6 +11,7 @@ import {
 } from '../../components/ui/Select';
 import { supplierService, type SupplierTransactionRecord, type SupplierStats } from '../../services/supplierService';
 import { formatCurrency, formatDateShort } from '../../utils';
+import { groupByPaymentGroup } from '../../utils/paymentGroups';
 import { handleError } from '../../utils/errorHandler';
 
 interface SupplierPaymentsTabProps {
@@ -117,43 +118,79 @@ export function SupplierPaymentsTab({ supplierId, stats, refreshKey }: SupplierP
                 <div className="flex-1 border-t border-dashed border-border" />
               </div>
 
-              {dayPayments.map((payment) => (
-                <div
-                  key={payment.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-sm"
-                >
-                  <div className="min-w-0">
-                    <p className="text-base font-semibold tabular-nums text-primary">
-                      {formatCurrency(Number(payment.amount) || 0)}
-                    </p>
-                    <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
-                      {payment.payment_method === 'card' ? (
-                        <>
-                          <CreditCard className="h-3.5 w-3.5 shrink-0" />
-                          {payment.bank_card_name || t('sales.card', 'Karta')}
-                        </>
-                      ) : (
-                        <>
-                          <Banknote className="h-3.5 w-3.5 shrink-0" />
-                          {t('sales.cash', 'Naqd')}
-                        </>
-                      )}
-                    </p>
+              {/* Bitta to'lov harakati (split: naqd + kartalar) — bitta karta,
+                  qismlari ichida alohida ko'rinadi */}
+              {groupByPaymentGroup(dayPayments).map((group) => {
+                const first = group[0];
+                const single = group.length === 1;
+                const groupTotal = group.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+                return (
+                  <div
+                    key={first.id}
+                    className="rounded-xl border border-border bg-card px-4 py-3 shadow-sm"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-base font-semibold tabular-nums text-primary">
+                          {formatCurrency(groupTotal)}
+                        </p>
+                        <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
+                          {single ? (
+                            first.payment_method === 'card' ? (
+                              <>
+                                <CreditCard className="h-3.5 w-3.5 shrink-0" />
+                                {first.bank_card_name || t('sales.card', 'Karta')}
+                              </>
+                            ) : (
+                              <>
+                                <Banknote className="h-3.5 w-3.5 shrink-0" />
+                                {t('sales.cash', 'Naqd')}
+                              </>
+                            )
+                          ) : (
+                            <>
+                              <Wallet className="h-3.5 w-3.5 shrink-0" />
+                              {t('sales.mixedPayment', "Aralash to'lov")}
+                            </>
+                          )}
+                        </p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="text-sm text-muted-foreground">
+                          {first.created_at ? formatDateShort(first.created_at) : '—'}
+                          <span className="mx-1 text-border">|</span>
+                          {formatTime(first.created_at)}
+                        </p>
+                        {first.entry ? (
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {t('suppliers.entryNumber', 'Kirim')} №{first.entry}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                    {/* Qismlar: qaysi usuldan/kartadan qancha */}
+                    {!single && (
+                      <div className="ml-1 mt-2 space-y-1 border-l border-border/60 pl-3">
+                        {group.map((p) => (
+                          <div key={p.id} className="flex items-center justify-between gap-2 text-xs">
+                            <span className="flex min-w-0 items-center gap-1.5 truncate text-muted-foreground">
+                              {p.payment_method === 'card' ? (
+                                <CreditCard className="h-3 w-3 shrink-0" />
+                              ) : (
+                                <Banknote className="h-3 w-3 shrink-0" />
+                              )}
+                              {p.payment_method === 'card'
+                                ? p.bank_card_name || t('sales.card', 'Karta')
+                                : t('sales.cash', 'Naqd')}
+                            </span>
+                            <span className="shrink-0 tabular-nums">{formatCurrency(Number(p.amount) || 0)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <div className="shrink-0 text-right">
-                    <p className="text-sm text-muted-foreground">
-                      {payment.created_at ? formatDateShort(payment.created_at) : '—'}
-                      <span className="mx-1 text-border">|</span>
-                      {formatTime(payment.created_at)}
-                    </p>
-                    {payment.entry ? (
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {t('suppliers.entryNumber', 'Kirim')} №{payment.entry}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ))
         )}

@@ -25,7 +25,8 @@ export type ColumnKey<T> = keyof T | (string & {});
 
 export interface Column<T> {
   key: ColumnKey<T>;
-  header: string;
+  // ReactNode — sarlavhada checkbox kabi elementlar ham bo'lishi mumkin (masalan, "hammasini tanlash")
+  header: React.ReactNode;
   render?: (item: T) => React.ReactNode;
   className?: string;
   sortable?: boolean;

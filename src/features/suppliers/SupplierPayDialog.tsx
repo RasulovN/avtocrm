@@ -5,7 +5,6 @@ import { Wallet, CheckCircle2, Loader2, Banknote, CreditCard } from 'lucide-reac
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
 import {
   Dialog,
   DialogContent,
@@ -13,6 +12,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../components/ui/Dialog';
+import { CardSplitEditor } from '../../components/shared/CardSplitEditor';
+import { useCardSplits } from '../../hooks/useCardSplits';
 import { inventoryService } from '../../services/inventoryService';
 import { supplierService } from '../../services/supplierService';
 import { bankCardService } from '../../services/bankCardService';
@@ -36,14 +37,12 @@ export function SupplierPayDialog({ supplier, open, onOpenChange, onPaid }: Supp
   const [entries, setEntries] = useState<ContractEntry[]>([]);
   const [loadingEntries, setLoadingEntries] = useState(false);
   const [selected, setSelected] = useState<Record<number, boolean>>({});
-  const [amountInput, setAmountInput] = useState('');
   const [paying, setPaying] = useState(false);
 
   // To'lov taqsimoti: naqd va karta summalari (ikkalasi birga = aralash to'lov)
   const [cashInput, setCashInput] = useState('');
   const [cardInput, setCardInput] = useState('');
   const [bankCards, setBankCards] = useState<BankCard[]>([]);
-  const [selectedBankCardId, setSelectedBankCardId] = useState('');
 
   const loadEntries = useCallback(async () => {
     if (!supplier) return;
@@ -66,16 +65,13 @@ export function SupplierPayDialog({ supplier, open, onOpenChange, onPaid }: Supp
   useEffect(() => {
     if (open && supplier) {
       setSelected({});
-      setAmountInput('');
+      setCashInput('');
+      setCardInput('');
       void loadEntries();
       // Kirim bo'limida ko'rinadigan to'lov turlari (scope: purchase + both)
       bankCardService
         .getAll({ is_active: true, scope: 'purchase' })
-        .then((cards) => {
-          setBankCards(cards);
-          const defaultCard = cards.find((card) => card.is_default) ?? cards[0];
-          setSelectedBankCardId(defaultCard ? String(defaultCard.id) : '');
-        })
+        .then(setBankCards)
         .catch(() => setBankCards([]));
     }
   }, [open, supplier, loadEntries]);
@@ -101,27 +97,33 @@ export function SupplierPayDialog({ supplier, open, onOpenChange, onPaid }: Supp
     [selectedEntries],
   );
 
-  // Tanlov o'zgarganda summa avtomatik tanlangan qarzning to'liq miqdoriga qo'yiladi
+  // Tanlov o'zgarganda naqd maydoni tanlangan qarzning to'liq miqdoriga qo'yiladi —
+  // foydalanuvchi kamaytirsa qisman to'lov bo'ladi
   useEffect(() => {
-    setAmountInput(selectedDebtCents > 0 ? formatAmountInput(selectedDebtCents / 100) : '');
-  }, [selectedDebtCents]);
-
-  const amountCents = toCents(parseAmountInput(amountInput));
-  const amountTooBig = amountCents > selectedDebtCents;
-
-  // Summa o'zgarganda taqsimot defaultga qaytadi — hammasi naqd
-  useEffect(() => {
-    setCashInput(amountCents > 0 ? formatAmountInput(amountCents / 100) : '');
+    setCashInput(selectedDebtCents > 0 ? formatAmountInput(selectedDebtCents / 100) : '');
     setCardInput('');
-  }, [amountCents]);
+  }, [selectedDebtCents]);
 
   const cashCents = toCents(parseAmountInput(cashInput));
   const cardCents = toCents(parseAmountInput(cardInput));
-  const splitMismatch = amountCents > 0 && cashCents + cardCents !== amountCents;
-  const cardMissing = cardCents > 0 && !selectedBankCardId;
+  // Jami to'lov naqd + karta yig'indisidan hisoblanadi — alohida summa kiritilmaydi
+  const amountCents = cashCents + cardCents;
+  const amountTooBig = amountCents > selectedDebtCents;
+
+  // Karta summasini bir nechta kartaga (Humo/Uzcard/...) taqsimlash
+  const cardSom = Math.round(cardCents / 100);
+  const {
+    cardSplits,
+    activeSplits,
+    splitsInvalid,
+    updateSplitCard,
+    updateSplitAmount,
+    addCardSplit,
+    removeCardSplit,
+  } = useCardSplits(bankCards, cardSom);
 
   const amountInvalid =
-    selectedEntries.length > 0 && (amountCents <= 0 || amountTooBig || splitMismatch || cardMissing);
+    selectedEntries.length > 0 && (amountCents <= 0 || amountTooBig || splitsInvalid);
 
   // Taqsimot: har kirimga ko'pi bilan o'z qarzi, jami esa kiritilgan summadan oshmaydi
   const allocations = useMemo(() => {
@@ -156,37 +158,43 @@ export function SupplierPayDialog({ supplier, open, onOpenChange, onPaid }: Supp
     setPaying(true);
     let paidCount = 0;
     try {
-      // Naqd va karta "hovuzlari": har kirim ulushi avval naqddan, yetmasa kartadan yopiladi.
-      // Aralash to'lovda bitta kirimga 2 ta tranzaksiya (naqd + karta) tushishi mumkin.
-      let cashPool = cashCents;
-      let cardPool = cardCents;
+      // Hovuzlar: naqd + har bir karta (Humo/Uzcard/...) alohida, tiyinda.
+      // Har kirim ulushi hovuzlardan navbat bilan yopiladi va bitta so'rovda
+      // payments massivi (split) sifatida ketadi — aralash to'lovda bitta
+      // kirimga bir nechta qator (naqd + kartalar) tushishi mumkin.
+      const pools: { type: 'cash' | 'card'; cents: number; bankCard?: number }[] = [];
+      if (cashCents > 0) pools.push({ type: 'cash', cents: cashCents });
+      for (const split of activeSplits) {
+        pools.push({ type: 'card', cents: split.amount * 100, bankCard: Number(split.bankCardId) });
+      }
+
+      let poolIdx = 0;
       for (const alloc of allocations) {
         if (alloc.cents <= 0) continue;
-        let remaining = alloc.cents;
-        const cashPart = Math.min(cashPool, remaining);
-        cashPool -= cashPart;
-        remaining -= cashPart;
-        const cardPart = Math.min(cardPool, remaining);
-        cardPool -= cardPart;
+        let need = alloc.cents;
+        const payments: { type: 'cash' | 'card'; amount: string; bank_card?: number }[] = [];
+        while (need > 0 && poolIdx < pools.length) {
+          const pool = pools[poolIdx];
+          const take = Math.min(pool.cents, need);
+          if (take > 0) {
+            payments.push({
+              type: pool.type,
+              amount: (take / 100).toFixed(2),
+              ...(pool.type === 'card' ? { bank_card: pool.bankCard } : {}),
+            });
+            pool.cents -= take;
+            need -= take;
+          }
+          if (pool.cents <= 0) poolIdx += 1;
+        }
+        if (payments.length === 0) continue;
 
-        // Har kirim bo'yicha alohida to'lov — backend qoldiqdan oshiq summani qabul qilmaydi
-        if (cashPart > 0) {
-          await supplierService.createPayment({
-            supplier: Number(supplier.id),
-            entry: alloc.entry.id,
-            amount: (cashPart / 100).toFixed(2),
-            payment_type: 'cash',
-          });
-        }
-        if (cardPart > 0) {
-          await supplierService.createPayment({
-            supplier: Number(supplier.id),
-            entry: alloc.entry.id,
-            amount: (cardPart / 100).toFixed(2),
-            payment_type: 'card',
-            bank_card: Number(selectedBankCardId),
-          });
-        }
+        // Har kirim bo'yicha bitta so'rov — backend qoldiqdan oshiq summani qabul qilmaydi
+        await supplierService.createPayment({
+          supplier: Number(supplier.id),
+          entry: alloc.entry.id,
+          payments,
+        });
         paidCount += 1;
       }
       toast.success(
@@ -315,119 +323,102 @@ export function SupplierPayDialog({ supplier, open, onOpenChange, onPaid }: Supp
                 </span>
               </div>
 
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">
-                  {t('suppliers.paymentAmount', 'To‘lov summasi')}
-                </Label>
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  value={amountInput}
-                  onChange={(e) => setAmountInput(e.target.value)}
-                  className={amountTooBig || amountCents <= 0 ? 'border-red-500 focus-visible:ring-red-500' : ''}
-                />
-                {amountTooBig && (
-                  <p className="text-xs text-red-600">
-                    {t('suppliers.amountExceedsDebt', 'Summa tanlangan qarzdan oshib ketdi')} (max{' '}
-                    {formatCurrency(selectedDebtCents / 100)})
-                  </p>
-                )}
-              </div>
+              {/* To'lov usuli: naqd / karta / aralash — jami to'lov naqd + karta
+                  yig'indisidan hisoblanadi, kam bo'lsa qisman to'lov bo'ladi */}
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Label className="text-xs text-muted-foreground">
+                    {t('sales.paymentType', "To'lov usuli")}
+                  </Label>
+                  <div className="flex gap-1.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={cardCents === 0 && cashCents > 0 ? 'default' : 'outline'}
+                      onClick={() => {
+                        const cents = amountCents > 0 ? amountCents : selectedDebtCents;
+                        setCashInput(formatAmountInput(cents / 100));
+                        setCardInput('');
+                      }}
+                    >
+                      <Banknote className="mr-1 h-3.5 w-3.5" />
+                      {t('sales.cash', 'Naqd')}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={cashCents === 0 && cardCents > 0 ? 'default' : 'outline'}
+                      onClick={() => {
+                        const cents = amountCents > 0 ? amountCents : selectedDebtCents;
+                        setCardInput(formatAmountInput(cents / 100));
+                        setCashInput('');
+                      }}
+                    >
+                      <CreditCard className="mr-1 h-3.5 w-3.5" />
+                      {t('sales.card', 'Karta')}
+                    </Button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">{t('sales.cash', 'Naqd')}</Label>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="0"
+                      value={cashInput}
+                      onChange={(e) => setCashInput(e.target.value)}
+                      className={amountTooBig ? 'border-red-400 focus-visible:ring-red-400' : ''}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">{t('sales.card', 'Karta')}</Label>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="0"
+                      value={cardInput}
+                      onChange={(e) => setCardInput(e.target.value)}
+                      className={amountTooBig ? 'border-red-400 focus-visible:ring-red-400' : ''}
+                    />
+                  </div>
+                </div>
 
-              {/* To'lov usuli: naqd / karta / aralash (ikkala inputga ham yozish mumkin) */}
-              {amountCents > 0 && !amountTooBig && (
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <Label className="text-xs text-muted-foreground">
-                      {t('sales.paymentType', "To'lov usuli")}
-                    </Label>
-                    <div className="flex gap-1.5">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={cardCents === 0 && cashCents > 0 ? 'default' : 'outline'}
-                        onClick={() => {
-                          setCashInput(formatAmountInput(amountCents / 100));
-                          setCardInput('');
-                        }}
-                      >
-                        <Banknote className="mr-1 h-3.5 w-3.5" />
-                        {t('sales.cash', 'Naqd')}
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={cashCents === 0 && cardCents > 0 ? 'default' : 'outline'}
-                        onClick={() => {
-                          setCardInput(formatAmountInput(amountCents / 100));
-                          setCashInput('');
-                        }}
-                      >
-                        <CreditCard className="mr-1 h-3.5 w-3.5" />
-                        {t('sales.card', 'Karta')}
-                      </Button>
-                    </div>
+                {/* Karta ishlatilsa — summani kartalarga (Uzcard/Humo/...) taqsimlash */}
+                {cardCents > 0 && (
+                  <CardSplitEditor
+                    bankCards={bankCards}
+                    cardSplits={cardSplits}
+                    onUpdateCard={updateSplitCard}
+                    onUpdateAmount={updateSplitAmount}
+                    onAdd={addCardSplit}
+                    onRemove={removeCardSplit}
+                    disabled={paying}
+                  />
+                )}
+
+                {/* Jami to'lov (naqd + karta) va qisman to'lovda qoladigan qarz */}
+                <div className="rounded-md bg-background/60 p-2 space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t('suppliers.paymentAmount', 'To‘lov summasi')}:</span>
+                    <span className="font-bold tabular-nums">{formatCurrency(amountCents / 100)}</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">{t('sales.cash', 'Naqd')}</Label>
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        placeholder="0"
-                        value={cashInput}
-                        onChange={(e) => setCashInput(e.target.value)}
-                        className={splitMismatch ? 'border-red-400 focus-visible:ring-red-400' : ''}
-                      />
+                  {!amountTooBig && amountCents > 0 && amountCents < selectedDebtCents && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">{t('customers.willRemain', 'qoladi')}:</span>
+                      <span className="font-semibold tabular-nums text-amber-600">
+                        {formatCurrency((selectedDebtCents - amountCents) / 100)}
+                      </span>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">{t('sales.card', 'Karta')}</Label>
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        placeholder="0"
-                        value={cardInput}
-                        onChange={(e) => setCardInput(e.target.value)}
-                        className={splitMismatch ? 'border-red-400 focus-visible:ring-red-400' : ''}
-                      />
-                    </div>
-                  </div>
-                  {splitMismatch && (
+                  )}
+                  {amountTooBig && (
                     <p className="text-xs text-red-600">
-                      {t('suppliers.splitMismatch', "Naqd va karta yig'indisi to'lov summasiga teng bo'lishi kerak")}{' '}
-                      ({formatCurrency(amountCents / 100)})
+                      {t('suppliers.amountExceedsDebt', 'Summa tanlangan qarzdan oshib ketdi')} (max{' '}
+                      {formatCurrency(selectedDebtCents / 100)})
                     </p>
                   )}
-
-                  {/* Karta ishlatilsa — to'lov turini (Uzcard/Humo/...) tanlash */}
-                  {cardCents > 0 && (
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">
-                        {t('nav.paymentTypes', "To'lov turlari")} <span className="text-red-500">*</span>
-                      </Label>
-                      {bankCards.length === 0 ? (
-                        <p className="text-xs text-red-600">
-                          {t('sales.noBankCards', "Faol to'lov turi yo'q — Sozlamalar → To'lov turlaridan qo'shing")}
-                        </p>
-                      ) : (
-                        <Select value={selectedBankCardId} onValueChange={setSelectedBankCardId}>
-                          <SelectTrigger className="h-9">
-                            <SelectValue placeholder={t('sales.selectCardType', 'Karta turini tanlang')} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {bankCards.map((card) => (
-                              <SelectItem key={card.id} value={String(card.id)}>
-                                {card.name}
-                                {card.is_default ? ' ★' : ''}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </div>
-                  )}
                 </div>
-              )}
+              </div>
 
               {/* Taqsimot: qaysi kirimga qancha tushishi oldindan ko'rinadi */}
               {amountCents > 0 && !amountTooBig && (

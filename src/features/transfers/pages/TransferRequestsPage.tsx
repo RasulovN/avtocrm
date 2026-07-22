@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
 import { Check, X, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PageHeader } from '../../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../../components/shared/DataTable';
@@ -14,6 +15,7 @@ import { Input } from '../../../components/ui/Input';
 import type { Transfer, Store } from '../../../types';
 import type { ReactElement } from 'react';
 import { useAuthStore } from '../../../app/store';
+import { handleError } from '../../../utils/errorHandler';
 
 const formatQuantity = (value: Transfer['quantity']) => {
   if (value === null || value === undefined) return '-';
@@ -40,6 +42,8 @@ export function TransferRequestsPage(): ReactElement {
   const [total, setTotal] = useState(0);
   // Qabul qilish / rad etish oldidan modal orqali tasdiq so'raladi
   const [confirmAction, setConfirmAction] = useState<{ type: 'approve' | 'reject'; transfer: Transfer } | null>(null);
+  // Tasdiqlangach so'rov tugaguncha modal loading holatida ochiq turadi
+  const [confirmLoading, setConfirmLoading] = useState(false);
   const limit = 20;
   const safeRequests = useMemo(() => (Array.isArray(requests) ? requests : []), [requests]);
 
@@ -202,8 +206,9 @@ export function TransferRequestsPage(): ReactElement {
     try {
       await transferService.approve(id);
       setRequests((prev) => prev.filter((req) => req.id !== id));
+      toast.success(t('transfers.approveSuccess', "O'tkazma qabul qilindi"));
     } catch (error) {
-      console.error('Failed to approve transfer:', error);
+      handleError(error, { showToast: true, logData: 'Failed to approve transfer' });
     }
   };
 
@@ -211,8 +216,9 @@ export function TransferRequestsPage(): ReactElement {
     try {
       await transferService.reject(id);
       setRequests((prev) => prev.filter((req) => req.id !== id));
+      toast.success(t('transfers.rejectSuccess', "O'tkazma rad etildi"));
     } catch (error) {
-      console.error('Failed to reject transfer:', error);
+      handleError(error, { showToast: true, logData: 'Failed to reject transfer' });
     }
   };
 
@@ -351,14 +357,20 @@ export function TransferRequestsPage(): ReactElement {
       <ConfirmDialog
         open={!!confirmAction}
         onOpenChange={(open: boolean) => !open && setConfirmAction(null)}
-        onConfirm={() => {
+        onConfirm={async () => {
           if (!confirmAction) return;
-          if (confirmAction.type === 'approve') {
-            void handleApprove(confirmAction.transfer.id);
-          } else {
-            void handleReject(confirmAction.transfer.id);
+          setConfirmLoading(true);
+          try {
+            if (confirmAction.type === 'approve') {
+              await handleApprove(confirmAction.transfer.id);
+            } else {
+              await handleReject(confirmAction.transfer.id);
+            }
+          } finally {
+            setConfirmLoading(false);
           }
         }}
+        loading={confirmLoading}
         title={
           confirmAction?.type === 'approve'
             ? t('transfers.confirmApproveTitle', "O'tkazmani qabul qilish")

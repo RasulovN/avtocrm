@@ -369,6 +369,13 @@ export interface PurchaseSessionItem {
   wholesale_price: string;
 }
 
+/** Xarid (kirim) bo'limidagi bitta split to'lov qatori — sotuvdagi SalePaymentInput andozasi */
+export interface PurchasePaymentInput {
+  type: 'cash' | 'card';
+  amount: string;
+  bank_card?: number | null;
+}
+
 export interface PurchaseSession {
   id: number;
   supplier: number;
@@ -381,6 +388,7 @@ export interface PurchaseSession {
   cash_amount: string;
   card_amount: string;
   bank_card: number | null;
+  payments?: PurchasePaymentInput[];
   note?: string;
   status: PurchaseSessionStatus;
   current_step: 1 | 2 | 3;
@@ -396,6 +404,7 @@ export interface PurchaseSessionPayload {
   cash_amount?: string;
   card_amount?: string;
   bank_card?: number | null;
+  payments?: PurchasePaymentInput[];
   note?: string;
   current_step?: 1 | 2 | 3;
 }
@@ -412,6 +421,16 @@ export interface ContractEntryItem {
   shtrix_code?: string | null;
 }
 
+/** Kirimning split to'lov qatori (o'qish) — StockEntryPayment */
+export interface ContractEntryPayment {
+  id: number;
+  amount: string;
+  type: 'cash' | 'card';
+  bank_card?: number | null;
+  bank_card_name?: string | null;
+  created_at?: string;
+}
+
 export interface ContractEntry {
   id: number;
   supplier: number;
@@ -422,6 +441,8 @@ export interface ContractEntry {
   created_by: number;
   full_name: string;
   items: ContractEntryItem[];
+  /** Kirim paytidagi split to'lovlar (naqd / har bir karta alohida) */
+  payments?: ContractEntryPayment[];
   /** Kirimning to'liq summasi (StockEntry.total_amount) */
   total_amount?: string;
   /** Kirim paytida darhol to'langan summa */
@@ -522,6 +543,8 @@ export interface SalePayment {
   bank_card_name?: string | null;
   is_refund?: boolean;
   created_at: string;
+  /** Bitta to'lov harakatining split qatorlarini bog'lovchi guruh ID (null — eski yozuvlar) */
+  payment_group?: string | null;
 }
 
 /**

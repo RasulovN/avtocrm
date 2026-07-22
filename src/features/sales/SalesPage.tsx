@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo, useCallback, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, memo, type ChangeEvent, type KeyboardEvent } from 'react';
 import toast from 'react-hot-toast';
-import { ScanBarcode, Trash2, DollarSign, Search, X, UserPlus, Eye, Package, Barcode, MapPin, Image as ImageIcon, Loader2, ArrowLeftRight, Banknote, CreditCard, Plus } from 'lucide-react';
+import { ScanBarcode, Trash2, DollarSign, Search, X, UserPlus, Eye, Package, Barcode, MapPin, Image as ImageIcon, Loader2, ArrowLeftRight, Banknote, CreditCard, Plus, ChevronDown, ShoppingCart } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/Dialog';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -109,6 +109,107 @@ const playErrorSound = () => {
     logger.warn('Audio not supported');
   }
 };
+
+/**
+ * Mahsulotlar katalogi ro'yxati — React.memo bilan ajratilgan.
+ * Sabab: SalesPage'da to'lov inputlariga har harf yozilganda butun sahifa
+ * qayta render bo'lardi; katalog (yuzlab/minglab karta) eng og'ir qismi edi
+ * va yozish sezilarli qotardi. Endi products/handlerlar o'zgarmagunicha
+ * (to'lov yozishda o'zgarmaydi) bu ro'yxat umuman qayta render bo'lmaydi.
+ */
+const ProductCatalogList = memo(function ProductCatalogList({
+  products,
+  activeStoreId,
+  onProductClick,
+  onOpenDetails,
+}: {
+  products: Product[];
+  activeStoreId: string;
+  onProductClick: (product: Product) => void;
+  onOpenDetails: (product: Product) => void | Promise<void>;
+}) {
+  const { t } = useTranslation();
+  return (
+    <>
+      {products.map((product) => {
+        const isNotAvailable = Boolean(activeStoreId) && (product.quantity === undefined || product.quantity <= 0);
+        return (
+          <div
+            key={product.id}
+            className={`w-full text-left rounded-lg p-3 border border-gray-900 hover:bg-accent dark:hover:bg-gray-900 transition-colors cursor-pointer ${
+              isNotAvailable ? 'opacity-70' : ''
+            }`}
+            onClick={() => onProductClick(product)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onProductClick(product);
+              }
+            }}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="font-medium dark:text-white text-sm truncate">
+                  {product.name || product.sku || t('sales.unknownProduct')}
+                </div>
+                <div className="mt-1 text-[10px] text-muted-foreground">
+                  SKU: {product.sku || '-'}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span
+                  className={`inline-flex items-center justify-center rounded text-xs font-bold min-w-[1.75rem] h-5 px-1.5 ${
+                    isNotAvailable
+                      ? 'bg-destructive/10 text-destructive dark:bg-red-900/30 dark:text-red-400'
+                      : 'bg-primary/10 dark:bg-gray-600 dark:text-gray-200'
+                  }`}
+                >
+                  {isNotAvailable ? '0' : product.quantity}
+                </span>
+                <button
+                  type="button"
+                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-input bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200 dark:hover:bg-gray-800"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    void onOpenDetails(product);
+                  }}
+                  aria-label={t('sales.productDetails')}
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+            <div className="mt-2 pt-2 border-t border-border/40 grid grid-cols-3 gap-2 text-xs">
+              <div>
+                <div className="text-muted-foreground mb-0.5 flex items-center gap-1">
+                  <Barcode className="h-3 w-3" /> Shtrix kod
+                </div>
+                <div className="font-semibold tabular-nums text-foreground truncate">
+                  {(product.shtrix_code ? extractBarcodeFromUrl(product.shtrix_code) : '') || product.barcode || product.sku || '-'}
+                </div>
+              </div>
+              <div>
+                <div className="text-muted-foreground mb-0.5">Sotuv narxi</div>
+                <div className="font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
+                  {formatCurrency(product.selling_price ?? 0)}
+                </div>
+              </div>
+              <div>
+                <div className="text-muted-foreground mb-0.5">Ulgurji narx</div>
+                <div className="font-semibold tabular-nums text-indigo-600 dark:text-indigo-400">
+                  {formatCurrency(product.wholesale_price ?? 0)}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </>
+  );
+});
 
 export function SalesPage() {
   const { t } = useTranslation();
@@ -531,6 +632,34 @@ export function SalesPage() {
     return [...source].sort((a, b) => (b.quantity ?? 0) - (a.quantity ?? 0));
   }, [searchResults, filteredProducts]);
 
+  // ─── Mobil scroll yordamchilari ───
+  // Ro'yxat ichki scroll ekani bilinmaydi: pastda fade + "pastga" tugmasi ko'rsatiladi,
+  // mahsulot tanlab bo'lgach chekka tez tushish uchun suzuvchi tugma bor
+  const productListRef = useRef<HTMLDivElement>(null);
+  const chekPanelRef = useRef<HTMLDivElement>(null);
+  const [listHasMore, setListHasMore] = useState(false);
+
+  const updateListHasMore = useCallback(() => {
+    const el = productListRef.current;
+    if (!el) return;
+    setListHasMore(el.scrollHeight - el.scrollTop - el.clientHeight > 24);
+  }, []);
+
+  // Ro'yxat o'zgarganda (qidiruv, do'kon filtri) indikator qayta hisoblanadi
+  useEffect(() => {
+    updateListHasMore();
+  }, [displayedProducts, updateListHasMore]);
+
+  const scrollListDown = () => {
+    const el = productListRef.current;
+    if (!el) return;
+    el.scrollBy({ top: el.clientHeight * 0.85, behavior: 'smooth' });
+  };
+
+  const scrollToReceipt = () => {
+    chekPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   const loadData = useCallback(async () => {
     try {
       const [storesRes, customersRes] = await Promise.all([
@@ -815,12 +944,17 @@ export function SalesPage() {
   //   qatorlardan (oxiridan boshlab) avtomatik qirqiladi.
   const updateSplitAmount = (idx: number, digits: string) => {
     const raw = digits === '' ? 0 : Number(digits);
-    // Karta avto rejimdan chiqamiz — endi karta jami qatorlar yig'indisiga ergashadi
-    if (activePayment === 'card') setActivePayment(null);
-
-    // Naqd avto rejimda naqd o'zi moslashadi, shuning uchun limitga kirmaydi
-    const cashPart = activePayment === 'cash' ? 0 : cashAmount;
-    const hardMax = Math.max(0, roundedTotal - cashPart);
+    // Qo'lda kiritish BARCHA avto rejimlarni o'chiradi: naqd avto to'ldirilgan
+    // bo'lsa 0 ga tushadi — endi faqat qo'lda yozilgan summalar hisobda,
+    // yetmagan qism qarzga o'tadi
+    let cashNow = cashAmount;
+    if (activePayment === 'cash') {
+      cashNow = 0;
+      setCashAmount(0);
+      setCashText('');
+    }
+    if (activePayment) setActivePayment(null);
+    const hardMax = Math.max(0, roundedTotal - cashNow);
 
     const val = Math.min(raw, hardMax);
     const next = cardSplits.map((row, i) =>
@@ -963,6 +1097,16 @@ export function SalesPage() {
       try {
         await refreshProducts();
         await loadStoreProducts();
+        // Qidiruv natijalari ochiq turgan bo'lsa ular ham qayta yuklanadi —
+        // aks holda ro'yxat (searchResults ?? filteredProducts) sotilgan
+        // mahsulotni eski qoldiq bilan (masalan, 5 dona) ko'rsatib turaverardi
+        const activeQuery = barcodeValue.trim();
+        if (activeQuery) {
+          const freshResults = await productService.search(activeQuery, activeStoreId || undefined);
+          setSearchResults(freshResults.map(hydrateProductFromCatalog));
+        } else {
+          setSearchResults(null);
+        }
       } catch (err) {
         console.error('Failed to refresh products after sale:', err);
       }
@@ -1007,7 +1151,9 @@ export function SalesPage() {
 
   const receiptTotal = totalWithDiscount;
 
-  const handleProductClick = (product: Product) => {
+  // useCallback — ProductCatalogList (React.memo) prop'i barqaror bo'lishi shart,
+  // aks holda memo ishlamay katalog har renderda qayta chiziladi
+  const handleProductClick = useCallback((product: Product) => {
     try {
       // Ensure product is properly hydrated and has ID
       const hydratedProduct = hydrateProductFromCatalog(product);
@@ -1021,7 +1167,8 @@ export function SalesPage() {
     } catch {
       toast.error(t('messages.productAddError'));
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrateProductFromCatalog, addProduct, barcodeOnChange, t]);
 
   const handleOpenProductDialog = useCallback(async (product: Product) => {
     const hydratedProduct = hydrateProductFromCatalog(product);
@@ -1152,6 +1299,18 @@ export function SalesPage() {
           <SaleReturnCreatePage embedded />
         ) : (
         <div ref={splitContainerRef} className="flex flex-col gap-3 xl:h-[calc(100vh-11rem)] xl:flex-row xl:gap-0">
+          {/* Mobil: mahsulot tanlangach chekka tez tushish uchun suzuvchi tugma */}
+          {items.length > 0 && (
+            <button
+              type="button"
+              onClick={scrollToReceipt}
+              aria-label={t('sales.goToReceipt', 'Chekka o‘tish')}
+              className="fixed bottom-5 right-4 z-40 flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-primary-foreground shadow-lg shadow-primary/30 transition-transform active:scale-95 xl:hidden"
+            >
+              <ShoppingCart className="h-5 w-5" />
+              <span className="text-sm font-bold tabular-nums">{items.length}</span>
+            </button>
+          )}
           <div className="flex min-h-0 flex-col space-y-2 overflow-y-auto" style={panelStyle(0)}>
             <div className="bg-card border border-gray-900 rounded-lg flex min-h-80 flex-col p-3 xl:min-h-0 xl:flex-1">
               <div className="mb-3">
@@ -1223,8 +1382,14 @@ export function SalesPage() {
                 </div>
               </div>
               {/* Mobilda ro'yxat o'z ichida scroll bo'ladi — chek va to'lov paneli pastda qoladi.
-                  min-h ro'yxat yuklanayotganda ham xuddi shu balandlikni egallashi uchun (CLS oldini oladi) */}
-              <div className="min-h-[50vh] max-h-[50vh] flex-1 overflow-y-auto space-y-1.5 xl:min-h-0 xl:max-h-none">
+                  min-h ro'yxat yuklanayotganda ham xuddi shu balandlikni egallashi uchun (CLS oldini oladi).
+                  relative o'ram — pastdagi "yana bor" fade va tugma uchun */}
+              <div className="relative flex min-h-0 flex-1 flex-col">
+                <div
+                  ref={productListRef}
+                  onScroll={updateListHasMore}
+                  className="min-h-[50vh] max-h-[50vh] flex-1 overflow-y-auto space-y-1.5 xl:min-h-0 xl:max-h-none"
+                >
                 {searchLoading || storeProductsLoading ? (
                   <div className="py-8 text-center text-sm text-muted-foreground dark:text-gray-400">
                     {t('common.loading')}
@@ -1234,88 +1399,34 @@ export function SalesPage() {
                     {t('messages.productNotFound')}
                   </div>
                 ) : (
-                  displayedProducts.map((product) => {
-                    const isNotAvailable = activeStoreId && (product.quantity === undefined || product.quantity <= 0);
-                    return (
-                      <div
-                        key={product.id}
-                        className={`w-full text-left rounded-lg p-3 border border-gray-900 hover:bg-accent dark:hover:bg-gray-900 transition-colors cursor-pointer ${
-                          isNotAvailable ? 'opacity-70' : ''
-                        }`}
-                        onClick={() => handleProductClick(product)}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            handleProductClick(product);
-                          }
-                        }}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium dark:text-white text-sm truncate">
-                              {product.name || product.sku || t('sales.unknownProduct')}
-                            </div>
-                            <div className="mt-1 text-[10px] text-muted-foreground">
-                              SKU: {product.sku || '-'}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`inline-flex items-center justify-center rounded text-xs font-bold min-w-[1.75rem] h-5 px-1.5 ${
-                                isNotAvailable
-                                  ? 'bg-destructive/10 text-destructive dark:bg-red-900/30 dark:text-red-400'
-                                  : 'bg-primary/10 dark:bg-gray-600 dark:text-gray-200'
-                              }`}
-                            >
-                              {isNotAvailable ? '0' : product.quantity}
-                            </span>
-                            <button
-                              type="button"
-                              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-input bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200 dark:hover:bg-gray-800"
-                              onClick={(event) => {
-                                event.preventDefault();
-                                event.stopPropagation();
-                                void handleOpenProductDialog(product);
-                              }}
-                              aria-label={t('sales.productDetails')}
-                            >
-                              <Eye className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                        <div className="mt-2 pt-2 border-t border-border/40 grid grid-cols-3 gap-2 text-xs">
-                          <div>
-                            <div className="text-muted-foreground mb-0.5 flex items-center gap-1">
-                              <Barcode className="h-3 w-3" /> Shtrix kod
-                            </div>
-                            <div className="font-semibold tabular-nums text-foreground truncate">
-                              {(product.shtrix_code ? extractBarcodeFromUrl(product.shtrix_code) : '') || product.barcode || product.sku || '-'}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-muted-foreground mb-0.5">Sotuv narxi</div>
-                            <div className="font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
-                              {formatCurrency(product.selling_price ?? 0)}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-muted-foreground mb-0.5">Ulgurji narx</div>
-                            <div className="font-semibold tabular-nums text-indigo-600 dark:text-indigo-400">
-                              {formatCurrency(product.wholesale_price ?? 0)}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
+                  <ProductCatalogList
+                    products={displayedProducts}
+                    activeStoreId={activeStoreId}
+                    onProductClick={handleProductClick}
+                    onOpenDetails={handleOpenProductDialog}
+                  />
+                )}
+                </div>
+
+                {/* Mobil: pastda yana mahsulotlar borligini ko'rsatuvchi fade + tugma */}
+                {listHasMore && (
+                  <>
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 rounded-b-lg bg-linear-to-t from-card to-transparent xl:hidden" />
+                    <button
+                      type="button"
+                      onClick={scrollListDown}
+                      aria-label={t('sales.scrollDownList', 'Ro‘yxatni pastga aylantirish')}
+                      className="absolute bottom-2 left-1/2 z-10 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full border border-border bg-background/95 text-muted-foreground shadow-md transition-colors hover:text-foreground xl:hidden"
+                    >
+                      <ChevronDown className="h-4 w-4 animate-bounce" />
+                    </button>
+                  </>
                 )}
               </div>
             </div>
           </div>
           {renderSplitter(0)}
-          <div className="flex min-h-0 flex-col space-y-2 overflow-y-auto" style={panelStyle(1)}>
+          <div ref={chekPanelRef} className="flex min-h-0 flex-col space-y-2 overflow-y-auto" style={panelStyle(1)}>
             <div className="bg-card border border-gray-900 rounded-lg flex min-h-80 flex-col xl:flex-1">
               <div className="p-3 pb-2">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -1626,21 +1737,22 @@ export function SalesPage() {
                         value={cashText}
                         disabled={isOverpaid && cashAmount === 0}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                          // "0" yozish mumkin; "05" → "5" (oldingi nol tashlanadi)
+                          // "0" yozish mumkin; "05" → "5" (oldingi nol tashlanadi).
+                          // Qo'lda kiritish avto rejimni O'CHIRADI: karta avto to'ldirilgan
+                          // bo'lsa 0 ga tushadi — yozilgan naqd aynan qoladi, yetmagani qarzga o'tadi
                           const digits = e.target.value.replace(/\D/g, '');
-                          const val = digits === '' ? 0 : Number(digits);
-                          const text = digits === '' ? '' : formatAmountInput(val) || '0';
+                          const raw = digits === '' ? 0 : Number(digits);
+                          let cardNow = cardAmount;
                           if (activePayment === 'card') {
-                            // Karta avto rejimda: naqd kiritilsa, karta qoldiqqa moslashadi
-                            if (val > roundedTotal) return;
-                            setCashAmount(val);
-                            setCashText(text);
-                            return;
+                            cardNow = 0;
+                            setCardAmount(0);
+                            setCardText('');
                           }
-                          if (activePayment === 'cash') setActivePayment(null);
-                          if (cardAmount + val > roundedTotal) return;
+                          if (activePayment) setActivePayment(null);
+                          // Jami to'lov sotuv summasidan oshmasin — ortiq qismi qirqiladi
+                          const val = Math.min(raw, Math.max(0, roundedTotal - cardNow));
                           setCashAmount(val);
-                          setCashText(text);
+                          setCashText(digits === '' ? '' : formatAmountInput(val) || '0');
                         }}
                         className={`h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white ${
                           isOverpaid ? 'border-red-500 dark:border-red-500 focus-visible:ring-red-500/30' : ''
@@ -1656,21 +1768,21 @@ export function SalesPage() {
                         value={cardText}
                         disabled={isOverpaid && cardAmount === 0}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                          // "0" yozish mumkin; "05" → "5" (oldingi nol tashlanadi)
+                          // "0" yozish mumkin; "05" → "5" (oldingi nol tashlanadi).
+                          // Qo'lda kiritish avto rejimni O'CHIRADI: naqd avto to'ldirilgan
+                          // bo'lsa 0 ga tushadi — yozilgan karta aynan qoladi, yetmagani qarzga o'tadi
                           const digits = e.target.value.replace(/\D/g, '');
-                          const val = digits === '' ? 0 : Number(digits);
-                          const text = digits === '' ? '' : formatAmountInput(val) || '0';
+                          const raw = digits === '' ? 0 : Number(digits);
+                          let cashNow = cashAmount;
                           if (activePayment === 'cash') {
-                            // Naqd avto rejimda: karta kiritilsa, naqd qoldiqqa moslashadi
-                            if (val > roundedTotal) return;
-                            setCardAmount(val);
-                            setCardText(text);
-                            return;
+                            cashNow = 0;
+                            setCashAmount(0);
+                            setCashText('');
                           }
-                          if (activePayment === 'card') setActivePayment(null);
-                          if (cashAmount + val > roundedTotal) return;
+                          if (activePayment) setActivePayment(null);
+                          const val = Math.min(raw, Math.max(0, roundedTotal - cashNow));
                           setCardAmount(val);
-                          setCardText(text);
+                          setCardText(digits === '' ? '' : formatAmountInput(val) || '0');
                         }}
                         className={`h-9 text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white ${
                           isOverpaid ? 'border-red-500 dark:border-red-500 focus-visible:ring-red-500/30' : ''

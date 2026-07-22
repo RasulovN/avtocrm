@@ -167,9 +167,12 @@ export const supplierService = {
   createPayment: async (data: {
     supplier: number;
     entry: number;
-    amount: string;
+    amount?: string;
     note?: string;
-    // To'lov usuli: 'cash' (default) yoki 'card'; karta bo'lsa bank_card majburiy
+    // Yangi rejim: bir nechta usul bilan to'lash — har usul alohida qator
+    // (payments berilsa amount ixtiyoriy, backend yig'indidan oladi)
+    payments?: { type: 'cash' | 'card'; amount: string; bank_card?: number | null }[];
+    // Eski rejim: 'cash' (default) yoki 'card'; karta bo'lsa bank_card majburiy
     payment_type?: 'cash' | 'card';
     bank_card?: number;
   }) => {
@@ -237,6 +240,8 @@ export interface SupplierTransactionRecord {
   payment_method?: 'cash' | 'card' | '';
   bank_card?: number | null;
   bank_card_name?: string | null;
+  /** Bitta to'lov harakatining split qatorlarini bog'lovchi guruh ID (null — eski yozuvlar) */
+  payment_group?: string | null;
   note?: string;
   created_at?: string;
 }

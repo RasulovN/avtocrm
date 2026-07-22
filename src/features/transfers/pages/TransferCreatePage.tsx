@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, type ChangeEvent } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, Send, ScanBarcode } from 'lucide-react';
@@ -8,6 +8,7 @@ import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { Label } from '../../../components/ui/Label';
 import { Card, CardContent, CardFooter } from '../../../components/ui/Card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../components/ui/Dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/Select';
 import { SearchableSelect } from '../../../components/ui/SearchableSelect';
 import { LazyScannerModal } from '../../../components/LazyScannerModal';
@@ -21,7 +22,11 @@ interface TransferItemForm {
   product: string;
   quantity: number;
   availableQuantity?: number;
+  /** React key uchun barqaror ID — qatorlar tepadan qo'shilganda state adashmasligi uchun */
+  rowId: number;
 }
+
+let transferRowSeq = 0;
 
 export function TransferCreatePage() {
   const { t, i18n } = useTranslation();
@@ -39,6 +44,16 @@ export function TransferCreatePage() {
   const [items, setItems] = useState<TransferItemForm[]>([]);
   const [barcodeInput, setBarcodeInput] = useState('');
   const [showScanner, setShowScanner] = useState(false);
+  // Yuborishga urinilganda tanlanmagan tovar/miqdor qatorlari qizil ko'rsatiladi
+  const [showErrors, setShowErrors] = useState(false);
+
+  // ─── Qoralama (sessiya): avto-saqlash + davom ettirish ───
+  // Yubormaguncha o'tkazma IN_PROGRESS qoralama bo'lib serverda turadi
+  const [sessionId, setSessionId] = useState<number | null>(null);
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const sessionReady = useRef(false); // qoralama yuklanmaguncha avto-saqlash o'chiq
+  const creatingSession = useRef(false); // parallel POST'lardan himoya
 
   const safeStores = useMemo(() => (Array.isArray(stores) ? stores : []), [stores]);
   const safeProducts = useMemo(() => {
@@ -56,9 +71,13 @@ export function TransferCreatePage() {
       } else {
         q = p.quantity ?? 0;
       }
+      // SKU/shtrix-kod sublabel sifatida — SearchableSelect qidiruvi label bilan
+      // birga sublabel bo'yicha ham ishlaydi, ya'ni nom, SKU va barcode bo'yicha topiladi
+      const codes = [p.sku, p.barcode].filter(Boolean).join(' • ');
       return {
         value: String(p.id),
-        label: `${p.name} (Omborda: ${q})`
+        label: `${p.name} (Omborda: ${q})`,
+        sublabel: codes || undefined,
       };
     });
   }, [safeProducts, fromStoreId]);
@@ -94,6 +113,90 @@ export function TransferCreatePage() {
     }
   }, [loadData, isAdmin, userStoreId]);
 
+  // Sahifa ochilganda faol qoralama bo'lsa tiklanadi (davom ettirish)
+  useEffect(() => {
+    let cancelled = false;
+    transferService
+      .getActiveSession()
+      .then((session) => {
+        if (cancelled || !session) return;
+        setSessionId(session.id);
+        // Do'kon xodimida "qayerdan" o'z do'koniga qulflangan — faqat admin tiklaydi
+        if (session.from_store && isAdmin) setFromStoreId(String(session.from_store));
+        if (session.to_store) setToStoreId(String(session.to_store));
+        if (Array.isArray(session.items) && session.items.length > 0) {
+          setItems(
+            session.items
+              .filter((it) => it && it.product != null)
+              .map((it) => ({
+                product: String(it.product),
+                quantity: Number(it.quantity) || 0,
+                rowId: ++transferRowSeq,
+              })),
+          );
+        }
+        toast.success(t('transfers.draftRestored', 'Qoralama tiklandi — davom ettirishingiz mumkin'));
+      })
+      .catch(() => { /* qoralama bo'lmasa jim davom etamiz */ })
+      .finally(() => {
+        if (!cancelled) sessionReady.current = true;
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Qoralamani serverga yozish; yangi sessiya ochilsa ID qaytaradi
+  const persistDraft = useCallback(async (): Promise<number | null> => {
+    const hasContent = Boolean(toStoreId) || items.length > 0;
+    if (!sessionId && !hasContent) return null; // bo'sh forma — saqlashga hojat yo'q
+    const payload = {
+      from_store: fromStoreId || null,
+      to_store: toStoreId || null,
+      items: items
+        .filter((item) => item.product)
+        .map(({ product, quantity }) => ({ product, quantity })),
+    };
+    try {
+      setSaveState('saving');
+      if (sessionId) {
+        await transferService.updateSession(sessionId, payload);
+        setSaveState('saved');
+        return sessionId;
+      }
+      if (creatingSession.current) return null;
+      creatingSession.current = true;
+      const session = await transferService.createSession(payload);
+      setSessionId(session.id);
+      setSaveState('saved');
+      return session.id;
+    } catch {
+      setSaveState('idle');
+      return sessionId;
+    } finally {
+      creatingSession.current = false;
+    }
+  }, [sessionId, fromStoreId, toStoreId, items]);
+
+  // Avto-saqlash: o'zgarishdan 1.2s keyin qoralama serverga yoziladi
+  useEffect(() => {
+    if (!sessionReady.current) return;
+    const timer = setTimeout(() => {
+      void persistDraft();
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [fromStoreId, toStoreId, items, persistDraft]);
+
+  // Tab yopilayotganda saqlash tugamagan bo'lsa ogohlantiramiz
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (saveState === 'saving') e.preventDefault();
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [saveState]);
+
   const handleRemoveItem = (index: number) => {
     setItems(items.filter((_, i) => i !== index));
   };
@@ -118,7 +221,11 @@ export function TransferCreatePage() {
          if (availableQty < 1) {
            toast.error(`${t('messages.insufficientStock', 'Maksimal qoldiq')}: 0`);
          } else {
-           setItems([...items, { product: String(foundProduct.id), quantity: 1, availableQuantity: availableQty }]);
+           // Yangi tovar tepadan qo'shiladi — avval qo'shilganlari pastda qoladi
+           setItems([
+             { product: String(foundProduct.id), quantity: 1, availableQuantity: availableQty, rowId: ++transferRowSeq },
+             ...items,
+           ]);
            toast.success(`${foundProduct.name} qo'shildi`);
          }
        }
@@ -147,6 +254,18 @@ export function TransferCreatePage() {
     e.preventDefault();
     if (saving) return;
 
+    // Avval aniq xabarlar: tovar tanlanmagan qator qizil belgilanadi
+    if (items.some(item => !item.product)) {
+      setShowErrors(true);
+      toast.error(t('transfers.productNotSelected', 'Mahsulot tanlanmagan — tovarni tanlang'));
+      return;
+    }
+    if (items.some(item => item.quantity <= 0)) {
+      setShowErrors(true);
+      toast.error(t('messages.invalidQuantity', 'Noto‘g‘ri miqdor kiritildi'));
+      return;
+    }
+
     const invalidItems = items.filter(item => {
       const currentStock = getProductStock(item.product);
       return item.quantity > currentStock;
@@ -157,21 +276,52 @@ export function TransferCreatePage() {
       return;
     }
 
-    const validItems = items.filter(item => item.product && item.quantity > 0);
-    if (validItems.length === 0) return;
+    setShowErrors(false);
     try {
       setSaving(true);
-      await transferService.create({
+      const created = await transferService.create({
         from_store: fromStoreId,
         to_store: toStoreId,
-        items: validItems,
+        items: items.map(({ product, quantity }) => ({ product, quantity })),
       });
+      // Qoralama yakunlanadi — endi u "davom ettirish" ro'yxatida chiqmaydi
+      if (sessionId) {
+        transferService.completeSession(sessionId, created?.id).catch(() => { /* jim */ });
+      }
       navigate(`/${lang}/transfers`);
     } catch (error) {
       console.error('Failed to create transfer:', error);
     } finally {
       setSaving(false);
     }
+  };
+
+  // ─── Chiqish oqimi: o'zgarishlar bo'lsa "saqlansinmi?" deb so'raymiz ───
+  const hasDraftContent = Boolean(toStoreId) || items.length > 0;
+
+  const handleCancelClick = () => {
+    if (hasDraftContent || sessionId) {
+      setLeaveOpen(true);
+    } else {
+      navigate(`/${lang}/transfers`);
+    }
+  };
+
+  const handleLeaveSave = async () => {
+    await persistDraft();
+    toast.success(
+      t('transfers.draftSavedToast', 'Qoralama saqlandi — ro‘yxat tepasida “Qoralama” bo‘lib turadi'),
+    );
+    navigate(`/${lang}/transfers`);
+  };
+
+  const handleLeaveDiscard = async () => {
+    if (sessionId) {
+      try {
+        await transferService.cancelSession(sessionId);
+      } catch { /* jim */ }
+    }
+    navigate(`/${lang}/transfers`);
   };
 
   return (
@@ -222,7 +372,17 @@ export function TransferCreatePage() {
             {/* Middle section: Items List */}
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <h3 className="text-sm font-bold text-foreground">{t('transfers.itemsToTransfer', "Jo'natiladigan tovarlar")}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-foreground">{t('transfers.itemsToTransfer', "Jo'natiladigan tovarlar")}</h3>
+                  {/* Avto-saqlash indikatori */}
+                  {saveState !== 'idle' && (
+                    <span className="text-[11px] text-muted-foreground">
+                      {saveState === 'saving'
+                        ? t('transfers.autosaveSaving', 'Saqlanmoqda…')
+                        : t('transfers.autosaveSaved', 'Qoralama saqlandi')}
+                    </span>
+                  )}
+                </div>
                 
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   <div className="relative min-w-0 w-full sm:w-64">
@@ -250,7 +410,7 @@ export function TransferCreatePage() {
                     variant="outline"
                     size="sm"
                     className="rounded-lg border border-border bg-card text-foreground hover:bg-muted flex items-center shrink-0 shadow-sm px-4 h-10"
-                    onClick={() => setItems([...items, { product: '', quantity: 1 }])}
+                    onClick={() => setItems([{ product: '', quantity: 0, rowId: ++transferRowSeq }, ...items])}
                   >
                     <Plus className="h-4 w-4 sm:mr-2" />
                     <span className="hidden sm:inline">{t('transfers.addProduct', "Tovar qo'shish")}</span>
@@ -266,7 +426,7 @@ export function TransferCreatePage() {
                 )}
 
                 {items.map((item, index) => (
-                  <div key={index} className="flex flex-col sm:flex-row items-start sm:items-end gap-4 p-4 rounded-xl bg-muted/40 border border-border/60">
+                  <div key={item.rowId} className="flex flex-col sm:flex-row items-start sm:items-end gap-4 p-4 rounded-xl bg-muted/40 border border-border/60">
                     <div className="min-w-0 flex-1 w-full space-y-2">
                       <Label className="text-xs font-semibold text-muted-foreground">{t('products.title', 'Tovar')}</Label>
                       <SearchableSelect
@@ -279,13 +439,23 @@ export function TransferCreatePage() {
                           if (newItems[index].quantity > availableQty) {
                             newItems[index].quantity = availableQty;
                           }
+                          // Tovar tanlanganda 0 turgan miqdor avtomatik 1 ga chiqadi
+                          if (newItems[index].quantity === 0 && availableQty > 0) {
+                            newItems[index].quantity = 1;
+                          }
                           setItems(newItems);
                         }}
                         options={productOptions}
                         placeholder={t('transfers.selectProduct', 'Tovarni tanlang')}
-                        searchPlaceholder={t('common.search', 'Qidirish...')}
+                        searchPlaceholder={t('purchaseSession.searchProduct', "Nomi, SKU yoki shtrix-kod bo'yicha qidirish…")}
                         emptyMessage={t('common.noData', "Ma'lumot yo'q")}
+                        className={showErrors && !item.product ? 'rounded-xl ring-2 ring-red-500/70' : ''}
                       />
+                      {showErrors && !item.product && (
+                        <p className="text-xs text-red-500">
+                          {t('transfers.productNotSelected', 'Mahsulot tanlanmagan — tovarni tanlang')}
+                        </p>
+                      )}
                     </div>
 
                     <div className="w-full sm:w-32 space-y-2 shrink-0">
@@ -293,7 +463,10 @@ export function TransferCreatePage() {
                       <Input
                         type="number"
                         min="1"
-                        className="bg-background border-border/60 h-10 shadow-none text-center sm:text-left"
+                        placeholder="0"
+                        className={`bg-background border-border/60 h-10 shadow-none text-center sm:text-left ${
+                          showErrors && item.quantity <= 0 ? 'border-red-500 focus-visible:ring-red-500/40' : ''
+                        }`}
                         value={item.quantity || ''}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => {
                           const newItems = [...items];
@@ -331,7 +504,7 @@ export function TransferCreatePage() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => navigate(`/${lang}/transfers`)}
+              onClick={handleCancelClick}
               className="w-full sm:flex-1 h-11 border border-border bg-card text-foreground rounded-lg hover:bg-muted"
             >
               {t('common.cancel', 'Bekor qilish')}
@@ -353,6 +526,34 @@ export function TransferCreatePage() {
         onOpenChange={setShowScanner}
         onScan={handleScannerModalScan}
       />
+
+      {/* Chiqishdan oldin: o'zgarishlar qoralamada qolsinmi? */}
+      <Dialog open={leaveOpen} onOpenChange={setLeaveOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t('transfers.leaveTitle', 'Sahifadan chiqish')}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {t(
+              'transfers.leaveQuestion',
+              'O‘zgarishlar qoralamada saqlansinmi? Keyin qaytganingizda shu joydan davom ettirasiz.',
+            )}
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1 text-red-600 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-900/20"
+              onClick={handleLeaveDiscard}
+            >
+              {t('transfers.leaveDiscard', 'Qoralamani o‘chirish')}
+            </Button>
+            <Button type="button" className="flex-1" onClick={handleLeaveSave}>
+              {t('transfers.leaveSave', 'Saqlash va chiqish')}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
