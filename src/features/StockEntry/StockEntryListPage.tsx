@@ -124,9 +124,11 @@ export function StockEntryListPage() {
 
 const globalProductCache = new Map<string, { name: string; sku: string; barcode: string; shtrix_code: string }>();
 
-  const loadData = useCallback(async () => {
+  // silent=true — fonda yangilash: ro'yxat "Yuklanmoqda..." holatiga o'tmaydi
+  // (to'lovdan keyin joyida yangilangan qatorlarni server qiymatlari bilan sinxronlaydi)
+  const loadData = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
 
       const filterParams: InventoryFilters = {
         page,
@@ -197,6 +199,12 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
         });
         
         const total = items.reduce((sum, i) => sum + i.total, 0);
+        // To'langan = kirim paytidagi boshlang'ich to'lov (paid_amount) + keyingi
+        // qarz to'lovlari (total_paid — SupplierTransaction 'pay' yig'indisi).
+        // Faqat paid_amount ko'rsatilsa keyingi to'lovlar "yo'qolib" 0 yoki
+        // birinchi to'lovgina ko'rinardi.
+        const initialPaid = entry.paid_amount ? parseFloat(entry.paid_amount) : 0;
+        const laterPaid = entry.total_paid ? parseFloat(String(entry.total_paid)) : 0;
         return {
           id: String(entry.id),
           supplier_id: String(entry.supplier),
@@ -204,7 +212,7 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
           store_id: String(entry.store),
           store_name: entry.store_name || String(entry.store),
           total,
-          paid: entry.paid_amount ? parseFloat(entry.paid_amount) : 0,
+          paid: initialPaid + laterPaid,
           debt: entry.debt ?? 0,
           status: 'completed',
           created_at: entry.created_at || new Date().toISOString(),
@@ -245,7 +253,7 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
       setInventory([]);
       setTotalCount(0);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [page, limit, searchTerm, storeFilter, supplierFilter, dateFrom, dateTo]);
 
@@ -496,7 +504,31 @@ const globalProductCache = new Map<string, { name: string; sku: string; barcode:
       setShowPaymentDialog(false);
       setPayCash('');
       setPayCard('');
-      loadData();
+
+      // ─── Joyida yangilash: sahifa yangilashsiz, "Yuklanmoqda" holatisiz ───
+      const paidNow = paymentTotalNum;
+      const entryId = selectedInventory.id;
+      // 1) Ro'yxatdagi qator: to'langan +, qarz −
+      setInventory((prev) =>
+        prev.map((row) =>
+          row.id === entryId
+            ? { ...row, paid: row.paid + paidNow, debt: Math.max(0, row.debt - paidNow) }
+            : row,
+        ),
+      );
+      // 2) Ochiq turgan tafsilot oynasidagi summalar ham darhol yangilanadi
+      setSelectedInventory((prev) =>
+        prev && prev.id === entryId
+          ? { ...prev, paid: prev.paid + paidNow, debt: Math.max(0, prev.debt - paidNow) }
+          : prev,
+      );
+      // 3) To'lovlar tarixida yangi to'lov ko'rinishi uchun qayta yuklaymiz
+      inventoryService
+        .getSupplierPayment(entryId)
+        .then((res) => setPaymentHistory(Array.isArray(res) ? res : []))
+        .catch(() => { /* tarix yangilanmasa ham asosiy summalar to'g'ri */ });
+      // 4) Fonda server bilan sinxronlash — ro'yxat miltillamaydi
+      void loadData(true);
     } catch (error) {
       handleError(error, { showToast: true });
     } finally {

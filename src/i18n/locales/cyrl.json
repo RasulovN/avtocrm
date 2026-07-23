@@ -418,6 +418,8 @@
     "lowStock": "Кам Захира",
     "lowStockDesc": "Минимал захира чегарасидан паст тушган маҳсулотлар рўйхати",
     "purchaseNeeded": "Харид керак",
+    "availableElsewhere": "Бошқа дўконларда",
+    "selectedCount": "Танланган",
     "transferNeeded": "Трансфер керак",
     "lowStockHistory": "Тарих",
     "currentQty": "Жорий миқдор",

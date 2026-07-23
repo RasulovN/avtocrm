@@ -5,6 +5,7 @@ export interface LowStockFilters {
   action_type?: 'purchase' | 'transfer';
   store?: number | string;
   product?: number | string;
+  search?: string;
   page?: number;
   limit?: number;
   ordering?: string;
@@ -15,6 +16,7 @@ const buildParams = (filters?: LowStockFilters): URLSearchParams => {
   if (filters?.action_type) params.append('action_type', filters.action_type);
   if (filters?.store) params.append('store', String(filters.store));
   if (filters?.product) params.append('product', String(filters.product));
+  if (filters?.search) params.append('search', filters.search);
   if (filters?.page) params.append('page', String(filters.page));
   if (filters?.limit) params.append('limit', String(filters.limit));
   if (filters?.ordering) params.append('ordering', filters.ordering);

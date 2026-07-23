@@ -454,18 +454,31 @@ export interface ContractEntry {
 }
 
 // Low Stock Types
+/** Transfer manbai — mahsulot boshqa qaysi do'konda qancha borligi */
+export interface LowStockSource {
+  store: number;
+  store_name: string;
+  quantity: number;
+}
+
 export interface LowStockItem {
-  id: number;
+  /** Jonli ro'yxatda "storeId-productId" kalit, tarixda raqamli DB ID */
+  id: number | string;
   store: number;
   store_name: string;
   product: number;
   product_name: string;
+  sku?: string;
   current_quantity: number;
   min_stock: number;
   action_type: 'purchase' | 'transfer';
   status: 'open' | 'resolved';
   resolved_at: string | null;
-  created_at: string;
+  created_at: string | null;
+  /** Boshqa do'konlardagi jami zaxira (jonli ro'yxatda) */
+  available_elsewhere?: number;
+  /** Qayerdan transfer qilsa bo'ladi — ko'pdan ozga saralangan */
+  sources?: LowStockSource[];
 }
 
 export interface LowStockPaginatedResponse {

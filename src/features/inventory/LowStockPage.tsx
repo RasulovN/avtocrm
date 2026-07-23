@@ -15,6 +15,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
+import { ExportButton } from '../../components/shared/ExportButton';
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
@@ -60,6 +61,10 @@ export function LowStockPage() {
   const [selectedStore, setSelectedStore] = useState<string>('');
   const [stores, setStores] = useState<StoreType[]>([]);
   const [ordering, setOrdering] = useState('-resolved_at');
+
+  // Checkbox tanlovi — eksport uchun ("storeId-productId" kalitlari).
+  // Sahifalar aro saqlanadi; tab yoki do'kon o'zgarsa tozalanadi.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   // Ref to avoid stale closures in WS listener
   const activeTabRef = useRef(activeTab);
@@ -138,6 +143,7 @@ export function LowStockPage() {
   // Fetch whenever tab, store, or ordering changes
   useEffect(() => {
     setCurrentPage(1);
+    setSelected(new Set());
     fetchData(1, activeTab);
   }, [activeTab, selectedStore, ordering]);
 
@@ -181,6 +187,43 @@ export function LowStockPage() {
     if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
     fetchData(page, activeTab);
+  };
+
+  // ─── Checkbox tanlovi ────────────────────────────────────────────────────────
+  const itemKey = (item: LowStockItem) => String(item.id);
+
+  const toggleSelect = (key: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const pageAllSelected = items.length > 0 && items.every((i) => selected.has(itemKey(i)));
+
+  const toggleSelectPage = () => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (pageAllSelected) items.forEach((i) => next.delete(itemKey(i)));
+      else items.forEach((i) => next.add(itemKey(i)));
+      return next;
+    });
+  };
+
+  // Eksport: tanlov bo'lsa faqat tanlanganlar (keys), bo'lmasa joriy filtrlar bo'yicha hammasi
+  const exportParams: Record<string, string | undefined> = {
+    action_type: activeTab === 'history' ? undefined : activeTab,
+    store: selectedStore || undefined,
+    keys: selected.size > 0 ? Array.from(selected).join(',') : undefined,
+  };
+
+  // Transfer manbalarini "Baza: 20 · Do'kon: 5" ko'rinishida qisqartirish
+  const sourcesLabel = (item: LowStockItem) => {
+    if (!item.sources || item.sources.length === 0) return '';
+    const shown = item.sources.slice(0, 3).map((s) => `${s.store_name}: ${s.quantity}`).join(' · ');
+    return item.sources.length > 3 ? `${shown} …` : shown;
   };
 
   // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -227,16 +270,25 @@ export function LowStockPage() {
           title={t('inventory.lowStock')}
           description={t('inventory.lowStockDesc')}
         />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => fetchData(currentPage, activeTab)}
-          disabled={loading}
-          className="shrink-0 self-start"
-        >
-          <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          {t('reports.refresh')}
-        </Button>
+        <div className="flex shrink-0 flex-wrap gap-2 self-start">
+          {activeTab !== 'history' && (
+            <ExportButton
+              direct
+              endpoint="/inventory/low-stock/export/"
+              filename="kam_qolgan_mahsulotlar.xlsx"
+              params={exportParams}
+            />
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchData(currentPage, activeTab)}
+            disabled={loading}
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            {t('reports.refresh')}
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -298,21 +350,33 @@ export function LowStockPage() {
             >
               <Icon className="h-4 w-4" />
               {tab.label}
-              {!isActive && tab.key !== 'history' && (
-                <span className="ml-1 hidden rounded-full bg-muted px-1.5 py-0.5 text-xs sm:block">
-                  {tab.key === activeTab ? total : ''}
-                </span>
-              )}
             </button>
           );
         })}
       </div>
 
-      {/* Total count badge */}
+      {/* Total count + selection info */}
       {!loading && (
-        <p className="text-sm text-muted-foreground">
-          {t('common.total')}: <span className="font-semibold text-foreground">{total}</span>
-        </p>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+          <p>
+            {t('common.total')}: <span className="font-semibold text-foreground">{total}</span>
+          </p>
+          {activeTab !== 'history' && selected.size > 0 && (
+            <p className="flex items-center gap-2">
+              <span>
+                {t('inventory.selectedCount', 'Tanlangan')}:{' '}
+                <span className="font-semibold text-foreground">{selected.size}</span>
+              </span>
+              <button
+                type="button"
+                className="text-primary hover:underline"
+                onClick={() => setSelected(new Set())}
+              >
+                {t('common.clear', 'Tozalash')}
+              </button>
+            </p>
+          )}
+        </div>
       )}
 
       {/* Content */}
@@ -336,12 +400,26 @@ export function LowStockPage() {
               <Card key={item.id} className="overflow-hidden">
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <p className="truncate font-semibold">{item.product_name}</p>
-                      <p className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Store className="h-3.5 w-3.5" />
-                        {item.store_name || storeName(item.store)}
-                      </p>
+                    <div className="flex min-w-0 flex-1 items-start gap-2.5">
+                      {activeTab !== 'history' && (
+                        <input
+                          type="checkbox"
+                          className="mt-1 h-4 w-4 shrink-0 rounded border-gray-300"
+                          checked={selected.has(itemKey(item))}
+                          onChange={() => toggleSelect(itemKey(item))}
+                          aria-label={item.product_name}
+                        />
+                      )}
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <p className="truncate font-semibold">{item.product_name}</p>
+                        {item.sku && (
+                          <p className="font-mono text-xs text-muted-foreground">{item.sku}</p>
+                        )}
+                        <p className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <Store className="h-3.5 w-3.5" />
+                          {item.store_name || storeName(item.store)}
+                        </p>
+                      </div>
                     </div>
                     {getActionTypeBadge(item)}
                   </div>
@@ -359,8 +437,18 @@ export function LowStockPage() {
                     </div>
                   </div>
 
+                  {/* Transfer manbalari: qayerdan olib kelsa bo'ladi */}
+                  {item.action_type === 'transfer' && item.sources && item.sources.length > 0 && (
+                    <div className="mt-2 rounded-lg bg-blue-50 px-3 py-2 text-xs dark:bg-blue-950/20">
+                      <span className="text-muted-foreground">
+                        {t('inventory.availableElsewhere', "Boshqa do'konlarda")}:{' '}
+                      </span>
+                      <span className="font-medium">{sourcesLabel(item)}</span>
+                    </div>
+                  )}
+
                   <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{formatDate(item.created_at)}</span>
+                    <span>{item.created_at ? formatDate(item.created_at) : ''}</span>
                     {item.status === 'resolved' && item.resolved_at && (
                       <span className="flex items-center gap-1 text-green-600">
                         <CheckCircle2 className="h-3 w-3" />
@@ -385,7 +473,19 @@ export function LowStockPage() {
               <table className="w-full min-w-[760px] text-sm">
                 <thead>
                   <tr className="border-b bg-muted/40">
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">ID</th>
+                    {activeTab !== 'history' ? (
+                      <th className="w-10 px-4 py-3">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-gray-300"
+                          checked={pageAllSelected}
+                          onChange={toggleSelectPage}
+                          aria-label={t('common.all')}
+                        />
+                      </th>
+                    ) : (
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">ID</th>
+                    )}
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                       {t('inventory.productName')}
                     </th>
@@ -401,21 +501,46 @@ export function LowStockPage() {
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                       {t('common.status')}
                     </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      {t('inventory.createdAt')}
-                    </th>
-                    {activeTab === 'history' && (
+                    {activeTab !== 'history' ? (
                       <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                        {t('inventory.resolvedAt')}
+                        {t('inventory.availableElsewhere', "Boshqa do'konlarda")}
                       </th>
+                    ) : (
+                      <>
+                        <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                          {t('inventory.createdAt')}
+                        </th>
+                        <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                          {t('inventory.resolvedAt')}
+                        </th>
+                      </>
                     )}
                   </tr>
                 </thead>
                 <tbody className="divide-y">
                   {items.map((item) => (
                     <tr key={item.id} className="transition-colors hover:bg-muted/20">
-                      <td className="px-4 py-3 text-muted-foreground">#{item.id}</td>
-                      <td className="px-4 py-3 font-medium">{item.product_name}</td>
+                      {activeTab !== 'history' ? (
+                        <td className="px-4 py-3">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-gray-300"
+                            checked={selected.has(itemKey(item))}
+                            onChange={() => toggleSelect(itemKey(item))}
+                            aria-label={item.product_name}
+                          />
+                        </td>
+                      ) : (
+                        <td className="px-4 py-3 text-muted-foreground">#{item.id}</td>
+                      )}
+                      <td className="px-4 py-3 font-medium">
+                        {item.product_name}
+                        {item.sku && (
+                          <p className="mt-0.5 font-mono text-xs font-normal text-muted-foreground">
+                            {item.sku}
+                          </p>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-muted-foreground">
                         {item.store_name || storeName(item.store)}
                       </td>
@@ -428,18 +553,26 @@ export function LowStockPage() {
                         {item.min_stock}
                       </td>
                       <td className="px-4 py-3">{getActionTypeBadge(item)}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{formatDate(item.created_at)}</td>
-                      {activeTab === 'history' && (
-                        <td className="px-4 py-3">
-                          {item.resolved_at ? (
-                            <span className="flex items-center gap-1.5 text-green-600 dark:text-green-400">
-                              <CheckCircle2 className="h-4 w-4" />
-                              {formatDate(item.resolved_at)}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
+                      {activeTab !== 'history' ? (
+                        <td className="px-4 py-3 text-xs text-muted-foreground">
+                          {item.sources && item.sources.length > 0 ? sourcesLabel(item) : '—'}
                         </td>
+                      ) : (
+                        <>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {item.created_at ? formatDate(item.created_at) : '—'}
+                          </td>
+                          <td className="px-4 py-3">
+                            {item.resolved_at ? (
+                              <span className="flex items-center gap-1.5 text-green-600 dark:text-green-400">
+                                <CheckCircle2 className="h-4 w-4" />
+                                {formatDate(item.resolved_at)}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </td>
+                        </>
                       )}
                     </tr>
                   ))}

@@ -418,6 +418,8 @@
     "lowStock": "Kam Zaxira",
     "lowStockDesc": "Minimal zaxira chegarasidan past tushgan mahsulotlar ro'yxati",
     "purchaseNeeded": "Xarid kerak",
+    "availableElsewhere": "Boshqa do‘konlarda",
+    "selectedCount": "Tanlangan",
     "transferNeeded": "Transfer kerak",
     "lowStockHistory": "Tarix",
     "currentQty": "Joriy miqdor",
