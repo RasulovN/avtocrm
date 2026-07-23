@@ -58,6 +58,8 @@ export function StoreListPage() {
     is_warehouse: false,
   });
   const [saving, setSaving] = useState(false);
+  // Saqlashga urinilgandan keyin majburiy maydon xatolari qizil ko'rsatiladi
+  const [showErrors, setShowErrors] = useState(false);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const placemarkRef = useRef<any>(null);
@@ -170,18 +172,30 @@ export function StoreListPage() {
         is_warehouse: false,
       });
     }
+    setShowErrors(false);
     setDialogOpen(true);
   };
 
+  // ─── Majburiy maydon xatolari (jonli hisoblanadi — yozgan sari yo'qoladi) ───
+  const nameValue = (storeFormData.name_uz ?? storeFormData.name ?? '').trim();
+  const nameError = !nameValue
+    ? t('errors.requiredField', 'Majburiy maydon')
+    : nameValue.length < 2
+      ? t('stores.nameTooShort', "Do'kon nomi kamida 2 ta belgi bo'lishi kerak")
+      : '';
+  const phoneEmpty = !normalizeUzPhone(storeFormData.phone_number || '');
+  const phoneError = phoneEmpty
+    ? t('errors.requiredField', 'Majburiy maydon')
+    : !isCompleteUzPhone(storeFormData.phone_number || '')
+      ? t('auth.phoneInvalid', "Telefon raqam to'liq emas (masalan: +998 90 123 45 67)")
+      : '';
+
   const handleSave = async () => {
-    // Backendga mos frontend validatsiya: nom (min 2) va to'liq UZ telefon raqami
-    const nameValue = (storeFormData.name_uz ?? storeFormData.name ?? '').trim();
-    if (nameValue.length < 2) {
-      toast.error(t('stores.nameTooShort', "Do'kon nomi kamida 2 ta belgi bo'lishi kerak"));
-      return;
-    }
-    if (!isCompleteUzPhone(storeFormData.phone_number || '')) {
-      toast.error(t('auth.phoneInvalid', "Telefon raqam to'liq emas (masalan: +998 90 123 45 67)"));
+    // Backendga mos frontend validatsiya: nom (min 2) va to'liq UZ telefon raqami.
+    // Xato bo'lsa tegishli inputlar qizil belgilanadi (showErrors).
+    if (nameError || phoneError) {
+      setShowErrors(true);
+      toast.error(t('errors.requiredFields', "Majburiy (*) maydonlarni to'ldiring"));
       return;
     }
     try {
@@ -478,14 +492,19 @@ export function StoreListPage() {
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>{t('stores.storeName')} (Lotin)</Label>
+                <Label>
+                  {t('stores.storeName')} (Lotin) <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   value={storeFormData.name_uz ?? storeFormData.name}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => handleNameChange(e.target.value)}
                   required
                   minLength={2}
                   maxLength={255}
+                  aria-invalid={Boolean(showErrors && nameError)}
+                  className={showErrors && nameError ? 'border-red-500 focus-visible:ring-red-500/40' : ''}
                 />
+                {showErrors && nameError && <p className="text-xs text-red-500">{nameError}</p>}
               </div>
               <div className="space-y-2">
                 <Label>{t('stores.storeName')} (Кирилл)</Label>
@@ -500,7 +519,9 @@ export function StoreListPage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>{t('stores.phone')}</Label>
+                <Label>
+                  {t('stores.phone')} <span className="text-red-500">*</span>
+                </Label>
                 {/* Faqat raqam, +998 XX XXX XX XX formatida — harflar yozib bo'lmaydi */}
                 <Input
                   type="tel"
@@ -512,7 +533,10 @@ export function StoreListPage() {
                   }}
                   maxLength={PHONE_INPUT_MAX_LENGTH}
                   placeholder="+998 90 123 45 67"
+                  aria-invalid={Boolean(showErrors && phoneError)}
+                  className={showErrors && phoneError ? 'border-red-500 focus-visible:ring-red-500/40' : ''}
                 />
+                {showErrors && phoneError && <p className="text-xs text-red-500">{phoneError}</p>}
               </div>
               <div className="space-y-2">
                 <Label>{t('stores.type')}</Label>
@@ -552,6 +576,9 @@ export function StoreListPage() {
               <Label>{t('stores.map')}</Label>
               <div ref={mapContainerRef} className="h-60 w-full rounded-md border" />
             </div>
+            <p className="text-xs text-muted-foreground">
+              <span className="text-red-500">*</span> — {t('common.requiredFieldsNote', 'majburiy maydonlar')}
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('common.cancel')}</Button>

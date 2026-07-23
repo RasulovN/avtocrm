@@ -1,5 +1,15 @@
 import { apiClient } from './api';
-import type { User } from '../types';
+import type { User, UserLog } from '../types';
+
+// Kirishlar tarixi — StandardPagination javobi
+export interface LoginHistoryPage {
+  count: number;
+  total_pages: number;
+  current_page: number;
+  next: string | null;
+  previous: string | null;
+  results: UserLog[];
+}
 
 interface ForgotPasswordPayload {
   email: string;
@@ -98,6 +108,15 @@ export const authService = {
 
   changePassword: async (payload: ChangePasswordPayload): Promise<void> => {
     await apiClient.post('/users/change-password/', payload);
-  }
+  },
+
+  // Kirishlar tarixi — sahifalangan ro'yxat (sozlamalar sahifasi uchun)
+  getLoginHistory: async (params?: { page?: number; limit?: number }): Promise<LoginHistoryPage> => {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append('page', String(params.page));
+    if (params?.limit) searchParams.append('limit', String(params.limit));
+    const response = await apiClient.get<LoginHistoryPage>(`/users/history/?${searchParams.toString()}`);
+    return response.data;
+  },
 };
 

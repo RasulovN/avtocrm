@@ -439,7 +439,7 @@ export function TransferListPage() {
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <Link to={`/${lang}/transfers/new`}>
+                <Link to={`/${lang}/transfers/new?draft=${draft.id}`}>
                   <Button size="sm">{t('transfers.draftContinue', 'Davom ettirish')}</Button>
                 </Link>
                 <Button

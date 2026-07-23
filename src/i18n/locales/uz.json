@@ -9,6 +9,7 @@
     "saving": "Saqlanmoqda...",
     "deleting": "O‘chirilmoqda...",
     "cancel": "Bekor qilish",
+    "requiredFieldsNote": "majburiy maydonlar",
     "loading": "Yuklanmoqda...",
     "localLoading": "Yuklanmoqda...",
     "noData": "Ma’lumot yo‘q",
@@ -142,6 +143,9 @@
     "email": "Elektron pochta",
     "loginHistory": "Kirishlar tarixi",
     "loginHistoryDescription": "Hisobingizga oxirgi kirishlar ro‘yxati",
+    "loginHistoryRetention": "Yozuvlar 60 kun saqlanadi",
+    "loginAction": "Kirish",
+    "logoutAction": "Chiqish",
     "forgotPassword": "Parolni unutdingizmi?",
     "forgotPasswordDescription": "Parolni tiklash uchun emailingizni kiriting. Sizga tiklash havolasi yuboriladi.",
     "sendResetLink": "Havola yuborish",
@@ -1070,6 +1074,7 @@
     "validationError": "Ma’lumotlar tekshirish xatoligi",
     "requestFailed": "So‘rov yuborilmadi",
     "requiredFields": "Majburiy (*) maydonlarni to‘ldiring",
+    "requiredField": "Majburiy maydon",
     "passwordMismatch": "Parollar mos kelmadi"
   },
   "components": {

@@ -9,6 +9,7 @@
     "saving": "Сақланмоқда...",
     "deleting": "Ўчирилмоқда...",
     "cancel": "Бекор қилиш",
+    "requiredFieldsNote": "мажбурий майдонлар",
     "loading": "Юкланмоқда...",
     "localLoading": "Юкланмоқда...",
     "noData": "Ма'лумот йўқ",
@@ -142,6 +143,9 @@
     "email": "Электрон почта",
     "loginHistory": "Киришлар тарихи",
     "loginHistoryDescription": "Ҳисобингизга охирги киришлар рўйхати",
+    "loginHistoryRetention": "Ёзувлар 60 кун сақланади",
+    "loginAction": "Кириш",
+    "logoutAction": "Чиқиш",
     "forgotPassword": "Паролни унутдингизми?",
     "forgotPasswordDescription": "Паролни тиклаш учун емаилингизни киритинг. Сизга тиклаш ҳаволаси юборилади.",
     "sendResetLink": "Ҳавола юбориш",
@@ -1072,6 +1076,7 @@
     "validationError": "Ма'лумотларни текшириш хатолиги",
     "requestFailed": "Сўров юборилмади",
     "requiredFields": "Мажбурий (*) майдонларни тўлдиринг",
+    "requiredField": "Мажбурий майдон",
     "passwordMismatch": "Пароллар мос келмади"
   },
   "components": {

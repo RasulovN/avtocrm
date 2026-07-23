@@ -1,7 +1,7 @@
-import { useState, type ChangeEvent } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { Save, User, Phone, Lock, History, Clock, KeyRound, Eye, EyeOff } from 'lucide-react';
+import { Save, User, Phone, Lock, History, Clock, KeyRound, Eye, EyeOff, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -12,12 +12,16 @@ import { useAuthStore } from '../../app/store';
 import { authService } from '../../services/authService';
 import { formatDateShort, formatTime } from '../../utils';
 import { maskUzPhoneInput, isCompleteUzPhone, PHONE_INPUT_MAX_LENGTH } from '../../utils/phone';
+import type { UserLog } from '../../types';
 
 // Forma cheklovlari: ism-familiya va parol uchun min/max
 const NAME_MIN_LENGTH = 3;
 const NAME_MAX_LENGTH = 100;
 const PASSWORD_MIN_LENGTH = 8;
 const PASSWORD_MAX_LENGTH = 64;
+
+// Kirishlar tarixi — har sahifada nechta yozuv
+const HISTORY_PAGE_SIZE = 5;
 
 interface LoginHistory {
   id: string;
@@ -72,8 +76,44 @@ export function SettingsPage() {
     setShowPasswords(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
-  const loginHistory: LoginHistory[] = (user?.history ?? []).map((log, index) => {
-    const deviceLine = [log.user_agent, log.action].filter(Boolean).join(' • ') || '-';
+  // ─── Kirishlar tarixi: serverdan sahifalab olinadi (avval user.history'dan faqat 5 tasi ko'rinardi) ───
+  const [historyItems, setHistoryItems] = useState<UserLog[]>([]);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyTotalPages, setHistoryTotalPages] = useState(1);
+  const [historyCount, setHistoryCount] = useState(0);
+  const [historyLoading, setHistoryLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setHistoryLoading(true);
+    authService
+      .getLoginHistory({ page: historyPage, limit: HISTORY_PAGE_SIZE })
+      .then((res) => {
+        if (cancelled) return;
+        setHistoryItems(Array.isArray(res.results) ? res.results : []);
+        setHistoryTotalPages(res.total_pages || 1);
+        setHistoryCount(res.count || 0);
+      })
+      .catch(() => {
+        if (!cancelled) setHistoryItems([]);
+      })
+      .finally(() => {
+        if (!cancelled) setHistoryLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [historyPage]);
+
+  // 'li'/'lo' kodlari o'rniga tushunarli matn
+  const actionLabel = (action?: string) => {
+    if (action === 'li') return t('auth.loginAction', 'Kirish');
+    if (action === 'lo') return t('auth.logoutAction', 'Chiqish');
+    return action || '';
+  };
+
+  const loginHistory: LoginHistory[] = historyItems.map((log, index) => {
+    const deviceLine = [log.user_agent, actionLabel(log.action)].filter(Boolean).join(' • ') || '-';
     return {
       id: String(log.id ?? index),
       date: formatDateShort(log.created_at),
@@ -335,14 +375,18 @@ export function SettingsPage() {
           </CardTitle>
           <CardDescription>
             {t('auth.loginHistoryDescription')}
+            {' · '}
+            {t('auth.loginHistoryRetention', 'Yozuvlar 60 kun saqlanadi')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {loginHistory.length === 0 ? (
+            {historyLoading && loginHistory.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
+            ) : loginHistory.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t('common.noData')}</p>
             ) : (
-              loginHistory.slice(0, 5).map((login) => (
+              loginHistory.map((login) => (
               <div key={login.id} className="flex flex-col gap-2 p-4 border rounded-lg bg-card hover:bg-accent/50 transition-colors sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-4 min-w-0">
                   <div className="h-10 w-10 shrink-0 rounded-full bg-primary/10 flex items-center justify-center">
@@ -359,6 +403,39 @@ export function SettingsPage() {
                 </div>
               </div>
             ))
+            )}
+
+            {/* Sahifalash — 5 tadan, oldingi/keyingi */}
+            {historyTotalPages > 1 && (
+              <div className="flex items-center justify-between border-t border-border pt-4">
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  {(historyPage - 1) * HISTORY_PAGE_SIZE + 1}
+                  -{Math.min(historyPage * HISTORY_PAGE_SIZE, historyCount)} / {historyCount}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+                    disabled={historyPage === 1 || historyLoading}
+                    aria-label={t('common.previous', 'Oldingi sahifa')}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm tabular-nums">
+                    {historyPage} / {historyTotalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setHistoryPage((p) => Math.min(historyTotalPages, p + 1))}
+                    disabled={historyPage === historyTotalPages || historyLoading}
+                    aria-label={t('common.next', 'Keyingi sahifa')}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
         </CardContent>

@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, User, ShoppingCart, CreditCard, Calendar, Tag, Wallet, Printer, Eye, Package, Barcode, MapPin, Image as ImageIcon, Loader2, Undo2, Banknote, CheckCircle2, Clock, Store as StoreIcon, Receipt as ReceiptIcon } from 'lucide-react';
+import { ArrowLeft, User, ShoppingCart, CreditCard, Calendar, Tag, Wallet, Printer, Eye, Package, Barcode, MapPin, Image as ImageIcon, Loader2, Undo2, Banknote, CheckCircle2, Clock, Store as StoreIcon } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -392,25 +392,11 @@ export function SalesDetailPage() {
                     </span>
                   );
                 })()}
-                <PaymentTypeBadge type={sale.payment_type} payments={sale.payments} />
               </div>
-              <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-                <span className="inline-flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5" />
-                  {formatDate(sale.created_at)}
-                </span>
-                {sale.store_name && (
-                  <span className="inline-flex items-center gap-1.5">
-                    <StoreIcon className="h-3.5 w-3.5" />
-                    {sale.store_name}
-                  </span>
-                )}
-                {sale.seller_name && (
-                  <span className="inline-flex items-center gap-1.5">
-                    <Tag className="h-3.5 w-3.5" />
-                    {sale.seller_name}
-                  </span>
-                )}
+              {/* Meta faqat sana — do'kon/sotuvchi/mijoz "Sotuv ma'lumotlari" kartasida turadi */}
+              <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Calendar className="h-3.5 w-3.5" />
+                {formatDate(sale.created_at)}
               </p>
             </div>
           </div>
@@ -425,71 +411,14 @@ export function SalesDetailPage() {
                 {t('saleReturns.returnSale')}
               </Button>
             </Link>
-            {Number(sale.debt) > 0 && (
-              <Button onClick={openPaymentDialog}>
-                <Wallet className="mr-2 h-4 w-4" />
-                {t('customers.payDebt')}
-              </Button>
-            )}
           </div>
         </div>
       </div>
 
-      {/* ─── Asosiy ko'rsatkichlar ─── */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground">
-            <ReceiptIcon className="h-3.5 w-3.5" />
-            {t('sales.totalAmount', 'Jami summa')}
-          </div>
-          <p className="mt-2 text-xl font-bold tabular-nums leading-tight">
-            {formatCurrency(parseFloat(sale.total_amount))}
-          </p>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground">
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-            {t('inventory.paid', 'To‘langan')}
-          </div>
-          <p className="mt-2 text-xl font-bold tabular-nums leading-tight text-emerald-600">
-            {formatCurrency(parseFloat(sale.paid_amount))}
-          </p>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground">
-            <Wallet className="h-3.5 w-3.5 text-amber-600" />
-            {t('sales.debt', 'Qarz')}
-          </div>
-          <p
-            className={`mt-2 text-xl font-bold tabular-nums leading-tight ${
-              Number(sale.debt) > 0 ? 'text-amber-600' : 'text-muted-foreground'
-            }`}
-          >
-            {formatCurrency(Number(sale.debt) || 0)}
-          </p>
-          {sale.debt_due_date && (
-            <p className="mt-1 text-xs text-muted-foreground">
-              {t('sales.debtDueDate', 'Muddat')}: {formatDate(sale.debt_due_date)}
-            </p>
-          )}
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground">
-            <Package className="h-3.5 w-3.5" />
-            {t('products.title', 'Mahsulotlar')}
-          </div>
-          <p className="mt-2 text-xl font-bold tabular-nums leading-tight">
-            {sale.items?.length || 0}
-            <span className="ml-1 text-sm font-medium text-muted-foreground">
-              {t('saleReturns.kinds', 'xil')} ·{' '}
-              {(sale.items || []).reduce((sum, item) => sum + item.quantity, 0)} {t('common.pcs', 'dona')}
-            </span>
-          </p>
-        </div>
-      </div>
-
+      {/* ─── Chapda mahsulotlar, o'ngda to'lov + sotuv ma'lumotlari.
+           Mobilda to'lov ustuni birinchi ko'rinadi (lg:order) ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 lg:order-1 space-y-6">
           <div className="rounded-xl border border-border bg-card">
             <div className="flex items-center justify-between gap-2 border-b border-border p-5 pb-4">
               <h3 className="flex items-center gap-2 text-base font-semibold">
@@ -596,6 +525,10 @@ export function SalesDetailPage() {
             </div>
           </div>
 
+        </div>
+
+        {/* ─── O'ng ustun: TO'LOV — summa, naqd/karta kesimi, tarix va qarz to'lash BIR joyda ─── */}
+        <div className="space-y-6 lg:order-2">
           <div className="rounded-xl border border-border bg-card">
             <div className="flex items-center justify-between border-b border-border p-5 pb-4">
               <h3 className="flex items-center gap-2 text-base font-semibold">
@@ -604,26 +537,66 @@ export function SalesDetailPage() {
               </h3>
               <PaymentTypeBadge type={sale.payment_type} payments={sale.payments} />
             </div>
-            <div className="p-5">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-lg bg-emerald-600/10 p-4">
-                  <div className="flex items-center gap-2 text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                    <Banknote className="h-3.5 w-3.5" />
-                    {t('payment.cash', 'Naqd')}
-                  </div>
-                  <p className="mt-1.5 text-lg font-bold tabular-nums text-emerald-600">{formatCurrency(cashAmount)}</p>
+            <div className="space-y-4 p-5">
+              {/* Hisob-kitob: jami → to'langan → qarz */}
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">{t('sales.totalAmount', 'Jami summa')}</span>
+                  <span className="font-semibold tabular-nums">{formatCurrency(parseFloat(sale.total_amount))}</span>
                 </div>
-                <div className="rounded-lg bg-blue-600/10 p-4">
-                  <div className="flex items-center gap-2 text-xs font-medium text-blue-700 dark:text-blue-400">
-                    <CreditCard className="h-3.5 w-3.5" />
-                    {t('payment.card', 'Karta')}
-                  </div>
-                  <p className="mt-1.5 text-lg font-bold tabular-nums text-blue-600">{formatCurrency(cardAmount)}</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">{t('inventory.paid', 'To‘langan')}</span>
+                  <span className="font-semibold tabular-nums text-emerald-600">
+                    {formatCurrency(parseFloat(sale.paid_amount))}
+                  </span>
                 </div>
+                <div className="flex items-center justify-between border-t border-border pt-2">
+                  <span className="font-medium">{t('sales.debt', 'Qarz')}</span>
+                  <span
+                    className={`text-base font-bold tabular-nums ${
+                      Number(sale.debt) > 0 ? 'text-amber-600' : 'text-muted-foreground'
+                    }`}
+                  >
+                    {formatCurrency(Number(sale.debt) || 0)}
+                  </span>
+                </div>
+                {sale.debt_due_date && Number(sale.debt) > 0 && (
+                  <p className="text-right text-xs text-muted-foreground">
+                    {t('sales.debtDueDate', 'Muddat')}: {formatDate(sale.debt_due_date)}
+                  </p>
+                )}
               </div>
 
+              {/* Qarz to'lash — raqamlar tagida, bitta aniq joyda */}
+              {Number(sale.debt) > 0 && (
+                <Button className="w-full" onClick={openPaymentDialog}>
+                  <Wallet className="mr-2 h-4 w-4" />
+                  {t('customers.payDebt')} · {formatCurrency(Number(sale.debt) || 0)}
+                </Button>
+              )}
+
+              {/* Naqd/karta kesimi — faqat to'lov bo'lgan bo'lsa */}
+              {(cashAmount > 0 || cardAmount > 0) && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-lg bg-emerald-600/10 p-3">
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                      <Banknote className="h-3.5 w-3.5" />
+                      {t('payment.cash', 'Naqd')}
+                    </div>
+                    <p className="mt-1 text-sm font-bold tabular-nums text-emerald-600">{formatCurrency(cashAmount)}</p>
+                  </div>
+                  <div className="rounded-lg bg-blue-600/10 p-3">
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-blue-700 dark:text-blue-400">
+                      <CreditCard className="h-3.5 w-3.5" />
+                      {t('payment.card', 'Karta')}
+                    </div>
+                    <p className="mt-1 text-sm font-bold tabular-nums text-blue-600">{formatCurrency(cardAmount)}</p>
+                  </div>
+                </div>
+              )}
+
               {sale.payments && sale.payments.length > 0 && (
-                <div className="mt-4 space-y-1.5 border-t border-border pt-4">
+                <div className="space-y-1.5 border-t border-border pt-4">
                   <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                     {t('sales.paymentHistory', 'To‘lovlar tarixi')}
                   </p>
@@ -703,90 +676,43 @@ export function SalesDetailPage() {
                 </div>
               )}
 
-              {Number(sale.debt) > 0 && (
-                <Button className="mt-4 w-full" onClick={openPaymentDialog}>
-                  <Wallet className="mr-2 h-4 w-4" />
-                  {t('customers.payDebt')} · {formatCurrency(Number(sale.debt) || 0)}
-                </Button>
-              )}
             </div>
           </div>
-        </div>
 
-        <div className="space-y-6">
-          {/* Sotuv ma'lumotlari — bitta ixcham kartada */}
+          {/* Sotuv ma'lumotlari — ixcham label:qiymat qatorlar */}
           <div className="rounded-xl border border-border bg-card">
             <h3 className="flex items-center gap-2 border-b border-border p-5 pb-4 text-base font-semibold">
               <User className="h-4 w-4" />
               {t('salesDetail.basicInfo', 'Sotuv ma’lumotlari')}
             </h3>
-            <div className="divide-y divide-border/60">
-              <div className="flex items-center gap-3 p-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                  <User className="h-5 w-5 text-primary" />
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate font-medium leading-tight">
-                    {sale.customer_name || sale.customer || t('sales.guest', 'Mehmon')}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{t('sales.customer')}</p>
-                </div>
+            <div className="divide-y divide-border/60 text-sm">
+              <div className="flex items-center justify-between gap-3 px-5 py-3">
+                <span className="flex shrink-0 items-center gap-2 text-muted-foreground">
+                  <User className="h-4 w-4" />
+                  {t('sales.customer')}
+                </span>
+                <span className="min-w-0 truncate text-right font-medium">
+                  {sale.customer_name || sale.customer || t('sales.guest', 'Mehmon')}
+                </span>
               </div>
-              <div className="flex items-center gap-3 p-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-600/10">
-                  <Tag className="h-5 w-5 text-violet-600" />
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate font-medium leading-tight">{sale.seller_name || sale.seller}</p>
-                  <p className="text-xs text-muted-foreground">{t('users.seller')}</p>
-                </div>
+              <div className="flex items-center justify-between gap-3 px-5 py-3">
+                <span className="flex shrink-0 items-center gap-2 text-muted-foreground">
+                  <Tag className="h-4 w-4" />
+                  {t('users.seller')}
+                </span>
+                <span className="min-w-0 truncate text-right font-medium">{sale.seller_name || sale.seller}</span>
               </div>
               {sale.store_name && (
-                <div className="flex items-center gap-3 p-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600/10">
-                    <StoreIcon className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate font-medium leading-tight">{sale.store_name}</p>
-                    <p className="text-xs text-muted-foreground">{t('sales.store', 'Do‘kon')}</p>
-                  </div>
+                <div className="flex items-center justify-between gap-3 px-5 py-3">
+                  <span className="flex shrink-0 items-center gap-2 text-muted-foreground">
+                    <StoreIcon className="h-4 w-4" />
+                    {t('sales.store', 'Do‘kon')}
+                  </span>
+                  <span className="min-w-0 truncate text-right font-medium">{sale.store_name}</span>
                 </div>
               )}
-              <div className="flex items-center gap-3 p-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
-                  <Calendar className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div className="min-w-0">
-                  <p className="font-medium leading-tight">{formatDate(sale.created_at)}</p>
-                  <p className="text-xs text-muted-foreground">{t('common.date')}</p>
-                </div>
-              </div>
             </div>
           </div>
-
-          {/* Chegirma — faqat mavjud bo'lsa ko'rsatiladi */}
-          {sale.discount_amount && parseFloat(sale.discount_amount) > 0 && (
-            <div className="rounded-xl border border-border bg-card p-5">
-              <h3 className="mb-3 flex items-center gap-2 text-base font-semibold">
-                <Tag className="h-4 w-4 text-red-600" />
-                {t('sales.discount')}
-              </h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">{t('stores.type')}</span>
-                  <span className="font-medium">
-                    {sale.discount_type === 'p' ? `${sale.discount_value}%` : t('sales.fixedAmount', 'So‘m')}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between border-t border-border pt-2">
-                  <span className="font-medium">{t('sales.discount')}</span>
-                  <span className="font-bold tabular-nums text-red-600">
-                    −{formatCurrency(parseFloat(sale.discount_amount))}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 

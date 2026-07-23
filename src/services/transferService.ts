@@ -135,6 +135,12 @@ create: async (data: TransferFormData): Promise<Transfer> => {
     return list[0] ?? null;
   },
 
+  // Bitta qoralamani ID bo'yicha olish — "Davom ettirish" aynan shu qoralamani ochishi uchun
+  getSession: async (id: number): Promise<TransferSessionRecord> => {
+    const response = await apiClient.get<TransferSessionRecord>(`/transfer/session/${id}/`);
+    return response.data;
+  },
+
   createSession: async (payload: TransferSessionPayload): Promise<TransferSessionRecord> => {
     const response = await apiClient.post<TransferSessionRecord>('/transfer/session/', payload);
     return response.data;

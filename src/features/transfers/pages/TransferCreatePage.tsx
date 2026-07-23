@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef, type ChangeEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, Send, ScanBarcode } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -117,15 +117,32 @@ export function TransferCreatePage() {
   // DIQQAT: effekt auth store to'liq tiklangandan KEYIN ishlashi shart —
   // aks holda isAdmin hali false bo'lib, admin uchun "qayerdan" do'koni
   // tiklanmay qolardi (har safar qayta tanlashga to'g'ri kelardi).
+  // restoredRef so'rov BOSHIDA emas, natija QO'LLANGANDA true bo'ladi —
+  // aks holda StrictMode'ning ikkinchi mount'i so'rovni umuman yubormay,
+  // bekor qilingan birinchi so'rov esa hech narsa tiklamay qolardi
+  // (dev'da qoralama hech qachon tiklanmasligining sababi shu edi).
   const restoredRef = useRef(false);
+  // Ro'yxatdagi aynan bitta qoralamaning "Davom ettirish" tugmasi ?draft=<id>
+  // bilan keladi — bir nechta qoralama bo'lsa doim eng oxirgisi ochilib ketmasligi uchun
+  const [searchParams] = useSearchParams();
+  const draftIdParam = searchParams.get('draft');
   useEffect(() => {
     if (!user || restoredRef.current) return;
-    restoredRef.current = true;
     let cancelled = false;
-    transferService
-      .getActiveSession()
+    const loadSession = async () => {
+      if (draftIdParam) {
+        try {
+          const byId = await transferService.getSession(Number(draftIdParam));
+          if (byId && byId.status === 'in_progress') return byId;
+        } catch { /* topilmasa oxirgi faol qoralamaga o'tamiz */ }
+      }
+      return transferService.getActiveSession();
+    };
+    loadSession()
       .then((session) => {
-        if (cancelled || !session) return;
+        if (cancelled) return;
+        restoredRef.current = true;
+        if (!session) return;
         setSessionId(session.id);
         // Do'kon xodimida "qayerdan" o'z do'koniga qulflangan — faqat admin tiklaydi
         if (session.from_store && isAdmin) setFromStoreId(String(session.from_store));
@@ -143,7 +160,10 @@ export function TransferCreatePage() {
         }
         toast.success(t('transfers.draftRestored', 'Qoralama tiklandi — davom ettirishingiz mumkin'));
       })
-      .catch(() => { /* qoralama bo'lmasa jim davom etamiz */ })
+      .catch(() => {
+        // qoralama bo'lmasa jim davom etamiz
+        if (!cancelled) restoredRef.current = true;
+      })
       .finally(() => {
         if (!cancelled) sessionReady.current = true;
       });
@@ -151,7 +171,7 @@ export function TransferCreatePage() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, isAdmin]);
+  }, [user, isAdmin, draftIdParam]);
 
   // Qoralamani serverga yozish; yangi sessiya ochilsa ID qaytaradi
   const persistDraft = useCallback(async (): Promise<number | null> => {

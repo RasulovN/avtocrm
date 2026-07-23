@@ -666,7 +666,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
                       : 'text-muted-foreground hover:text-foreground'
                   )}
                   onClick={() => switchLanguage('uz')}
-                >
+                > 
                   <Globe className="h-3.5 w-3.5" />
                   Uz
                 </button>
