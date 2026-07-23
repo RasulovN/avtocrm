@@ -4,6 +4,7 @@ export { Input } from './Input';
 export { Label } from './Label';
 export { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './Table';
 export { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './Dialog';
+export { Sheet, SheetBody, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from './Sheet';
 export {
   Select,
   SelectContent,

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Plus, FileText, Eye, EyeOff, ChevronLeft, ChevronRight, Trash2, Archive, RotateCcw } from 'lucide-react';
+import { Plus, FileText, Eye, BarChart3, ChevronLeft, ChevronRight, Trash2, Archive, RotateCcw } from 'lucide-react';
 import { PageHeader } from '../../components/shared/PageHeader';
 import { DataTable, type Column } from '../../components/shared/DataTable';
 import { DateRangeFilter } from '../../components/shared/DateRangeFilter';
@@ -11,6 +11,7 @@ import { PaymentTypeBadge } from '../../components/shared/PaymentTypeBadge';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 import { Button } from '../../components/ui/Button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/Dialog';
+import { Sheet, SheetBody, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../../components/ui/Sheet';
 import { salesService, type SaleStatistics, type ArchivedSale } from '../../services/salesService';
 import { storeService } from '../../services/storeService';
 import { useAuthStore } from '../../app/store';
@@ -52,7 +53,8 @@ export function SalesListPage() {
   const navigate = useNavigate();
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showStats, setShowStats] = useState(() => localStorage.getItem('sales_list_show_stats') !== 'false');
+  // Statistika sahifani band qilmaydi — o'ng tomondan chiquvchi panelda (Sheet) ochiladi
+  const [statsOpen, setStatsOpen] = useState(false);
 
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -68,8 +70,6 @@ export function SalesListPage() {
 
   // Statistika — serverdan, butun filtrlangan davr bo'yicha
   const [stats, setStats] = useState<SaleStatistics | null>(null);
-  // To'lov turlari ko'p bo'lsa kartada faqat bir qismi ko'rinadi, qolgani modalda
-  const [breakdownOpen, setBreakdownOpen] = useState(false);
 
   // O'chirish (faqat superadmin): checkbox bilan tanlash + tasdiqlash + arxiv
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -334,25 +334,10 @@ export function SalesListPage() {
           <Button
             variant="outline"
             className="w-full sm:w-auto"
-            onClick={() => {
-              setShowStats(prev => {
-                const newVal = !prev;
-                localStorage.setItem('sales_list_show_stats', String(newVal));
-                return newVal;
-              });
-            }}
+            onClick={() => setStatsOpen(true)}
           >
-            {showStats ? (
-              <>
-                <EyeOff className="h-4 w-4 mr-2" />
-                {t('common.hideStats', 'Statistikani yashirish')}
-              </>
-            ) : (
-              <>
-                <Eye className="h-4 w-4 mr-2" />
-                {t('common.showStats', 'Statistikani ko\'rsatish')}
-              </>
-            )}
+            <BarChart3 className="h-4 w-4 mr-2" />
+            {t('sales.statsTitle', 'Statistika')}
           </Button>
           <Link to={`/${lang}/sales/new`} className="w-full sm:w-auto">
             <Button className="w-full sm:w-auto">
@@ -424,154 +409,118 @@ export function SalesListPage() {
         </div>
       </div>
 
-      {showStats && stats && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 transition-all duration-300 ease-in-out">
-          <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm card-hover-lift">
-            <p className="text-sm text-muted-foreground">{t('dashboard.totalSales')}</p>
-            <p className="text-2xl font-bold">{stats.total_sales}</p>
-          </div>
-          <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm card-hover-lift">
-            <p className="text-sm text-muted-foreground">{t('dashboard.totalRevenue')}</p>
-            {/* Sof savdo — qaytarib berilgan summa ayirilgan */}
-            <p className="text-2xl font-bold text-green-600">
-              {formatCurrency(parseFloat(stats.total_net ?? stats.total_amount ?? '0'))}
-            </p>
-            {stats.total_net !== undefined &&
-              parseFloat(stats.total_returned || '0') > 0 && (
-                <p className="mt-2 border-t border-border/60 pt-2 text-xs text-muted-foreground">
-                  {t('sales.grossBeforeReturns', 'Qaytarimlardan oldin')}:{' '}
-                  <span className="font-semibold">{formatCurrency(parseFloat(stats.total_amount || '0'))}</span>
-                </p>
-              )}
-          </div>
-          <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm card-hover-lift">
-            <p className="text-sm text-muted-foreground">{t('sales.paid', 'To‘langan')}</p>
-            <p className="text-2xl font-bold text-emerald-600">{formatCurrency(parseFloat(stats.total_paid || '0'))}</p>
-            {(stats.paid_breakdown?.length ?? 0) > 0 && (
-              <div className="mt-3 space-y-1.5 border-t border-border/60 pt-2.5">
-                {/* Kartada faqat dastlabki 3 tasi — dizayn buzilmasligi uchun */}
-                {stats.paid_breakdown!.slice(0, 3).map((row, index) => (
-                  <div key={`${row.type}-${row.name ?? index}`} className="flex items-center justify-between gap-2 text-xs">
-                    <span className="flex items-center gap-1.5 min-w-0 text-muted-foreground">
-                      <span
-                        className={`h-1.5 w-1.5 shrink-0 rounded-full ${row.type === 'cash' ? 'bg-emerald-500' : 'bg-sky-500'}`}
-                      />
-                      <span className="truncate">
-                        {row.type === 'cash'
-                          ? t('sales.cash', 'Naqd')
-                          : row.name || t('sales.unknownCard', 'Noma’lum karta')}
-                      </span>
-                    </span>
-                    <span className="shrink-0 font-medium tabular-nums">
-                      {formatCurrency(parseFloat(row.amount || '0'))}
-                    </span>
-                  </div>
-                ))}
-                {stats.paid_breakdown!.length > 3 && (
-                  <button
-                    type="button"
-                    onClick={() => setBreakdownOpen(true)}
-                    className="w-full pt-0.5 text-left text-xs font-medium text-primary hover:underline"
-                  >
-                    {t('sales.morePaymentTypes', '+{{count}} ta to‘lov turi', {
-                      count: stats.paid_breakdown!.length - 3,
-                    })}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm card-hover-lift">
-            <p className="text-sm text-muted-foreground">{t('saleReturns.totalRefund', 'Qaytarilgan summa')}</p>
-            <p className="text-2xl font-bold text-amber-600">{formatCurrency(parseFloat(stats.total_returned || '0'))}</p>
-            {/* Tanlangan davrda qaytarim bo'lmasa ham umumiy summa ko'rinib turadi —
-                sales-returns sahifasidagi jami bilan mos */}
-            {stats.total_returned_all !== undefined &&
-              parseFloat(stats.total_returned_all || '0') !== parseFloat(stats.total_returned || '0') && (
-                <p className="mt-2 border-t border-border/60 pt-2 text-xs text-muted-foreground">
-                  {t('export.all', 'Hammasi')}:{' '}
-                  <span className="font-semibold text-amber-600">
-                    {formatCurrency(parseFloat(stats.total_returned_all))}
-                  </span>
-                </p>
-              )}
-          </div>
-          <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm card-hover-lift">
-            <p className="text-sm text-muted-foreground">{t('dashboard.totalDebt')}</p>
-            <p className="text-2xl font-bold text-red-500">{formatCurrency(parseFloat(stats.total_debt || '0'))}</p>
-            {/* Oxirgi qarz to'lovlari: jami summa + qismlari (naqd / Humo / Uzcard ...) */}
-            {(stats.recent_debt_payments?.length ?? 0) > 0 && (
-              <div className="mt-3 space-y-2 border-t border-border/60 pt-2.5">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {t('sales.recentDebtPayments', "Oxirgi qarz to'lovlari")}
-                </p>
-                {stats.recent_debt_payments!.map((g, i) => (
-                  <div key={i} className="text-xs">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="min-w-0 truncate text-muted-foreground">
-                        #{g.sale} · {formatDate(g.created_at)}
-                      </span>
-                      <span className="shrink-0 font-semibold tabular-nums text-emerald-600">
-                        +{formatCurrency(parseFloat(g.amount || '0'))}
-                      </span>
-                    </div>
-                    <div className="mt-0.5 flex flex-wrap gap-x-2.5 gap-y-0.5 text-[11px] text-muted-foreground">
-                      {g.parts.map((p, j) => (
-                        <span key={j} className="inline-flex items-center gap-1 whitespace-nowrap">
-                          <span
-                            className={`h-1.5 w-1.5 shrink-0 rounded-full ${p.type === 'cash' ? 'bg-emerald-500' : 'bg-sky-500'}`}
-                          />
-                          {p.type === 'cash' ? t('sales.cash', 'Naqd') : p.name || t('sales.card', 'Karta')}:{' '}
-                          {formatCurrency(parseFloat(p.amount || '0'))}
-                        </span>
+      {/* ─── Statistika — o'ng tomondan chiquvchi panel (Sheet) ─── */}
+      <Sheet open={statsOpen} onOpenChange={setStatsOpen}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>{t('sales.statsTitle', 'Statistika')}</SheetTitle>
+            <SheetDescription>
+              {!dateFrom && !dateTo
+                ? t('export.all', 'Hammasi')
+                : `${dateFrom || '…'} — ${dateTo || '…'}`}
+              {storeFilter
+                ? ` · ${stores.find((s) => String(s.id) === String(storeFilter))?.name ?? ''}`
+                : ''}
+            </SheetDescription>
+          </SheetHeader>
+          <SheetBody className="space-y-3">
+            {!stats ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">{t('common.loading')}</p>
+            ) : (
+              <>
+                <div className="rounded-xl border border-border/60 bg-card p-4">
+                  <p className="text-sm text-muted-foreground">{t('dashboard.totalSales')}</p>
+                  <p className="mt-1 text-2xl font-bold">{stats.total_sales}</p>
+                </div>
+
+                <div className="rounded-xl border border-border/60 bg-card p-4">
+                  <p className="text-sm text-muted-foreground">{t('dashboard.totalRevenue')}</p>
+                  {/* Sof savdo — qaytarib berilgan summa ayirilgan */}
+                  <p className="mt-1 text-2xl font-bold text-green-600">
+                    {formatCurrency(parseFloat(stats.total_net ?? stats.total_amount ?? '0'))}
+                  </p>
+                  {stats.total_net !== undefined &&
+                    parseFloat(stats.total_returned || '0') > 0 && (
+                      <p className="mt-2 border-t border-border/60 pt-2 text-xs text-muted-foreground">
+                        {t('sales.grossBeforeReturns', 'Qaytarimlardan oldin')}:{' '}
+                        <span className="font-semibold">{formatCurrency(parseFloat(stats.total_amount || '0'))}</span>
+                      </p>
+                    )}
+                </div>
+
+                <div className="rounded-xl border border-border/60 bg-card p-4">
+                  <p className="text-sm text-muted-foreground">{t('sales.paid', 'To‘langan')}</p>
+                  <p className="mt-1 text-2xl font-bold text-emerald-600">
+                    {formatCurrency(parseFloat(stats.total_paid || '0'))}
+                  </p>
+                  {(stats.paid_breakdown?.length ?? 0) > 0 && (
+                    <div className="mt-3 space-y-1.5 border-t border-border/60 pt-2.5">
+                      {/* Panelda joy yetarli — BARCHA to'lov turlari (avvalgi "+N" modali kerak emas) */}
+                      {stats.paid_breakdown!.map((row, index) => (
+                        <div key={`${row.type}-${row.name ?? index}`} className="flex items-center justify-between gap-2 text-xs">
+                          <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
+                            <span
+                              className={`h-1.5 w-1.5 shrink-0 rounded-full ${row.type === 'cash' ? 'bg-emerald-500' : 'bg-sky-500'}`}
+                            />
+                            <span className="truncate">
+                              {row.type === 'cash'
+                                ? t('sales.cash', 'Naqd')
+                                : row.name || t('sales.unknownCard', 'Noma’lum karta')}
+                            </span>
+                          </span>
+                          <span className="shrink-0 font-medium tabular-nums">
+                            {formatCurrency(parseFloat(row.amount || '0'))}
+                          </span>
+                        </div>
                       ))}
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* To'lov turlari bo'yicha to'liq taqsimot modali */}
-      <Dialog open={breakdownOpen} onOpenChange={setBreakdownOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{t('sales.paidBreakdownTitle', 'To‘langan — to‘lov turlari')}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-1">
-            <div className="mb-2 flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
-              <span className="text-sm text-muted-foreground">{t('common.total', 'Jami')}</span>
-              <span className="font-bold tabular-nums text-emerald-600">
-                {formatCurrency(parseFloat(stats?.total_paid || '0'))}
-              </span>
-            </div>
-            <div className="max-h-72 divide-y divide-border/50 overflow-y-auto">
-              {(stats?.paid_breakdown ?? []).map((row, index) => (
-                <div
-                  key={`${row.type}-${row.name ?? index}`}
-                  className="flex items-center justify-between gap-3 px-1 py-2 text-sm"
-                >
-                  <span className="flex min-w-0 items-center gap-2 text-muted-foreground">
-                    <span
-                      className={`h-2 w-2 shrink-0 rounded-full ${row.type === 'cash' ? 'bg-emerald-500' : 'bg-sky-500'}`}
-                    />
-                    <span className="truncate">
-                      {row.type === 'cash'
-                        ? t('sales.cash', 'Naqd')
-                        : row.name || t('sales.unknownCard', 'Noma’lum karta')}
-                    </span>
-                  </span>
-                  <span className="shrink-0 font-semibold tabular-nums">
-                    {formatCurrency(parseFloat(row.amount || '0'))}
-                  </span>
+                  )}
                 </div>
-              ))}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+
+                <div className="rounded-xl border border-border/60 bg-card p-4">
+                  <p className="text-sm text-muted-foreground">{t('saleReturns.totalRefund', 'Qaytarilgan summa')}</p>
+                  <p className="mt-1 text-2xl font-bold text-amber-600">
+                    {formatCurrency(parseFloat(stats.total_returned || '0'))}
+                  </p>
+                  {/* Tanlangan davrda qaytarim bo'lmasa ham umumiy summa ko'rinib turadi —
+                      sales-returns sahifasidagi jami bilan mos */}
+                  {stats.total_returned_all !== undefined &&
+                    parseFloat(stats.total_returned_all || '0') !== parseFloat(stats.total_returned || '0') && (
+                      <p className="mt-2 border-t border-border/60 pt-2 text-xs text-muted-foreground">
+                        {t('export.all', 'Hammasi')}:{' '}
+                        <span className="font-semibold text-amber-600">
+                          {formatCurrency(parseFloat(stats.total_returned_all))}
+                        </span>
+                      </p>
+                    )}
+                </div>
+
+                <div className="rounded-xl border border-border/60 bg-card p-4">
+                  <p className="text-sm text-muted-foreground">{t('dashboard.totalDebt')}</p>
+                  <p className="mt-1 text-2xl font-bold text-red-500">
+                    {formatCurrency(parseFloat(stats.total_debt || '0'))}
+                  </p>
+                  {/* Oxirgi qarz to'lovlari: ro'yxat emas — oxirgi 4 to'lovning YIG'INDISI */}
+                  {(stats.recent_debt_payments?.length ?? 0) > 0 && (
+                    <div className="mt-3 flex items-center justify-between gap-2 border-t border-border/60 pt-2.5">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        {t('sales.recentDebtPayments', "Oxirgi qarz to'lovlari")}
+                      </p>
+                      <p className="shrink-0 text-lg font-bold tabular-nums text-emerald-600">
+                        +{formatCurrency(
+                          stats.recent_debt_payments!
+                            .slice(0, 4)
+                            .reduce((sum, g) => sum + parseFloat(g.amount || '0'), 0),
+                        )}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </SheetBody>
+        </SheetContent>
+      </Sheet>
 
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold">{t('sales.history')}</h2>
